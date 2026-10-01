@@ -26,6 +26,8 @@ class Health_Check {
 
 	/**
 	 * Initialize health checks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'site_status_tests', array( self::class, 'add_tests' ) );
@@ -40,6 +42,8 @@ class Health_Check {
 	 *
 	 * This is called when the ActivityPub settings page is loaded to
 	 * automatically restore any missing scheduled events.
+	 *
+	 * @return void
 	 */
 	public static function ensure_schedules_registered() {
 		$missing_schedules = self::get_missing_schedules();

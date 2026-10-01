@@ -27,6 +27,8 @@ class Jetpack {
 
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		if ( ! \defined( 'IS_WPCOM' ) ) {
@@ -165,6 +167,8 @@ class Jetpack {
 
 	/**
 	 * Adapt the parameters for a post share request to be compatible with the Federated Reply block.
+	 *
+	 * @return void
 	 */
 	public static function adapt_post_share() {
 		if ( ! isset( $_GET['is_post_share'], $_GET['url'] ) || ! $_GET['is_post_share'] ) { // phpcs:ignore WordPress.Security

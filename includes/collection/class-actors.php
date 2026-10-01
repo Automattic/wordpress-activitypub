@@ -47,7 +47,7 @@ class Actors {
 	 *
 	 * @param int $user_id The user ID.
 	 *
-	 * @return Actor|User|Blog|Application|\WP_Error Actor object or WP_Error if not found or not permitted.
+	 * @return User|Blog|\WP_Error Actor object or WP_Error if not found or not permitted.
 	 */
 	public static function get_by_id( $user_id ) {
 		if ( \is_numeric( $user_id ) ) {

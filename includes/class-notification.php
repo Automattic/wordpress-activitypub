@@ -60,6 +60,8 @@ class Notification {
 
 	/**
 	 * Send the notification.
+	 *
+	 * @return void
 	 */
 	public function send() {
 		$type = \strtolower( $this->type );

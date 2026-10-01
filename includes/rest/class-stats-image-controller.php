@@ -83,6 +83,8 @@ class Stats_Image_Controller extends \WP_REST_Controller {
 
 	/**
 	 * Register routes.
+	 *
+	 * @return void
 	 */
 	public function register_routes() {
 		$route_pattern = '/(?P<user_id>[\d]+)/(?P<year>[\d]{4})';

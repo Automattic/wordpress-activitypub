@@ -23,6 +23,8 @@ use function Activitypub\object_to_uri;
 class Announce {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_announce', array( self::class, 'handle_announce' ), 10, 3 );
@@ -34,6 +36,8 @@ class Announce {
 	 * @param array                          $announcement The activity-object.
 	 * @param int|int[]                      $user_ids     The id(s) of the local blog-user(s).
 	 * @param \Activitypub\Activity\Activity $activity     The activity object.
+	 *
+	 * @return void
 	 */
 	public static function handle_announce( $announcement, $user_ids, $activity = null ) {
 		// Check if Activity is public or not.
@@ -145,6 +149,8 @@ class Announce {
 	 *
 	 * @param array     $activity The activity-object.
 	 * @param int|int[] $user_ids The id of the local blog-user.
+	 *
+	 * @return void
 	 */
 	public static function maybe_save_announce( $activity, $user_ids ) {
 		$url = object_to_uri( $activity );

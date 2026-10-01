@@ -22,6 +22,8 @@ class Dashboard {
 
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'wp_dashboard_setup', array( self::class, 'add_dashboard_widgets' ) );
@@ -30,6 +32,8 @@ class Dashboard {
 
 	/**
 	 * Add Dashboard widgets.
+	 *
+	 * @return void
 	 */
 	public static function add_dashboard_widgets() {
 		// Plugin news widget.
@@ -75,6 +79,8 @@ class Dashboard {
 	 * Enqueue scripts for the dashboard widgets.
 	 *
 	 * @param string $hook The current admin page.
+	 *
+	 * @return void
 	 */
 	public static function enqueue_scripts( $hook ) {
 		if ( 'index.php' !== $hook ) {
@@ -148,6 +154,8 @@ class Dashboard {
 
 	/**
 	 * Render the ActivityPub.blog news feed widget.
+	 *
+	 * @return void
 	 */
 	public static function render_news_widget() {
 		echo '<div class="rss-widget">';
@@ -165,6 +173,8 @@ class Dashboard {
 
 	/**
 	 * Render the ActivityPub Author profile widget.
+	 *
+	 * @return void
 	 */
 	public static function render_author_profile_widget() {
 		$user = Actors::get_by_id( \get_current_user_id() );
@@ -185,6 +195,8 @@ class Dashboard {
 
 	/**
 	 * Render the ActivityPub Blog profile widget.
+	 *
+	 * @return void
 	 */
 	public static function render_blog_profile_widget() {
 		$user = new Blog();
@@ -207,6 +219,8 @@ class Dashboard {
 
 	/**
 	 * Render the stats widget container.
+	 *
+	 * @return void
 	 */
 	public static function render_stats_widget() {
 		echo '<div id="activitypub-stats-widget-root"></div>';

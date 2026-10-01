@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<phpunit bootstrap="bootstrap-tests.php" colors="true">
+	<testsuites>
+		<testsuite name="PHPStan extensions">
+			<directory suffix=".php">tests</directory>
+		</testsuite>
+	</testsuites>
+</phpunit>

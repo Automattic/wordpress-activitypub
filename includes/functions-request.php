@@ -170,7 +170,9 @@ function accept_prefers_activitypub( $accept ) {
  * Cache-Control would not reach a page cache or CDN. WordPress core sends its own CORS `Vary: Origin`
  * the same raw way for the same reason. The raw header is skipped once the headers are already sent.
  *
- * @param \WP_REST_Response $response The response to mark.
+ * @param \WP_HTTP_Response $response The response to mark.
+ *
+ * @return void
  */
 function maybe_set_no_store( $response ) {
 	$response->header( 'Cache-Control', 'private, no-store, max-age=0' );

@@ -179,7 +179,14 @@ class Sanitize {
 		$parts = \array_map( 'sanitize_title', $parts );
 
 		// A segment can sanitize away to nothing, and a leading, trailing or doubled dot is not a usable handle.
-		$sanitized = \implode( '.', \array_filter( $parts, 'strlen' ) );
+		$parts = \array_filter(
+			$parts,
+			static function ( $part ) {
+				return '' !== $part;
+			}
+		);
+
+		$sanitized = \implode( '.', $parts );
 
 		if ( empty( $sanitized ) ) {
 			return Blog::get_default_username();

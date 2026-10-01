@@ -27,6 +27,8 @@ class Surge {
 
 	/**
 	 * Initialize the Surge integration.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'activate_surge/surge.php', array( self::class, 'add_cache_config' ) );
@@ -37,6 +39,8 @@ class Surge {
 
 	/**
 	 * Add the Surge cache config.
+	 *
+	 * @return void
 	 */
 	public static function add_cache_config() {
 		// Check if surge is installed and active.
@@ -82,6 +86,8 @@ class Surge {
 
 	/**
 	 * Remove the Surge cache config.
+	 *
+	 * @return void
 	 */
 	public static function remove_cache_config() {
 		if ( ! \defined( 'WP_CACHE_CONFIG' ) ) {

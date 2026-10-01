@@ -81,6 +81,8 @@ abstract class File {
 	 * Initialize the cache handler.
 	 *
 	 * Subclasses should override this to register filters and actions.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		// Subclasses implement specific initialization.
@@ -334,6 +336,144 @@ abstract class File {
 		}
 
 		return static::get_filesystem()->rmdir( $basedir, true );
+	}
+
+	/**
+	 * Remove legacy `<hash>-N.webp` and `<hash>-N.jpg` image copies.
+	 *
+	 * Keep an existing canonical image, or promote the newest copy when it is missing.
+	 * A failed promotion leaves the group intact. Without `$delete`, only count the changes.
+	 *
+	 * Each directory is scanned twice, retaining only the newest copy per hash rather than every
+	 * duplicate. Subdirectories are cleaned before this directory's files are removed.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $directory The cache directory to walk, subdirectories included.
+	 * @param bool   $delete    Whether to remove and move the files. Default false, count only.
+	 *
+	 * @return array {
+	 *     What was done, or would be.
+	 *
+	 *     @type int $removed  Copies removed.
+	 *     @type int $bytes    Their combined size.
+	 *     @type int $promoted Copies moved to the canonical name.
+	 *     @type int $failed   Files or directories that could not be read, moved or removed.
+	 * }
+	 */
+	public static function remove_duplicates( $directory, $delete = false ) {
+		$result = array(
+			'removed'  => 0,
+			'bytes'    => 0,
+			'promoted' => 0,
+			'failed'   => 0,
+		);
+
+		// A live cache can remove entity directories at any time.
+		if ( ! \is_dir( $directory ) ) {
+			return $result;
+		}
+
+		if ( ! \is_readable( $directory ) ) {
+			++$result['failed'];
+			return $result;
+		}
+
+		try {
+			$entries = new \FilesystemIterator( $directory, \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::CURRENT_AS_PATHNAME );
+		} catch ( \UnexpectedValueException $exception ) {
+			// Entity directories can disappear between the readability check and opening the iterator.
+			\clearstatcache( true, $directory );
+			if ( \is_dir( $directory ) ) {
+				++$result['failed'];
+			}
+			return $result;
+		}
+
+		/*
+		 * The lookup matches `<hash>.*`: retain one candidate per hash, not per format or copy.
+		 */
+		$groups  = array();
+		$pattern = '/^([0-9a-f]{32})-([1-9][0-9]*)\.(webp|jpg)$/';
+
+		foreach ( $entries as $file ) {
+			// Match the previous glob's exclusion of hidden entries.
+			if ( '.' === \basename( $file )[0] ) {
+				continue;
+			}
+
+			if ( \is_dir( $file ) ) {
+				// Linked directories can lead out of the cache or back into it.
+				if ( ! \is_link( $file ) ) {
+					foreach ( static::remove_duplicates( $file, $delete ) as $key => $count ) {
+						$result[ $key ] += $count;
+					}
+				}
+				continue;
+			}
+
+			// Only the exact shape the old code produced: a full hash, a counter and a converted format.
+			if ( ! \is_file( $file ) || ! \preg_match( $pattern, \basename( $file ), $match ) ) {
+				continue;
+			}
+
+			$canonical = $directory . '/' . $match[1];
+			$copy      = array(
+				'time'    => (int) \filemtime( $file ),
+				'counter' => (int) $match[2],
+				'path'    => $file,
+			);
+
+			// Modification time decides, then the counter; the path makes exact ties deterministic.
+			if ( ! isset( $groups[ $canonical ] ) || $copy > $groups[ $canonical ] ) {
+				$groups[ $canonical ] = $copy;
+			}
+		}
+
+		$filesystem = static::get_filesystem();
+
+		foreach ( $groups as $canonical => $newest ) {
+			// With no file to serve under the hash, in any format, the newest copy becomes it, in its own.
+			if ( ! \glob( static::escape_glob_pattern( $canonical ) . '.*' ) ) {
+				$target = $canonical . '.' . \pathinfo( $newest['path'], PATHINFO_EXTENSION );
+
+				// If it cannot be moved, the group stays whole; removing the others would leave nothing to promote later.
+				if ( $delete && ! $filesystem->move( $newest['path'], $target ) ) {
+					++$result['failed'];
+					unset( $groups[ $canonical ] );
+					continue;
+				}
+
+				++$result['promoted'];
+				$groups[ $canonical ] = $newest['path'];
+			} else {
+				// A canonical file already exists, so every numbered copy can be removed.
+				$groups[ $canonical ] = '';
+			}
+		}
+
+		// Rewind the streaming iterator to remove copies without retaining their paths in memory.
+		foreach ( $entries as $file ) {
+			if ( ! \is_file( $file ) || ! \preg_match( $pattern, \basename( $file ), $match ) ) {
+				continue;
+			}
+
+			$canonical = $directory . '/' . $match[1];
+			if ( ! isset( $groups[ $canonical ] ) || $file === $groups[ $canonical ] ) {
+				continue;
+			}
+
+			$size = (int) \filesize( $file );
+			if ( $delete && ! $filesystem->delete( $file ) ) {
+				++$result['failed'];
+				continue;
+			}
+
+			++$result['removed'];
+			$result['bytes'] += $size;
+		}
+
+		return $result;
 	}
 
 	/**

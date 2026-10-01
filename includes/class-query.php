@@ -410,6 +410,8 @@ class Query {
 	 * Fake an old host request.
 	 *
 	 * @param bool $state Optional. The state to set. Default true.
+	 *
+	 * @return void
 	 */
 	public function set_old_host_request( $state = true ) {
 		$this->is_old_host_request = $state;
@@ -442,7 +444,7 @@ class Query {
 			return false;
 		}
 
-		$user_uri = get_user_id( $post->post_author );
+		$user_uri = get_user_id( (int) $post->post_author );
 
 		if ( ! $user_uri ) {
 			return false;

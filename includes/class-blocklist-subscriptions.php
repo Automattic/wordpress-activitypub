@@ -141,6 +141,8 @@ class Blocklist_Subscriptions {
 	 * Sync all subscriptions.
 	 *
 	 * Called by cron job.
+	 *
+	 * @return void
 	 */
 	public static function sync_all() {
 		\array_map( array( __CLASS__, 'sync' ), \array_keys( self::get_all() ) );

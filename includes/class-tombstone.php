@@ -258,6 +258,8 @@ class Tombstone {
 	 * normalized URL.
 	 *
 	 * @param string ...$urls The URLs to add to the tombstone registry.
+	 *
+	 * @return void
 	 */
 	public static function bury( ...$urls ) {
 		foreach ( $urls as $url ) {
@@ -313,6 +315,8 @@ class Tombstone {
 	 * This marks the URLs as no longer tombstoned for future local checks.
 	 *
 	 * @param string ...$urls The URLs to remove from the tombstone registry.
+	 *
+	 * @return void
 	 */
 	public static function remove( ...$urls ) {
 		$normalized_urls = array();

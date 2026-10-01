@@ -23,6 +23,8 @@ class Relay {
 	 * Initialize the class, registering WordPress hooks.
 	 *
 	 * Registered on `init`, so the setting is read once the site context is settled.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		if ( ! \get_option( 'activitypub_relay_mode', false ) ) {
@@ -42,6 +44,8 @@ class Relay {
 	 * @param array $activity The activity data.
 	 * @param array $user_ids The user IDs that are recipients.
 	 * @param bool  $success  Whether the activity was handled successfully.
+	 *
+	 * @return void
 	 */
 	public static function handle_activity( $activity, $user_ids, $success ) {
 		// Only relay if: successfully handled, Blog actor is recipient, activity is public, and in single-user mode.
@@ -69,6 +73,8 @@ class Relay {
 	 * Unhook settings fields when relay mode is enabled.
 	 *
 	 * Removes all settings sections except moderation when relay mode is active.
+	 *
+	 * @return void
 	 */
 	public static function unhook_settings_fields() {
 		global $wp_settings_sections;

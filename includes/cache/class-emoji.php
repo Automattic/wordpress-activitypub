@@ -80,6 +80,8 @@ class Emoji extends File {
 
 	/**
 	 * Initialize the cache handler.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		if ( ! self::is_enabled() ) {

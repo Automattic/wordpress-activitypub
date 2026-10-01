@@ -21,6 +21,8 @@ use Activitypub\Transformer\Factory as Transformer_Factory;
  *
  * @param \WP_Comment|\WP_Post $wp_object The WordPress object.
  * @param string               $state     The state of the object.
+ *
+ * @return void
  */
 function set_wp_object_state( $wp_object, $state ) {
 	if ( $wp_object instanceof \WP_Post ) {
@@ -155,6 +157,12 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 		$activity = $transformer->to_activity( $activity_type );
 		$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
 	} else {
+		/**
+		 * Without an Activity type, `$data` is already an Activity, and its transformer
+		 * hands it back as one.
+		 *
+		 * @var Activity $activity
+		 */
 		$activity = $transformer->to_object();
 	}
 

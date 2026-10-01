@@ -39,6 +39,8 @@ class Outbox_Command extends \WP_CLI_Command {
 	 *
 	 * @param array $args       The positional arguments.
 	 * @param array $assoc_args The associative arguments (unused).
+	 *
+	 * @return void
 	 */
 	public function undo( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$outbox_item_id = $args[0];
@@ -81,6 +83,8 @@ class Outbox_Command extends \WP_CLI_Command {
 	 *
 	 * @param array $args       The positional arguments.
 	 * @param array $assoc_args The associative arguments (unused).
+	 *
+	 * @return void
 	 */
 	public function reschedule( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$outbox_item_id = $args[0];

@@ -24,6 +24,8 @@ use function Activitypub\object_to_uri;
 class Accept {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_accept', array( self::class, 'handle_accept' ), 10, 2 );
@@ -35,6 +37,8 @@ class Accept {
 	 *
 	 * @param array     $accept   The activity-object.
 	 * @param int|int[] $user_ids The id of the local blog-user.
+	 *
+	 * @return void
 	 */
 	public static function handle_accept( $accept, $user_ids ) {
 		// Validate that there is a preceding Activity of ours.
@@ -61,6 +65,8 @@ class Accept {
 	 *
 	 * @param array     $accept   The activity-object.
 	 * @param int[]|int $user_ids The local user IDs.
+	 *
+	 * @return void
 	 */
 	private static function accept_follow( $accept, $user_ids ) {
 		/*
@@ -102,6 +108,8 @@ class Accept {
 	 * @param array     $accept      The activity-object.
 	 * @param \WP_Post  $outbox_post Our QuoteRequest outbox item.
 	 * @param int[]|int $user_ids    The local user IDs.
+	 *
+	 * @return void
 	 */
 	private static function accept_quote_request( $accept, $outbox_post, $user_ids ) {
 		$request = Outbox::get_activity( $outbox_post );
@@ -172,7 +180,7 @@ class Accept {
 		\update_post_meta( $post->ID, '_activitypub_quote_authorization', $stamp_uri );
 		\delete_post_meta( $post->ID, '_activitypub_quote_rejected' );
 
-		add_to_outbox( $post, 'Update', $post->post_author );
+		add_to_outbox( $post, 'Update', (int) $post->post_author );
 
 		/** This action is documented in includes/handler/class-accept.php */
 		\do_action( 'activitypub_handled_accept', $accept, (array) $user_ids, true, $post );

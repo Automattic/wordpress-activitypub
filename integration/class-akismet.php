@@ -17,6 +17,8 @@ use function Activitypub\was_comment_received;
 class Akismet {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'comment_row_actions', array( self::class, 'comment_row_actions' ), 10, 2 );

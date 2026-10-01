@@ -18,6 +18,8 @@ use function Activitypub\is_activity_public;
 class Update {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_outbox_update', array( self::class, 'handle_update' ), 10, 3 );

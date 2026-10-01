@@ -26,6 +26,8 @@ class Server {
 	 * Initialize the OAuth server.
 	 *
 	 * Registered on `init`, so the setting is read once the site context is settled.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		if ( ! \get_option( 'activitypub_api', false ) ) {
@@ -321,6 +323,8 @@ class Server {
 
 	/**
 	 * Run cleanup tasks for OAuth data.
+	 *
+	 * @return void
 	 */
 	public static function cleanup() {
 		// Clean up expired tokens.
@@ -361,6 +365,8 @@ class Server {
 	 * Handle OAuth authorization consent page via wp-login.php.
 	 *
 	 * This is triggered by wp-login.php?action=activitypub_authorize
+	 *
+	 * @return void
 	 */
 	public static function login_form_authorize() {
 		// Require user to be logged in.
@@ -395,6 +401,8 @@ class Server {
 
 	/**
 	 * Render the OAuth authorization consent form.
+	 *
+	 * @return void
 	 */
 	private static function render_authorize_form() {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Initial form display, nonce checked on POST.
@@ -463,6 +471,8 @@ class Server {
 
 	/**
 	 * Process the OAuth authorization consent form submission.
+	 *
+	 * @return void
 	 */
 	private static function process_authorize_form() {
 		// Verify nonce. It is bound to the client, so a consent form for one app can't approve another.
@@ -566,6 +576,8 @@ class Server {
 	 *
 	 * @param string $redirect_uri The client's redirect URI.
 	 * @param array  $params       Query parameters to append.
+	 *
+	 * @return void
 	 */
 	private static function redirect_to_client( $redirect_uri, $params ) {
 		$url = Sanitize::redirect_uri( \add_query_arg( $params, $redirect_uri ) );

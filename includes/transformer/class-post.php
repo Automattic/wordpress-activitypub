@@ -34,6 +34,8 @@ use function Activitypub\site_supports_blocks;
  * Currently supported are:
  *
  * - Activitypub\Activity\Base_Object
+ *
+ * @property \WP_Post $item The post being transformed.
  */
 class Post extends Base {
 	/**
@@ -53,7 +55,7 @@ class Post extends Base {
 	/**
 	 * The summary.
 	 *
-	 * @var string|null|false False indicates not yet computed.
+	 * @var string|false False indicates not yet computed.
 	 */
 	private $summary = false;
 
@@ -208,7 +210,7 @@ class Post extends Base {
 			return $blog_user;
 		}
 
-		$user = Actors::get_by_id( $this->item->post_author );
+		$user = Actors::get_by_id( (int) $this->item->post_author );
 
 		if ( $user && ! \is_wp_error( $user ) ) {
 			$this->actor_object = $user;

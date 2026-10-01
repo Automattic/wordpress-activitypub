@@ -237,6 +237,8 @@ class Remote_Actors {
 	 * @since unreleased
 	 *
 	 * @param int[] $user_ids The local users whose follower inbox lists include the actor.
+	 *
+	 * @return void
 	 */
 	private static function clear_inbox_caches( $user_ids ) {
 		$keys = array( self::CACHE_KEY_INBOXES );

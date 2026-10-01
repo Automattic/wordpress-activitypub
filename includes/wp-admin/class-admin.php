@@ -34,6 +34,8 @@ use function Activitypub\was_comment_received;
 class Admin {
 	/**
 	 * Initialize the class, registering WordPress hooks,
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'load-comment.php', array( self::class, 'edit_comment' ) );
@@ -92,6 +94,8 @@ class Admin {
 
 	/**
 	 * Display admin menu notices about configuration problems or conflicts.
+	 *
+	 * @return void
 	 */
 	public static function admin_notices() {
 		$current_screen = \get_current_screen();
@@ -130,6 +134,8 @@ class Admin {
 
 	/**
 	 * Load user settings page.
+	 *
+	 * @return void
 	 */
 	public static function followers_list_page() {
 		// User has to be able to publish posts.
@@ -140,6 +146,8 @@ class Admin {
 
 	/**
 	 * Load user following list page.
+	 *
+	 * @return void
 	 */
 	public static function following_list_page() {
 		// User has to be able to publish posts.
@@ -150,6 +158,8 @@ class Admin {
 
 	/**
 	 * Load blocked actors page.
+	 *
+	 * @return void
 	 */
 	public static function blocked_actors_list_page() {
 		// User has to be able to publish posts.
@@ -160,6 +170,8 @@ class Admin {
 
 	/**
 	 * Creates the followers and following list tables in ActivityPub settings.
+	 *
+	 * @return void
 	 */
 	public static function add_settings_list_tables() {
 		$tab = \sanitize_text_field( \wp_unslash( $_GET['tab'] ?? 'welcome' ) ); // phpcs:ignore WordPress.Security.NonceVerification
@@ -179,6 +191,8 @@ class Admin {
 
 	/**
 	 * Creates the followers list table.
+	 *
+	 * @return void
 	 */
 	public static function add_followers_list_table() {
 		$GLOBALS['followers_list_table'] = new Table\Followers();
@@ -186,6 +200,8 @@ class Admin {
 
 	/**
 	 * Creates the following list table.
+	 *
+	 * @return void
 	 */
 	public static function add_following_list_table() {
 		$GLOBALS['following_list_table'] = new Table\Following();
@@ -193,6 +209,8 @@ class Admin {
 
 	/**
 	 * Creates the blocked actors list table.
+	 *
+	 * @return void
 	 */
 	public static function add_blocked_actors_list_table() {
 		$GLOBALS['blocked_actors_list_table'] = new Table\Blocked_Actors();
@@ -200,6 +218,8 @@ class Admin {
 
 	/**
 	 * Render user settings.
+	 *
+	 * @return void
 	 */
 	public static function add_profile() {
 		\wp_enqueue_media();
@@ -215,6 +235,8 @@ class Admin {
 	 * Handles the saving of the ActivityPub settings.
 	 *
 	 * @param int $user_id The user ID.
+	 *
+	 * @return void
 	 */
 	public static function save_user_settings( $user_id ) {
 		if ( ! isset( $_REQUEST['_apnonce'] ) ) {
@@ -272,6 +294,8 @@ class Admin {
 	 * Enqueue the admin scripts and styles.
 	 *
 	 * @param string $hook_suffix The current page.
+	 *
+	 * @return void
 	 */
 	public static function enqueue_scripts( $hook_suffix ) {
 		\wp_register_script(
@@ -378,6 +402,8 @@ class Admin {
 
 	/**
 	 * Enqueue moderation admin scripts.
+	 *
+	 * @return void
 	 */
 	public static function enqueue_moderation_scripts() {
 		\wp_enqueue_script(
@@ -408,6 +434,8 @@ class Admin {
 	 * Enqueue connected apps admin scripts on the profile page.
 	 *
 	 * @since 8.1.0
+	 *
+	 * @return void
 	 */
 	public static function enqueue_connected_apps_scripts() {
 		\wp_enqueue_script(
@@ -448,6 +476,8 @@ class Admin {
 	 * Hook into the edit_comment functionality.
 	 *
 	 * Disables the edit_comment capability for federated comments.
+	 *
+	 * @return void
 	 */
 	public static function edit_comment() {
 		// phpcs:ignore WordPress.Security.NonceVerification
@@ -479,6 +509,8 @@ class Admin {
 	 * Hook into the edit_post functionality.
 	 *
 	 * Disables the edit_post capability for federated posts.
+	 *
+	 * @return void
 	 */
 	public static function edit_post() {
 		// Disable the edit_post capability for federated posts.
@@ -508,6 +540,8 @@ class Admin {
 
 	/**
 	 * Add ActivityPub specific actions/filters to the post list view.
+	 *
+	 * @return void
 	 */
 	public static function list_posts() {
 		// Remove all views for the extra fields.
@@ -597,6 +631,8 @@ class Admin {
 	 *
 	 * @param array $column     The column to implement.
 	 * @param int   $comment_id The comment id.
+	 *
+	 * @return void
 	 */
 	public static function manage_comments_custom_column( $column, $comment_id ) {
 		if ( 'comment_type' === $column && ! \defined( 'WEBMENTION_PLUGIN_DIR' ) ) {
@@ -789,6 +825,8 @@ class Admin {
 
 	/**
 	 * Handle the bulk capability removal page request directly.
+	 *
+	 * @return void
 	 */
 	public static function handle_bulk_actor_delete_page() {
 
@@ -827,6 +865,8 @@ class Admin {
 
 	/**
 	 * Handle the bulk capability removal confirmation form submission.
+	 *
+	 * @return void
 	 */
 	public static function handle_bulk_actor_delete_confirmation() {
 		// Verify nonce.
@@ -992,6 +1032,8 @@ class Admin {
 	 * Add plugin settings link.
 	 *
 	 * @param array $actions The current actions.
+	 *
+	 * @return array The action links.
 	 */
 	public static function add_plugin_settings_link( $actions ) {
 		$actions[] = \sprintf(
@@ -1008,6 +1050,8 @@ class Admin {
 	 *
 	 * @param array  $data   The plugin data.
 	 * @param object $update The plugin update data.
+	 *
+	 * @return void
 	 */
 	public static function plugin_update_message( $data, $update ) {
 		if ( ! isset( $update->upgrade_notice ) ) {
@@ -1019,6 +1063,8 @@ class Admin {
 
 	/**
 	 * Adds meta box on wp-admin/tools.php.
+	 *
+	 * @return void
 	 */
 	public static function tool_box() {
 		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/toolbox.php' );
@@ -1029,6 +1075,8 @@ class Admin {
 	 *
 	 * This function is used to open the help tab,
 	 * it is triggered by the hash in the URL.
+	 *
+	 * @return void
 	 */
 	public static function open_help_tab() {
 		// get all tabs registered for the ActivityPub settings page.
@@ -1062,6 +1110,8 @@ class Admin {
 
 	/**
 	 * AJAX handler for moderation settings (add/remove blocks).
+	 *
+	 * @return void
 	 */
 	public static function ajax_moderation_settings() {
 		$context   = \sanitize_text_field( \wp_unslash( $_POST['context'] ?? '' ) );
@@ -1123,6 +1173,8 @@ class Admin {
 
 	/**
 	 * AJAX handler for blocklist subscriptions (add/remove).
+	 *
+	 * @return void
 	 */
 	public static function ajax_blocklist_subscription() {
 		$operation = \sanitize_text_field( \wp_unslash( $_POST['operation'] ?? '' ) );
@@ -1172,6 +1224,8 @@ class Admin {
 	 * AJAX handler for registering a new OAuth client from the user profile.
 	 *
 	 * @since 8.1.0
+	 *
+	 * @return void
 	 */
 	public static function ajax_register_oauth_client() {
 		// Verify nonce.
@@ -1222,6 +1276,8 @@ class Admin {
 	 * AJAX handler for deleting a registered OAuth client.
 	 *
 	 * @since 8.1.0
+	 *
+	 * @return void
 	 */
 	public static function ajax_delete_oauth_client() {
 		// Verify nonce.
@@ -1252,6 +1308,8 @@ class Admin {
 	 * AJAX handler for deleting all manually registered OAuth clients.
 	 *
 	 * @since 8.1.0
+	 *
+	 * @return void
 	 */
 	public static function ajax_delete_all_oauth_clients() {
 		// Verify nonce.
@@ -1278,6 +1336,8 @@ class Admin {
 	 * Follows the WordPress core Application Passwords pattern.
 	 *
 	 * @since 8.1.0
+	 *
+	 * @return void
 	 */
 	public static function ajax_revoke_oauth_token() {
 		// Verify nonce.
@@ -1319,6 +1379,8 @@ class Admin {
 	 * AJAX handler for revoking all OAuth tokens for the current user.
 	 *
 	 * @since 8.1.0
+	 *
+	 * @return void
 	 */
 	public static function ajax_revoke_all_oauth_tokens() {
 		// Verify nonce.

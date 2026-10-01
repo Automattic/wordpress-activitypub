@@ -23,6 +23,8 @@ use function Activitypub\get_url_authority;
 class Collection_Sync {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_create', array( self::class, 'handle_collection_synchronization' ), 10, 2 );
@@ -41,6 +43,8 @@ class Collection_Sync {
 	 *
 	 * @param array     $data     The activity data.
 	 * @param int|int[] $user_ids The user ID(s).
+	 *
+	 * @return void
 	 */
 	public static function handle_collection_synchronization( $data, $user_ids ) {
 		if ( empty( $_SERVER['HTTP_COLLECTION_SYNCHRONIZATION'] ) ) {

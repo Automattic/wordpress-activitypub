@@ -26,6 +26,8 @@ class Event_Stream {
 	 * Initialize the event stream signals.
 	 *
 	 * Registered on `init`, so the setting is read once the site context is settled.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		if ( ! \get_option( 'activitypub_api', false ) ) {
@@ -42,6 +44,8 @@ class Event_Stream {
 	 * @param int                            $outbox_activity_id The outbox post ID.
 	 * @param \Activitypub\Activity\Activity $activity           The activity object.
 	 * @param int                            $user_id            The user ID.
+	 *
+	 * @return void
 	 */
 	public static function signal_outbox( $outbox_activity_id, $activity, $user_id ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$signal_key = \sprintf( 'activitypub_sse_signal_%s_outbox', $user_id );
@@ -53,6 +57,8 @@ class Event_Stream {
 	 *
 	 * @param array $data     The activity data array.
 	 * @param array $user_ids The user IDs that received the activity.
+	 *
+	 * @return void
 	 */
 	public static function signal_inbox( $data, $user_ids ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		if ( ! \is_array( $user_ids ) ) {
