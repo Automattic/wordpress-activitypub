@@ -7,17 +7,13 @@
 
 namespace Activitypub\Cache;
 
-use Activitypub\Collection\Remote_Posts;
-
 /**
  * Media cache class.
  *
  * Handles lazy caching of remote post and comment media locally.
  * Media is cached on-demand when URLs pass through the `activitypub_remote_media_url` filter.
  *
- * Storage locations:
- * - Posts: /wp-content/uploads/activitypub/posts/{post_id}/
- * - Comments: /wp-content/uploads/activitypub/comments/{comment_id}/
+ * Post and comment images share /wp-content/uploads/activitypub/posts/{post_id}/.
  *
  * Files are cleaned up automatically when the parent post is deleted.
  *
@@ -173,10 +169,6 @@ class Media extends File {
 	 * @return void
 	 */
 	public static function maybe_cleanup( $post_id ) {
-		if ( Remote_Posts::POST_TYPE !== \get_post_type( $post_id ) ) {
-			return;
-		}
-
 		self::invalidate_entity( $post_id );
 	}
 
