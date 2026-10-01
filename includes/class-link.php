@@ -14,6 +14,8 @@ class Link {
 
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_extra_field_content', array( self::class, 'the_content' ) );

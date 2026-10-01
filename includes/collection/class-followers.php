@@ -422,6 +422,8 @@ class Followers {
 	 * @param string $value   The blocked actor URI.
 	 * @param string $type    The block type (actor, domain, keyword).
 	 * @param int    $user_id The user ID.
+	 *
+	 * @return void
 	 */
 	public static function remove_blocked_actors( $value, $type, $user_id ) {
 		if ( 'actor' !== $type ) {

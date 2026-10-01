@@ -25,6 +25,8 @@ class Move {
 
 	/**
 	 * Initialize the Move class.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		/**
@@ -218,6 +220,8 @@ class Move {
 	 *
 	 * @param int    $user_id The user ID.
 	 * @param string $from    The current account URL.
+	 *
+	 * @return void
 	 */
 	private static function update_user_also_known_as( $user_id, $from ) {
 		$also_known_as = \get_user_option( 'activitypub_also_known_as', $user_id ) ?: array();
@@ -235,6 +239,8 @@ class Move {
 	 * Update the alsoKnownAs property of the blog.
 	 *
 	 * @param string $from The current account URL.
+	 *
+	 * @return void
 	 */
 	private static function update_blog_also_known_as( $from ) {
 		$also_known_as = \get_option( 'activitypub_blog_user_also_known_as', array() );
@@ -319,6 +325,8 @@ class Move {
 	 * If it does, it retrieves the cached data for the user and populates the instance.
 	 *
 	 * @param Blog|User $instance The Blog or User instance to populate.
+	 *
+	 * @return void
 	 */
 	public static function maybe_initiate_old_user( $instance ) {
 		if ( ! Query::get_instance()->is_old_host_request() ) {
@@ -340,6 +348,8 @@ class Move {
 	 * Pre-send to inboxes.
 	 *
 	 * @param string $json The ActivityPub Activity JSON.
+	 *
+	 * @return void
 	 */
 	public static function pre_send_to_inboxes( $json ) {
 		$json = \json_decode( $json, true );

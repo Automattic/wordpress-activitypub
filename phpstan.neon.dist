@@ -1,0 +1,43 @@
+includes:
+	- vendor/szepeviktor/phpstan-wordpress/extension.neon
+	- phpstan-baseline.neon
+
+parameters:
+	level: 6
+	phpVersion: 70400
+	paths:
+		- includes
+		- integration
+		- activitypub.php
+	excludePaths:
+		# Extends a class from the Stream plugin, which PHPStan cannot analyse without it.
+		- integration/stream/class-connector.php
+	bootstrapFiles:
+		- tests/phpstan/bootstrap.php
+	scanFiles:
+		- tests/phpstan/stubs/wp-cli.php
+		- tests/phpstan/stubs/wp-cli-utils.php
+	stubFiles:
+		# Core documents the escaping functions as taking a string, but they convert any scalar.
+		- tests/phpstan/stubs/escaping.stub
+	treatPhpDocTypesAsCertain: false
+	# Keep the baseline in sync when findings are fixed, rather than hiding regressions.
+	reportUnmatchedIgnoredErrors: true
+	ignoreErrors:
+		# `array<string, mixed>` generics in every array docblock; WordPress code
+		# does not carry them, and on PHP 7.4 they could only live in docblocks.
+		- identifier: missingType.iterableValue
+		# Integrations talk to other plugins that are not installed here.
+		-
+			identifiers:
+				- class.notFound
+				- function.notFound
+			paths:
+				- integration/*
+
+services:
+	# `Generic_Object::__call()` answers get_*/set_*/add_* from the object's attributes.
+	-
+		class: Activitypub\PHPStan\Magic_Accessors_Extension
+		tags:
+			- phpstan.broker.methodsClassReflectionExtension

@@ -25,6 +25,8 @@ class Opengraph {
 	 * Initialize the class, registering WordPress hooks.
 	 *
 	 * Registered on `init`, so the setting is read once the site context is settled.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		if ( '1' !== \get_option( 'activitypub_use_opengraph', '1' ) ) {
@@ -98,6 +100,8 @@ class Opengraph {
 
 	/**
 	 * Output Open Graph <meta> tags in the page header.
+	 *
+	 * @return void
 	 */
 	public static function add_meta_tags() {
 		$metadata = \apply_filters( 'opengraph_metadata', array() );

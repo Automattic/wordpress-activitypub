@@ -11,6 +11,10 @@ This file provides detailed testing patterns and examples. For basic test comman
 
 ## Test Organization
 
+### PHPStan Extension Tests
+
+Tests for the development-only PHPStan extension live in `tests/phpstan/tests/`, with a `class-test-` file matching the extension's source file. Helpers and fixtures live in `tests/phpstan/data/`. These tests use PHPStan's testing base class rather than WordPress's, and run independently of WordPress and Docker with `composer analyze:test`.
+
 ### PHP Test Structure
 
 ```

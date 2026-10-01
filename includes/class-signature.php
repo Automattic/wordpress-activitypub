@@ -20,6 +20,8 @@ class Signature {
 
 	/**
 	 * Initialize the class.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'http_request_args', array( self::class, 'sign_request' ), 0, 2 ); // Ahead of all other filters, so signature is set.
@@ -319,6 +321,8 @@ class Signature {
 	 * Set RFC-9421 signature unsupported for a given host.
 	 *
 	 * @param string $url The URL to set.
+	 *
+	 * @return void
 	 */
 	private static function rfc9421_add_unsupported_host( $url ) {
 		$list = \get_option( 'activitypub_rfc9421_unsupported', array() );

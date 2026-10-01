@@ -106,7 +106,7 @@ class Generic_Object {
 	 * Generic setter.
 	 *
 	 * @param string $key   The key to set.
-	 * @param string $value The value to set.
+	 * @param mixed  $value The value to set.
 	 *
 	 * @return mixed The value.
 	 */
@@ -200,6 +200,8 @@ class Generic_Object {
 	 * Convert JSON input to an array and pre-fill the object.
 	 *
 	 * @param array $data The array.
+	 *
+	 * @return void
 	 */
 	public function from_array( $data ) {
 		foreach ( $data as $key => $value ) {
@@ -218,6 +220,8 @@ class Generic_Object {
 	 * Convert JSON input to an array and pre-fill the object.
 	 *
 	 * @param string $json The JSON string.
+	 *
+	 * @return void
 	 */
 	public function from_json( $json ) {
 		$array = \json_decode( $json, true );

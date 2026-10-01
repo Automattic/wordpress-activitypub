@@ -1,0 +1,18 @@
+<?php
+/**
+ * Core documents the escaping functions as taking a string, but they convert any scalar.
+ *
+ * @package Activitypub
+ */
+
+/**
+ * @param string|int|float $text
+ * @return string
+ */
+function esc_attr( $text ) {}
+
+/**
+ * @param string|int|float $text
+ * @return string
+ */
+function esc_html( $text ) {}

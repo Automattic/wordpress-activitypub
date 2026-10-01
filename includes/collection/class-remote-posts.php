@@ -365,6 +365,8 @@ class Remote_Posts {
 	 *
 	 * @param int   $post_id         The post ID.
 	 * @param array $activity_object The activity object data.
+	 *
+	 * @return void
 	 */
 	private static function add_taxonomies( $post_id, $activity_object ) {
 		// Save Object Type as Taxonomy item.
@@ -550,6 +552,8 @@ class Remote_Posts {
 	 *
 	 * @param int   $post_id  The post ID.
 	 * @param int[] $user_ids The user ID or array of user IDs to add.
+	 *
+	 * @return void
 	 */
 	public static function add_recipients( $post_id, $user_ids ) {
 		foreach ( $user_ids as $user_id ) {

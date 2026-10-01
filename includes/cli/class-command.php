@@ -26,6 +26,8 @@ class Command extends \WP_CLI_Command {
 	 *
 	 * @param array $args       The positional arguments (unused).
 	 * @param array $assoc_args The associative arguments (unused).
+	 *
+	 * @return void
 	 */
 	public function version( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		\WP_CLI::line( 'ActivityPub ' . ACTIVITYPUB_PLUGIN_VERSION );

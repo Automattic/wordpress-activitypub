@@ -16,6 +16,8 @@ class Menu {
 
 	/**
 	 * Initialize the Menu class.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'admin_menu', array( self::class, 'admin_menu' ) );
@@ -24,6 +26,8 @@ class Menu {
 
 	/**
 	 * Add admin menu entry.
+	 *
+	 * @return void
 	 */
 	public static function admin_menu() {
 		$settings_page = \add_options_page(
@@ -106,6 +110,8 @@ class Menu {
 	 * Add Social Web item to the admin bar.
 	 *
 	 * @param \WP_Admin_Bar $wp_admin_bar The WP_Admin_Bar instance.
+	 *
+	 * @return void
 	 */
 	public static function admin_bar_menu( $wp_admin_bar ) {
 		// Only show if reader UI is enabled and the WordPress app boot stack is available.

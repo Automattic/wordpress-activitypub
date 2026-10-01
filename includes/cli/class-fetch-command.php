@@ -75,6 +75,8 @@ class Fetch_Command extends \WP_CLI_Command {
 	 *
 	 * @param array $args       The positional arguments.
 	 * @param array $assoc_args The associative arguments.
+	 *
+	 * @return void
 	 */
 	public function __invoke( $args, $assoc_args ) {
 		$url             = $args[0];

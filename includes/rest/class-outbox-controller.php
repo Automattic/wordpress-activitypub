@@ -55,6 +55,8 @@ class Outbox_Controller extends \WP_REST_Controller {
 
 	/**
 	 * Register routes.
+	 *
+	 * @return void
 	 */
 	public function register_routes() {
 		\register_rest_route(
@@ -546,9 +548,9 @@ class Outbox_Controller extends \WP_REST_Controller {
 		 * - array: Modified activity data (fallback to default handling)
 		 * - Other: No handler processed the activity (fallback to default)
 		 *
-		 * @param array  $data       The activity data.
-		 * @param int    $user_id    The user ID.
-		 * @param string $visibility Content visibility.
+		 * @param array|\WP_Post|\WP_Comment|int|\WP_Error|false $data       The activity data, or the result of an earlier handler.
+		 * @param int                                          $user_id    The user ID.
+		 * @param string                                       $visibility Content visibility.
 		 */
 		$result = \apply_filters( 'activitypub_outbox_' . $type, $data, $user_id, $visibility );
 

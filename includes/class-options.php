@@ -16,6 +16,8 @@ class Options {
 
 	/**
 	 * Initialize the options.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'admin_init', array( self::class, 'register_settings' ) );
@@ -48,6 +50,8 @@ class Options {
 
 	/**
 	 * Register ActivityPub settings.
+	 *
+	 * @return void
 	 */
 	public static function register_settings() {
 		/*
@@ -570,6 +574,8 @@ class Options {
 
 	/**
 	 * Delete all options.
+	 *
+	 * @return void
 	 */
 	public static function delete() {
 		global $wpdb;
@@ -1039,6 +1045,8 @@ class Options {
 	 *
 	 * @param mixed $old_value The old option value.
 	 * @param mixed $new_value The new option value.
+	 *
+	 * @return void
 	 */
 	public static function relay_mode_changed( $old_value, $new_value ) {
 		if ( $new_value && ! $old_value ) {

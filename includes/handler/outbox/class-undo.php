@@ -20,6 +20,8 @@ use function Activitypub\unfollow;
 class Undo {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_outbox_undo', array( self::class, 'handle_undo' ), 10, 2 );

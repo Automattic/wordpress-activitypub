@@ -19,6 +19,8 @@ use Activitypub\Collection\Remote_Posts;
 class Comment {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		self::register_comment_types();
@@ -283,7 +285,7 @@ class Comment {
 		}
 
 		$comment = \get_comment( $comment );
-		$user_id = $comment->user_id;
+		$user_id = (int) $comment->user_id;
 
 		// Comments without user can't be federated.
 		if ( ! $user_id ) {
@@ -363,7 +365,7 @@ class Comment {
 	 *
 	 * @param string $url The URL to check.
 	 *
-	 * @return string|null Comment ID or null if not found.
+	 * @return int|null Comment ID or null if not found.
 	 */
 	public static function url_to_commentid( $url ) {
 		if ( ! $url || ! \filter_var( $url, \FILTER_VALIDATE_URL ) ) {
@@ -381,7 +383,7 @@ class Comment {
 					$comment = \get_comment( $params['c'] );
 
 					if ( $comment ) {
-						return $comment->comment_ID;
+						return (int) $comment->comment_ID;
 					}
 				}
 			}
@@ -406,7 +408,7 @@ class Comment {
 		$comments = $query->query( $args );
 
 		if ( $comments && \is_array( $comments ) ) {
-			return $comments[0]->comment_ID;
+			return (int) $comments[0]->comment_ID;
 		}
 
 		return null;
@@ -534,7 +536,7 @@ class Comment {
 		$comment = \get_comment( $comment );
 
 		// Show external comment ID if it exists.
-		$public_comment_link = self::get_source_id( $comment->comment_ID );
+		$public_comment_link = self::get_source_id( (int) $comment->comment_ID );
 
 		if ( $public_comment_link ) {
 			return $public_comment_link;
@@ -697,6 +699,8 @@ class Comment {
 
 	/**
 	 * Register the comment types used by the ActivityPub plugin.
+	 *
+	 * @return void
 	 */
 	public static function register_comment_types() {
 		register_comment_type(
@@ -779,6 +783,8 @@ class Comment {
 	 * @see https://github.com/janboddez/indieblocks/blob/a2d59de358031056a649ee47a1332ce9e39d4ce2/includes/functions.php#L423-L432
 	 *
 	 * @param \WP_Comment_Query $query Comment count.
+	 *
+	 * @return void
 	 */
 	public static function comment_query( $query ) {
 		if ( ! $query instanceof \WP_Comment_Query ) {
@@ -981,6 +987,8 @@ class Comment {
 	 *
 	 * @param mixed $old_value The old option value.
 	 * @param mixed $value     The new option value.
+	 *
+	 * @return void
 	 */
 	public static function maybe_update_comment_counts( $old_value, $value ) {
 		if ( '1' === $old_value && '1' !== $value ) {

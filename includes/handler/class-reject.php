@@ -22,6 +22,8 @@ use function Activitypub\object_to_uri;
 class Reject {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_reject', array( self::class, 'handle_reject' ), 10, 2 );
@@ -33,6 +35,8 @@ class Reject {
 	 *
 	 * @param array     $reject   The activity-object.
 	 * @param int|int[] $user_ids The user ID(s).
+	 *
+	 * @return void
 	 */
 	public static function handle_reject( $reject, $user_ids ) {
 		// Validate that there is a preceding Activity.
@@ -59,6 +63,8 @@ class Reject {
 	 *
 	 * @param array     $reject   The activity-object.
 	 * @param int|int[] $user_ids The user ID(s).
+	 *
+	 * @return void
 	 */
 	private static function reject_follow( $reject, $user_ids ) {
 		/*
@@ -101,6 +107,8 @@ class Reject {
 	 * @param array     $reject      The activity-object.
 	 * @param \WP_Post  $outbox_post Our QuoteRequest outbox item.
 	 * @param int[]|int $user_ids    The local user IDs.
+	 *
+	 * @return void
 	 */
 	private static function reject_quote_request( $reject, $outbox_post, $user_ids ) {
 		$request = Outbox::get_activity( $outbox_post );
@@ -131,7 +139,7 @@ class Reject {
 		\update_post_meta( $post->ID, '_activitypub_quote_rejected', '1' );
 		\delete_post_meta( $post->ID, '_activitypub_quote_authorization' );
 
-		add_to_outbox( $post, 'Update', $post->post_author );
+		add_to_outbox( $post, 'Update', (int) $post->post_author );
 
 		/** This action is documented in includes/handler/class-reject.php */
 		\do_action( 'activitypub_handled_reject', $reject, (array) $user_ids, true, $post );

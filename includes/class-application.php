@@ -39,6 +39,8 @@ class Application {
 	 * Initialize the class, registering WordPress hooks.
 	 *
 	 * @since 9.1.0
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		/*

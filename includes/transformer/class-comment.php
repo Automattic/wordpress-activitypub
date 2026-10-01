@@ -180,12 +180,12 @@ class Comment extends Base {
 		}
 
 		if ( $parent_comment ) {
-			$in_reply_to = Comment_Utils::get_source_id( $parent_comment->comment_ID );
+			$in_reply_to = Comment_Utils::get_source_id( (int) $parent_comment->comment_ID );
 			if ( ! $in_reply_to && ! empty( $parent_comment->user_id ) ) {
 				$in_reply_to = Comment_Utils::generate_id( $parent_comment );
 			}
 		} else {
-			$in_reply_to = \get_permalink( $comment->comment_post_ID );
+			$in_reply_to = \get_permalink( (int) $comment->comment_post_ID );
 		}
 
 		return $in_reply_to;
@@ -223,7 +223,7 @@ class Comment extends Base {
 			return $blog_user;
 		}
 
-		$user = Actors::get_by_id( $this->item->user_id );
+		$user = Actors::get_by_id( (int) $this->item->user_id );
 
 		if ( $user && ! \is_wp_error( $user ) ) {
 			$this->actor_object = $user;

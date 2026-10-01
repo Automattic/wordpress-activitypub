@@ -18,6 +18,8 @@ use Activitypub\Webfinger;
 class Mention {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'the_content', array( self::class, 'the_content' ), 99 );
@@ -181,7 +183,7 @@ class Mention {
 		$links     = array();
 		$processor = new \WP_HTML_Tag_Processor( $content );
 
-		while ( $processor->next_tag( 'A' ) ) {
+		while ( $processor->next_tag( array( 'tag_name' => 'A' ) ) ) {
 			$rel = (string) $processor->get_attribute( 'rel' );
 			if ( ! $processor->has_class( 'mention' ) && ! \in_array( 'mention', \preg_split( '/\s+/', $rel ), true ) ) {
 				continue;

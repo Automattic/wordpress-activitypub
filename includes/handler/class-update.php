@@ -21,6 +21,8 @@ use function Activitypub\object_to_uri;
 class Update {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'activitypub_handled_inbox_update', array( self::class, 'handle_update' ), 10, 3 );
@@ -32,6 +34,8 @@ class Update {
 	 * @param array                          $activity        The Activity object.
 	 * @param int[]                          $user_ids        Local recipient user IDs (followers and addressed local actors); may be empty.
 	 * @param \Activitypub\Activity\Activity $activity_object The activity object. Default null.
+	 *
+	 * @return void
 	 */
 	public static function handle_update( $activity, $user_ids, $activity_object ) {
 		$object_type = $activity['object']['type'] ?? '';
@@ -81,6 +85,8 @@ class Update {
 	 * @param array                          $activity        The Activity object.
 	 * @param int[]|null                     $user_ids        Local recipient user IDs (followers and addressed local actors); may be empty.
 	 * @param \Activitypub\Activity\Activity $activity_object The activity object. Default null.
+	 *
+	 * @return void
 	 */
 	public static function update_object( $activity, $user_ids, $activity_object ) {
 		$result  = new \WP_Error( 'activitypub_update_failed', 'Update failed' );
@@ -109,7 +115,8 @@ class Update {
 
 		// There is no object to update, try to trigger create instead.
 		if ( ! $updated ) {
-			return Create::handle_create( $activity, $user_ids, $activity_object );
+			Create::handle_create( $activity, $user_ids, $activity_object );
+			return;
 		}
 
 		$success = ( $result && ! \is_wp_error( $result ) );
@@ -130,6 +137,8 @@ class Update {
 	 *
 	 * @param array      $activity The Activity object.
 	 * @param int[]|null $user_ids Local recipient user IDs (followers and addressed local actors); may be empty.
+	 *
+	 * @return void
 	 */
 	public static function update_actor( $activity, $user_ids ) {
 		/*
