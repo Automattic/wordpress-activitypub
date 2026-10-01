@@ -9,6 +9,7 @@ on:
       - 'composer.lock'
       - 'phpstan.neon.dist'
       - 'phpstan-baseline.neon'
+      - 'tests/phpstan/**'
       - '.github/workflows/phpstan.yml'
       - '!build/**/*.asset.php'
   pull_request:
@@ -18,6 +19,7 @@ on:
       - 'composer.lock'
       - 'phpstan.neon.dist'
       - 'phpstan-baseline.neon'
+      - 'tests/phpstan/**'
       - '.github/workflows/phpstan.yml'
       - '!build/**/*.asset.php'
 permissions:
@@ -38,3 +40,5 @@ jobs:
         uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
       - name: Analyse
         run: composer analyze -- --no-progress --error-format=github
+      - name: Test PHPStan extension
+        run: composer analyze:test

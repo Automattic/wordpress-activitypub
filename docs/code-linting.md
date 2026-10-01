@@ -63,10 +63,18 @@ PHPStan checks the PHP code for type errors and for missing type declarations:
 composer analyze
 ```
 
-The configuration lives in `phpstan.neon.dist`. It runs at level 6, so every new or changed method needs parameter and return types; the value types of arrays (`array<string, mixed>`) are not required. `phpstan-baseline.neon` lists the findings that existed before PHPStan was introduced, so only new findings fail the check. Fixing one of the listed findings does not fail the check either; when you have typed a file, regenerate the baseline so it shrinks:
+The configuration lives in `phpstan.neon.dist`. It runs at level 6 and checks parameter and return types; the value types of arrays (`array<string, mixed>`) are not required. `phpstan-baseline.neon` suppresses existing findings by message, file and occurrence count, not by changed lines. New findings and obsolete baseline entries fail the check. After fixing existing findings, remove their baseline entries or regenerate the baseline:
 
 ```bash
 composer analyze:baseline
+```
+
+Review the baseline diff: it should remove resolved findings, not suppress new errors. Fix new errors before regenerating it.
+
+Run the custom magic-accessor extension's regression tests without WordPress or Docker:
+
+```bash
+composer analyze:test
 ```
 
 Integrations reference classes of other plugins that are not installed here; those "class not found" findings are ignored for the `integration/` directory. WP-CLI is covered by the small stubs in `tests/phpstan/stubs/`.

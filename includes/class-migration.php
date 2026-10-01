@@ -1397,6 +1397,8 @@ class Migration {
 	 * harmless, the second pass finds nothing.
 	 *
 	 * @since unreleased
+	 *
+	 * @return void
 	 */
 	public static function remove_duplicate_cache_files() {
 		$upload_dir = \wp_upload_dir();

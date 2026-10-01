@@ -21,9 +21,8 @@ parameters:
 		# Core documents the escaping functions as taking a string, but they convert any scalar.
 		- tests/phpstan/stubs/escaping.stub
 	treatPhpDocTypesAsCertain: false
-	# The baseline matches by message, path and count. Fixing one occurrence in an
-	# old file must not fail the run, so the baseline only ever shrinks.
-	reportUnmatchedIgnoredErrors: false
+	# Keep the baseline in sync when findings are fixed, rather than hiding regressions.
+	reportUnmatchedIgnoredErrors: true
 	ignoreErrors:
 		# `array<string, mixed>` generics in every array docblock; WordPress code
 		# does not carry them, and on PHP 7.4 they could only live in docblocks.

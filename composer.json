@@ -62,6 +62,9 @@
 		"analyze:baseline": [
 			"phpstan analyse --memory-limit=-1 --generate-baseline phpstan-baseline.neon"
 		],
+		"analyze:test": [
+			"phpunit --configuration tests/phpstan/phpunit.xml.dist"
+		],
 		"lint": [
 			"vendor/bin/phpcs"
 		],
