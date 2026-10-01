@@ -9,6 +9,7 @@ namespace Activitypub\Tests;
 
 use Activitypub\Activity\Actor;
 use Activitypub\Application;
+use Activitypub\Cache\Avatar;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
@@ -946,6 +947,29 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertEquals( '456', \get_post_meta( $post2, '_activitypub_following', true ), '_activitypub_following with different value should remain' );
 		$this->assertEquals( -1, \get_post_meta( $post1, '_activitypub_other_meta', true ), 'Other meta keys should not be affected' );
 		$this->assertEquals( -1, \get_post_meta( $post2, 'different_meta', true ), 'Other meta keys should not be affected' );
+	}
+
+	/**
+	 * The duplicate copies earlier versions left in the image caches are removed.
+	 *
+	 * @covers ::remove_duplicate_cache_files
+	 */
+	public function test_remove_duplicate_cache_files() {
+		$dir  = Avatar::get_storage_paths( 'migration-dedupe' )['basedir'];
+		$hash = \md5( 'https://example.com/avatar.webp' );
+		\wp_mkdir_p( $dir );
+		foreach ( array( "{$hash}.webp", "{$hash}-1.webp", "{$hash}-2.webp" ) as $name ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			\file_put_contents( "{$dir}/{$name}", 'image' );
+		}
+
+		Migration::remove_duplicate_cache_files();
+
+		$this->assertFileExists( "{$dir}/{$hash}.webp" );
+		$this->assertFileDoesNotExist( "{$dir}/{$hash}-1.webp" );
+		$this->assertFileDoesNotExist( "{$dir}/{$hash}-2.webp" );
+
+		Avatar::delete_directory( $dir );
 	}
 
 	/**

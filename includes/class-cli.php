@@ -40,7 +40,7 @@ class Cli {
 	 * - wp activitypub comment <delete|update> <id>
 	 * - wp activitypub actor <delete|update> <id>
 	 * - wp activitypub outbox <undo|reschedule> <id>
-	 * - wp activitypub cache <clear|status> [--type=<type>]
+	 * - wp activitypub cache <clear|status|cleanup> [--type=<type>]
 	 * - wp activitypub self-destruct [--status] [--yes]
 	 * - wp activitypub move <from> <to>
 	 * - wp activitypub follow <remote_user>
@@ -120,7 +120,7 @@ class Cli {
 			'activitypub cache',
 			Cache_Command::class,
 			array(
-				'shortdesc' => 'Manage remote media cache (clear or show status).',
+				'shortdesc' => 'Manage remote media cache (clear, show status, or clean up duplicates).',
 			)
 		);
 
