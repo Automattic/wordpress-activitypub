@@ -16,6 +16,29 @@ use Activitypub\Sanitize;
  * @coversDefaultClass \Activitypub\Sanitize
  */
 class Test_Sanitize extends \WP_UnitTestCase {
+	/**
+	 * Removing remote markup must not construct executable block delimiters.
+	 *
+	 * @covers ::content
+	 * @covers ::comment_content
+	 */
+	public function test_remote_sanitizers_strip_reconstructed_blocks() {
+		$payloads = array(
+			'<!-- wp:activitypub/image /-->',
+			'<<!-- -->!-- wp:activitypub/image /-->',
+			'<!<script></script>-- wp:activitypub/image /-->',
+			'<!-- wp:activitypub/image /--!>',
+			'<!-- wp:activitypub/image',
+		);
+		foreach ( array( 'content', 'comment_content' ) as $method ) {
+			foreach ( $payloads as $payload ) {
+				$result = \call_user_func( array( Sanitize::class, $method ), $payload );
+				$this->assertFalse( \has_blocks( $result ), $method . ': ' . $payload );
+				$this->assertStringNotContainsString( '<!--', $result );
+			}
+		}
+	}
+
 
 	/**
 	 * Data provider for URL list tests.

@@ -19,6 +19,29 @@ use function Activitypub\object_to_uri;
  * @coversDefaultClass \Activitypub\Collection\Remote_Posts
  */
 class Test_Remote_Posts extends \WP_UnitTestCase {
+	/**
+	 * Object types classify attachments without MIME, and MIME types ignore casing.
+	 *
+	 * @covers ::extract_attachments
+	 */
+	public function test_extract_attachments_classifies_object_types_and_mime_casing() {
+		$cases = array(
+			array( array( 'type' => 'Audio' ), 'audio' ),
+			array( array( 'type' => 'Video' ), 'video' ),
+			array( array( 'type' => 'Image' ), 'image' ),
+			array( array( 'type' => 'Document' ), 'document' ),
+			array( array( 'mediaType' => 'IMAGE/JPEG' ), 'image' ),
+			array( array( 'mediaType' => 'AUDIO/MPEG' ), 'audio' ),
+			array( array( 'mediaType' => 'VIDEO/MP4' ), 'video' ),
+		);
+		foreach ( $cases as $case ) {
+			$attachment        = $case[0];
+			$attachment['url'] = 'https://example.com/media';
+			$attachments       = Remote_Posts::extract_attachments( array( 'attachment' => array( $attachment ) ) );
+			$this->assertSame( $case[1], $attachments[0]['type'] );
+		}
+	}
+
 
 	/**
 	 * Set up test environment.

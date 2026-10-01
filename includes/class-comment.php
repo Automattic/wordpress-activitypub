@@ -47,8 +47,7 @@ class Comment {
 	 * Render blocks in comment content.
 	 *
 	 * Comments don't automatically parse blocks like posts do.
-	 * This filter applies do_blocks() to render activitypub/emoji
-	 * and activitypub/image blocks in comment content.
+	 * This filter renders only leaf activitypub/emoji and activitypub/image blocks.
 	 *
 	 * @param string           $content The comment content.
 	 * @param \WP_Comment|null $comment Optional. The comment being rendered.
@@ -71,7 +70,8 @@ class Comment {
 		\add_filter( 'render_block_context', $context_filter );
 
 		foreach ( $blocks as $block ) {
-			if ( ! empty( $block['blockName'] ) && \str_starts_with( $block['blockName'], 'activitypub/' ) ) {
+			// Rendering a parent also invokes its children's callbacks, so reject nested blocks.
+			if ( \in_array( $block['blockName'], array( 'activitypub/emoji', 'activitypub/image' ), true ) && empty( $block['innerBlocks'] ) ) {
 				$output .= \render_block( $block );
 			} else {
 				$output .= \serialize_block( $block );

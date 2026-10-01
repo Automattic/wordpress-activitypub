@@ -441,13 +441,16 @@ class Remote_Posts {
 				continue;
 			}
 
-			$mime_type = \is_string( $attachment['mediaType'] ?? null ) ? $attachment['mediaType'] : '';
+			$mime_type = \is_string( $attachment['mediaType'] ?? null ) ? \strtolower( $attachment['mediaType'] ) : '';
 
-			if ( \str_starts_with( $mime_type, 'video/' ) ) {
+			if ( '' === $mime_type ) {
+				$type = \is_string( $attachment['type'] ?? null ) ? \strtolower( $attachment['type'] ) : 'image';
+				$type = \in_array( $type, array( 'image', 'audio', 'video' ), true ) ? $type : 'document';
+			} elseif ( \str_starts_with( $mime_type, 'video/' ) ) {
 				$type = 'video';
 			} elseif ( \str_starts_with( $mime_type, 'audio/' ) ) {
 				$type = 'audio';
-			} elseif ( '' === $mime_type || \str_starts_with( $mime_type, 'image/' ) ) {
+			} elseif ( \str_starts_with( $mime_type, 'image/' ) ) {
 				$type = 'image';
 			} else {
 				$type = 'document';

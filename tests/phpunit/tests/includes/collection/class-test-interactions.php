@@ -20,6 +20,50 @@ use function Activitypub\object_id_to_comment;
  */
 class Test_Interactions extends \WP_UnitTestCase {
 	/**
+	 * Create and update strip remote blocks before adding our own image blocks.
+	 *
+	 * @covers ::add_comment
+	 * @covers ::update_comment
+	 */
+	public function test_comment_images_reject_remote_blocks_and_non_image_objects() {
+		$activity                         = $this->create_test_object( 'https://example.com/remote-block-reply' );
+		$activity['object']['attachment'] = array(
+			array(
+				'type' => 'Image',
+				'url'  => 'https://example.com/photo.jpg',
+			),
+			array(
+				'type' => 'Audio',
+				'url'  => 'https://example.com/audio.mp3',
+			),
+			array(
+				'type' => 'Video',
+				'url'  => 'https://example.com/video.mp4',
+			),
+		);
+		$activity['object']['content']    = '<<!-- -->!-- wp:activitypub/test-probe /--><p>Safe text.</p>';
+		$comment_id                       = Interactions::add_comment( $activity );
+		$this->assertIsInt( $comment_id );
+		$content = \get_comment( $comment_id )->comment_content;
+		$this->assertStringNotContainsString( '<!-- wp:activitypub/test-probe', $content );
+		$this->assertStringNotContainsString( 'audio.mp3', $content );
+		$this->assertStringNotContainsString( 'video.mp4', $content );
+		$this->assertStringContainsString( '<!-- wp:activitypub/image', $content );
+		$this->assertStringContainsString( 'photo.jpg', $content );
+
+		$activity['object']['content'] = '<!<script></script>-- wp:activitypub/test-probe /--><p>Updated text.</p>';
+		$result                        = Interactions::update_comment( $activity );
+		$this->assertNotWPError( $result );
+		$this->assertNotFalse( $result );
+		$content = \get_comment( $comment_id )->comment_content;
+		$this->assertStringNotContainsString( '<!-- wp:activitypub/test-probe', $content );
+		$this->assertStringNotContainsString( 'audio.mp3', $content );
+		$this->assertStringNotContainsString( 'video.mp4', $content );
+		$this->assertStringContainsString( '<!-- wp:activitypub/image', $content );
+		$this->assertStringContainsString( 'Updated text.', $content );
+	}
+
+	/**
 	 * Image-only comments reuse the post's lazy image cache and retain alt text.
 	 *
 	 * @group activitypub

@@ -19,6 +19,28 @@ use function Activitypub\generate_image_block;
  */
 class Test_Comment extends \WP_UnitTestCase {
 	/**
+	 * Only leaf image and emoji blocks may invoke render callbacks in comments.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_render_blocks_rejects_other_and_nested_blocks() {
+		$calls    = 0;
+		$callback = static function () use ( &$calls ) {
+			++$calls;
+			return 'Unexpected callback.';
+		};
+		\register_block_type( 'activitypub/test-probe', array( 'render_callback' => $callback ) );
+		\register_block_type( 'core/test-probe', array( 'render_callback' => $callback ) );
+		Comment::render_blocks( '<!-- wp:activitypub/test-probe /-->' );
+		Comment::render_blocks( '<!-- wp:activitypub/image --><!-- wp:test-probe /--><!-- /wp:activitypub/image -->' );
+		Comment::render_blocks( '<!-- wp:activitypub/emoji --><!-- wp:test-probe /--><!-- /wp:activitypub/emoji -->' );
+		\unregister_block_type( 'activitypub/test-probe' );
+		\unregister_block_type( 'core/test-probe' );
+
+		$this->assertSame( 0, $calls );
+	}
+
+	/**
 	 * Images use the comment's parent post, not the current global post.
 	 *
 	 * @group activitypub
