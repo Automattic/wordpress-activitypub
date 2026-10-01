@@ -229,7 +229,9 @@ class Blocks {
 			array(
 				'attributes'      => array(
 					'url' => array( 'type' => 'string' ),
+					'alt' => array( 'type' => 'string' ),
 				),
+				'uses_context'    => array( 'postId' ),
 				'render_callback' => array( self::class, 'render_image_block' ),
 			)
 		);
@@ -644,22 +646,28 @@ class Blocks {
 	 *
 	 * Replaces remote image URL with cached URL at runtime.
 	 *
-	 * @param array  $attrs   The block attributes.
-	 * @param string $content The block inner content (img tag).
+	 * @param array          $attrs   The block attributes.
+	 * @param string         $content The block inner content (img tag).
+	 * @param \WP_Block|null $block   Optional. The block instance.
 	 *
 	 * @return string The rendered content with cached URL.
 	 */
-	public static function render_image_block( $attrs, $content ) {
-		if ( empty( $attrs['url'] ) || empty( $content ) ) {
+	public static function render_image_block( $attrs, $content, $block = null ) {
+		if ( empty( $attrs['url'] ) ) {
 			return $content;
 		}
 
-		$url = $attrs['url'];
+		$url       = \wp_specialchars_decode( $attrs['url'], ENT_QUOTES );
+		$processor = new \WP_HTML_Tag_Processor( $content );
+		if ( isset( $attrs['alt'] ) && ( ! $processor->next_tag( array( 'tag_name' => 'IMG' ) ) || ! $processor->get_attribute( 'src' ) ) ) {
+			// Comment sanitization removes img attributes; retain them in the block instead.
+			$content = \sprintf( '<img src="%s" alt="%s" />', \esc_url( $url ), \esc_attr( $attrs['alt'] ) );
+		}
 
 		// Get entity ID from context.
-		$entity_id = null;
+		$entity_id = $block->context['postId'] ?? null;
 		$post      = \get_post();
-		if ( $post ) {
+		if ( ! $entity_id && $post ) {
 			$entity_id = $post->ID;
 		}
 
@@ -674,7 +682,11 @@ class Blocks {
 		$cached_url = \apply_filters( 'activitypub_remote_media_url', $url, 'media', $entity_id, array() );
 
 		if ( $cached_url && $cached_url !== $url ) {
-			return \str_replace( $url, $cached_url, $content );
+			$processor = new \WP_HTML_Tag_Processor( $content );
+			if ( $processor->next_tag( array( 'tag_name' => 'IMG' ) ) ) {
+				$processor->set_attribute( 'src', $cached_url );
+				return $processor->get_updated_html();
+			}
 		}
 
 		return $content;

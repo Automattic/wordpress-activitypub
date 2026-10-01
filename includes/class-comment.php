@@ -40,7 +40,7 @@ class Comment {
 		\add_filter( 'get_comment_author', array( static::class, 'render_emoji' ), 10, 2 );
 		\add_filter( 'comment_author', array( static::class, 'unescape_emoji' ), 20, 2 ); // After esc_html().
 		\add_filter( 'rest_comment_query', array( static::class, 'rest_comment_query' ) );
-		\add_filter( 'comment_text', array( static::class, 'render_blocks' ), 5 ); // Before other filters.
+		\add_filter( 'comment_text', array( static::class, 'render_blocks' ), 5, 2 ); // Before other filters.
 	}
 
 	/**
@@ -50,17 +50,25 @@ class Comment {
 	 * This filter applies do_blocks() to render activitypub/emoji
 	 * and activitypub/image blocks in comment content.
 	 *
-	 * @param string $content The comment content.
+	 * @param string           $content The comment content.
+	 * @param \WP_Comment|null $comment Optional. The comment being rendered.
 	 *
 	 * @return string The content with blocks rendered.
 	 */
-	public static function render_blocks( $content ) {
+	public static function render_blocks( $content, $comment = null ) {
 		if ( empty( $content ) || ! \str_contains( $content, '<!-- wp:activitypub/' ) ) {
 			return $content;
 		}
 
-		$blocks = \parse_blocks( $content );
-		$output = '';
+		$blocks         = \parse_blocks( $content );
+		$output         = '';
+		$context_filter = static function ( $context ) use ( $comment ) {
+			if ( $comment instanceof \WP_Comment ) {
+				$context['postId'] = (int) $comment->comment_post_ID;
+			}
+			return $context;
+		};
+		\add_filter( 'render_block_context', $context_filter );
 
 		foreach ( $blocks as $block ) {
 			if ( ! empty( $block['blockName'] ) && \str_starts_with( $block['blockName'], 'activitypub/' ) ) {
@@ -69,6 +77,7 @@ class Comment {
 				$output .= \serialize_block( $block );
 			}
 		}
+		\remove_filter( 'render_block_context', $context_filter );
 
 		return $output;
 	}

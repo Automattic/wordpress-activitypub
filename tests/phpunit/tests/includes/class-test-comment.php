@@ -10,12 +10,75 @@ namespace Activitypub\Tests;
 use Activitypub\Collection\Remote_Posts;
 use Activitypub\Comment;
 
+use function Activitypub\generate_image_block;
+
 /**
  * Test class for Activitypub Comment.
  *
  * @coversDefaultClass \Activitypub\Comment
  */
 class Test_Comment extends \WP_UnitTestCase {
+	/**
+	 * Images use the comment's parent post, not the current global post.
+	 *
+	 * @group activitypub
+	 * @covers ::render_blocks
+	 */
+	public function test_render_image_with_parent_post_context() {
+		$parent  = self::factory()->post->create();
+		$comment = self::factory()->comment->create_and_get( array( 'comment_post_ID' => $parent ) );
+		$this->go_to( \get_permalink( self::factory()->post->create() ) );
+		$content  = generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' );
+		$seen_id  = null;
+		$filter   = static function ( $url, $context, $entity_id ) use ( &$seen_id ) {
+			$seen_id = $entity_id;
+			return 'https://cdn.example.com/photo.jpg';
+		};
+		$download = static function () {
+			return new \WP_Error( 'cache_skipped', 'Test uses a CDN.' );
+		};
+		\add_filter( 'activitypub_pre_download_url', $download );
+		\add_filter( 'activitypub_remote_media_url', $filter, 1, 3 );
+		$rendered = Comment::render_blocks( $content, $comment );
+		\remove_filter( 'activitypub_remote_media_url', $filter, 1 );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+		$this->assertSame( (int) $comment->comment_post_ID, $seen_id );
+		$this->assertStringContainsString( 'https://cdn.example.com/photo.jpg', $rendered );
+	}
+
+	/**
+	 * Core block filters remain available to extensions when rendering comments.
+	 *
+	 * @group activitypub
+	 * @covers ::render_blocks
+	 */
+	public function test_render_blocks_preserves_core_filters() {
+		$content = generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' );
+		$filters = array( 'pre_render_block', 'render_block_data', 'render_block_context' );
+		$seen    = array();
+		$filter  = static function ( $value ) use ( &$seen ) {
+			$seen[] = \current_filter();
+			return $value;
+		};
+		foreach ( $filters as $hook ) {
+			\add_filter( $hook, $filter );
+		}
+		$pre_render = static function () {
+			return 'Filtered comment image.';
+		};
+		Comment::render_blocks( '<!-- wp:activitypub/image /-->' );
+		\add_filter( 'pre_render_block', $pre_render, 20 );
+		$rendered = Comment::render_blocks( $content );
+		\remove_filter( 'pre_render_block', $pre_render, 20 );
+		foreach ( $filters as $hook ) {
+			\remove_filter( $hook, $filter );
+		}
+
+		$this->assertSame( 'Filtered comment image.', $rendered );
+		foreach ( $filters as $hook ) {
+			$this->assertContains( $hook, $seen );
+		}
+	}
 
 	/**
 	 * Test get source id or url.

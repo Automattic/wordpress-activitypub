@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Collection;
 
+use Activitypub\Cache\Media;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Tests\Equal_Html;
@@ -21,6 +22,105 @@ use function Activitypub\object_id_to_comment;
 class Test_Interactions extends \WP_UnitTestCase {
 	use Equal_Html;
 
+	/**
+	 * Image-only comments reuse the post's lazy image cache and retain alt text.
+	 *
+	 * @group activitypub
+	 * @covers ::add_comment
+	 */
+	public function test_image_only_comment_uses_post_cache() {
+		$url                              = 'https://example.com/photo.jpg?a=1&b=2';
+		$activity                         = $this->create_test_object( 'https://example.com/image-reply' );
+		$activity['object']['attachment'] = array(
+			array(
+				'type'      => 'Document',
+				'mediaType' => 'image/jpeg',
+				'url'       => $url,
+				'name'      => 'A "cat" & her kittens',
+			),
+		);
+		unset( $activity['object']['content'] );
+		$downloads = 0;
+		$download  = static function () use ( &$downloads ) {
+			++$downloads;
+			$file = \wp_tempnam( 'comment-image.jpg' );
+			\copy( AP_TESTS_DIR . '/data/assets/test.jpg', $file );
+			return array(
+				'file'      => $file,
+				'mime_type' => 'image/jpeg',
+			);
+		};
+		Media::init();
+		\add_filter( 'activitypub_pre_download_url', $download );
+		$comment_id = Interactions::add_comment( $activity );
+		$comment    = \get_comment( $comment_id );
+		$before     = $downloads;
+		$rendered   = \apply_filters( 'comment_text', $comment->comment_content, $comment );
+		$again      = \apply_filters( 'comment_text', $comment->comment_content, $comment );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+		$cached = Media::get( $url, self::$post_id );
+		\wp_delete_comment( $comment_id, true );
+		$after_delete = Media::get( $url, self::$post_id );
+		Media::invalidate_entity( self::$post_id );
+
+		$this->assertIsInt( $comment_id );
+		$this->assertStringContainsString( '<!-- wp:activitypub/image', $comment->comment_content );
+		$this->assertSame( 0, $before );
+		$this->assertSame( 1, $downloads );
+		$this->assertStringContainsString( '/activitypub/posts/' . self::$post_id . '/', $rendered );
+		$this->assertStringContainsString( 'alt="A &quot;cat&quot; &amp; her kittens"', $rendered );
+		$this->assertSame( $rendered, $again );
+		$this->assertNotFalse( $cached );
+		$this->assertSame( $cached, $after_delete );
+	}
+
+	/**
+	 * Updating a comment replaces its image blocks without a separate cache lifecycle.
+	 *
+	 * @group activitypub
+	 * @covers ::update_comment
+	 */
+	public function test_update_comment_images() {
+		$activity                         = $this->create_test_object( 'https://example.com/update-images' );
+		$activity['object']['attachment'] = array(
+			array(
+				'mediaType' => 'image/jpeg',
+				'url'       => 'https://example.com/old.jpg',
+			),
+		);
+		$comment_id                       = Interactions::add_comment( $activity );
+		$this->assertIsInt( $comment_id );
+
+		$activity['object']['attachment'][0]['url'] = 'https://example.com/new.jpg';
+		$result                                     = Interactions::update_comment( $activity );
+		$this->assertNotWPError( $result );
+		$this->assertNotFalse( $result );
+		$content = \get_comment( $comment_id )->comment_content;
+		$this->assertStringContainsString( 'new.jpg', $content );
+		$this->assertStringNotContainsString( 'old.jpg', $content );
+
+		unset( $activity['object']['attachment'] );
+		Interactions::update_comment( $activity );
+		$this->assertStringNotContainsString( '<!-- wp:activitypub/image', \get_comment( $comment_id )->comment_content );
+	}
+
+	/**
+	 * Remote HTML cannot supply trusted image blocks or executable attributes.
+	 *
+	 * @group activitypub
+	 * @covers ::add_comment
+	 */
+	public function test_image_comment_strips_untrusted_markup() {
+		$activity                      = $this->create_test_object( 'https://example.com/hostile-image-reply' );
+		$activity['object']['content'] = '<!-- wp:activitypub/image {"url":"https://example.com/injected.jpg"} --><img src="https://example.com/injected.jpg" onerror="alert(1)"><!-- /wp:activitypub/image --><p>Safe text.</p>';
+		$comment_id                    = Interactions::add_comment( $activity );
+		$this->assertIsInt( $comment_id );
+		$content = \get_comment( $comment_id )->comment_content;
+		$this->assertStringNotContainsString( '<!-- wp:', $content );
+		$this->assertStringNotContainsString( 'injected.jpg', $content );
+		$this->assertStringNotContainsString( 'onerror', $content );
+		$this->assertStringContainsString( 'Safe text.', $content );
+	}
 
 	/**
 	 * User ID.

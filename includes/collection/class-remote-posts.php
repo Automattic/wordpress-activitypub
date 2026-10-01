@@ -386,7 +386,7 @@ class Remote_Posts {
 	 *
 	 * @return array Array of attachments with 'url', 'alt', and 'type' keys.
 	 */
-	private static function extract_attachments( $activity_object ) {
+	public static function extract_attachments( $activity_object ) {
 		$items = $activity_object['attachment'] ?? array();
 
 		/*
@@ -411,6 +411,13 @@ class Remote_Posts {
 			}
 		}
 
+		if ( \is_object( $items ) ) {
+			$items = \get_object_vars( $items );
+		}
+		if ( \is_array( $items ) && ! \array_is_list( $items ) ) {
+			$items = array( $items );
+		}
+
 		if ( empty( $items ) || ! \is_array( $items ) ) {
 			return array();
 		}
@@ -433,14 +440,16 @@ class Remote_Posts {
 				continue;
 			}
 
-			$mime_type = $attachment['mediaType'] ?? '';
+			$mime_type = \is_string( $attachment['mediaType'] ?? null ) ? $attachment['mediaType'] : '';
 
 			if ( \str_starts_with( $mime_type, 'video/' ) ) {
 				$type = 'video';
 			} elseif ( \str_starts_with( $mime_type, 'audio/' ) ) {
 				$type = 'audio';
-			} else {
+			} elseif ( '' === $mime_type || \str_starts_with( $mime_type, 'image/' ) ) {
 				$type = 'image';
+			} else {
+				$type = 'document';
 			}
 
 			$attachments[] = array(

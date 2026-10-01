@@ -84,9 +84,9 @@ class Test_Media extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test maybe_cleanup only runs for ap_post post type.
+	 * Test cleanup also removes comment images attached to a regular post.
 	 */
-	public function test_maybe_cleanup_wrong_post_type() {
+	public function test_maybe_cleanup_regular_post() {
 		// Create a regular post.
 		$post_id = self::factory()->post->create();
 
@@ -96,11 +96,10 @@ class Test_Media extends WP_UnitTestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
 		file_put_contents( $paths['basedir'] . '/test.txt', 'test' );
 
-		// Call cleanup.
-		Media::maybe_cleanup( $post_id );
+		Media::init();
+		wp_delete_post( $post_id, true );
 
-		// File should still exist (not cleaned up because wrong post type).
-		$this->assertTrue( file_exists( $paths['basedir'] . '/test.txt' ) );
+		$this->assertFalse( is_dir( $paths['basedir'] ) );
 
 		// Clean up.
 		Media::invalidate_entity( $post_id );

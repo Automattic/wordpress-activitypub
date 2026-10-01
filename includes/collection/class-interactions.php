@@ -18,6 +18,7 @@ use function Activitypub\is_post_disabled;
 use function Activitypub\is_same_host;
 use function Activitypub\object_id_to_comment;
 use function Activitypub\object_to_uri;
+use function Activitypub\process_remote_images;
 use function Activitypub\url_to_commentid;
 
 /**
@@ -160,6 +161,7 @@ class Interactions {
 		 */
 		$content                         = Sanitize::comment_content( $activity['object']['content'] ?? '' );
 		$content                         = Emoji::wrap_in_content( $content, $activity['object'] );
+		$content                         = process_remote_images( $content, Remote_Posts::extract_attachments( $activity['object'] ) );
 		$comment_data['comment_content'] = \addslashes( $content );
 
 		$result = self::persist( $comment_data, self::UPDATE );
@@ -512,7 +514,6 @@ class Interactions {
 		// the slashing is ours: wp_new_comment() unslashes the whole array.
 		$comment_author     = \wp_slash( $comment_author ?? \__( 'Anonymous', 'activitypub' ) );
 		$comment_author_url = \esc_url_raw( object_to_uri( $actor['url'] ?? $actor['id'] ) );
-		$comment_content    = null;
 		$webfinger          = Webfinger::uri_to_acct( $comment_author_url );
 
 		if ( \is_wp_error( $webfinger ) ) {
@@ -521,15 +522,11 @@ class Interactions {
 			$comment_author_email = Sanitize::webfinger( $webfinger );
 		}
 
-		if ( isset( $activity['object']['content'] ) ) {
-			/*
-			 * Sanitize before wrapping: emoji blocks are our own markup, and kses would
-			 * mangle the block comments they are made of.
-			 */
-			$content         = Sanitize::comment_content( $activity['object']['content'] );
-			$content         = Emoji::wrap_in_content( $content, $activity['object'] );
-			$comment_content = \addslashes( $content );
-		}
+		// Sanitize remote HTML before adding our own emoji and image blocks.
+		$content         = Sanitize::comment_content( $activity['object']['content'] ?? '' );
+		$content         = Emoji::wrap_in_content( $content, $activity['object'] );
+		$content         = process_remote_images( $content, Remote_Posts::extract_attachments( $activity['object'] ) );
+		$comment_content = \addslashes( $content );
 
 		return array(
 			'comment_author'       => $comment_author,

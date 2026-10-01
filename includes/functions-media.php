@@ -51,9 +51,15 @@ function is_remote_url( $url ) {
  * @return string The wrapped image block.
  */
 function generate_image_block( $url, $img_html ) {
-	return \sprintf(
-		'<!-- wp:activitypub/image %s -->%s<!-- /wp:activitypub/image -->',
-		\wp_json_encode( array( 'url' => $url ) ),
+	$processor = new \WP_HTML_Tag_Processor( $img_html );
+	$processor->next_tag( array( 'tag_name' => 'IMG' ) );
+
+	return \get_comment_delimited_block_content(
+		'activitypub/image',
+		array(
+			'url' => $url,
+			'alt' => $processor->get_attribute( 'alt' ) ?? '',
+		),
 		$img_html
 	);
 }
@@ -148,6 +154,10 @@ function process_remote_images( $content, $attachments = array() ) {
 	// Append attachments not already in content.
 	if ( ! empty( $attachments ) ) {
 		foreach ( $attachments as $attachment ) {
+			if ( 'image' !== ( $attachment['type'] ?? 'image' ) ) {
+				continue;
+			}
+
 			$url = $attachment['url'] ?? '';
 			if ( empty( $url ) || isset( $seen_urls[ $url ] ) ) {
 				continue;

@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Display images attached to Fediverse comments, with local caching and image descriptions.
