@@ -391,6 +391,49 @@ class Test_Proxy extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Inline actors can retire their own host's entries, but not another host's.
+	 *
+	 * @dataProvider inline_actor_provider
+	 * @covers ::delete
+	 *
+	 * @param array $actor    The embedded actor reference.
+	 * @param bool  $expected Whether it may retire the entry.
+	 */
+	public function test_delete_validates_inline_actors( $actor, $expected ) {
+		$id = $this->note( 'https://example.com/notes/inline-actor' );
+		Proxy::get( $id );
+
+		$this->assertSame( $expected, Proxy::delete( $id, $actor ) );
+		Proxy::get( $id );
+		$this->assertSame( $expected ? 2 : 1, $this->requests );
+	}
+
+	/**
+	 * Embedded actors used to authorize cache invalidation.
+	 *
+	 * @return array The actor references and expected decisions.
+	 */
+	public function inline_actor_provider() {
+		return array(
+			'same host'    => array(
+				array(
+					'id'   => 'https://example.com/users/alice',
+					'type' => 'Person',
+				),
+				true,
+			),
+			'foreign host' => array(
+				array(
+					'id'   => 'https://example.org/users/mallory',
+					'type' => 'Person',
+				),
+				false,
+			),
+			'missing id'   => array( array( 'type' => 'Person' ), false ),
+		);
+	}
+
+	/**
 	 * A media-typed object cannot retire an entry on another host.
 	 *
 	 * `object_to_uri()` answers with `url` for an `Image` while the cache is keyed on `id`, so a
@@ -600,7 +643,7 @@ class Test_Proxy extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * JSON scalars and empty documents are rejected and remembered as invalid JSON.
+	 * JSON scalars, lists, and empty documents are rejected and remembered as invalid JSON.
 	 *
 	 * @dataProvider invalid_json_document_provider
 	 * @covers ::get
@@ -640,6 +683,8 @@ class Test_Proxy extends \WP_UnitTestCase {
 			'false'        => array( 'false' ),
 			'null'         => array( 'null' ),
 			'empty array'  => array( '[]' ),
+			'scalar list'  => array( '[1, 2]' ),
+			'object list'  => array( '[{"id":"https://example.com/notes/invalid","type":"Note"}]' ),
 			'empty object' => array( '{}' ),
 		);
 	}

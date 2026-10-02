@@ -8,6 +8,7 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Http;
+use Activitypub\Proxy;
 
 /**
  * Test class for Http.
@@ -15,6 +16,61 @@ use Activitypub\Http;
  * @coversDefaultClass \Activitypub\Http
  */
 class Test_Http extends \WP_UnitTestCase {
+	use Remote_Request_Stub;
+
+	/**
+	 * The legacy helper preserves cache bypasses and caller-supplied lifetimes.
+	 *
+	 * @dataProvider remote_object_cache_provider
+	 * @expectedDeprecated Activitypub\Http::get_remote_object
+	 * @covers ::get_remote_object
+	 *
+	 * @param bool|int $cached The legacy caching argument.
+	 * @param int      $ttl    The expected cache lifetime.
+	 */
+	public function test_get_remote_object_preserves_cache_settings( $cached, $ttl ) {
+		$this->stub_remote_requests();
+		$id                     = 'https://example.com/notes/legacy';
+		$this->responses[ $id ] = array(
+			'id'   => $id,
+			'type' => 'Note',
+		);
+		$started                = \time();
+
+		$first  = Http::get_remote_object( $id, $cached );
+		$second = Http::get_remote_object( $id, $cached );
+		$key    = 'activitypub_object_' . \hash( 'sha256', $id );
+		$entry  = \get_transient( $key );
+		Proxy::get( $id );
+		$this->unstub_remote_requests();
+
+		$this->assertSame( $this->responses[ $id ], $first );
+		$this->assertSame( $first, $second );
+		if ( 0 === $ttl ) {
+			$this->assertFalse( $entry, 'One-shot fetches must not populate the shared cache.' );
+			$this->assertSame( 3, $this->requests );
+		} else {
+			$this->assertSame( $first, $entry );
+			$this->assertSame( 1, $this->requests );
+			$expires = (int) \get_option( '_transient_timeout_' . $key );
+			$this->assertGreaterThanOrEqual( $started + $ttl, $expires );
+			$this->assertLessThanOrEqual( \time() + $ttl, $expires );
+		}
+	}
+
+	/**
+	 * Supported legacy caching arguments.
+	 *
+	 * @return array The cache settings.
+	 */
+	public function remote_object_cache_provider() {
+		return array(
+			'disabled' => array( false, 0 ),
+			'zero'     => array( 0, 0 ),
+			'enabled'  => array( true, HOUR_IN_SECONDS ),
+			'duration' => array( 5 * MINUTE_IN_SECONDS, 5 * MINUTE_IN_SECONDS ),
+		);
+	}
 
 	/**
 	 * When caching is not requested (the default), the response is not stored in a transient — a

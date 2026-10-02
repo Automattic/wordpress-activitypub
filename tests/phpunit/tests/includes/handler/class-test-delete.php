@@ -843,6 +843,60 @@ class Test_Delete extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Inline actor data cannot substitute for confirmation at the actor's URL.
+	 *
+	 * @dataProvider inline_actor_deletion_provider
+	 * @covers ::maybe_delete_follower
+	 *
+	 * @param string $type   The inline actor's claimed type.
+	 * @param int    $status The HTTP status at the actor's URL.
+	 * @param bool   $purged Whether the cache should be cleared.
+	 */
+	public function test_delete_inline_actor_requires_remote_confirmation( $type, $status, $purged ) {
+		$this->stub_remote_requests();
+		$id                     = 'https://example.com/users/inline-delete';
+		$actor                  = array(
+			'id'   => $id,
+			'type' => 'Person',
+		);
+		$this->responses[ $id ] = $actor;
+		Proxy::get( $id );
+
+		$this->responses[ $id ] = 200 === $status ? $actor : $status;
+		Delete::handle_delete(
+			array(
+				'type'   => 'Delete',
+				'actor'  => array(
+					'id'   => $id,
+					'type' => $type,
+				),
+				'object' => $actor,
+			),
+			array( self::$user_id )
+		);
+		$confirmed = $this->requests;
+
+		$this->responses[ $id ] = $actor;
+		Proxy::get( $id );
+		$this->unstub_remote_requests();
+
+		$this->assertSame( 2, $confirmed, 'The inline claim must be checked at the actor URL.' );
+		$this->assertSame( $confirmed + (int) $purged, $this->requests );
+	}
+
+	/**
+	 * Untrusted inline claims and confirmed actor deletions.
+	 *
+	 * @return array The inline actor and remote confirmation cases.
+	 */
+	public function inline_actor_deletion_provider() {
+		return array(
+			'forged tombstone' => array( 'Tombstone', 200, false ),
+			'confirmed actor'  => array( 'Person', 410, true ),
+		);
+	}
+
+	/**
 	 * Confirmed and unconfirmed remote deletions.
 	 *
 	 * @return array Test cases.

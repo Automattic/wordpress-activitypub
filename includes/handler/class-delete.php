@@ -246,15 +246,17 @@ class Delete {
 	 * @return bool True on success, false otherwise.
 	 */
 	public static function maybe_delete_follower( $activity ) {
-		// Verify that Actor is deleted.
-		if ( ! Tombstone::exists( $activity['actor'] ) ) {
+		$actor = object_to_uri( $activity['actor'] ?? '' );
+
+		// Confirm at the actor's URI; an inline Tombstone is only an untrusted claim.
+		if ( ! \is_string( $actor ) || ! $actor || ! Tombstone::exists( $actor ) ) {
 			return false;
 		}
 
 		// The actor is gone from its own host, so the cached copy goes with it.
-		Proxy::purge( $activity['actor'] );
+		Proxy::purge( $actor );
 
-		$follower = Remote_Actors::get_by_uri( $activity['actor'] );
+		$follower = Remote_Actors::get_by_uri( $actor );
 
 		if ( ! \is_wp_error( $follower ) ) {
 			self::maybe_delete_interactions( $follower->ID );

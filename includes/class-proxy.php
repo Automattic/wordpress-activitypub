@@ -191,14 +191,14 @@ class Proxy {
 	 * @since unreleased
 	 *
 	 * @param string|array|null $id    The ActivityPub id, or an object with an id.
-	 * @param string            $actor The actor the activity came from.
+	 * @param string|array      $actor The actor the activity came from.
 	 *
 	 * @return bool Whether an entry was removed.
 	 */
 	public static function delete( $id, $actor ) {
 		$url = self::entry_url( $id );
 
-		if ( '' === $url || ! is_same_host( (string) $actor, $url ) ) {
+		if ( '' === $url || ! is_same_host( $actor, $url ) ) {
 			return false;
 		}
 
@@ -421,7 +421,7 @@ class Proxy {
 
 		$data = \json_decode( \wp_remote_retrieve_body( $response ), true );
 
-		if ( ! \is_array( $data ) || ! $data ) {
+		if ( ! \is_array( $data ) || ! $data || \array_is_list( $data ) ) {
 			return new \WP_Error(
 				'activitypub_invalid_json',
 				\__( 'No valid JSON data', 'activitypub' ),

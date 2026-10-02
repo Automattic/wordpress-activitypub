@@ -627,8 +627,9 @@ class Test_Update extends \WP_UnitTestCase {
 	 * @covers ::handle_update
 	 *
 	 * @param string|array $update_object The `object` of the Update.
+	 * @param string|array $actor         The actor sending the Update.
 	 */
-	public function test_handle_update_drops_the_cached_object( $update_object ) {
+	public function test_handle_update_drops_the_cached_object( $update_object, $actor = 'https://example.com/users/alice' ) {
 		$this->stub_remote_requests();
 		$id                     = 'https://example.com/notes/1';
 		$this->responses[ $id ] = array(
@@ -640,7 +641,7 @@ class Test_Update extends \WP_UnitTestCase {
 		Update::handle_update(
 			array(
 				'type'   => 'Update',
-				'actor'  => 'https://example.com/users/alice',
+				'actor'  => $actor,
 				'object' => $update_object,
 			),
 			array( 1 ),
@@ -660,8 +661,15 @@ class Test_Update extends \WP_UnitTestCase {
 	 */
 	public function update_object_provider() {
 		return array(
-			'bare id' => array( 'https://example.com/notes/1' ),
-			'inlined' => array(
+			'inline actor' => array(
+				'https://example.com/notes/1',
+				array(
+					'id'   => 'https://example.com/users/alice',
+					'type' => 'Person',
+				),
+			),
+			'bare id'      => array( 'https://example.com/notes/1' ),
+			'inlined'      => array(
 				array(
 					'id'   => 'https://example.com/notes/1',
 					'type' => 'Note',

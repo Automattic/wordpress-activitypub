@@ -293,8 +293,8 @@ class Http {
 
 		$args = array( 'cached' => (bool) $cached );
 
-		if ( \is_int( $cached ) && $cached > 0 ) {
-			$args['ttl'] = $cached;
+		if ( false === $cached || \is_int( $cached ) ) {
+			$args['ttl'] = (int) $cached;
 		}
 
 		return Proxy::get( $url_or_object, $args );
