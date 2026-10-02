@@ -9,6 +9,7 @@ namespace Activitypub\Conversation;
 
 use Activitypub\Http;
 
+use function Activitypub\is_activity_object;
 use function Activitypub\object_to_uri;
 
 /**
@@ -60,15 +61,24 @@ class In_Reply_To implements Source {
 		$depth = 0;
 
 		while ( $this->supports( $activity_object ) && $depth < self::MAX_DEPTH ) {
-			$uri = object_to_uri( $activity_object['inReplyTo'] );
+			$parent = $activity_object['inReplyTo'];
+			$uri    = object_to_uri( $parent );
 
 			// Objects claiming to reply to each other would otherwise climb forever.
-			if ( ! $uri || isset( $seen[ $uri ] ) ) {
-				break;
+			if ( \is_string( $uri ) && $uri ) {
+				if ( isset( $seen[ $uri ] ) ) {
+					break;
+				}
+				$seen[ $uri ] = true;
 			}
 
-			$seen[ $uri ] = true;
-			$parent       = Http::get_remote_object( $uri );
+			// Embedded objects can guide the climb; the builder validates collected objects separately.
+			if ( ! \is_array( $parent ) || ! is_activity_object( $parent ) ) {
+				if ( ! \is_string( $uri ) || ! $uri ) {
+					break;
+				}
+				$parent = Http::get_remote_object( $uri );
+			}
 
 			if ( \is_wp_error( $parent ) || ! \is_array( $parent ) ) {
 				break;

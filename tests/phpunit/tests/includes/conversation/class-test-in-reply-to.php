@@ -20,6 +20,86 @@ class Test_In_Reply_To extends \WP_UnitTestCase {
 	use Remote_Object_Stub;
 
 	/**
+	 * Embedded parents lead to further ancestors without being fetched first.
+	 *
+	 * @dataProvider embedded_parent_id_provider
+	 * @covers ::parse
+	 *
+	 * @param string|null $id Optional parent ID.
+	 */
+	public function test_climbs_through_an_embedded_parent( $id ) {
+		$root   = array( 'id' => 'https://remote.example/notes/1' );
+		$parent = array(
+			'type'      => 'Note',
+			'content'   => 'Embedded parent.',
+			'inReplyTo' => $root['id'],
+		);
+		if ( $id ) {
+			$parent['id'] = $id;
+		}
+		$this->documents[ $root['id'] ] = $root;
+
+		$this->assertSame( array( $parent, $root ), ( new In_Reply_To() )->parse( array( 'inReplyTo' => $parent ) ) );
+		$this->assertSame( array( $root['id'] ), $this->requested );
+	}
+
+	/**
+	 * Embedded parents with and without an identifier.
+	 *
+	 * @return array Test cases.
+	 */
+	public function embedded_parent_id_provider() {
+		return array(
+			'with id'    => array( 'https://remote.example/notes/2' ),
+			'without id' => array( null ),
+		);
+	}
+
+	/**
+	 * Bare object and Link references are still dereferenced.
+	 *
+	 * @covers ::parse
+	 */
+	public function test_dereferences_parent_object_and_link_references() {
+		$id                     = 'https://remote.example/notes/1';
+		$this->documents[ $id ] = array(
+			'id'   => $id,
+			'type' => 'Note',
+		);
+		foreach ( array(
+			array( 'id' => $id ),
+			array(
+				'type' => 'Link',
+				'href' => $id,
+			),
+		) as $reference ) {
+			$this->assertSame( array( $this->documents[ $id ] ), ( new In_Reply_To() )->parse( array( 'inReplyTo' => $reference ) ) );
+		}
+		$this->assertSame( array( $id, $id ), $this->requested );
+	}
+
+	/**
+	 * Anonymous embedded ancestors cannot bypass the depth limit.
+	 *
+	 * @covers ::parse
+	 */
+	public function test_bounds_anonymous_embedded_ancestors() {
+		$object = array(
+			'type'    => 'Note',
+			'content' => 'Root.',
+		);
+		for ( $i = 0; $i < In_Reply_To::MAX_DEPTH + 3; ++$i ) {
+			$object = array(
+				'type'      => 'Note',
+				'inReplyTo' => $object,
+			);
+		}
+
+		$this->assertCount( In_Reply_To::MAX_DEPTH, ( new In_Reply_To() )->parse( $object ) );
+		$this->assertSame( array(), $this->requested );
+	}
+
+	/**
 	 * Malformed scalar references are unsupported and never fetched.
 	 *
 	 * @covers ::supports

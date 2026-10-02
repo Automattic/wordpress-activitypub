@@ -21,6 +21,56 @@ class Test_Builder extends \WP_UnitTestCase {
 	use Remote_Object_Stub;
 
 	/**
+	 * Embedded traversal data never replaces the object fetched under its own ID.
+	 *
+	 * @dataProvider embedded_source_provider
+	 * @covers ::build
+	 *
+	 * @param string $source The source to run.
+	 */
+	public function test_validates_objects_discovered_through_embedded_sources( $source ) {
+		$seed                     = 'https://remote.example/notes/1';
+		$id                       = 'https://victim.example/notes/2';
+		$embedded                 = array(
+			'id'           => $id,
+			'type'         => 'Note',
+			'attributedTo' => 'https://victim.example/users/bob',
+			'content'      => 'Forged content.',
+		);
+		$this->documents[ $seed ] = array(
+			'id'           => $seed,
+			'attributedTo' => 'https://remote.example/users/alice',
+		);
+		if ( 'replies' === $source ) {
+			$this->documents[ $seed ]['replies'] = array(
+				'type'  => 'Collection',
+				'items' => array( $embedded ),
+			);
+		} else {
+			$this->documents[ $seed ]['inReplyTo'] = $embedded;
+		}
+		$this->documents[ $id ] = \array_merge( $embedded, array( 'content' => 'Canonical content.' ) );
+
+		$objects = ( new Builder( $seed ) )->build( array( $source ) );
+		$by_id   = \array_column( $objects, null, 'id' );
+		$this->assertCount( 2, $objects );
+		$this->assertSame( 'Canonical content.', $by_id[ $id ]['content'] );
+		$this->assertSame( array( $seed, $id ), $this->requested );
+	}
+
+	/**
+	 * Sources that can carry embedded objects.
+	 *
+	 * @return array Test cases.
+	 */
+	public function embedded_source_provider() {
+		return array(
+			'replies'     => array( 'replies' ),
+			'in_reply_to' => array( 'in_reply_to' ),
+		);
+	}
+
+	/**
 	 * Malformed authors are rejected, and malformed parents do not break ordering.
 	 *
 	 * @covers ::build

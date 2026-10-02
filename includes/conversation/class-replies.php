@@ -79,7 +79,7 @@ class Replies implements Source {
 	 *
 	 * @param array $activity_object The object whose replies to read.
 	 * @param int   $depth           How many levels below the starting object this is.
-	 * @param array $seen            Collection URIs already read, keyed by URI.
+	 * @param array $seen            Visited collections, keyed by URI when available.
 	 *
 	 * @return array The ActivityPub objects found.
 	 */
@@ -88,17 +88,23 @@ class Replies implements Source {
 			return array();
 		}
 
-		$uri = object_to_uri( $activity_object['replies'] );
+		$collection = $activity_object['replies'];
+		$uri        = object_to_uri( $collection );
 
 		// A reply naming an ancestor's collection would otherwise walk the thread in circles.
-		if ( ! $uri || isset( $seen[ $uri ] ) ) {
-			return array();
+		if ( \is_string( $uri ) && $uri ) {
+			if ( isset( $seen[ $uri ] ) ) {
+				return array();
+			}
+			$seen[ $uri ] = true;
+		} else {
+			// Anonymous embedded collections still consume the collection budget.
+			$seen[] = true;
 		}
 
-		$seen[ $uri ] = true;
-		$found        = array();
+		$found = array();
 
-		foreach ( Collection_Reader::read( $uri ) as $reply ) {
+		foreach ( Collection_Reader::read( $collection ) as $reply ) {
 			if ( \is_string( $reply ) ) {
 				$reply = Http::get_remote_object( $reply );
 			}

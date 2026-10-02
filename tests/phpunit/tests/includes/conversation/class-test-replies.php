@@ -20,6 +20,104 @@ class Test_Replies extends \WP_UnitTestCase {
 	use Remote_Object_Stub;
 
 	/**
+	 * Embedded replies are read directly, including anonymous nested collections.
+	 *
+	 * @dataProvider embedded_collection_id_provider
+	 * @covers ::parse
+	 *
+	 * @param string|null $id Optional collection ID.
+	 */
+	public function test_reads_embedded_replies_without_refetching( $id ) {
+		$grandchild = array( 'id' => 'https://remote.example/notes/3' );
+		$reply      = array(
+			'id'      => 'https://remote.example/notes/2',
+			'replies' => array(
+				'type'  => 'Collection',
+				'items' => array( $grandchild ),
+			),
+		);
+		$collection = array(
+			'type'  => 'Collection',
+			'first' => array(
+				'type'  => 'CollectionPage',
+				'items' => array( $reply ),
+			),
+		);
+		if ( $id ) {
+			$collection['id'] = $id;
+		}
+
+		$this->assertSame( array( $reply, $grandchild ), ( new Replies() )->parse( array( 'replies' => $collection ) ) );
+		$this->assertSame( array(), $this->requested );
+	}
+
+	/**
+	 * Embedded collections with and without an identifier.
+	 *
+	 * @return array Test cases.
+	 */
+	public function embedded_collection_id_provider() {
+		return array(
+			'with id'    => array( 'https://remote.example/notes/1/replies' ),
+			'without id' => array( null ),
+		);
+	}
+
+	/**
+	 * Anonymous collections still count toward the collection budget.
+	 *
+	 * @covers ::parse
+	 */
+	public function test_bounds_anonymous_replies_collections() {
+		$children = array();
+		for ( $i = 0; $i < Replies::MAX_COLLECTIONS + 5; ++$i ) {
+			$children[] = array(
+				'id'      => "https://remote.example/notes/$i",
+				'replies' => array(
+					'type'  => 'Collection',
+					'items' => array( array( 'id' => "https://remote.example/notes/$i/child" ) ),
+				),
+			);
+		}
+		$items = ( new Replies() )->parse(
+			array(
+				'replies' => array(
+					'type'  => 'Collection',
+					'items' => $children,
+				),
+			)
+		);
+
+		$this->assertCount( \count( $children ) + Replies::MAX_COLLECTIONS - 1, $items );
+		$this->assertSame( array(), $this->requested );
+	}
+
+	/**
+	 * Embedded collection IDs use the same cycle guard as URI references.
+	 *
+	 * @covers ::parse
+	 */
+	public function test_stops_on_an_embedded_collection_cycle() {
+		$id    = 'https://remote.example/notes/1/replies';
+		$reply = array(
+			'id'      => 'https://remote.example/notes/2',
+			'replies' => $id,
+		);
+		$items = ( new Replies() )->parse(
+			array(
+				'replies' => array(
+					'id'    => $id,
+					'type'  => 'Collection',
+					'items' => array( $reply ),
+				),
+			)
+		);
+
+		$this->assertSame( array( $reply ), $items );
+		$this->assertSame( array(), $this->requested );
+	}
+
+	/**
 	 * Malformed scalar references are unsupported and never fetched.
 	 *
 	 * @covers ::supports
