@@ -105,8 +105,16 @@ class Replies implements Source {
 		$found = array();
 
 		foreach ( Collection_Reader::read( $collection ) as $reply ) {
-			if ( \is_string( $reply ) || ( \is_array( $reply ) && 'Link' === ( $reply['type'] ?? '' ) ) ) {
-				$uri = object_to_uri( $reply );
+			// Identity fields alone name a reference, not an object whose replies are available.
+			if ( \is_string( $reply ) || ( \is_array( $reply ) && ( 'Link' === ( $reply['type'] ?? '' ) || ! \array_diff_key(
+				$reply,
+				array(
+					'id'       => true,
+					'type'     => true,
+					'@context' => true,
+				)
+			) ) ) ) {
+				$uri = \is_array( $reply ) && 'Link' !== ( $reply['type'] ?? '' ) ? ( $reply['id'] ?? object_to_uri( $reply ) ) : object_to_uri( $reply );
 				if ( ! \is_string( $uri ) || ! $uri ) {
 					continue;
 				}

@@ -28,7 +28,10 @@ class Test_Replies extends \WP_UnitTestCase {
 	 * @param string|null $id Optional collection ID.
 	 */
 	public function test_reads_embedded_replies_without_refetching( $id ) {
-		$grandchild = array( 'id' => 'https://remote.example/notes/3' );
+		$grandchild = array(
+			'id'      => 'https://remote.example/notes/3',
+			'content' => 'Embedded reply.',
+		);
 		$reply      = array(
 			'id'      => 'https://remote.example/notes/2',
 			'replies' => array(
@@ -75,7 +78,12 @@ class Test_Replies extends \WP_UnitTestCase {
 				'id'      => "https://remote.example/notes/$i",
 				'replies' => array(
 					'type'  => 'Collection',
-					'items' => array( array( 'id' => "https://remote.example/notes/$i/child" ) ),
+					'items' => array(
+						array(
+							'id'      => "https://remote.example/notes/$i/child",
+							'content' => 'Embedded reply.',
+						),
+					),
 				),
 			);
 		}
@@ -134,26 +142,38 @@ class Test_Replies extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * URI and Link items must be resolved to discover their own replies collections.
+	 * Reply references must be resolved to discover their own replies collections.
 	 *
 	 * @dataProvider reply_reference_provider
 	 * @covers ::parse
 	 *
-	 * @param bool $linked Whether to supply Link objects instead of URI strings.
+	 * @param string $shape The reference shape.
 	 */
-	public function test_descends_into_uri_replies( $linked ) {
+	public function test_descends_into_uri_replies( $shape ) {
 		$reply      = 'https://remote.example/notes/2';
 		$grandchild = 'https://remote.example/notes/3';
+		$references = array( $reply, $grandchild );
+		foreach ( $references as &$reference ) {
+			if ( 'Link' === $shape ) {
+				$reference = array(
+					'type' => 'Link',
+					'href' => $reference,
+				);
+			} elseif ( 'id' === $shape ) {
+				$reference = array( 'id' => $reference );
+			} elseif ( 'URI' !== $shape ) {
+				$reference = array(
+					'id'   => $reference,
+					'type' => $shape,
+				);
+			}
+		}
+		unset( $reference );
 		$this->documents['https://remote.example/notes/1/replies'] = array(
 			'type'  => 'Collection',
 			'first' => array(
 				'type'  => 'CollectionPage',
-				'items' => array(
-					$linked ? array(
-						'type' => 'Link',
-						'href' => $reply,
-					) : $reply,
-				),
+				'items' => array( $references[0] ),
 			),
 		);
 		$this->documents[ $reply ]                                 = array(
@@ -162,12 +182,7 @@ class Test_Replies extends \WP_UnitTestCase {
 		);
 		$this->documents['https://remote.example/notes/2/replies'] = array(
 			'type'  => 'Collection',
-			'items' => array(
-				$linked ? array(
-					'type' => 'Link',
-					'href' => $grandchild,
-				) : $grandchild,
-			),
+			'items' => array( $references[1] ),
 		);
 		$this->documents[ $grandchild ]                            = array( 'id' => $grandchild );
 
@@ -187,8 +202,14 @@ class Test_Replies extends \WP_UnitTestCase {
 	 */
 	public function reply_reference_provider() {
 		return array(
-			'URI'  => array( false ),
-			'Link' => array( true ),
+			'URI'                    => array( 'URI' ),
+			'Link'                   => array( 'Link' ),
+			'id-only object'         => array( 'id' ),
+			'typed object reference' => array( 'Note' ),
+			'Image reference'        => array( 'Image' ),
+			'Audio reference'        => array( 'Audio' ),
+			'Video reference'        => array( 'Video' ),
+			'Document reference'     => array( 'Document' ),
 		);
 	}
 
@@ -269,8 +290,14 @@ class Test_Replies extends \WP_UnitTestCase {
 			'id'           => 'https://remote.example/notes/1/replies',
 			'type'         => 'OrderedCollection',
 			'orderedItems' => array(
-				array( 'id' => 'https://remote.example/notes/2' ),
-				array( 'id' => 'https://remote.example/notes/3' ),
+				array(
+					'id'      => 'https://remote.example/notes/2',
+					'content' => 'Embedded reply.',
+				),
+				array(
+					'id'      => 'https://remote.example/notes/3',
+					'content' => 'Embedded reply.',
+				),
 			),
 		);
 
@@ -307,7 +334,12 @@ class Test_Replies extends \WP_UnitTestCase {
 		$this->documents['https://remote.example/notes/2/replies'] = array(
 			'id'           => 'https://remote.example/notes/2/replies',
 			'type'         => 'OrderedCollection',
-			'orderedItems' => array( array( 'id' => 'https://remote.example/notes/3' ) ),
+			'orderedItems' => array(
+				array(
+					'id'      => 'https://remote.example/notes/3',
+					'content' => 'Embedded reply.',
+				),
+			),
 		);
 
 		$source = new Replies();
@@ -414,7 +446,12 @@ class Test_Replies extends \WP_UnitTestCase {
 			$this->documents[ "https://remote.example/notes/$i/replies" ] = array(
 				'id'           => "https://remote.example/notes/$i/replies",
 				'type'         => 'OrderedCollection',
-				'orderedItems' => array( array( 'id' => "https://remote.example/notes/$i/child" ) ),
+				'orderedItems' => array(
+					array(
+						'id'      => "https://remote.example/notes/$i/child",
+						'content' => 'Embedded reply.',
+					),
+				),
 			);
 		}
 

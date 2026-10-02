@@ -113,10 +113,99 @@ class Test_Collection_Reader extends \WP_UnitTestCase {
 	 */
 	public function page_reference_provider() {
 		return array(
-			'object' => array( 'id', null ),
-			'link'   => array( 'href', 'Link' ),
-			'href'   => array( 'href', null ),
+			'object'                   => array( 'id', null ),
+			'link'                     => array( 'href', 'Link' ),
+			'href'                     => array( 'href', null ),
+			'typed collection'         => array( 'id', 'Collection' ),
+			'typed ordered collection' => array( 'id', 'OrderedCollection' ),
+			'typed page'               => array( 'id', 'CollectionPage' ),
+			'typed ordered page'       => array( 'id', 'OrderedCollectionPage' ),
 		);
+	}
+
+	/**
+	 * A fetched collection's own identifier also participates in cycle detection.
+	 *
+	 * @dataProvider initial_cycle_reference_provider
+	 * @covers ::read
+	 *
+	 * @param bool $linked Whether the initial reference is a Link.
+	 */
+	public function test_stops_on_requested_and_canonical_collection_cycles( $linked ) {
+		$uri                           = 'https://remote.example/alias';
+		$canonical                     = 'https://remote.example/collection';
+		$document                      = array(
+			'id'    => $canonical,
+			'type'  => 'Collection',
+			'items' => array( 'https://remote.example/notes/1' ),
+			'next'  => $linked ? $uri : $canonical,
+		);
+		$this->documents[ $uri ]       = $document;
+		$this->documents[ $canonical ] = $document;
+
+		$this->assertSame(
+			$document['items'],
+			Collection_Reader::read(
+				$linked ? array(
+					'type' => 'Link',
+					'href' => $uri,
+				) : $uri
+			)
+		);
+		$this->assertSame( array( $uri ), $this->requested );
+	}
+
+	/**
+	 * A later URL alias must not contribute the same canonical page twice.
+	 *
+	 * @covers ::read
+	 */
+	public function test_stops_when_a_later_alias_returns_an_already_read_page() {
+		$first                     = 'https://remote.example/page/1';
+		$alias                     = 'https://remote.example/page/alias';
+		$this->documents[ $first ] = array(
+			'id'    => $first,
+			'type'  => 'CollectionPage',
+			'items' => array( 'https://remote.example/notes/1' ),
+			'next'  => $alias,
+		);
+		$this->documents[ $alias ] = $this->documents[ $first ];
+
+		$this->assertSame( $this->documents[ $first ]['items'], Collection_Reader::read( $first ) );
+		$this->assertSame( array( $first, $alias ), $this->requested );
+	}
+
+	/**
+	 * Cycles through the requested URL and the fetched document's id.
+	 *
+	 * @return array The initial reference forms.
+	 */
+	public function initial_cycle_reference_provider() {
+		return array(
+			'canonical id cycle' => array( false ),
+			'Link URL cycle'     => array( true ),
+		);
+	}
+
+	/**
+	 * Explicitly empty embedded collections are complete and need no fetch.
+	 *
+	 * @covers ::read
+	 */
+	public function test_does_not_refetch_explicitly_empty_embedded_collections() {
+		foreach ( array( 'items', 'orderedItems' ) as $property ) {
+			$this->assertSame(
+				array(),
+				Collection_Reader::read(
+					array(
+						'id'      => 'https://remote.example/empty',
+						'type'    => 'Collection',
+						$property => array(),
+					)
+				)
+			);
+		}
+		$this->assertSame( array(), $this->requested );
 	}
 
 	/**

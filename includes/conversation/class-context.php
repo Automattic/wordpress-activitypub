@@ -7,10 +7,6 @@
 
 namespace Activitypub\Conversation;
 
-use Activitypub\Http;
-
-use function Activitypub\is_collection;
-
 /**
  * Reaches a conversation through the `context` property.
  *
@@ -53,15 +49,6 @@ class Context implements Source {
 			return array();
 		}
 
-		$context = $activity_object['context'];
-		if ( ! \is_array( $context ) || ! is_collection( $context ) ) {
-			$context = Http::get_remote_object( $context );
-		}
-
-		if ( \is_wp_error( $context ) || ! \is_array( $context ) || ! is_collection( $context ) ) {
-			return array();
-		}
-
-		return Collection_Reader::read( $context );
+		return Collection_Reader::read( $activity_object['context'] );
 	}
 }

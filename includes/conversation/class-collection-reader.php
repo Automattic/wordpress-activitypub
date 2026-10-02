@@ -57,15 +57,18 @@ class Collection_Reader {
 		$page     = self::fetch( $collection );
 		$requests = 1;
 
-		// Seeded whichever way the collection arrived, or a `next` naming the document we already
-		// hold is fetched once before the cycle guard notices. `Context` hands us a fetched array.
-		$id = \is_string( $collection ) ? $collection : ( $page['id'] ?? '' );
+		$id = object_to_uri( $collection );
 
 		if ( \is_string( $id ) && $id ) {
 			$seen[ $id ] = true;
 		}
 
 		while ( $page ) {
+			// A fetched document can have a different id than the reference used to reach it.
+			$id = $page['id'] ?? null;
+			if ( \is_string( $id ) && $id ) {
+				$seen[ $id ] = true;
+			}
 			$page_items = $page['orderedItems'] ?? $page['items'] ?? array();
 			// JSON-LD may unwrap a single object or URI instead of returning a list.
 			if ( \is_string( $page_items ) || ( \is_array( $page_items ) && ! \array_is_list( $page_items ) ) ) {
@@ -101,10 +104,16 @@ class Collection_Reader {
 				if ( isset( $seen[ $next_id ] ) ) {
 					break;
 				}
-				$seen[ $next_id ] = true;
 			}
 			$page = self::fetch( $next );
 			++$requests;
+			$id = $page['id'] ?? null;
+			if ( \is_string( $id ) && isset( $seen[ $id ] ) ) {
+				break;
+			}
+			if ( \is_string( $next_id ) && $next_id ) {
+				$seen[ $next_id ] = true;
+			}
 		}
 
 		return $items;
@@ -119,7 +128,15 @@ class Collection_Reader {
 	 */
 	private static function fetch( $document ) {
 		// Embedded collections are already available; object and Link references need a fetch.
-		if ( \is_array( $document ) && is_collection( $document ) ) {
+		if ( \is_array( $document ) && is_collection( $document ) && \array_intersect_key(
+			$document,
+			array(
+				'items'        => true,
+				'orderedItems' => true,
+				'first'        => true,
+				'next'         => true,
+			)
+		) ) {
 			return $document;
 		}
 

@@ -58,18 +58,49 @@ class Test_Context extends \WP_UnitTestCase {
 	/**
 	 * A bare object reference still needs to be resolved.
 	 *
+	 * @dataProvider context_reference_type_provider
 	 * @covers ::parse
+	 *
+	 * @param string|null $type The reference's optional collection type.
 	 */
-	public function test_resolves_a_context_object_reference() {
+	public function test_resolves_a_context_object_reference( $type ) {
 		$uri                     = 'https://remote.example/context/1';
 		$this->documents[ $uri ] = array(
 			'id'    => $uri,
 			'type'  => 'Collection',
 			'items' => array( array( 'id' => 'https://remote.example/notes/1' ) ),
 		);
-		$items                   = ( new Context() )->parse( array( 'context' => array( 'id' => $uri ) ) );
+		$reference               = array( 'id' => $uri );
+		if ( $type ) {
+			$reference['type'] = $type;
+		}
+		$items = ( new Context() )->parse( array( 'context' => $reference ) );
 		$this->assertCount( 1, $items );
 		$this->assertSame( array( $uri ), $this->requested );
+	}
+
+	/**
+	 * Bare and typed collection references.
+	 *
+	 * @return array The reference types.
+	 */
+	public function context_reference_type_provider() {
+		return array(
+			'id only'          => array( null ),
+			'typed collection' => array( 'Collection' ),
+		);
+	}
+
+	/**
+	 * Malformed identifiers inside context references must not reach the HTTP client.
+	 *
+	 * @covers ::parse
+	 */
+	public function test_rejects_malformed_context_identifiers() {
+		foreach ( array( true, 1, array( 'not-a-url' ) ) as $id ) {
+			$this->assertSame( array(), ( new Context() )->parse( array( 'context' => array( 'id' => $id ) ) ) );
+		}
+		$this->assertSame( array(), $this->requested );
 	}
 
 	/**
