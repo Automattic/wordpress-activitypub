@@ -119,8 +119,9 @@ class Proxy {
 			}
 		}
 
+		$first_url = '';
 		$final_url = '';
-		$object    = self::fetch_verified( $url, $final_url );
+		$object    = self::fetch_verified( $url, $final_url, $first_url );
 
 		/*
 		 * Nothing is cached unless the response named the URL it came from. `effective_url()`
@@ -169,7 +170,8 @@ class Proxy {
 			self::cache_set( $canonical, $object, $ttl );
 		}
 
-		if ( $same_host && $canonical !== $url ) {
+		// Confirmation must not hide a cross-host or unknown-origin first response.
+		if ( $same_host && '' !== $first_url && is_same_host( $url, $first_url ) && $canonical !== $url ) {
 			// Without an id, the requested URL is the only name the document has.
 			self::cache_set( $url, '' !== $canonical ? $canonical : $object, $ttl );
 		}
@@ -320,11 +322,13 @@ class Proxy {
 	 * @param string $final_url Set to the URL the object was served from, empty when the response
 	 *                          does not name it. For a failure, the URL that served the document
 	 *                          which failed to confirm, or the last URL attempted on a transport error.
+	 * @param string $first_url Set to the first response's URL, empty when its origin is unknown.
 	 *
 	 * @return array|\WP_Error The object, or an error.
 	 */
-	private static function fetch_verified( $url, &$final_url ) {
-		$object = self::fetch( $url, $final_url );
+	private static function fetch_verified( $url, &$final_url, &$first_url ) {
+		$object    = self::fetch( $url, $final_url );
+		$first_url = $final_url;
 
 		if ( \is_wp_error( $object ) ) {
 			return $object;
@@ -341,17 +345,16 @@ class Proxy {
 			return $object;
 		}
 
-		$first_hop = $final_url;
-		$object    = self::fetch( $declared_id, $final_url );
+		$object = self::fetch( $declared_id, $final_url );
 
 		if ( \is_wp_error( $object ) ) {
-			$final_url = $first_hop;
+			$final_url = $first_url;
 
 			return $object;
 		}
 
 		if ( ! id_matches_url( $object, '' !== $final_url ? $final_url : $declared_id ) ) {
-			$final_url = $first_hop;
+			$final_url = $first_url;
 
 			return new \WP_Error(
 				'activitypub_object_id_mismatch',

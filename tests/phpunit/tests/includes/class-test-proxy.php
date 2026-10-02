@@ -345,6 +345,98 @@ class Test_Proxy extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An alias requires known, same-host origins for both fetches.
+	 *
+	 * @dataProvider verification_origin_provider
+	 * @covers ::get
+	 *
+	 * @param string $first_origin The first response's origin, or empty when unknown.
+	 * @param string $declared     The canonical object id.
+	 * @param bool   $final_known  Whether the canonical response names its origin.
+	 * @param bool   $alias        Whether the requested URL may be aliased.
+	 */
+	public function test_get_preserves_both_verification_origins( $first_origin, $declared, $final_known, $alias ) {
+		$requested                     = 'https://example.com/redirect';
+		$object                        = array(
+			'id'   => $declared,
+			'type' => 'Note',
+		);
+		$this->responses[ $requested ] = $this->redirected( $first_origin, $object );
+		$this->responses[ $declared ]  = $this->redirected( $declared, $object );
+		if ( '' === $first_origin ) {
+			unset( $this->responses[ $requested ]['http_response'] );
+		}
+		if ( ! $final_known ) {
+			unset( $this->responses[ $declared ]['http_response'] );
+		}
+
+		$this->assertSame( $object, Proxy::get( $requested ) );
+		$this->assertSame( 2, $this->requests, 'The declared id confirms itself.' );
+		$this->assertSame( $alias ? $declared : false, \get_transient( 'activitypub_object_' . \hash( 'sha256', $requested ) ) );
+		$this->assertSame( $final_known ? $object : false, \get_transient( 'activitypub_object_' . \hash( 'sha256', $declared ) ) );
+
+		$this->assertSame( $object, Proxy::get( $requested ) );
+		$this->assertSame( $alias ? 2 : 4, $this->requests, 'Only a safe alias can bypass fetching the requested URL.' );
+		$this->assertSame( $object, Proxy::get( $declared ) );
+		$this->assertSame( ( $alias ? 2 : 4 ) + ( $final_known ? 0 : 1 ), $this->requests );
+	}
+
+	/**
+	 * First and confirming response origins.
+	 *
+	 * @return array The origins and expected alias decisions.
+	 */
+	public function verification_origin_provider() {
+		return array(
+			'cross-host first, same-host confirmation' => array( 'https://example.org/document', 'https://example.com/notes/1', true, false ),
+			'unknown first, known confirmation'        => array( '', 'https://example.com/notes/1', true, false ),
+			'same-host first, unknown confirmation'    => array( 'https://example.com/document', 'https://example.com/notes/1', false, false ),
+			'same-host first and confirmation'         => array( 'https://example.com/document', 'https://example.com/notes/1', true, true ),
+			'same-host first, cross-host confirmation' => array( 'https://example.com/document', 'https://example.org/notes/1', true, false ),
+		);
+	}
+
+	/**
+	 * Failed confirmation belongs to the first response's origin, not the declared id.
+	 *
+	 * @dataProvider verification_failure_origin_provider
+	 * @covers ::get
+	 *
+	 * @param string $first_origin The first response's origin, or empty when unknown.
+	 * @param bool   $mismatch     Whether confirmation returns a mismatched object instead of an error.
+	 * @param int    $requests     The expected request count after two calls.
+	 */
+	public function test_failed_confirmation_preserves_first_origin( $first_origin, $mismatch, $requests ) {
+		$requested                     = 'https://example.com/redirect';
+		$declared                      = 'https://example.com/notes/1';
+		$this->responses[ $requested ] = $this->redirected( $first_origin, array( 'id' => $declared ) );
+		if ( '' === $first_origin ) {
+			unset( $this->responses[ $requested ]['http_response'] );
+		}
+		$this->responses[ $declared ] = $mismatch ? array( 'id' => 'https://example.com/notes/other' ) : 404;
+
+		$this->assertWPError( Proxy::get( $requested ) );
+		$this->assertWPError( Proxy::get( $requested ) );
+		$this->assertSame( $requests, $this->requests );
+	}
+
+	/**
+	 * Confirmation errors and mismatches for known and unknown first origins.
+	 *
+	 * @return array The origins, failure modes, and expected request counts.
+	 */
+	public function verification_failure_origin_provider() {
+		return array(
+			'same-host HTTP error'  => array( 'https://example.com/document', false, 2 ),
+			'cross-host HTTP error' => array( 'https://example.org/document', false, 4 ),
+			'unknown HTTP error'    => array( '', false, 4 ),
+			'same-host mismatch'    => array( 'https://example.com/document', true, 2 ),
+			'cross-host mismatch'   => array( 'https://example.org/document', true, 4 ),
+			'unknown mismatch'      => array( '', true, 4 ),
+		);
+	}
+
+	/**
 	 * A failure reached through a cross-host redirect is not remembered for the requested URL.
 	 *
 	 * @covers ::get
