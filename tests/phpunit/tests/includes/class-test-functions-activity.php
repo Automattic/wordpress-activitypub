@@ -7,6 +7,8 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Activity\Base_Object;
+
 use function Activitypub\extract_recipients_from_activity;
 use function Activitypub\extract_recipients_from_activity_property;
 use function Activitypub\get_activity_visibility;
@@ -26,7 +28,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 	 * @param mixed $output The expected output.
 	 */
 	public function test_object_to_uri( $input, $output ) {
-		$this->assertEquals( $output, \Activitypub\object_to_uri( $input ) );
+		$this->assertSame( $output, \Activitypub\object_to_uri( $input ) );
 	}
 
 	/**
@@ -35,7 +37,66 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 	 * @return array[]
 	 */
 	public function object_to_uri_provider() {
+		$object = new Base_Object();
+		$object->set_id( 'https://example.com/note' );
+		$image = new Base_Object();
+		$image->set_type( 'Image' );
+		$image->set_url( 'https://example.com/photo.jpg' );
 		return array(
+			array( $object, 'https://example.com/note' ),
+			array( array( $object ), 'https://example.com/note' ),
+			array( $image, 'https://example.com/photo.jpg' ),
+			array( 42, null ),
+			array( true, null ),
+			array( false, null ),
+			array( 0, null ),
+			array( 1.5, null ),
+			array( new \stdClass(), null ),
+			array( array(), null ),
+			array( array( 42 ), null ),
+			array( array( true ), null ),
+			array(
+				array(
+					'type' => 'Image',
+					'url'  => 42,
+				),
+				null,
+			),
+			array(
+				array(
+					'type' => 'Image',
+					'url'  => true,
+				),
+				null,
+			),
+			array( array( 'type' => 'Image' ), null ),
+			array(
+				array(
+					'type' => 'Image',
+					'url'  => array(
+						'type' => 'Image',
+						'url'  => 42,
+					),
+				),
+				null,
+			),
+			array(
+				array(
+					'type' => 'Image',
+					'url'  => array( 42 ),
+				),
+				null,
+			),
+			array(
+				array(
+					'type' => 'Link',
+					'href' => 42,
+				),
+				null,
+			),
+			array( array( 'type' => 'Link' ), null ),
+			array( array( 'id' => true ), null ),
+			array( array( 'href' => array( 'https://example.com' ) ), null ),
 			array( null, null ),
 			array( 'https://example.com', 'https://example.com' ),
 			array( array( 'https://example.com' ), 'https://example.com' ),

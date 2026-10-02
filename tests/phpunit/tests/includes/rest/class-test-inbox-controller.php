@@ -126,6 +126,20 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$request->set_header( 'Content-Type', 'application/activity+json' );
 		$request->set_body( \wp_json_encode( $json ) );
 		$this->assertSame( 202, \rest_do_request( $request )->get_status() );
+		foreach ( array(
+			42,
+			true,
+			array(
+				'type' => 'Image',
+				'url'  => 42,
+			),
+			'/photo.jpg',
+			'//remote.example/photo.jpg',
+		) as $url ) {
+			$json['object']['attachment']['url'] = $url;
+			$request->set_body( \wp_json_encode( $json ) );
+			$this->assertSame( 400, \rest_do_request( $request )->get_status() );
+		}
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
 	}

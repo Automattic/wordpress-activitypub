@@ -431,6 +431,9 @@ class Remote_Posts {
 			if ( empty( $url ) || ! \is_string( $url ) ) {
 				continue;
 			}
+			if ( ! \filter_var( $url, FILTER_VALIDATE_URL ) || ! \esc_url_raw( $url, array( 'http', 'https' ) ) ) {
+				continue;
+			}
 
 			$mime_type = \is_string( $attachment['mediaType'] ?? null ) ? \strtolower( $attachment['mediaType'] ) : '';
 
