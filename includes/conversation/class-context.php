@@ -1,0 +1,54 @@
+<?php
+/**
+ * Conversation Context source file.
+ *
+ * @package Activitypub
+ */
+
+namespace Activitypub\Conversation;
+
+/**
+ * Reaches a conversation through the `context` property.
+ *
+ * FEP-7888 makes `context` a resolvable pointer at whatever groups objects together, and FEP-2931
+ * says that when it resolves to a Collection, that collection is the canonical membership of the
+ * context, to be iterated for backfill. That is the one shape which tells us what belongs to the
+ * conversation, so a context resolving to anything else is not a source of objects here.
+ *
+ * When it is available, one collection discovers the whole conversation without walking each
+ * object's ancestor or replies collection. The builder resolves its candidates separately.
+ *
+ * @since unreleased
+ *
+ * @see https://fediverse.codeberg.page/fep/fep/7888/
+ * @see https://fediverse.codeberg.page/fep/fep/2931/
+ */
+class Context implements Source {
+
+	/**
+	 * Whether the object names a context.
+	 *
+	 * @param array $activity_object The ActivityPub object.
+	 *
+	 * @return bool True when there is a context to resolve.
+	 */
+	public function supports( $activity_object ) {
+		$reference = $activity_object['context'] ?? null;
+		return ! empty( $reference ) && ( \is_string( $reference ) || \is_array( $reference ) );
+	}
+
+	/**
+	 * Read the objects listed by the object's context collection.
+	 *
+	 * @param array $activity_object The ActivityPub object.
+	 *
+	 * @return array The ActivityPub objects in the context.
+	 */
+	public function parse( $activity_object ) {
+		if ( ! $this->supports( $activity_object ) ) {
+			return array();
+		}
+
+		return Collection_Reader::read( $activity_object['context'] );
+	}
+}

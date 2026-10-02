@@ -1,0 +1,535 @@
+<?php
+/**
+ * Test file for the conversation Collection_Reader.
+ *
+ * @package Activitypub
+ */
+
+namespace Activitypub\Tests\Conversation;
+
+use Activitypub\Conversation\Collection_Reader;
+use Activitypub\Tests\Remote_Object_Stub;
+
+/**
+ * Test class for Collection_Reader.
+ *
+ * @coversDefaultClass \Activitypub\Conversation\Collection_Reader
+ */
+class Test_Collection_Reader extends \WP_UnitTestCase {
+
+	use Remote_Object_Stub;
+
+	/**
+	 * Fetched non-collections cannot supply items or continue pagination.
+	 *
+	 * @dataProvider invalid_collection_position_provider
+	 * @covers ::read
+	 *
+	 * @param string $position Where the invalid document is referenced.
+	 */
+	public function test_rejects_fetched_non_collection_documents( $position ) {
+		$url                     = 'https://remote.example/not-a-collection';
+		$this->documents[ $url ] = array(
+			'id'    => $url,
+			'type'  => 'Note',
+			'items' => array( 'https://remote.example/notes/unrelated' ),
+			'next'  => 'https://remote.example/another-page',
+		);
+		$collection              = $url;
+		$expected                = array();
+		if ( 'initial' !== $position ) {
+			$collection = array(
+				'type'    => 'Collection',
+				$position => $url,
+			);
+			if ( 'next' === $position ) {
+				$expected            = array( 'https://remote.example/notes/1' );
+				$collection['items'] = $expected;
+			}
+		}
+
+		$this->assertSame( $expected, Collection_Reader::read( $collection ) );
+		$this->assertSame( array( $url ), $this->requested );
+	}
+
+	/**
+	 * Documents reached at the start or during pagination.
+	 *
+	 * @return array Test cases.
+	 */
+	public function invalid_collection_position_provider() {
+		return array(
+			'initial' => array( 'initial' ),
+			'first'   => array( 'first' ),
+			'next'    => array( 'next' ),
+		);
+	}
+
+	/**
+	 * Page references are dereferenced, and Link cycles stop before fetching twice.
+	 *
+	 * @dataProvider page_reference_provider
+	 * @covers ::read
+	 *
+	 * @param string      $attribute The URI attribute.
+	 * @param string|null $type      The optional reference type.
+	 */
+	public function test_follows_object_page_references( $attribute, $type ) {
+		$first     = 'https://remote.example/page/1';
+		$second    = 'https://remote.example/page/2';
+		$first_ref = array( $attribute => $first );
+		$next_ref  = array( $attribute => $second );
+		if ( $type ) {
+			$first_ref['type'] = $type;
+			$next_ref['type']  = $type;
+		}
+		$this->documents[ $first ]  = array(
+			'id'    => $first,
+			'type'  => 'CollectionPage',
+			'items' => array( 'https://remote.example/notes/1' ),
+			'next'  => $next_ref,
+		);
+		$this->documents[ $second ] = array(
+			'id'    => $second,
+			'type'  => 'CollectionPage',
+			'items' => array( 'https://remote.example/notes/2' ),
+			'next'  => $first_ref,
+		);
+
+		$items = Collection_Reader::read(
+			array(
+				'type'  => 'Collection',
+				'first' => $first_ref,
+			)
+		);
+		$this->assertSame( array( 'https://remote.example/notes/1', 'https://remote.example/notes/2' ), $items );
+		$this->assertSame( array( $first, $second ), $this->requested );
+	}
+
+	/**
+	 * Supported object and Link reference shapes.
+	 *
+	 * @return array The URI attributes and types.
+	 */
+	public function page_reference_provider() {
+		return array(
+			'object'                   => array( 'id', null ),
+			'link'                     => array( 'href', 'Link' ),
+			'href'                     => array( 'href', null ),
+			'typed collection'         => array( 'id', 'Collection' ),
+			'typed ordered collection' => array( 'id', 'OrderedCollection' ),
+			'typed page'               => array( 'id', 'CollectionPage' ),
+			'typed ordered page'       => array( 'id', 'OrderedCollectionPage' ),
+		);
+	}
+
+	/**
+	 * A fetched collection's own identifier also participates in cycle detection.
+	 *
+	 * @dataProvider initial_cycle_reference_provider
+	 * @covers ::read
+	 *
+	 * @param bool $linked Whether the initial reference is a Link.
+	 */
+	public function test_stops_on_requested_and_canonical_collection_cycles( $linked ) {
+		$uri                           = 'https://remote.example/alias';
+		$canonical                     = 'https://remote.example/collection';
+		$document                      = array(
+			'id'    => $canonical,
+			'type'  => 'Collection',
+			'items' => array( 'https://remote.example/notes/1' ),
+			'next'  => $linked ? $uri : $canonical,
+		);
+		$this->documents[ $uri ]       = $document;
+		$this->documents[ $canonical ] = $document;
+
+		$this->assertSame(
+			$document['items'],
+			Collection_Reader::read(
+				$linked ? array(
+					'type' => 'Link',
+					'href' => $uri,
+				) : $uri
+			)
+		);
+		$this->assertSame( array( $uri ), $this->requested );
+	}
+
+	/**
+	 * A later URL alias must not contribute the same canonical page twice.
+	 *
+	 * @covers ::read
+	 */
+	public function test_stops_when_a_later_alias_returns_an_already_read_page() {
+		$first                     = 'https://remote.example/page/1';
+		$alias                     = 'https://remote.example/page/alias';
+		$this->documents[ $first ] = array(
+			'id'    => $first,
+			'type'  => 'CollectionPage',
+			'items' => array( 'https://remote.example/notes/1' ),
+			'next'  => $alias,
+		);
+		$this->documents[ $alias ] = $this->documents[ $first ];
+
+		$this->assertSame( $this->documents[ $first ]['items'], Collection_Reader::read( $first ) );
+		$this->assertSame( array( $first, $alias ), $this->requested );
+	}
+
+	/**
+	 * Cycles through the requested URL and the fetched document's id.
+	 *
+	 * @return array The initial reference forms.
+	 */
+	public function initial_cycle_reference_provider() {
+		return array(
+			'canonical id cycle' => array( false ),
+			'Link URL cycle'     => array( true ),
+		);
+	}
+
+	/**
+	 * Explicitly empty embedded collections are complete and need no fetch.
+	 *
+	 * @covers ::read
+	 */
+	public function test_does_not_refetch_explicitly_empty_embedded_collections() {
+		foreach ( array( 'items', 'orderedItems' ) as $property ) {
+			$this->assertSame(
+				array(),
+				Collection_Reader::read(
+					array(
+						'id'      => 'https://remote.example/empty',
+						'type'    => 'Collection',
+						$property => array(),
+					)
+				)
+			);
+		}
+		$this->assertSame( array(), $this->requested );
+	}
+
+	/**
+	 * JSON-LD can unwrap a single object as well as a single URI.
+	 *
+	 * @covers ::read
+	 */
+	public function test_reads_an_unwrapped_object() {
+		$object = array(
+			'id'   => 'https://remote.example/notes/1',
+			'type' => 'Note',
+		);
+		$this->assertSame(
+			array( $object ),
+			Collection_Reader::read(
+				array(
+					'type'  => 'Collection',
+					'items' => $object,
+				)
+			)
+		);
+	}
+
+	/**
+	 * Malformed scalar item values are ignored.
+	 *
+	 * @covers ::read
+	 */
+	public function test_ignores_invalid_scalar_items() {
+		$this->assertSame(
+			array(),
+			Collection_Reader::read(
+				array(
+					'type'  => 'Collection',
+					'items' => true,
+				)
+			)
+		);
+	}
+
+	/**
+	 * Reaching the item budget on a later page stops before fetching another page.
+	 *
+	 * @covers ::read
+	 */
+	public function test_stops_at_the_remaining_item_budget() {
+		$first  = \array_fill( 0, Collection_Reader::MAX_ITEMS - 1, 'https://remote.example/notes/1' );
+		$second = \array_fill( 0, Collection_Reader::MAX_ITEMS + 50, 'https://remote.example/notes/2' );
+		$this->documents['https://remote.example/page/2'] = array(
+			'type'  => 'CollectionPage',
+			'items' => $second,
+			'next'  => 'https://remote.example/page/3',
+		);
+		$items = Collection_Reader::read(
+			array(
+				'id'    => 'https://remote.example/page/1',
+				'type'  => 'CollectionPage',
+				'items' => $first,
+				'next'  => 'https://remote.example/page/2',
+			)
+		);
+		$this->assertCount( Collection_Reader::MAX_ITEMS, $items );
+		$this->assertSame( 'https://remote.example/notes/2', $items[ Collection_Reader::MAX_ITEMS - 1 ] );
+		$this->assertSame( array( 'https://remote.example/page/2' ), $this->requested );
+	}
+
+	/**
+	 * A collection can embed its first page instead of referring to it by URI.
+	 *
+	 * @covers ::read
+	 */
+	public function test_reads_an_embedded_first_page() {
+		$object = array( 'id' => 'https://remote.example/notes/1' );
+		$items  = Collection_Reader::read(
+			array(
+				'type'  => 'Collection',
+				'first' => array(
+					'type'  => 'CollectionPage',
+					'items' => array( $object ),
+				),
+			)
+		);
+		$this->assertSame( array( $object ), $items );
+		$this->assertSame( array(), $this->requested );
+	}
+
+	/**
+	 * Embedded pages without identifiers still count toward the traversal limit.
+	 *
+	 * @covers ::read
+	 */
+	public function test_bounds_anonymous_embedded_pages() {
+		$page = array();
+		for ( $i = 0; $i < Collection_Reader::MAX_REQUESTS + 2; ++$i ) {
+			$page = array(
+				'type'  => 'CollectionPage',
+				'items' => array( 'https://remote.example/notes/' . $i ),
+				'next'  => $page,
+			);
+		}
+
+		$this->assertCount( Collection_Reader::MAX_REQUESTS, Collection_Reader::read( $page ) );
+		$this->assertSame( array(), $this->requested );
+	}
+
+	/**
+	 * A single-page collection hands back its items.
+	 *
+	 * @covers ::read
+	 */
+	public function test_reads_a_single_page_collection() {
+		$this->documents['https://remote.example/context/1'] = array(
+			'id'           => 'https://remote.example/context/1',
+			'type'         => 'OrderedCollection',
+			'orderedItems' => array(
+				array( 'id' => 'https://remote.example/notes/1' ),
+				array( 'id' => 'https://remote.example/notes/2' ),
+			),
+		);
+
+		$items = Collection_Reader::read( 'https://remote.example/context/1' );
+
+		$this->assertCount( 2, $items );
+		$this->assertSame( 'https://remote.example/notes/1', $items[0]['id'] );
+		$this->assertSame( 'https://remote.example/notes/2', $items[1]['id'] );
+	}
+
+	/**
+	 * A collection that defers its items to pages is followed through `first` and `next`.
+	 *
+	 * @covers ::read
+	 */
+	public function test_follows_first_and_next_through_the_pages() {
+		$this->documents['https://remote.example/context/2']        = array(
+			'id'    => 'https://remote.example/context/2',
+			'type'  => 'OrderedCollection',
+			'first' => 'https://remote.example/context/2?page=1',
+		);
+		$this->documents['https://remote.example/context/2?page=1'] = array(
+			'id'           => 'https://remote.example/context/2?page=1',
+			'type'         => 'OrderedCollectionPage',
+			'orderedItems' => array( array( 'id' => 'https://remote.example/notes/1' ) ),
+			'next'         => 'https://remote.example/context/2?page=2',
+		);
+		$this->documents['https://remote.example/context/2?page=2'] = array(
+			'id'           => 'https://remote.example/context/2?page=2',
+			'type'         => 'OrderedCollectionPage',
+			'orderedItems' => array( array( 'id' => 'https://remote.example/notes/2' ) ),
+		);
+
+		$items = Collection_Reader::read( 'https://remote.example/context/2' );
+
+		$this->assertCount( 2, $items, 'Items from every page have to be collected.' );
+		$this->assertSame( 'https://remote.example/notes/1', $items[0]['id'] );
+		$this->assertSame( 'https://remote.example/notes/2', $items[1]['id'] );
+	}
+
+	/**
+	 * A collection whose `next` points back at itself terminates.
+	 *
+	 * Nothing obliges a remote server to end a collection, so the reader has to stop on its own
+	 * rather than fetch until the request times out.
+	 *
+	 * @covers ::read
+	 */
+	public function test_stops_on_a_collection_that_never_ends() {
+		$this->documents['https://remote.example/loop'] = array(
+			'id'           => 'https://remote.example/loop',
+			'type'         => 'OrderedCollection',
+			'orderedItems' => array( array( 'id' => 'https://remote.example/notes/1' ) ),
+			'next'         => 'https://remote.example/loop',
+		);
+
+		$items = Collection_Reader::read( 'https://remote.example/loop' );
+
+		$this->assertLessThanOrEqual(
+			Collection_Reader::MAX_REQUESTS,
+			\count( $this->requested ),
+			'The reader must not fetch more than its own request cap.'
+		);
+		$this->assertNotEmpty( $items, 'What was gathered before the cap still counts.' );
+	}
+
+	/**
+	 * A collection carrying items of its own does not also page through them.
+	 *
+	 * `first` is how a collection defers its items to pages. When the document already listed
+	 * them, following it as well collects the same objects twice.
+	 *
+	 * @covers ::read
+	 */
+	public function test_does_not_repeat_items_of_a_collection_that_also_has_pages() {
+		$this->documents['https://remote.example/both']        = array(
+			'id'           => 'https://remote.example/both',
+			'type'         => 'OrderedCollection',
+			'orderedItems' => array(
+				array( 'id' => 'https://remote.example/notes/1' ),
+				array( 'id' => 'https://remote.example/notes/2' ),
+			),
+			'first'        => 'https://remote.example/both?page=1',
+		);
+		$this->documents['https://remote.example/both?page=1'] = array(
+			'id'           => 'https://remote.example/both?page=1',
+			'type'         => 'OrderedCollectionPage',
+			'orderedItems' => array(
+				array( 'id' => 'https://remote.example/notes/1' ),
+				array( 'id' => 'https://remote.example/notes/2' ),
+			),
+		);
+
+		$items = Collection_Reader::read( 'https://remote.example/both' );
+
+		$this->assertCount( 2, $items, 'The same objects must not be collected twice.' );
+	}
+
+	/**
+	 * A cycle between two pages stops at the repeat rather than at the request cap.
+	 *
+	 * A counter alone cannot tell a cycle from a long collection, so a short loop would cost the
+	 * full budget on every read.
+	 *
+	 * @covers ::read
+	 */
+	public function test_stops_as_soon_as_a_page_repeats() {
+		$this->documents['https://remote.example/cycle/a'] = array(
+			'id'           => 'https://remote.example/cycle/a',
+			'type'         => 'OrderedCollection',
+			'orderedItems' => array( array( 'id' => 'https://remote.example/notes/1' ) ),
+			'next'         => 'https://remote.example/cycle/b',
+		);
+		$this->documents['https://remote.example/cycle/b'] = array(
+			'id'           => 'https://remote.example/cycle/b',
+			'type'         => 'OrderedCollectionPage',
+			'orderedItems' => array( array( 'id' => 'https://remote.example/notes/2' ) ),
+			'next'         => 'https://remote.example/cycle/a',
+		);
+
+		$items = Collection_Reader::read( 'https://remote.example/cycle/a' );
+
+		$this->assertCount( 2, $items, 'Both pages are read once.' );
+		$this->assertCount( 2, $this->requested, 'A page already fetched must not be fetched again.' );
+	}
+
+	/**
+	 * A collection using `items` rather than `orderedItems` reads the same way.
+	 *
+	 * @covers ::read
+	 */
+	public function test_reads_an_unordered_collection() {
+		$this->documents['https://remote.example/unordered'] = array(
+			'id'    => 'https://remote.example/unordered',
+			'type'  => 'Collection',
+			'items' => array( array( 'id' => 'https://remote.example/notes/1' ) ),
+		);
+
+		$items = Collection_Reader::read( 'https://remote.example/unordered' );
+
+		$this->assertCount( 1, $items );
+	}
+
+	/**
+	 * A collection that cannot be fetched yields nothing rather than an error.
+	 *
+	 * @covers ::read
+	 */
+	public function test_returns_nothing_for_an_unreachable_collection() {
+		$this->assertSame( array(), Collection_Reader::read( 'https://remote.example/missing' ) );
+	}
+
+	/**
+	 * An empty collection yields nothing.
+	 *
+	 * @covers ::read
+	 */
+	public function test_returns_nothing_for_an_empty_collection() {
+		$this->documents['https://remote.example/empty'] = array(
+			'id'           => 'https://remote.example/empty',
+			'type'         => 'OrderedCollection',
+			'orderedItems' => array(),
+		);
+
+		$this->assertSame( array(), Collection_Reader::read( 'https://remote.example/empty' ) );
+	}
+
+	/**
+	 * A page listing more items than the cap does not hand all of them back.
+	 *
+	 * Page size is the remote server's choice, so a single response can be arbitrarily large.
+	 * Without a ceiling the whole list is materialised in memory before any caller sees it.
+	 *
+	 * @covers ::read
+	 */
+	public function test_stops_collecting_at_the_item_cap() {
+		$items = array();
+		for ( $i = 0; $i < Collection_Reader::MAX_ITEMS + 50; $i++ ) {
+			$items[] = array( 'id' => "https://remote.example/notes/$i" );
+		}
+
+		$this->documents['https://remote.example/huge'] = array(
+			'id'           => 'https://remote.example/huge',
+			'type'         => 'OrderedCollection',
+			'orderedItems' => $items,
+		);
+
+		$this->assertCount( Collection_Reader::MAX_ITEMS, Collection_Reader::read( 'https://remote.example/huge' ) );
+	}
+
+	/**
+	 * A collection listing a single unwrapped value does not bring the request down.
+	 *
+	 * JSON-LD compaction drops the array around a one-element list, so `items` arriving as a bare
+	 * string is conforming, not hostile. Merging it would be a TypeError on PHP 8.
+	 *
+	 * @covers ::read
+	 */
+	public function test_survives_items_that_are_not_a_list() {
+		$this->documents['https://remote.example/unwrapped'] = array(
+			'id'    => 'https://remote.example/unwrapped',
+			'type'  => 'Collection',
+			'items' => 'https://remote.example/notes/1',
+		);
+
+		$items = Collection_Reader::read( 'https://remote.example/unwrapped' );
+
+		$this->assertSame( array( 'https://remote.example/notes/1' ), $items );
+	}
+}

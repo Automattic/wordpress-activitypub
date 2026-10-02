@@ -1,0 +1,155 @@
+<?php
+/**
+ * Conversation Collection Reader file.
+ *
+ * @package Activitypub
+ */
+
+namespace Activitypub\Conversation;
+
+use Activitypub\Http;
+
+use function Activitypub\is_collection;
+use function Activitypub\object_to_uri;
+
+/**
+ * Reads the items out of an ActivityStreams collection.
+ *
+ * Both the `context` collection of FEP-2931 and Mastodon's `replies` are collections that may be
+ * split across pages, and nothing in the plugin walked one before this: `Scheduler\Collection_Sync`
+ * reads `orderedItems` off the first document and never follows `next`.
+ *
+ * @since unreleased
+ */
+class Collection_Reader {
+
+	/**
+	 * How many documents one read may traverse, including embedded pages.
+	 *
+	 * Nothing obliges a remote server to end a collection, and a `next` pointing back at itself
+	 * is enough to make a reader fetch until the request dies. This is the reader's own floor;
+	 * a caller walking several collections is expected to bound the walk as well.
+	 *
+	 * @var int
+	 */
+	const MAX_REQUESTS = 50;
+
+	/**
+	 * How many items one read may collect.
+	 *
+	 * Page size is the remote server's choice, so one response can list as many objects as it
+	 * likes. Without this the whole list is built in memory before a caller ever sees it.
+	 *
+	 * @var int
+	 */
+	const MAX_ITEMS = 500;
+
+	/**
+	 * Read the items of a collection.
+	 *
+	 * @param string|array $collection The collection, or its URI.
+	 *
+	 * @return array The items, in the order the collection listed them.
+	 */
+	public static function read( $collection ) {
+		$items    = array();
+		$seen     = array();
+		$page     = self::fetch( $collection );
+		$requests = 1;
+
+		$id = object_to_uri( $collection );
+
+		if ( \is_string( $id ) && $id ) {
+			$seen[ $id ] = true;
+		}
+
+		while ( $page ) {
+			// A fetched document can have a different id than the reference used to reach it.
+			$id = $page['id'] ?? null;
+			if ( \is_string( $id ) && $id ) {
+				$seen[ $id ] = true;
+			}
+			$page_items = $page['orderedItems'] ?? $page['items'] ?? array();
+			// JSON-LD may unwrap a single object or URI instead of returning a list.
+			if ( \is_string( $page_items ) || ( \is_array( $page_items ) && ! \array_is_list( $page_items ) ) ) {
+				$page_items = array( $page_items );
+			} elseif ( ! \is_array( $page_items ) ) {
+				$page_items = array();
+			}
+
+			foreach ( $page_items as $item ) {
+				$items[] = $item;
+				if ( \count( $items ) >= self::MAX_ITEMS ) {
+					return $items;
+				}
+			}
+
+			/*
+			 * `next` continues a page. `first` is how a collection defers its items to pages, so
+			 * it is only worth following when this document listed none of its own: a collection
+			 * that carries both would otherwise hand back the same objects a second time.
+			 */
+			$next = $page['next'] ?? ( $page_items ? null : ( $page['first'] ?? null ) );
+
+			/*
+			 * A repeat means a cycle. The request cap alone would stop it, but only after paying
+			 * for the whole budget, and it cannot tell a short loop from a long collection.
+			 */
+			if ( ( ! \is_string( $next ) && ! \is_array( $next ) ) || $requests >= self::MAX_REQUESTS ) {
+				break;
+			}
+
+			$next_id = object_to_uri( $next );
+			if ( \is_string( $next_id ) && $next_id ) {
+				if ( isset( $seen[ $next_id ] ) ) {
+					break;
+				}
+			}
+			$page = self::fetch( $next );
+			++$requests;
+			$id = $page['id'] ?? null;
+			if ( \is_string( $id ) && isset( $seen[ $id ] ) ) {
+				break;
+			}
+			if ( \is_string( $next_id ) && $next_id ) {
+				$seen[ $next_id ] = true;
+			}
+		}
+
+		return $items;
+	}
+
+	/**
+	 * Fetch one document of a collection.
+	 *
+	 * @param string|array $document The document, or its URI.
+	 *
+	 * @return array|null The document, or null when it could not be read.
+	 */
+	private static function fetch( $document ) {
+		// Embedded collections are already available; object and Link references need a fetch.
+		if ( \is_array( $document ) && is_collection( $document ) && \array_intersect_key(
+			$document,
+			array(
+				'items'        => true,
+				'orderedItems' => true,
+				'first'        => true,
+				'next'         => true,
+			)
+		) ) {
+			return $document;
+		}
+
+		$uri = object_to_uri( $document );
+		if ( ! \is_string( $uri ) || ! $uri ) {
+			return null;
+		}
+		$document = Http::get_remote_object( $uri );
+
+		if ( \is_wp_error( $document ) || ! \is_array( $document ) || ! is_collection( $document ) ) {
+			return null;
+		}
+
+		return $document;
+	}
+}
