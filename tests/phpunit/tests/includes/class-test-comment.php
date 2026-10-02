@@ -48,7 +48,12 @@ class Test_Comment extends \WP_UnitTestCase {
 	 */
 	public function test_render_image_with_parent_post_context() {
 		$parent  = self::factory()->post->create();
-		$comment = self::factory()->comment->create_and_get( array( 'comment_post_ID' => $parent ) );
+		$comment = self::factory()->comment->create_and_get(
+			array(
+				'comment_post_ID' => $parent,
+				'comment_meta'    => array( 'protocol' => 'activitypub' ),
+			)
+		);
 		$this->go_to( \get_permalink( self::factory()->post->create() ) );
 		$content  = generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' );
 		$seen_id  = null;
@@ -75,6 +80,7 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * @covers ::render_blocks
 	 */
 	public function test_render_blocks_preserves_core_filters() {
+		$comment = self::factory()->comment->create_and_get( array( 'comment_meta' => array( 'protocol' => 'activitypub' ) ) );
 		$content = generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' );
 		$filters = array( 'pre_render_block', 'render_block_data', 'render_block_context' );
 		$seen    = array();
@@ -88,9 +94,9 @@ class Test_Comment extends \WP_UnitTestCase {
 		$pre_render = static function () {
 			return 'Filtered comment image.';
 		};
-		Comment::render_blocks( '<!-- wp:activitypub/image /-->' );
+		Comment::render_blocks( '<!-- wp:activitypub/image /-->', $comment );
 		\add_filter( 'pre_render_block', $pre_render, 20 );
-		$rendered = Comment::render_blocks( $content );
+		$rendered = Comment::render_blocks( $content, $comment );
 		\remove_filter( 'pre_render_block', $pre_render, 20 );
 		foreach ( $filters as $hook ) {
 			\remove_filter( $hook, $filter );
@@ -100,6 +106,59 @@ class Test_Comment extends \WP_UnitTestCase {
 		foreach ( $filters as $hook ) {
 			$this->assertContains( $hook, $seen );
 		}
+	}
+
+	/**
+	 * Ordinary comment submission cannot turn block attributes into an image.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_ordinary_comment_cannot_render_image_blocks() {
+		\wp_set_current_user( 0 );
+		\kses_init();
+		$content    = '<!-- wp:activitypub/image {"url":"https://example.com/tracker.jpg","alt":""} /-->';
+		$comment_id = \wp_new_comment(
+			\wp_slash(
+				array(
+					'comment_post_ID'      => self::factory()->post->create(),
+					'comment_author'       => 'Local commenter',
+					'comment_author_email' => 'local@example.com',
+					'comment_author_url'   => '',
+					'comment_content'      => $content,
+				)
+			),
+			true
+		);
+		$this->assertIsInt( $comment_id );
+		$comment = \get_comment( $comment_id );
+		$this->assertFalse( Comment::was_received( $comment ) );
+		$this->assertStringContainsString( '<!-- wp:activitypub/image', $comment->comment_content );
+
+		$download = static function () {
+			return new \WP_Error( 'cache_skipped', 'The image cache is unavailable.' );
+		};
+		\add_filter( 'activitypub_pre_download_url', $download );
+		$rendered = \apply_filters( 'comment_text', $comment->comment_content, $comment );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+
+		$this->assertStringNotContainsString( '<img', $rendered );
+		$this->assertSame( $comment->comment_content, Comment::render_blocks( $comment->comment_content ) );
+	}
+
+	/**
+	 * Emoji rendering still works without a received comment.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_render_emoji_without_a_received_comment() {
+		$url      = \wp_upload_dir()['baseurl'] . '/activitypub/emoji/party.png';
+		$content  = '<!-- wp:activitypub/emoji ' . \wp_json_encode( array( 'url' => $url ) ) . ' -->:party:<!-- /wp:activitypub/emoji -->';
+		$comment  = self::factory()->comment->create_and_get();
+		$rendered = Comment::render_blocks( $content, $comment );
+
+		$this->assertStringContainsString( '<img', $rendered );
+		$this->assertStringContainsString( 'class="emoji"', $rendered );
+		$this->assertSame( $rendered, Comment::render_blocks( $content ) );
 	}
 
 	/**
