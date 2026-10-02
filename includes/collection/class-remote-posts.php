@@ -400,15 +400,6 @@ class Remote_Posts {
 			if ( \is_string( $items ) ) {
 				$items = array( 'url' => $items );
 			}
-
-			if ( \is_object( $items ) ) {
-				$items = \get_object_vars( $items );
-			}
-
-			// A single `Image` object rather than a list of them.
-			if ( \is_array( $items ) && ! \array_is_list( $items ) ) {
-				$items = array( $items );
-			}
 		}
 
 		if ( \is_object( $items ) ) {

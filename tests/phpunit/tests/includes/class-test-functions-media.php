@@ -180,7 +180,7 @@ class Test_Functions_Media extends \WP_UnitTestCase {
 		$result = \Activitypub\generate_image_block( 'https://example.com/image.jpg', '<img src="https://example.com/image.jpg" alt="--&gt; &quot;cat&quot; &amp; kittens" />' );
 		$blocks = \parse_blocks( $result );
 		$this->assertCount( 1, $blocks );
-		$this->assertSame( '--> "cat" & kittens', $blocks[0]['attrs']['alt'] );
+		$this->assertSame( '--&gt; &quot;cat&quot; &amp; kittens', $blocks[0]['attrs']['alt'] );
 	}
 
 	/**

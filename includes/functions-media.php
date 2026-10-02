@@ -60,7 +60,7 @@ function generate_image_block( $url, $img_html ) {
 			// Core runs block attribute strings through KSES when saving comments.
 			'url'        => \htmlspecialchars( $url, ENT_QUOTES, 'UTF-8', true ),
 			'urlEncoded' => true,
-			'alt'        => $processor->get_attribute( 'alt' ) ?? '',
+			'alt'        => \htmlspecialchars( $processor->get_attribute( 'alt' ) ?? '', ENT_QUOTES, 'UTF-8', true ),
 		),
 		$img_html
 	);
@@ -173,7 +173,7 @@ function process_remote_images( $content, $attachments = array() ) {
 				continue;
 			}
 
-			$alt     = ! empty( $attachment['alt'] ) ? \esc_attr( $attachment['alt'] ) : '';
+			$alt     = ! empty( $attachment['alt'] ) ? \esc_attr( \htmlspecialchars( $attachment['alt'], ENT_QUOTES, 'UTF-8', true ) ) : '';
 			$img_tag = $alt
 				? \sprintf( '<img src="%s" alt="%s" />', \esc_url( \htmlspecialchars( $url, ENT_QUOTES, 'UTF-8', true ) ), $alt )
 				: \sprintf( '<img src="%s" />', \esc_url( \htmlspecialchars( $url, ENT_QUOTES, 'UTF-8', true ) ) );
