@@ -129,6 +129,8 @@ class Media extends File {
 
 	/**
 	 * Initialize the cache handler.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		// Only register local caching filter when caching is enabled.
@@ -167,6 +169,8 @@ class Media extends File {
 	 * Maybe clean up cached media when post is deleted.
 	 *
 	 * @param int $post_id The post ID being deleted.
+	 *
+	 * @return void
 	 */
 	public static function maybe_cleanup( $post_id ) {
 		if ( Remote_Posts::POST_TYPE !== \get_post_type( $post_id ) ) {

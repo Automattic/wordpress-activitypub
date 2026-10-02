@@ -17,6 +17,8 @@ class Heartbeat {
 
 	/**
 	 * Initialize the Heartbeat API integration.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'admin_print_scripts-settings_page_activitypub', array( self::class, 'enqueue_scripts' ) );
@@ -27,6 +29,8 @@ class Heartbeat {
 
 	/**
 	 * Enqueue scripts and localize data for the Following list table.
+	 *
+	 * @return void
 	 */
 	public static function enqueue_scripts() {
 		$tab = \sanitize_text_field( \wp_unslash( $_GET['tab'] ?? 'welcome' ) ); // phpcs:ignore WordPress.Security.NonceVerification

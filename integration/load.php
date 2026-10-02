@@ -15,6 +15,8 @@ Autoloader::register_path( __NAMESPACE__, __DIR__ );
 
 /**
  * Initialize the ActivityPub integrations.
+ *
+ * @return void
  */
 function plugin_init() {
 	/**

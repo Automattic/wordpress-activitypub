@@ -50,6 +50,8 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 
 	/**
 	 * Initialize the integration.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		// Add rules if LiteSpeed Cache is active and rules aren't set.
@@ -75,6 +77,8 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	 * Clean up htaccess rules when LiteSpeed Cache plugin is deleted.
 	 *
 	 * @param string $plugin_file Path to the plugin file relative to the plugins directory.
+	 *
+	 * @return void
 	 */
 	public static function on_plugin_deleted( $plugin_file ) {
 		if ( self::$plugin_slug === $plugin_file && \get_option( self::$option_name ) ) {
@@ -84,6 +88,8 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 
 	/**
 	 * Add the LiteSpeed Cache htaccess rules.
+	 *
+	 * @return void
 	 */
 	public static function add_htaccess_rules() {
 		$added_rules = self::append_with_markers( self::$marker, self::$rules );
@@ -98,6 +104,8 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 
 	/**
 	 * Remove the LiteSpeed Cache htaccess rules.
+	 *
+	 * @return void
 	 */
 	public static function remove_htaccess_rules() {
 		self::append_with_markers( self::$marker, '' );

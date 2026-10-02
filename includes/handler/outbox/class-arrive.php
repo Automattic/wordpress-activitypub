@@ -22,6 +22,8 @@ class Arrive {
 	 * Initialize the class, registering WordPress hooks.
 	 *
 	 * @since 8.1.0
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_outbox_arrive', array( self::class, 'handle_arrive' ), 10, 3 );
@@ -143,6 +145,8 @@ class Arrive {
 	 *
 	 * @param int        $post_id  The post ID.
 	 * @param array|null $location The ActivityPub location data.
+	 *
+	 * @return void
 	 */
 	private static function save_location( $post_id, $location ) {
 		if ( ! \is_array( $location ) ) {

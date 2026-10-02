@@ -469,6 +469,8 @@ class Attachments {
 	 *
 	 * @param int   $post_id        The post ID.
 	 * @param int[] $attachment_ids Array of attachment IDs.
+	 *
+	 * @return void
 	 */
 	private static function append_media_to_post_content( $post_id, $attachment_ids ) {
 		$post = \get_post( $post_id );
@@ -622,6 +624,8 @@ class Attachments {
 	 * @param int    $object_id   The object ID (post or comment).
 	 * @param string $object_type The object type ('post' or 'comment').
 	 * @param string $content     The new content.
+	 *
+	 * @return void
 	 */
 	private static function update_object_content( $object_id, $object_type, $content ) {
 		if ( 'comment' === $object_type ) {
@@ -650,6 +654,8 @@ class Attachments {
 	 * @param int    $object_id   The object ID (post or comment).
 	 * @param array  $files       Array of file data arrays with 'url', 'mime_type', and 'alt' keys.
 	 * @param string $object_type The object type ('post' or 'comment').
+	 *
+	 * @return void
 	 */
 	public static function append_files_to_content( $object_id, $files, $object_type = 'post' ) {
 		$content = self::get_object_content( $object_id, $object_type );

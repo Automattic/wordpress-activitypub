@@ -18,6 +18,8 @@ use function Activitypub\url_to_commentid;
 class Delete {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_outbox_delete', array( self::class, 'handle_delete' ), 10, 2 );

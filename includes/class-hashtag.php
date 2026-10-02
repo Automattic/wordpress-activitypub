@@ -15,6 +15,8 @@ namespace Activitypub;
 class Hashtag {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		if ( '1' === \get_option( 'activitypub_use_hashtags', '0' ) ) {
@@ -48,6 +50,8 @@ class Hashtag {
 	 *
 	 * @param int      $post_id Post ID.
 	 * @param \WP_Post $post    Post object.
+	 *
+	 * @return void
 	 */
 	public static function insert_post( $post_id, $post ) {
 		// Check if the post supports ActivityPub.

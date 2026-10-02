@@ -15,6 +15,8 @@ namespace Activitypub\Integration;
 class Polylang {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_locale', array( self::class, 'get_post_locale' ), 10, 2 );

@@ -15,6 +15,8 @@ use function Activitypub\object_to_uri;
 class Like {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_outbox_like', array( self::class, 'handle_like' ), 10, 2 );
@@ -27,6 +29,8 @@ class Like {
 	 *
 	 * @param array $data    The activity data array.
 	 * @param int   $user_id The user ID.
+	 *
+	 * @return array The activity data array.
 	 */
 	public static function handle_like( $data, $user_id = null ) {
 		$object_url = object_to_uri( $data['object'] ?? '' );

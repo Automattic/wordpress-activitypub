@@ -13,6 +13,8 @@ namespace Activitypub;
 class Shortcodes {
 	/**
 	 * Register the shortcodes.
+	 *
+	 * @return void
 	 */
 	public static function register() {
 		foreach ( \get_class_methods( self::class ) as $shortcode ) {
@@ -24,6 +26,8 @@ class Shortcodes {
 
 	/**
 	 * Unregister the shortcodes.
+	 *
+	 * @return void
 	 */
 	public static function unregister() {
 		foreach ( \get_class_methods( self::class ) as $shortcode ) {
@@ -331,7 +335,7 @@ class Shortcodes {
 			return '';
 		}
 
-		$author_id = \get_post_field( 'post_author', $item->ID );
+		$author_id = (int) \get_post_field( 'post_author', $item->ID );
 		$name      = \get_the_author_meta( 'display_name', $author_id );
 
 		if ( ! $name ) {
@@ -353,7 +357,7 @@ class Shortcodes {
 			return '';
 		}
 
-		$author_id = \get_post_field( 'post_author', $item->ID );
+		$author_id = (int) \get_post_field( 'post_author', $item->ID );
 		$url       = \get_the_author_meta( 'user_url', $author_id );
 
 		if ( ! $url ) {

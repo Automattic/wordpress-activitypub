@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Duplicate copies of cached profile pictures and images that earlier versions left behind are removed on update, and `wp activitypub cache cleanup` removes them on demand.

@@ -17,6 +17,8 @@ use Activitypub\Model\Blog;
 class Blog_Settings_Fields {
 	/**
 	 * Initialize the settings fields.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'load-settings_page_activitypub', array( self::class, 'register_settings' ) );
@@ -24,6 +26,8 @@ class Blog_Settings_Fields {
 
 	/**
 	 * Register all settings fields.
+	 *
+	 * @return void
 	 */
 	public static function register_settings() {
 		// If we're in blog mode, and we're on the blog profile tab, mark the profile setup step as done.
@@ -119,6 +123,8 @@ class Blog_Settings_Fields {
 
 	/**
 	 * Name field callback.
+	 *
+	 * @return void
 	 */
 	public static function name_callback() {
 		?>
@@ -133,6 +139,8 @@ class Blog_Settings_Fields {
 
 	/**
 	 * Avatar field callback.
+	 *
+	 * @return void
 	 */
 	public static function avatar_callback() {
 		$blog         = new Blog();
@@ -197,6 +205,8 @@ class Blog_Settings_Fields {
 
 	/**
 	 * Header image field callback.
+	 *
+	 * @return void
 	 */
 	public static function header_image_callback() {
 		$classes_for_button           = 'button upload-button button-add-media button-add-header-image activitypub-media-picker-button';
@@ -247,6 +257,8 @@ class Blog_Settings_Fields {
 
 	/**
 	 * Profile ID field callback.
+	 *
+	 * @return void
 	 */
 	public static function profile_id_callback() {
 		?>
@@ -267,6 +279,8 @@ class Blog_Settings_Fields {
 
 	/**
 	 * Description field callback.
+	 *
+	 * @return void
 	 */
 	public static function description_callback() {
 		?>
@@ -287,6 +301,8 @@ class Blog_Settings_Fields {
 
 	/**
 	 * Notifications field callback.
+	 *
+	 * @return void
 	 */
 	public static function notifications_callback() {
 		?>
@@ -327,6 +343,8 @@ class Blog_Settings_Fields {
 
 	/**
 	 * Extra fields callback.
+	 *
+	 * @return void
 	 */
 	public static function extra_fields_callback() {
 		?>
@@ -375,6 +393,8 @@ class Blog_Settings_Fields {
 
 	/**
 	 * Also Known As field callback.
+	 *
+	 * @return void
 	 */
 	public static function also_known_as_callback() {
 		$also_known_as = \get_option( 'activitypub_blog_user_also_known_as' );
@@ -398,6 +418,8 @@ class Blog_Settings_Fields {
 
 	/**
 	 * Hide Social Graph field callback.
+	 *
+	 * @return void
 	 */
 	public static function hide_followers_callback() {
 		?>

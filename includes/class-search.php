@@ -19,6 +19,8 @@ class Search {
 
 	/**
 	 * Initialize the search enhancement.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'pre_get_posts', array( self::class, 'enhance_public_search' ) );
@@ -73,6 +75,8 @@ class Search {
 	/**
 	 * Handle admin comment search to check for URLs and ActivityPub objects.
 	 * Runs on admin_init to avoid infinite loops.
+	 *
+	 * @return void
 	 */
 	public static function enhance_admin_comment_search() {
 		// Check user capabilities.

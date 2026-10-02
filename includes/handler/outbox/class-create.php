@@ -23,6 +23,8 @@ use function Activitypub\url_to_commentid;
 class Create {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_outbox_create', array( self::class, 'handle_create' ), 10, 3 );

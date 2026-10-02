@@ -47,6 +47,8 @@ Autoloader::register_path( __NAMESPACE__, __DIR__ . '/includes' );
 
 /**
  * Initialize REST routes.
+ *
+ * @return void
  */
 function rest_init() {
 	Rest\Server::init();
@@ -86,6 +88,8 @@ function rest_init() {
 
 /**
  * Initialize plugin.
+ *
+ * @return void
  */
 function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Activitypub', 'init' ) );
@@ -131,11 +135,13 @@ function plugin_init() {
 
 /**
  * Initialize plugin admin.
+ *
+ * @return void
  */
 function plugin_admin_init() {
 	// Screen Options and Menus are set before `admin_init`.
 	\add_action( 'init', array( __NAMESPACE__ . '\WP_Admin\Heartbeat', 'init' ), 9 ); // Before script loader.
-	\add_filter( 'init', array( __NAMESPACE__ . '\WP_Admin\Screen_Options', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\WP_Admin\Screen_Options', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\WP_Admin\Menu', 'init' ) );
 
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Admin', 'init' ) );
@@ -160,6 +166,8 @@ function plugin_admin_init() {
  * Redirect to the welcome page after plugin activation.
  *
  * @param string $plugin The plugin basename.
+ *
+ * @return void
  */
 function activation_redirect( $plugin ) {
 	if ( ACTIVITYPUB_PLUGIN_BASENAME === $plugin ) {

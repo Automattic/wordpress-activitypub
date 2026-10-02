@@ -65,6 +65,8 @@ class Self_Destruct_Command extends \WP_CLI_Command {
 	 *
 	 * @param array $args       The positional arguments (unused).
 	 * @param array $assoc_args The associative arguments (--status, --yes).
+	 *
+	 * @return void
 	 */
 	public function __invoke( $args, $assoc_args = array() ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		// Check if --status flag is provided.
@@ -93,6 +95,8 @@ class Self_Destruct_Command extends \WP_CLI_Command {
 	 * 5. Provides progress feedback and completion instructions
 	 *
 	 * @param array $assoc_args The associative arguments from WP-CLI.
+	 *
+	 * @return void
 	 */
 	private function execute_self_destruct( $assoc_args ) {
 		$this->display_self_destruct_warning();
@@ -117,6 +121,8 @@ class Self_Destruct_Command extends \WP_CLI_Command {
 
 	/**
 	 * Display the self-destruct warning message.
+	 *
+	 * @return void
 	 */
 	private function display_self_destruct_warning() {
 		\WP_CLI::line( \WP_CLI::colorize( '%R⚠️  DESTRUCTIVE OPERATION ⚠️%n' ) );
@@ -213,6 +219,8 @@ class Self_Destruct_Command extends \WP_CLI_Command {
 	 * Display the completion message after processing.
 	 *
 	 * @param int $processed Number of users successfully processed.
+	 *
+	 * @return void
 	 */
 	private function display_completion_message( $processed ) {
 		if ( 0 === $processed ) {
@@ -242,6 +250,8 @@ class Self_Destruct_Command extends \WP_CLI_Command {
 	 * - NOT STARTED: Process hasn't been initiated
 	 * - IN PROGRESS: Delete activities are still being processed
 	 * - COMPLETED: All Delete activities have been sent
+	 *
+	 * @return void
 	 */
 	private function show_self_destruct_status() {
 		// Only proceed if self-destruct is active.

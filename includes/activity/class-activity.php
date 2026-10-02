@@ -186,6 +186,8 @@ class Activity extends Base_Object {
 	 * @see https://www.w3.org/TR/activitypub/#object-without-create
 	 *
 	 * @param array|string|Base_Object|Activity|Actor|null $data Activity object.
+	 *
+	 * @return void
 	 */
 	public function set_object( $data ) {
 		$object = $data;
@@ -205,6 +207,8 @@ class Activity extends Base_Object {
 
 	/**
 	 * Fills the Activity with the specified activity object.
+	 *
+	 * @return void
 	 */
 	public function pre_fill_activity_from_object() {
 		$object = $this->get_object();

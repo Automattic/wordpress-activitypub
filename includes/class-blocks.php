@@ -66,6 +66,8 @@ class Blocks {
 
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		// This is already being called on the init hook, so just add it.
@@ -90,6 +92,8 @@ class Blocks {
 
 	/**
 	 * Enqueue the block editor assets.
+	 *
+	 * @return void
 	 */
 	public static function enqueue_editor_assets() {
 		$data = array(
@@ -129,6 +133,8 @@ class Blocks {
 
 	/**
 	 * Enqueue the reply handle script if the in_reply_to GET param is set.
+	 *
+	 * @return void
 	 */
 	public static function handle_in_reply_to_get_param() {
 		self::enqueue_intent_script( 'in_reply_to', 'reply-intent' );
@@ -144,6 +150,8 @@ class Blocks {
 	 *
 	 * @param string $param  The URL parameter carrying the address.
 	 * @param string $script The build folder and script handle suffix.
+	 *
+	 * @return void
 	 */
 	private static function enqueue_intent_script( $param, $script ) {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only, the script only prefills a block.
@@ -160,6 +168,8 @@ class Blocks {
 	 * Enqueue the quote intent script if the quotation_of GET param is set.
 	 *
 	 * @since unreleased
+	 *
+	 * @return void
 	 */
 	public static function handle_quotation_of_get_param() {
 		self::enqueue_intent_script( 'quotation_of', 'quote-intent' );
@@ -167,6 +177,8 @@ class Blocks {
 
 	/**
 	 * Register the blocks.
+	 *
+	 * @return void
 	 */
 	public static function register_blocks() {
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/extra-fields' );
@@ -245,6 +257,8 @@ class Blocks {
 
 	/**
 	 * Register block patterns for ActivityPub.
+	 *
+	 * @return void
 	 */
 	public static function register_patterns() {
 		// Register the ActivityPub pattern category.
@@ -276,6 +290,8 @@ class Blocks {
 
 	/**
 	 * Register FSE templates for block themes.
+	 *
+	 * @return void
 	 */
 	public static function register_templates() {
 		// Only register templates for block themes on WP 6.7+.
@@ -320,6 +336,8 @@ class Blocks {
 
 	/**
 	 * Register REST fields needed for blocks.
+	 *
+	 * @return void
 	 */
 	public static function register_rest_fields() {
 		// Register the post_count field for Follow Me block.
@@ -887,6 +905,8 @@ class Blocks {
 	 *                                 (e.g. 'context.modal.title'). When set, uses data-wp-text
 	 *                                 on the title element and enables dynamic compact toggling.
 	 * }
+	 *
+	 * @return void
 	 */
 	public static function render_modal( $args = array() ) {
 		$defaults = array(
@@ -950,6 +970,8 @@ class Blocks {
 	 * interactions to users unfamiliar with the Fediverse.
 	 *
 	 * @since 8.0.0
+	 *
+	 * @return void
 	 */
 	public static function render_modal_help() {
 		?>
@@ -969,6 +991,8 @@ class Blocks {
 	 * Renders an actor list component that can be used by different blocks.
 	 *
 	 * @param array $args Arguments for the actor list.
+	 *
+	 * @return void
 	 */
 	public static function render_actor_list( $args = array() ) {
 		$defaults = array(
@@ -1090,9 +1114,9 @@ class Blocks {
 	/**
 	 * Add Interactivity directions to the specified element.
 	 *
-	 * @param string   $content    The block content.
-	 * @param string[] $selector   The selector for the element to add directions to.
-	 * @param string[] $attributes The attributes to add to the element.
+	 * @param string                                        $content    The block content.
+	 * @param array{tag_name?: string, class_name?: string} $selector   The tag processor query for the element to add directions to.
+	 * @param string[]                                      $attributes The attributes to add to the element.
 	 *
 	 * @return string The updated content.
 	 */
@@ -1117,6 +1141,8 @@ class Blocks {
 	 * Add post transformation callbacks.
 	 *
 	 * @param object $post The post object.
+	 *
+	 * @return void
 	 */
 	public static function add_post_transformation_callbacks( $post ) {
 		\add_filter( 'render_block_core/embed', array( self::class, 'revert_embed_links' ), 10, 2 );
@@ -1458,6 +1484,8 @@ class Blocks {
 	 * @since 8.1.0
 	 *
 	 * @param WP_Query $query The WP_Query instance.
+	 *
+	 * @return void
 	 */
 	public static function filter_query_loop_vars( $query ) {
 		// Never touch admin or feed queries.

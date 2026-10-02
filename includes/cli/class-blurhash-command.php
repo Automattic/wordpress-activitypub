@@ -88,6 +88,8 @@ class Blurhash_Command extends \WP_CLI_Command {
 	 * @param array<string, mixed> $assoc_args Associative CLI flags.
 	 *
 	 * @when after_wp_load
+	 *
+	 * @return void
 	 */
 	public function backfill( $args, $assoc_args ) {
 		unset( $args );

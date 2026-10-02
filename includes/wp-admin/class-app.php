@@ -39,6 +39,8 @@ class App {
 	 * Initialize the App page.
 	 *
 	 * Must run early (on admin_init) before the admin bar is initialized.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -49,6 +51,8 @@ class App {
 
 	/**
 	 * Remove admin notices from the App page.
+	 *
+	 * @return void
 	 */
 	public static function remove_admin_notices() {
 		\remove_all_actions( 'admin_notices' );
@@ -65,6 +69,8 @@ class App {
 
 	/**
 	 * Enqueue scripts and styles for the App page.
+	 *
+	 * @return void
 	 */
 	public static function enqueue_scripts() {
 		\wp_dequeue_style( 'colors' );
@@ -181,6 +187,8 @@ class App {
 	 * Add boot configuration for the app loader module.
 	 *
 	 * @param array $routes Route definitions.
+	 *
+	 * @return void
 	 */
 	private static function add_loader_data( $routes ) {
 		$mount_id = self::MOUNT_ID;
@@ -201,6 +209,8 @@ class App {
 
 	/**
 	 * Preload REST data used by the first app render.
+	 *
+	 * @return void
 	 */
 	private static function preload_rest_data() {
 		// Define paths to preload - must match exact fields from entities.js.
@@ -265,6 +275,8 @@ class App {
 	 * Register app script modules.
 	 *
 	 * @param array $routes Route definitions.
+	 *
+	 * @return void
 	 */
 	private static function register_app_modules( $routes ) {
 		$module_assets = self::get_app_module_assets();
@@ -326,6 +338,8 @@ class App {
 	 * @param string $module_id  Script module ID.
 	 * @param string $script     Script path relative to the plugin root.
 	 * @param string $asset_file Asset metadata path relative to the plugin root.
+	 *
+	 * @return void
 	 */
 	private static function register_script_module( $module_id, $script, $asset_file ) {
 		$asset = self::get_asset( $asset_file );
@@ -388,6 +402,8 @@ class App {
 
 	/**
 	 * Enqueue styles emitted by the module build.
+	 *
+	 * @return void
 	 */
 	private static function enqueue_app_styles() {
 		$style_path = 'build/app/routes/feed/style-content.css';
@@ -466,6 +482,8 @@ class App {
 
 	/**
 	 * Render the App admin page.
+	 *
+	 * @return void
 	 */
 	public static function render_page() {
 		if ( ! self::is_supported() ) {

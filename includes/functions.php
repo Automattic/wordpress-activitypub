@@ -14,7 +14,7 @@ namespace Activitypub;
  *
  * Returns the canonical ActivityPub URI for a WP_Post or WP_Comment.
  *
- * @param \WP_Post|\WP_Comment $wp_object The WordPress post or comment.
+ * @param mixed $wp_object The WordPress post or comment; anything else yields null.
  *
  * @return string|null The ActivityPub ID (a URL), or null if unsupported type.
  */

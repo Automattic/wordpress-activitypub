@@ -494,6 +494,8 @@ class Token {
 	 *
 	 * @param int    $user_id   The user ID.
 	 * @param string $client_id The OAuth client ID.
+	 *
+	 * @return void
 	 */
 	private static function maybe_untrack_user( $user_id, $client_id ) {
 		if ( empty( $client_id ) ) {
@@ -736,6 +738,8 @@ class Token {
 	 *
 	 * @param int    $user_id   The user ID.
 	 * @param string $client_id The OAuth client ID.
+	 *
+	 * @return void
 	 */
 	private static function track_user( $user_id, $client_id ) {
 		$client = Client::get( $client_id );
@@ -758,6 +762,8 @@ class Token {
 	 * @since 8.1.0
 	 *
 	 * @param int $user_id The user ID.
+	 *
+	 * @return void
 	 */
 	private static function enforce_token_limit( $user_id ) {
 		$all_meta = \get_user_meta( $user_id );
@@ -810,6 +816,8 @@ class Token {
 	 *
 	 * @param int    $user_id   The user ID.
 	 * @param string $client_id The OAuth client ID.
+	 *
+	 * @return void
 	 */
 	private static function untrack_user( $user_id, $client_id ) {
 		$client = Client::get( $client_id );
@@ -825,6 +833,8 @@ class Token {
 	 * Untrack all users from a specific client.
 	 *
 	 * @param string $client_id The OAuth client ID.
+	 *
+	 * @return void
 	 */
 	private static function untrack_all_users( $client_id ) {
 		$client = Client::get( $client_id );

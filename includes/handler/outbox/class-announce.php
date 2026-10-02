@@ -15,6 +15,8 @@ use function Activitypub\object_to_uri;
 class Announce {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_outbox_announce', array( self::class, 'handle_announce' ), 10, 2 );
@@ -27,6 +29,8 @@ class Announce {
 	 *
 	 * @param array $data    The activity data array.
 	 * @param int   $user_id The user ID.
+	 *
+	 * @return array The activity data array.
 	 */
 	public static function handle_announce( $data, $user_id = null ) {
 		$object_url = object_to_uri( $data['object'] ?? '' );

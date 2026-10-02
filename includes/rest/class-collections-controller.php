@@ -29,6 +29,8 @@ class Collections_Controller extends Actors_Controller {
 
 	/**
 	 * Register routes.
+	 *
+	 * @return void
 	 */
 	public function register_routes() {
 		\register_rest_route(

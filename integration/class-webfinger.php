@@ -19,6 +19,8 @@ use function Activitypub\get_rest_url_by_path;
 class Webfinger {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'webfinger_user_data', array( self::class, 'add_user_discovery' ), 1, 3 );

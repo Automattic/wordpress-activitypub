@@ -37,6 +37,8 @@ class Actor_Command extends \WP_CLI_Command {
 	 *
 	 * @param array $args       The positional arguments.
 	 * @param array $assoc_args The associative arguments (unused).
+	 *
+	 * @return void
 	 */
 	public function delete( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		// Only the blog actor (0) and real users (positive IDs) can be deleted; negative IDs (e.g. the former -1 application ID) are never valid actors.
@@ -70,6 +72,8 @@ class Actor_Command extends \WP_CLI_Command {
 	 *
 	 * @param array $args       The positional arguments.
 	 * @param array $assoc_args The associative arguments (unused).
+	 *
+	 * @return void
 	 */
 	public function update( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		Actor::schedule_profile_update( $args[0] );

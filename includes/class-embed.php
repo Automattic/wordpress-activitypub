@@ -14,6 +14,8 @@ class Embed {
 
 	/**
 	 * Initialize the embed handler.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'pre_oembed_result', array( self::class, 'maybe_use_activitypub_embed' ), 10, 3 );

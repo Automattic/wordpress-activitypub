@@ -670,7 +670,7 @@ class Base_Object extends Generic_Object {
 	 * Generic setter.
 	 *
 	 * @param string $key   The key to set.
-	 * @param string $value The value to set.
+	 * @param mixed  $value The value to set.
 	 *
 	 * @return mixed The value.
 	 */

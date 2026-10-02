@@ -167,6 +167,20 @@ trait Collection {
 	}
 
 	/**
+	 * Resolve the zero-based position of an item under the collection's own query and visibility rules.
+	 *
+	 * Collections with a seekable order override this; the default has nothing to seek.
+	 *
+	 * @param string           $item    The ActivityPub ID of the item.
+	 * @param \WP_REST_Request $request Full details about the request.
+	 *
+	 * @return int|false|\WP_Error Zero-based index of the item, false or WP_Error when not found.
+	 */
+	public function get_item_index( $item, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+		return false;
+	}
+
+	/**
 	 * Handle a seek request by redirecting to the collection page that contains the sought item.
 	 *
 	 * Implements the seekItem collection extension: when the `item` parameter is present, the

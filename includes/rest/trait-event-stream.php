@@ -97,6 +97,8 @@ trait Event_Stream {
 	 * @since 8.1.0
 	 *
 	 * @see https://swicg.github.io/activitypub-api/sse
+	 *
+	 * @return void
 	 */
 	private function authenticate_from_query_param() {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Opaque auth token, must not be altered.
@@ -133,6 +135,8 @@ trait Event_Stream {
 	 *
 	 * @param int    $user_id    The actor ID.
 	 * @param string $collection The collection type ('outbox' or 'inbox').
+	 *
+	 * @return void
 	 */
 	protected function stream_collection( $user_id, $collection ) {
 		// Allow PHP to detect client disconnects instead of auto-terminating.
@@ -202,6 +206,8 @@ trait Event_Stream {
 	 * does not support streaming responses.
 	 *
 	 * @param string $stream_url The remote eventStream URL.
+	 *
+	 * @return void
 	 */
 	protected function relay_remote_stream( $stream_url ) {
 		\ignore_user_abort( true );
@@ -364,6 +370,8 @@ trait Event_Stream {
 
 	/**
 	 * Send SSE-specific HTTP headers.
+	 *
+	 * @return void
 	 */
 	protected function send_sse_headers() {
 		while ( \ob_get_level() > 0 ) {
@@ -385,6 +393,8 @@ trait Event_Stream {
 	 *
 	 * @param \WP_Post $item       The collection post item.
 	 * @param string   $collection The collection type ('outbox' or 'inbox').
+	 *
+	 * @return void
 	 */
 	protected function send_sse_event( $item, $collection ) {
 		$event_type = $this->get_event_type( $item, $collection );
@@ -405,6 +415,8 @@ trait Event_Stream {
 	 * Send an SSE comment line.
 	 *
 	 * @param string $comment The comment text.
+	 *
+	 * @return void
 	 */
 	protected function send_sse_comment( $comment ) {
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- SSE protocol requires raw output.
@@ -413,6 +425,8 @@ trait Event_Stream {
 
 	/**
 	 * Flush all output buffers.
+	 *
+	 * @return void
 	 */
 	protected function flush_output() {
 		if ( \ob_get_level() > 0 ) {

@@ -16,6 +16,8 @@ use Activitypub\Collection\Outbox;
 class Router {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
@@ -32,6 +34,8 @@ class Router {
 
 	/**
 	 * Add rewrite rules.
+	 *
+	 * @return void
 	 */
 	public static function add_rewrite_rules() {
 		/*
@@ -242,6 +246,8 @@ class Router {
 
 	/**
 	 * Add the 'self' link to the header.
+	 *
+	 * @return void
 	 */
 	public static function add_headers() {
 		$id = Query::get_instance()->get_activitypub_object_id();
@@ -450,6 +456,8 @@ class Router {
 	 * since we only need to return the blog actor, not posts.
 	 *
 	 * @param \WP_Query $wp_query The WP_Query instance.
+	 *
+	 * @return void
 	 */
 	public static function fix_is_home_check( $wp_query ) {
 		if (

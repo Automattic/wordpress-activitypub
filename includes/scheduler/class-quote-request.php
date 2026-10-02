@@ -26,6 +26,8 @@ class Quote_Request {
 	 * Initialize the class, registering WordPress hooks.
 	 *
 	 * @since unreleased
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'maybe_send_request' ), 10, 3 );
@@ -39,6 +41,8 @@ class Quote_Request {
 	 * @param int      $outbox_id The outbox item ID.
 	 * @param Activity $activity  The activity object.
 	 * @param int      $user_id   The local user ID.
+	 *
+	 * @return void
 	 */
 	public static function maybe_send_request( $outbox_id, $activity, $user_id ) {
 		if ( ! \in_array( $activity->get_type(), array( 'Create', 'Update' ), true ) ) {
