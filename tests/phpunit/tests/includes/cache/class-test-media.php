@@ -97,7 +97,7 @@ class Test_Media extends WP_UnitTestCase {
 		file_put_contents( $paths['basedir'] . '/test.txt', 'test' );
 
 		Media::init();
-		wp_delete_post( $post_id, true );
+		\wp_delete_post( $post_id, true );
 
 		$this->assertFalse( is_dir( $paths['basedir'] ) );
 
