@@ -129,7 +129,7 @@ class Collection_Reader {
 		}
 		$document = Http::get_remote_object( $uri );
 
-		if ( \is_wp_error( $document ) || ! \is_array( $document ) ) {
+		if ( \is_wp_error( $document ) || ! \is_array( $document ) || ! is_collection( $document ) ) {
 			return null;
 		}
 

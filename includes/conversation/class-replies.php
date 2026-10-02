@@ -105,8 +105,12 @@ class Replies implements Source {
 		$found = array();
 
 		foreach ( Collection_Reader::read( $collection ) as $reply ) {
-			if ( \is_string( $reply ) ) {
-				$reply = Http::get_remote_object( $reply );
+			if ( \is_string( $reply ) || ( \is_array( $reply ) && 'Link' === ( $reply['type'] ?? '' ) ) ) {
+				$uri = object_to_uri( $reply );
+				if ( ! \is_string( $uri ) || ! $uri ) {
+					continue;
+				}
+				$reply = Http::get_remote_object( $uri );
 			}
 
 			if ( ! \is_array( $reply ) ) {

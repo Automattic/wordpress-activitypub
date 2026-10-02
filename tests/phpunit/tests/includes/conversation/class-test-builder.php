@@ -171,19 +171,42 @@ class Test_Builder extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Collections can list object URIs rather than embedded objects.
+	 * Collections can list object and Link references rather than embedded objects.
 	 *
+	 * @dataProvider collection_member_reference_provider
 	 * @covers ::build
+	 *
+	 * @param string|null $attribute The URI attribute, or null for a bare URI.
+	 * @param string|null $type      The reference type, if supplied.
+	 * @param bool        $has_id    Whether a Link also has its own identifier.
 	 */
-	public function test_resolves_uri_items_in_a_context_collection() {
-		$seed                      = 'https://remote.example/notes/1';
-		$reply                     = 'https://other.example/notes/2';
+	public function test_resolves_uri_items_in_a_context_collection( $attribute, $type, $has_id = false ) {
+		$seed      = 'https://remote.example/notes/1';
+		$reply     = 'https://other.example/notes/2';
+		$reference = $attribute ? array( $attribute => $reply ) : $reply;
+		if ( $type ) {
+			$reference['type'] = $type;
+		}
+		if ( $has_id ) {
+			$reference['id']                     = 'https://remote.example/links/1';
+			$this->documents[ $reference['id'] ] = array(
+				'id'           => $reference['id'],
+				'attributedTo' => 'https://remote.example/users/alice',
+			);
+		}
+		if ( 'Image' === $type ) {
+			$reference['url']                     = 'https://remote.example/media/1';
+			$this->documents[ $reference['url'] ] = array(
+				'id'           => $reference['url'],
+				'attributedTo' => 'https://remote.example/users/alice',
+			);
+		}
 		$this->documents[ $seed ]  = array(
 			'id'           => $seed,
 			'attributedTo' => 'https://remote.example/users/alice',
 			'context'      => array(
 				'type'  => 'Collection',
-				'items' => array( $reply ),
+				'items' => array( $reference ),
 			),
 		);
 		$this->documents[ $reply ] = array(
@@ -196,6 +219,22 @@ class Test_Builder extends \WP_UnitTestCase {
 
 		$this->assertSame( array( $seed, $reply ), \wp_list_pluck( $objects, 'id' ) );
 		$this->assertSame( array( $seed, $reply ), $this->requested );
+	}
+
+	/**
+	 * Collection member references supported by URI resolution.
+	 *
+	 * @return array Test cases.
+	 */
+	public function collection_member_reference_provider() {
+		return array(
+			'URI'       => array( null, null ),
+			'object id' => array( 'id', null ),
+			'Link'      => array( 'href', 'Link' ),
+			'Link id'   => array( 'href', 'Link', true ),
+			'Image id'  => array( 'id', 'Image' ),
+			'href'      => array( 'href', null ),
+		);
 	}
 
 	/**

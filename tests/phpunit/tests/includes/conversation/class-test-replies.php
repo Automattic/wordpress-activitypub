@@ -134,18 +134,26 @@ class Test_Replies extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * URI items must be resolved to discover their own replies collections.
+	 * URI and Link items must be resolved to discover their own replies collections.
 	 *
+	 * @dataProvider reply_reference_provider
 	 * @covers ::parse
+	 *
+	 * @param bool $linked Whether to supply Link objects instead of URI strings.
 	 */
-	public function test_descends_into_uri_replies() {
+	public function test_descends_into_uri_replies( $linked ) {
 		$reply      = 'https://remote.example/notes/2';
 		$grandchild = 'https://remote.example/notes/3';
 		$this->documents['https://remote.example/notes/1/replies'] = array(
 			'type'  => 'Collection',
 			'first' => array(
 				'type'  => 'CollectionPage',
-				'items' => array( $reply ),
+				'items' => array(
+					$linked ? array(
+						'type' => 'Link',
+						'href' => $reply,
+					) : $reply,
+				),
 			),
 		);
 		$this->documents[ $reply ]                                 = array(
@@ -154,7 +162,12 @@ class Test_Replies extends \WP_UnitTestCase {
 		);
 		$this->documents['https://remote.example/notes/2/replies'] = array(
 			'type'  => 'Collection',
-			'items' => array( $grandchild ),
+			'items' => array(
+				$linked ? array(
+					'type' => 'Link',
+					'href' => $grandchild,
+				) : $grandchild,
+			),
 		);
 		$this->documents[ $grandchild ]                            = array( 'id' => $grandchild );
 
@@ -165,6 +178,56 @@ class Test_Replies extends \WP_UnitTestCase {
 			array( 'https://remote.example/notes/1/replies', $reply, 'https://remote.example/notes/2/replies', $grandchild ),
 			$this->requested
 		);
+	}
+
+	/**
+	 * Reference shapes used by replies collections.
+	 *
+	 * @return array Test cases.
+	 */
+	public function reply_reference_provider() {
+		return array(
+			'URI'  => array( false ),
+			'Link' => array( true ),
+		);
+	}
+
+	/**
+	 * Invalid Link targets are ignored without fetching malformed values.
+	 *
+	 * @covers ::parse
+	 */
+	public function test_ignores_malformed_link_items() {
+		$this->assertSame(
+			array(),
+			( new Replies() )->parse(
+				array(
+					'replies' => array(
+						'type'  => 'Collection',
+						'items' => array( array( 'type' => 'Link' ) ),
+					),
+				)
+			)
+		);
+		foreach ( array( null, true, 1, array( 'https://remote.example/notes/2' ) ) as $href ) {
+			$this->assertSame(
+				array(),
+				( new Replies() )->parse(
+					array(
+						'replies' => array(
+							'type'  => 'Collection',
+							'items' => array(
+								array(
+									'type' => 'Link',
+									'href' => $href,
+								),
+							),
+						),
+					)
+				)
+			);
+		}
+		$this->assertSame( array(), $this->requested );
 	}
 
 	/**

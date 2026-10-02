@@ -36,6 +36,12 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 	 */
 	public function object_to_uri_provider() {
 		return array(
+			array( array( 'type' => 'Link' ), null ),
+			array( array( 'type' => 'Mention' ), null ),
+			array( array( 'type' => 'Image' ), null ),
+			array( array( 'type' => 'Audio' ), null ),
+			array( array( 'type' => 'Video' ), null ),
+			array( array( 'type' => 'Document' ), null ),
 			array( true, null ),
 			array( 1, null ),
 			array( 1.5, null ),

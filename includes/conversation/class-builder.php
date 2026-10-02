@@ -117,7 +117,10 @@ class Builder {
 					break;
 				}
 
-				$id = \is_array( $found ) ? ( $found['id'] ?? '' ) : $found;
+				$id = \is_array( $found ) ? ( $found['id'] ?? object_to_uri( $found ) ) : $found;
+				if ( \is_array( $found ) && 'Link' === ( $found['type'] ?? '' ) ) {
+					$id = object_to_uri( $found );
+				}
 				if ( ! \is_string( $id ) || ! $id || isset( $collected[ $id ] ) ) {
 					continue;
 				}

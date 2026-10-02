@@ -20,6 +20,52 @@ class Test_Collection_Reader extends \WP_UnitTestCase {
 	use Remote_Object_Stub;
 
 	/**
+	 * Fetched non-collections cannot supply items or continue pagination.
+	 *
+	 * @dataProvider invalid_collection_position_provider
+	 * @covers ::read
+	 *
+	 * @param string $position Where the invalid document is referenced.
+	 */
+	public function test_rejects_fetched_non_collection_documents( $position ) {
+		$url                     = 'https://remote.example/not-a-collection';
+		$this->documents[ $url ] = array(
+			'id'    => $url,
+			'type'  => 'Note',
+			'items' => array( 'https://remote.example/notes/unrelated' ),
+			'next'  => 'https://remote.example/another-page',
+		);
+		$collection              = $url;
+		$expected                = array();
+		if ( 'initial' !== $position ) {
+			$collection = array(
+				'type'    => 'Collection',
+				$position => $url,
+			);
+			if ( 'next' === $position ) {
+				$expected            = array( 'https://remote.example/notes/1' );
+				$collection['items'] = $expected;
+			}
+		}
+
+		$this->assertSame( $expected, Collection_Reader::read( $collection ) );
+		$this->assertSame( array( $url ), $this->requested );
+	}
+
+	/**
+	 * Documents reached at the start or during pagination.
+	 *
+	 * @return array Test cases.
+	 */
+	public function invalid_collection_position_provider() {
+		return array(
+			'initial' => array( 'initial' ),
+			'first'   => array( 'first' ),
+			'next'    => array( 'next' ),
+		);
+	}
+
+	/**
 	 * Page references are dereferenced, and Link cycles stop before fetching twice.
 	 *
 	 * @dataProvider page_reference_provider
