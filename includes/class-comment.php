@@ -69,9 +69,14 @@ class Comment {
 		};
 		\add_filter( 'render_block_context', $context_filter );
 
+		$allowed_blocks = array( 'activitypub/emoji' );
+		if ( $comment instanceof \WP_Comment && self::was_received( $comment ) ) {
+			$allowed_blocks[] = 'activitypub/image';
+		}
+
 		foreach ( $blocks as $block ) {
 			// Rendering a parent also invokes its children's callbacks, so reject nested blocks.
-			if ( \in_array( $block['blockName'], array( 'activitypub/emoji', 'activitypub/image' ), true ) && empty( $block['innerBlocks'] ) ) {
+			if ( \in_array( $block['blockName'], $allowed_blocks, true ) && empty( $block['innerBlocks'] ) ) {
 				$output .= \render_block( $block );
 			} else {
 				$output .= \serialize_block( $block );

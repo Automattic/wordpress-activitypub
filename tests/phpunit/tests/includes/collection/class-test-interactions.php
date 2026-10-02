@@ -149,6 +149,56 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An attachment URL in the text does not replace the attachment's image.
+	 *
+	 * @dataProvider linked_image_content_provider
+	 * @covers ::add_comment
+	 * @covers ::update_comment
+	 *
+	 * @param string $content Remote comment content with an attachment URL.
+	 */
+	public function test_comment_preserves_linked_image_attachments( $content ) {
+		$url                              = 'https://example.com/photo.jpg';
+		$activity                         = $this->create_test_object( 'https://example.com/linked-image-reply' );
+		$activity['object']['content']    = $content;
+		$activity['object']['attachment'] = array(
+			array(
+				'type' => 'Image',
+				'url'  => $url,
+				'name' => 'Photo description',
+			),
+		);
+		$comment_id                       = Interactions::add_comment( $activity );
+		$this->assertIsInt( $comment_id );
+		$stored = \get_comment( $comment_id )->comment_content;
+		$this->assertSame( 1, \substr_count( $stored, '<!-- wp:activitypub/image' ) );
+		$this->assertStringContainsString( 'Photo description', $stored );
+
+		$activity['object']['content']              = \str_replace( 'photo.jpg', 'updated.jpg', $content );
+		$activity['object']['attachment'][0]['url'] = 'https://example.com/updated.jpg';
+		$result                                     = Interactions::update_comment( $activity );
+		$this->assertNotWPError( $result );
+		$this->assertNotFalse( $result );
+		$stored = \get_comment( $comment_id )->comment_content;
+		$this->assertSame( 1, \substr_count( $stored, '<!-- wp:activitypub/image' ) );
+		$this->assertStringContainsString( 'updated.jpg', $stored );
+		$this->assertStringNotContainsString( 'photo.jpg', $stored );
+	}
+
+	/**
+	 * Text and links that reference an attached image.
+	 *
+	 * @return array Test cases.
+	 */
+	public function linked_image_content_provider() {
+		return array(
+			'plain URL'    => array( '<p>Photo: https://example.com/photo.jpg</p>' ),
+			'link'         => array( '<p><a href="https://example.com/photo.jpg">Photo</a></p>' ),
+			'linked image' => array( '<p><a href="https://example.com/photo.jpg"><img src="https://example.com/photo.jpg" alt="Photo" /></a></p>' ),
+		);
+	}
+
+	/**
 	 * Remote HTML cannot supply trusted image blocks or executable attributes.
 	 *
 	 * @group activitypub

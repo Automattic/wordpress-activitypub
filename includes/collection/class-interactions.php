@@ -161,7 +161,7 @@ class Interactions {
 		 */
 		$content                         = Sanitize::comment_content( $activity['object']['content'] ?? '' );
 		$content                         = Emoji::wrap_in_content( $content, $activity['object'] );
-		$content                         = process_remote_images( $content, Remote_Posts::extract_attachments( $activity['object'] ) );
+		$content                        .= process_remote_images( '', Remote_Posts::extract_attachments( $activity['object'] ) );
 		$comment_data['comment_content'] = \addslashes( $content );
 
 		$result = self::persist( $comment_data, self::UPDATE );
@@ -525,7 +525,7 @@ class Interactions {
 		// Sanitize remote HTML before adding our own emoji and image blocks.
 		$content         = Sanitize::comment_content( $activity['object']['content'] ?? '' );
 		$content         = Emoji::wrap_in_content( $content, $activity['object'] );
-		$content         = process_remote_images( $content, Remote_Posts::extract_attachments( $activity['object'] ) );
+		$content        .= process_remote_images( '', Remote_Posts::extract_attachments( $activity['object'] ) );
 		$comment_content = \addslashes( $content );
 
 		return array(
