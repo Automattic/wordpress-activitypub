@@ -23,7 +23,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	use Uri_Test_Cases;
 
 	/**
-	 * Object types classify attachments without MIME, and MIME types ignore casing.
+	 * Lists and single attachments retain URL, description, and type regardless of MIME casing.
 	 *
 	 * @covers ::extract_attachments
 	 */
@@ -38,10 +38,21 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 			array( array( 'mediaType' => 'VIDEO/MP4' ), 'video' ),
 		);
 		foreach ( $cases as $case ) {
-			$attachment        = $case[0];
-			$attachment['url'] = 'https://example.com/media';
-			$attachments       = Remote_Posts::extract_attachments( array( 'attachment' => array( $attachment ) ) );
-			$this->assertSame( $case[1], $attachments[0]['type'] );
+			$attachment         = $case[0];
+			$attachment['url']  = 'https://example.com/media';
+			$attachment['name'] = 'Media description';
+			foreach ( array( array( $attachment ), $attachment, (object) $attachment ) as $input ) {
+				$this->assertSame(
+					array(
+						array(
+							'url'  => 'https://example.com/media',
+							'alt'  => 'Media description',
+							'type' => $case[1],
+						),
+					),
+					Remote_Posts::extract_attachments( array( 'attachment' => $input ) )
+				);
+			}
 		}
 	}
 
