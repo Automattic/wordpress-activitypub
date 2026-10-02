@@ -174,6 +174,7 @@ class Delete {
 			return false;
 		}
 
+		Proxy::purge( $stamp_uri );
 		\delete_post_meta( $post->ID, '_activitypub_quote_authorization' );
 
 		add_to_outbox( $post, 'Update', (int) $post->post_author );
@@ -245,13 +246,17 @@ class Delete {
 	 * @return bool True on success, false otherwise.
 	 */
 	public static function maybe_delete_follower( $activity ) {
+		// Verify that Actor is deleted.
+		if ( ! Tombstone::exists( $activity['actor'] ) ) {
+			return false;
+		}
+
+		// The actor is gone from its own host, so the cached copy goes with it.
+		Proxy::purge( $activity['actor'] );
+
 		$follower = Remote_Actors::get_by_uri( $activity['actor'] );
 
-		// Verify that Actor is deleted.
-		if ( ! \is_wp_error( $follower ) && Tombstone::exists( $activity['actor'] ) ) {
-			// The actor is gone from its own host, so the cached copy goes with it.
-			Proxy::purge( $activity['actor'] );
-
+		if ( ! \is_wp_error( $follower ) ) {
 			self::maybe_delete_interactions( $follower->ID );
 			self::maybe_delete_posts( $follower->ID );
 			$state = Remote_Actors::delete( $follower->ID );

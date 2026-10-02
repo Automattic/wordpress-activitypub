@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Handler;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Delete;
 use Activitypub\Proxy;
 use Activitypub\Tests\Quote_Post_Fixtures;
@@ -802,6 +803,57 @@ class Test_Delete extends \WP_UnitTestCase {
 		$this->assertSame( $before, $this->requests, 'The object is still served from the cache.' );
 	}
 
+	/**
+	 * Actor cache invalidation does not require a stored remote actor.
+	 *
+	 * @dataProvider cache_deletion_provider
+	 * @covers ::maybe_delete_follower
+	 *
+	 * @param int  $status HTTP status returned by the actor.
+	 * @param bool $purged Whether the cached actor should be removed.
+	 */
+	public function test_delete_actor_without_a_local_record( $status, $purged ) {
+		$this->stub_remote_requests();
+		$id                     = 'https://example.com/users/cached-only';
+		$actor                  = array(
+			'id'   => $id,
+			'type' => 'Person',
+		);
+		$this->responses[ $id ] = $actor;
+		$this->assertWPError( Remote_Actors::get_by_uri( $id ) );
+		$this->assertSame( $actor, Proxy::get( $id ) );
+
+		$this->responses[ $id ] = 200 === $status ? $actor : $status;
+		Delete::handle_delete(
+			array(
+				'type'   => 'Delete',
+				'actor'  => $id,
+				'object' => $id,
+			),
+			array( self::$user_id )
+		);
+
+		$this->responses[ $id ] = $actor;
+		$before                 = $this->requests;
+		Proxy::get( $id );
+		$this->unstub_remote_requests();
+
+		$this->assertSame( $before + (int) $purged, $this->requests );
+		$this->assertWPError( Remote_Actors::get_by_uri( $id ) );
+	}
+
+	/**
+	 * Confirmed and unconfirmed remote deletions.
+	 *
+	 * @return array Test cases.
+	 */
+	public function cache_deletion_provider() {
+		return array(
+			'confirmed'   => array( 410, true ),
+			'unconfirmed' => array( 200, false ),
+		);
+	}
+
 	/*
 	 * ------------------------------------------------------------------
 	 * Deletes of QuoteAuthorization stamps on our own quote posts (FEP-044f).
@@ -840,6 +892,54 @@ class Test_Delete extends \WP_UnitTestCase {
 
 		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
 		$this->assertSame( $before + 1, $this->count_updates( $post_id ) );
+	}
+
+	/**
+	 * Only a confirmed stamp revocation removes the shared cached copy.
+	 *
+	 * @dataProvider cache_deletion_provider
+	 * @covers ::revoke_quote_authorization
+	 *
+	 * @param int  $status HTTP status returned by the stamp.
+	 * @param bool $purged Whether the cached stamp should be removed.
+	 */
+	public function test_stamp_delete_invalidates_only_after_confirmation( $status, $purged ) {
+		$this->stub_remote_requests();
+		$id                            = 'https://example.com/stamps/1';
+		$actor                         = 'https://example.com/users/alice';
+		$quoted_id                     = 'https://example.com/notes/1';
+		$this->responses[ $quoted_id ] = array(
+			'id'           => $quoted_id,
+			'type'         => 'Note',
+			'attributedTo' => $actor,
+		);
+		$this->responses[ $actor ]     = array(
+			'id'    => $actor,
+			'type'  => 'Person',
+			'inbox' => $actor . '/inbox',
+		);
+		$post_id                       = $this->create_quote_post( $quoted_id );
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', $id );
+		$stamp                  = array(
+			'id'                => $id,
+			'type'              => 'QuoteAuthorization',
+			'attributedTo'      => $actor,
+			'interactingObject' => get_object_id( \get_post( $post_id ) ),
+			'interactionTarget' => $quoted_id,
+		);
+		$this->responses[ $id ] = $stamp;
+		$this->assertSame( $stamp, Proxy::get( $id ) );
+
+		$this->responses[ $id ] = 200 === $status ? $stamp : $status;
+		Delete::handle_delete( $this->build_stamp_delete( $actor, $id ), self::$user_id );
+
+		$this->responses[ $id ] = $stamp;
+		$before                 = $this->requests;
+		Proxy::get( $id );
+		$this->unstub_remote_requests();
+
+		$this->assertSame( $before + (int) $purged, $this->requests );
+		$this->assertSame( $purged ? '' : $id, \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
 	}
 
 	/**

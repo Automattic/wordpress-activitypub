@@ -157,7 +157,13 @@ class Accept {
 		}
 
 		// Uncached: a stamp is fetched once, right when it is presented, never served stale.
-		$stamp = Proxy::get( $stamp_uri, array( 'cached' => false ) );
+		$stamp = Proxy::get(
+			$stamp_uri,
+			array(
+				'cached' => false,
+				'ttl'    => 0,
+			)
+		);
 
 		/*
 		 * The stamp must bind exactly this quote post to exactly this quoted object and be
