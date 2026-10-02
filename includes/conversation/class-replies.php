@@ -57,7 +57,8 @@ class Replies implements Source {
 	 * @return bool True when there are replies to walk.
 	 */
 	public function supports( $activity_object ) {
-		return ! empty( $activity_object['replies'] );
+		$reference = $activity_object['replies'] ?? null;
+		return ! empty( $reference ) && ( \is_string( $reference ) || \is_array( $reference ) );
 	}
 
 	/**

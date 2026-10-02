@@ -20,6 +20,22 @@ class Test_In_Reply_To extends \WP_UnitTestCase {
 	use Remote_Object_Stub;
 
 	/**
+	 * Malformed scalar references are unsupported and never fetched.
+	 *
+	 * @covers ::supports
+	 * @covers ::parse
+	 */
+	public function test_rejects_scalar_references() {
+		$source = new In_Reply_To();
+		foreach ( array( true, 1, 1.5, false, 0, null, '', array() ) as $value ) {
+			$object = array( 'inReplyTo' => $value );
+			$this->assertFalse( $source->supports( $object ) );
+			$this->assertSame( array(), $source->parse( $object ) );
+		}
+		$this->assertSame( array(), $this->requested );
+	}
+
+	/**
 	 * A root object replies to nothing, so there is nothing above it.
 	 *
 	 * @covers ::supports

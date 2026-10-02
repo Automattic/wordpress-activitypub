@@ -20,6 +20,22 @@ class Test_Context extends \WP_UnitTestCase {
 	use Remote_Object_Stub;
 
 	/**
+	 * Malformed scalar references are unsupported and never fetched.
+	 *
+	 * @covers ::supports
+	 * @covers ::parse
+	 */
+	public function test_rejects_scalar_references() {
+		$source = new Context();
+		foreach ( array( true, 1, 1.5, false, 0, null, '', array() ) as $value ) {
+			$object = array( 'context' => $value );
+			$this->assertFalse( $source->supports( $object ) );
+			$this->assertSame( array(), $source->parse( $object ) );
+		}
+		$this->assertSame( array(), $this->requested );
+	}
+
+	/**
 	 * An embedded collection is already available and need not be fetched again.
 	 *
 	 * @covers ::parse

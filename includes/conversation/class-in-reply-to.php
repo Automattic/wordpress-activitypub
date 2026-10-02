@@ -43,7 +43,8 @@ class In_Reply_To implements Source {
 	 * @return bool True when there is an ancestor to climb to.
 	 */
 	public function supports( $activity_object ) {
-		return ! empty( $activity_object['inReplyTo'] );
+		$reference = $activity_object['inReplyTo'] ?? null;
+		return ! empty( $reference ) && ( \is_string( $reference ) || \is_array( $reference ) );
 	}
 
 	/**

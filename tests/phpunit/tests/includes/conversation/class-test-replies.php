@@ -20,6 +20,22 @@ class Test_Replies extends \WP_UnitTestCase {
 	use Remote_Object_Stub;
 
 	/**
+	 * Malformed scalar references are unsupported and never fetched.
+	 *
+	 * @covers ::supports
+	 * @covers ::parse
+	 */
+	public function test_rejects_scalar_references() {
+		$source = new Replies();
+		foreach ( array( true, 1, 1.5, false, 0, null, '', array() ) as $value ) {
+			$object = array( 'replies' => $value );
+			$this->assertFalse( $source->supports( $object ) );
+			$this->assertSame( array(), $source->parse( $object ) );
+		}
+		$this->assertSame( array(), $this->requested );
+	}
+
+	/**
 	 * URI items must be resolved to discover their own replies collections.
 	 *
 	 * @covers ::parse

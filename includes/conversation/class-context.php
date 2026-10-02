@@ -37,7 +37,8 @@ class Context implements Source {
 	 * @return bool True when there is a context to resolve.
 	 */
 	public function supports( $activity_object ) {
-		return ! empty( $activity_object['context'] );
+		$reference = $activity_object['context'] ?? null;
+		return ! empty( $reference ) && ( \is_string( $reference ) || \is_array( $reference ) );
 	}
 
 	/**

@@ -20,6 +20,60 @@ class Test_Collection_Reader extends \WP_UnitTestCase {
 	use Remote_Object_Stub;
 
 	/**
+	 * Page references are dereferenced, and Link cycles stop before fetching twice.
+	 *
+	 * @dataProvider page_reference_provider
+	 * @covers ::read
+	 *
+	 * @param string      $attribute The URI attribute.
+	 * @param string|null $type      The optional reference type.
+	 */
+	public function test_follows_object_page_references( $attribute, $type ) {
+		$first     = 'https://remote.example/page/1';
+		$second    = 'https://remote.example/page/2';
+		$first_ref = array( $attribute => $first );
+		$next_ref  = array( $attribute => $second );
+		if ( $type ) {
+			$first_ref['type'] = $type;
+			$next_ref['type']  = $type;
+		}
+		$this->documents[ $first ]  = array(
+			'id'    => $first,
+			'type'  => 'CollectionPage',
+			'items' => array( 'https://remote.example/notes/1' ),
+			'next'  => $next_ref,
+		);
+		$this->documents[ $second ] = array(
+			'id'    => $second,
+			'type'  => 'CollectionPage',
+			'items' => array( 'https://remote.example/notes/2' ),
+			'next'  => $first_ref,
+		);
+
+		$items = Collection_Reader::read(
+			array(
+				'type'  => 'Collection',
+				'first' => $first_ref,
+			)
+		);
+		$this->assertSame( array( 'https://remote.example/notes/1', 'https://remote.example/notes/2' ), $items );
+		$this->assertSame( array( $first, $second ), $this->requested );
+	}
+
+	/**
+	 * Supported object and Link reference shapes.
+	 *
+	 * @return array The URI attributes and types.
+	 */
+	public function page_reference_provider() {
+		return array(
+			'object' => array( 'id', null ),
+			'link'   => array( 'href', 'Link' ),
+			'href'   => array( 'href', null ),
+		);
+	}
+
+	/**
 	 * JSON-LD can unwrap a single object as well as a single URI.
 	 *
 	 * @covers ::read

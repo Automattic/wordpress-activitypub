@@ -190,6 +190,10 @@ function object_to_uri( $data ) {
 		$data = $data->to_array();
 	}
 
+	if ( ! \is_array( $data ) ) {
+		return null;
+	}
+
 	/*
 	 * Check if it is a list, then take first item.
 	 * This plugin does not support collections.

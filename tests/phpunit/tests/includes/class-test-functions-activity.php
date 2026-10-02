@@ -36,6 +36,9 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 	 */
 	public function object_to_uri_provider() {
 		return array(
+			array( true, null ),
+			array( 1, null ),
+			array( 1.5, null ),
 			array( null, null ),
 			array( 'https://example.com', 'https://example.com' ),
 			array( array( 'https://example.com' ), 'https://example.com' ),

@@ -9,6 +9,9 @@ namespace Activitypub\Conversation;
 
 use Activitypub\Http;
 
+use function Activitypub\is_collection;
+use function Activitypub\object_to_uri;
+
 /**
  * Reads the items out of an ActivityStreams collection.
  *
@@ -93,7 +96,7 @@ class Collection_Reader {
 				break;
 			}
 
-			$next_id = \is_string( $next ) ? $next : ( $next['id'] ?? '' );
+			$next_id = object_to_uri( $next );
 			if ( \is_string( $next_id ) && $next_id ) {
 				if ( isset( $seen[ $next_id ] ) ) {
 					break;
@@ -115,9 +118,16 @@ class Collection_Reader {
 	 * @return array|null The document, or null when it could not be read.
 	 */
 	private static function fetch( $document ) {
-		if ( \is_string( $document ) ) {
-			$document = Http::get_remote_object( $document );
+		// Embedded collections are already available; object and Link references need a fetch.
+		if ( \is_array( $document ) && is_collection( $document ) ) {
+			return $document;
 		}
+
+		$uri = object_to_uri( $document );
+		if ( ! \is_string( $uri ) || ! $uri ) {
+			return null;
+		}
+		$document = Http::get_remote_object( $uri );
 
 		if ( \is_wp_error( $document ) || ! \is_array( $document ) ) {
 			return null;

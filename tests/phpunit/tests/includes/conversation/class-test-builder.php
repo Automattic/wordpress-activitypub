@@ -21,6 +21,24 @@ class Test_Builder extends \WP_UnitTestCase {
 	use Remote_Object_Stub;
 
 	/**
+	 * Malformed authors are rejected, and malformed parents do not break ordering.
+	 *
+	 * @covers ::build
+	 */
+	public function test_ignores_scalar_author_and_parent_references() {
+		$id                     = 'https://remote.example/notes/1';
+		$this->documents[ $id ] = array(
+			'id'           => $id,
+			'attributedTo' => true,
+		);
+		$this->assertSame( array(), ( new Builder( $id ) )->build( array() ) );
+
+		$this->documents[ $id ]['attributedTo'] = 'https://remote.example/users/alice';
+		$this->documents[ $id ]['inReplyTo']    = true;
+		$this->assertCount( 1, ( new Builder( $id ) )->build( array() ) );
+	}
+
+	/**
 	 * A malformed identifier must not become an array key.
 	 *
 	 * @covers ::build
