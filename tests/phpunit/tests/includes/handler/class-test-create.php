@@ -61,7 +61,7 @@ class Test_Create extends \WP_UnitTestCase {
 	 * @return array The object fields and validation result.
 	 */
 	public function image_only_object_provider() {
-		return array(
+		$cases = array(
 			'empty text'             => array( array( 'content' => '' ), true ),
 			'missing text and image' => array( array(), false ),
 			'Image object'           => array(
@@ -115,6 +115,29 @@ class Test_Create extends \WP_UnitTestCase {
 				false,
 			),
 		);
+		foreach ( array(
+			42,
+			true,
+			array(
+				'type' => 'Image',
+				'url'  => 42,
+			),
+			'/photo.jpg',
+			'//remote.example/photo.jpg',
+			'ftp://remote.example/photo.jpg',
+			'https://',
+		) as $url ) {
+			$cases[] = array(
+				array(
+					'attachment' => array(
+						'type' => 'Image',
+						'url'  => $url,
+					),
+				),
+				false,
+			);
+		}
+		return $cases;
 	}
 
 	/**
