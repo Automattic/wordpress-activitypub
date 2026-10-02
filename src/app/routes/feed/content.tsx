@@ -13,16 +13,16 @@ import type { ReactNode } from 'react';
  * Internal dependencies
  */
 import { AppShell } from '../../index';
-import Panel from '../../components/panel';
+import FeedHeader from '../../components/feed-header';
 import FeedStage from './stage';
 import FeedInspector from './inspector';
 
+// Boot's stage column is the surface; the feed renders straight into it.
 export function stage(): ReactNode {
 	return (
 		<AppShell>
-			<Panel>
-				<FeedStage />
-			</Panel>
+			<FeedHeader />
+			<FeedStage />
 		</AppShell>
 	);
 }

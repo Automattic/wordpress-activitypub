@@ -3,29 +3,27 @@
  * This compiles to style-index.css
  */
 
-@use "@wordpress/base-styles/mixins";
-
 // Import global styles (design tokens, body styles, root element)
 @use "./styles/design-tokens";
 
-// Main layout container.
+// Main layout container: boot's full-page shell fills it.
 .activitypub-app-layout {
 	position: fixed;
 	top: 0;
 	left: 0;
 	right: 0;
 	bottom: 0;
-
-	// Line boot's inspector column up with the stage card; the corner radius
-	// stays boot's, its view transitions are drawn with that radius.
-	.boot-layout__inspector {
-
-		@include mixins.break-medium() {
-			margin: var(--wpds-dimension-gap-lg, 16px) var(--wpds-dimension-gap-lg, 16px) var(--wpds-dimension-gap-lg, 16px) 0;
-		}
-	}
 }
 
 #wpfooter {
 	display: none;
+}
+
+// WordPress up to 7.1 ships a `wp-components` whose `ItemGroup` fills every
+// `path` (`path { fill: currentColor }`), turning the stroke-based icons of
+// `@wordpress/icons` 17 in boot's menu into solid boxes. Components 40.1.0
+// dropped that rule (gutenberg#78808); remove this once the minimum WordPress
+// version ships it.
+.boot-navigation-item svg[style*="fill: none"] path {
+	fill: none;
 }

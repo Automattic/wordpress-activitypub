@@ -18,6 +18,7 @@ import { DataViews } from '@wordpress/dataviews/wp';
 import type { Field, View as DataViewsView } from '@wordpress/dataviews/wp';
 import { useView } from '@wordpress/views';
 import { useSelect } from '@wordpress/data';
+import { useViewportMatch } from '@wordpress/compose';
 import { useNavigate, useSearch } from '@wordpress/route';
 
 /**
@@ -114,9 +115,19 @@ export default function FeedStage(): ReactNode {
 	const query: FeedQuery = useMemo( (): FeedQuery => viewToQuery( view, activeActorId ), [ view, activeActorId ] );
 	const { feed, isResolving, totalItems, totalPages } = useFeed( query );
 
+	// Type and tag sit in the filter bar permanently where there is room for it;
+	// on small screens they stay behind the filter button like every other filter.
+	const isMobileViewport: boolean = useViewportMatch( 'medium', '<' );
 	const fields: Field< FeedPost >[] = useMemo(
-		(): Field< FeedPost >[] => [ metadataField, titleField, contentField, dateField, objectTypeField, tagField ],
-		[]
+		(): Field< FeedPost >[] => [
+			metadataField,
+			titleField,
+			contentField,
+			dateField,
+			{ ...objectTypeField, filterBy: { ...objectTypeField.filterBy, isPrimary: ! isMobileViewport } },
+			{ ...tagField, filterBy: { ...tagField.filterBy, isPrimary: ! isMobileViewport } },
+		],
+		[ isMobileViewport ]
 	);
 
 	// Normalize view.fields to maintain the canonical order defined in fields array

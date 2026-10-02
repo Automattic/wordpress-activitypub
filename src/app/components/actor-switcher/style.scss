@@ -1,16 +1,15 @@
-@use "@wordpress/base-styles/colors";
-
 .actor-switcher {
 	display: flex;
 	align-items: center;
 	text-decoration: none;
-	color: colors.$gray-200;
-	transition: color 0.2s ease;
+	// Takes the surface's text colour, dark sidebar or light stage alike.
+	color: inherit;
+	transition: opacity 0.2s ease;
 	min-width: 0; // Allow text truncation
 	padding-left: 2px;
 
 	&:hover:not(:disabled) {
-		color: colors.$white;
+		opacity: 0.8;
 	}
 
 	&__avatar {
