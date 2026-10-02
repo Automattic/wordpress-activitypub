@@ -11,6 +11,7 @@ use Activitypub\Collection\Remote_Posts;
 use Activitypub\Comment;
 
 use function Activitypub\generate_image_block;
+use function Activitypub\process_remote_images;
 
 /**
  * Test class for Activitypub Comment.
@@ -19,11 +20,76 @@ use function Activitypub\generate_image_block;
  */
 class Test_Comment extends \WP_UnitTestCase {
 	/**
+	 * Descriptions survive comment creation and updates with core block-attribute KSES active.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_image_descriptions_survive_comment_save_and_update() {
+		\wp_set_current_user( 0 );
+		\kses_init();
+		$post_id    = self::factory()->post->create();
+		$comment_id = 0;
+		$download   = static function () {
+			return new \WP_Error( 'cache_skipped', 'The image cache is unavailable.' );
+		};
+		\add_filter( 'activitypub_pre_download_url', $download );
+		foreach ( array( 'width < height', 'Updated: width < height, "quotes", & and literal &lt;' ) as $description ) {
+			$content = process_remote_images(
+				'',
+				Remote_Posts::extract_attachments(
+					array(
+						'attachment' => array(
+							'type' => 'Image',
+							'url'  => 'https://example.com/photo.jpg',
+							'name' => $description,
+						),
+					)
+				)
+			);
+			if ( $comment_id ) {
+				$this->assertSame(
+					1,
+					\wp_update_comment(
+						\wp_slash(
+							array(
+								'comment_ID'      => $comment_id,
+								'comment_content' => $content,
+							)
+						)
+					)
+				);
+			} else {
+				$comment_id = \wp_new_comment(
+					\wp_slash(
+						array(
+							'comment_post_ID'      => $post_id,
+							'comment_author'       => 'Remote author',
+							'comment_author_email' => 'remote@example.com',
+							'comment_author_url'   => '',
+							'comment_content'      => $content,
+							'comment_meta'         => array( 'protocol' => 'activitypub' ),
+						)
+					),
+					true
+				);
+				$this->assertIsInt( $comment_id );
+			}
+			$comment  = \get_comment( $comment_id );
+			$rendered = Comment::render_blocks( $comment->comment_content, $comment );
+			$image    = new \WP_HTML_Tag_Processor( $rendered );
+			$this->assertTrue( $image->next_tag( 'IMG' ) );
+			$this->assertSame( $description, $image->get_attribute( 'alt' ) );
+		}
+		\remove_filter( 'activitypub_pre_download_url', $download );
+	}
+
+	/**
 	 * Only leaf image and emoji blocks may invoke render callbacks in comments.
 	 *
 	 * @covers ::render_blocks
 	 */
 	public function test_render_blocks_rejects_other_and_nested_blocks() {
+		$comment  = self::factory()->comment->create_and_get( array( 'comment_meta' => array( 'protocol' => 'activitypub' ) ) );
 		$calls    = 0;
 		$callback = static function () use ( &$calls ) {
 			++$calls;
@@ -31,9 +97,9 @@ class Test_Comment extends \WP_UnitTestCase {
 		};
 		\register_block_type( 'activitypub/test-probe', array( 'render_callback' => $callback ) );
 		\register_block_type( 'core/test-probe', array( 'render_callback' => $callback ) );
-		Comment::render_blocks( '<!-- wp:activitypub/test-probe /-->' );
-		Comment::render_blocks( '<!-- wp:activitypub/image --><!-- wp:test-probe /--><!-- /wp:activitypub/image -->' );
-		Comment::render_blocks( '<!-- wp:activitypub/emoji --><!-- wp:test-probe /--><!-- /wp:activitypub/emoji -->' );
+		Comment::render_blocks( '<!-- wp:activitypub/test-probe /-->', $comment );
+		Comment::render_blocks( '<!-- wp:activitypub/image --><!-- wp:test-probe /--><!-- /wp:activitypub/image -->', $comment );
+		Comment::render_blocks( '<!-- wp:activitypub/emoji --><!-- wp:test-probe /--><!-- /wp:activitypub/emoji -->', $comment );
 		\unregister_block_type( 'activitypub/test-probe' );
 		\unregister_block_type( 'core/test-probe' );
 
