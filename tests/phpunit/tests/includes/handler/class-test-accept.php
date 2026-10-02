@@ -11,7 +11,9 @@ use Activitypub\Collection\Following;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Accept;
 use Activitypub\Handler\Reject;
+use Activitypub\Proxy;
 use Activitypub\Tests\Quote_Post_Fixtures;
+use Activitypub\Tests\Remote_Request_Stub;
 
 use function Activitypub\get_object_id;
 use function Activitypub\object_to_uri;
@@ -23,6 +25,7 @@ use function Activitypub\object_to_uri;
  */
 class Test_Accept extends \WP_UnitTestCase {
 	use Quote_Post_Fixtures;
+	use Remote_Request_Stub;
 
 	/**
 	 * Test user ID.
@@ -329,6 +332,47 @@ class Test_Accept extends \WP_UnitTestCase {
 		$this->assertSame( 'https://remote.example/stamps/1', \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
 		$this->assertSame( $before + 1, $this->count_updates( $post_id ) );
 		$this->assertSame( array( array( $post_id, 'https://remote.example/stamps/1' ) ), $authorized );
+	}
+
+	/**
+	 * The one-shot stamp check does not populate the shared cache.
+	 *
+	 * @covers ::accept_quote_request
+	 */
+	public function test_accept_does_not_cache_the_stamp() {
+		$this->stub_remote_requests();
+		$id                            = 'https://example.com/stamps/1';
+		$actor                         = 'https://example.com/users/alice';
+		$quoted_id                     = 'https://example.com/notes/1';
+		$this->responses[ $quoted_id ] = array(
+			'id'           => $quoted_id,
+			'type'         => 'Note',
+			'attributedTo' => $actor,
+		);
+		$this->responses[ $actor ]     = array(
+			'id'    => $actor,
+			'type'  => 'Person',
+			'inbox' => $actor . '/inbox',
+		);
+		$post_id                       = $this->create_quote_post( $quoted_id );
+		$accept                        = $this->build_accept( $post_id, $id, $actor );
+		$this->responses[ $id ]        = array(
+			'id'                => $id,
+			'type'              => 'QuoteAuthorization',
+			'attributedTo'      => $accept['actor'],
+			'interactingObject' => get_object_id( \get_post( $post_id ) ),
+			'interactionTarget' => $quoted_id,
+		);
+
+		Accept::handle_accept( $accept, self::$user_id );
+		$this->assertSame( $id, \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$before                 = $this->requests;
+		$this->responses[ $id ] = 410;
+		$result                 = Proxy::get( $id );
+		$this->unstub_remote_requests();
+
+		$this->assertWPError( $result );
+		$this->assertSame( $before + 1, $this->requests, 'The stamp is fetched again instead of serving the accepted copy.' );
 	}
 
 	/**

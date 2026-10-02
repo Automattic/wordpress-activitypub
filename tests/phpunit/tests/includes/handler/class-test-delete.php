@@ -9,8 +9,11 @@ namespace Activitypub\Tests\Handler;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Delete;
+use Activitypub\Proxy;
 use Activitypub\Tests\Quote_Post_Fixtures;
+use Activitypub\Tests\Remote_Request_Stub;
 use Activitypub\Tombstone;
 
 use function Activitypub\get_object_id;
@@ -23,6 +26,7 @@ use function Activitypub\object_to_uri;
  */
 class Test_Delete extends \WP_UnitTestCase {
 	use Quote_Post_Fixtures;
+	use Remote_Request_Stub;
 
 	/**
 	 * Test user ID.
@@ -728,6 +732,182 @@ class Test_Delete extends \WP_UnitTestCase {
 		$this->assertFalse( Delete::defer_signature_verification( false, $request, true ) );
 	}
 
+	/**
+	 * A confirmed deletion drops the cached copy of the object.
+	 *
+	 * The Delete is not signed on this path, so the cached copy is retired only once the object
+	 * is gone from its own host, the same confirmation the deletion itself waits for.
+	 *
+	 * @covers ::maybe_delete_post
+	 */
+	public function test_a_confirmed_delete_drops_the_cached_object() {
+		$this->stub_remote_requests();
+		$id                     = 'https://example.com/notes/1';
+		$this->responses[ $id ] = array(
+			'id'   => $id,
+			'type' => 'Note',
+		);
+
+		Proxy::get( $id );
+
+		// The object is gone now, which is what `Tombstone::exists()` asks the host.
+		$this->responses[ $id ] = 410;
+		Delete::maybe_delete_post(
+			array(
+				'type'   => 'Delete',
+				'actor'  => 'https://example.com/users/alice',
+				'object' => $id,
+			)
+		);
+
+		$this->responses[ $id ] = array(
+			'id'   => $id,
+			'type' => 'Note',
+		);
+		$before                 = $this->requests;
+		Proxy::get( $id );
+		$this->unstub_remote_requests();
+
+		$this->assertSame( $before + 1, $this->requests, 'The object is fetched again after the deletion was confirmed.' );
+	}
+
+	/**
+	 * An unconfirmed Delete does not touch the cache, whoever sent it.
+	 *
+	 * The object still answers, so the Delete is unproven and nothing is retired. This is the
+	 * protection that matters here, because the inbox waives signature verification for Deletes.
+	 *
+	 * @covers ::handle_delete
+	 */
+	public function test_an_unconfirmed_delete_keeps_the_cached_object() {
+		$this->stub_remote_requests();
+		$id                     = 'https://example.com/notes/1';
+		$this->responses[ $id ] = array(
+			'id'   => $id,
+			'type' => 'Note',
+		);
+
+		Proxy::get( $id );
+		Delete::handle_delete(
+			array(
+				'type'   => 'Delete',
+				'actor'  => 'https://example.org/users/mallory',
+				'object' => $id,
+			),
+			array( 1 )
+		);
+		$before = $this->requests;
+		Proxy::get( $id );
+		$this->unstub_remote_requests();
+
+		$this->assertSame( $before, $this->requests, 'The object is still served from the cache.' );
+	}
+
+	/**
+	 * Actor cache invalidation does not require a stored remote actor.
+	 *
+	 * @dataProvider cache_deletion_provider
+	 * @covers ::maybe_delete_follower
+	 *
+	 * @param int  $status HTTP status returned by the actor.
+	 * @param bool $purged Whether the cached actor should be removed.
+	 */
+	public function test_delete_actor_without_a_local_record( $status, $purged ) {
+		$this->stub_remote_requests();
+		$id                     = 'https://example.com/users/cached-only';
+		$actor                  = array(
+			'id'   => $id,
+			'type' => 'Person',
+		);
+		$this->responses[ $id ] = $actor;
+		$this->assertWPError( Remote_Actors::get_by_uri( $id ) );
+		$this->assertSame( $actor, Proxy::get( $id ) );
+
+		$this->responses[ $id ] = 200 === $status ? $actor : $status;
+		Delete::handle_delete(
+			array(
+				'type'   => 'Delete',
+				'actor'  => $id,
+				'object' => $id,
+			),
+			array( self::$user_id )
+		);
+
+		$this->responses[ $id ] = $actor;
+		$before                 = $this->requests;
+		Proxy::get( $id );
+		$this->unstub_remote_requests();
+
+		$this->assertSame( $before + (int) $purged, $this->requests );
+		$this->assertWPError( Remote_Actors::get_by_uri( $id ) );
+	}
+
+	/**
+	 * Inline actor data cannot substitute for confirmation at the actor's URL.
+	 *
+	 * @dataProvider inline_actor_deletion_provider
+	 * @covers ::maybe_delete_follower
+	 *
+	 * @param string $type   The inline actor's claimed type.
+	 * @param int    $status The HTTP status at the actor's URL.
+	 * @param bool   $purged Whether the cache should be cleared.
+	 */
+	public function test_delete_inline_actor_requires_remote_confirmation( $type, $status, $purged ) {
+		$this->stub_remote_requests();
+		$id                     = 'https://example.com/users/inline-delete';
+		$actor                  = array(
+			'id'   => $id,
+			'type' => 'Person',
+		);
+		$this->responses[ $id ] = $actor;
+		Proxy::get( $id );
+
+		$this->responses[ $id ] = 200 === $status ? $actor : $status;
+		Delete::handle_delete(
+			array(
+				'type'   => 'Delete',
+				'actor'  => array(
+					'id'   => $id,
+					'type' => $type,
+				),
+				'object' => $actor,
+			),
+			array( self::$user_id )
+		);
+		$confirmed = $this->requests;
+
+		$this->responses[ $id ] = $actor;
+		Proxy::get( $id );
+		$this->unstub_remote_requests();
+
+		$this->assertSame( 2, $confirmed, 'The inline claim must be checked at the actor URL.' );
+		$this->assertSame( $confirmed + (int) $purged, $this->requests );
+	}
+
+	/**
+	 * Untrusted inline claims and confirmed actor deletions.
+	 *
+	 * @return array The inline actor and remote confirmation cases.
+	 */
+	public function inline_actor_deletion_provider() {
+		return array(
+			'forged tombstone' => array( 'Tombstone', 200, false ),
+			'confirmed actor'  => array( 'Person', 410, true ),
+		);
+	}
+
+	/**
+	 * Confirmed and unconfirmed remote deletions.
+	 *
+	 * @return array Test cases.
+	 */
+	public function cache_deletion_provider() {
+		return array(
+			'confirmed'   => array( 410, true ),
+			'unconfirmed' => array( 200, false ),
+		);
+	}
+
 	/*
 	 * ------------------------------------------------------------------
 	 * Deletes of QuoteAuthorization stamps on our own quote posts (FEP-044f).
@@ -766,6 +946,54 @@ class Test_Delete extends \WP_UnitTestCase {
 
 		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
 		$this->assertSame( $before + 1, $this->count_updates( $post_id ) );
+	}
+
+	/**
+	 * Only a confirmed stamp revocation removes the shared cached copy.
+	 *
+	 * @dataProvider cache_deletion_provider
+	 * @covers ::revoke_quote_authorization
+	 *
+	 * @param int  $status HTTP status returned by the stamp.
+	 * @param bool $purged Whether the cached stamp should be removed.
+	 */
+	public function test_stamp_delete_invalidates_only_after_confirmation( $status, $purged ) {
+		$this->stub_remote_requests();
+		$id                            = 'https://example.com/stamps/1';
+		$actor                         = 'https://example.com/users/alice';
+		$quoted_id                     = 'https://example.com/notes/1';
+		$this->responses[ $quoted_id ] = array(
+			'id'           => $quoted_id,
+			'type'         => 'Note',
+			'attributedTo' => $actor,
+		);
+		$this->responses[ $actor ]     = array(
+			'id'    => $actor,
+			'type'  => 'Person',
+			'inbox' => $actor . '/inbox',
+		);
+		$post_id                       = $this->create_quote_post( $quoted_id );
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', $id );
+		$stamp                  = array(
+			'id'                => $id,
+			'type'              => 'QuoteAuthorization',
+			'attributedTo'      => $actor,
+			'interactingObject' => get_object_id( \get_post( $post_id ) ),
+			'interactionTarget' => $quoted_id,
+		);
+		$this->responses[ $id ] = $stamp;
+		$this->assertSame( $stamp, Proxy::get( $id ) );
+
+		$this->responses[ $id ] = 200 === $status ? $stamp : $status;
+		Delete::handle_delete( $this->build_stamp_delete( $actor, $id ), self::$user_id );
+
+		$this->responses[ $id ] = $stamp;
+		$before                 = $this->requests;
+		Proxy::get( $id );
+		$this->unstub_remote_requests();
+
+		$this->assertSame( $before + (int) $purged, $this->requests );
+		$this->assertSame( $purged ? '' : $id, \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
 	}
 
 	/**

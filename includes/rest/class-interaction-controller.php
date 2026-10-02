@@ -9,7 +9,7 @@ namespace Activitypub\Rest;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
-use Activitypub\Http;
+use Activitypub\Proxy;
 
 use function Activitypub\user_can_activitypub;
 
@@ -118,7 +118,7 @@ class Interaction_Controller extends \WP_REST_Controller {
 		// Aliases resolve to their activity type before dispatch, so callers below only ever see the canonical intent.
 		$intent       = self::INTENT_ALIASES[ $intent ] ?? $intent;
 		$redirect_url = '';
-		$object       = Http::get_remote_object( $uri );
+		$object       = Proxy::get( $uri );
 
 		if ( \is_wp_error( $object ) || ! isset( $object['type'] ) ) {
 			// Use wp_die as this can be called from the front-end. See https://github.com/Automattic/wordpress-activitypub/pull/1149/files#r1915297109.

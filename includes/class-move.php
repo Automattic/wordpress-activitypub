@@ -86,7 +86,7 @@ class Move {
 			return $user;
 		}
 
-		$response = Http::get_remote_object( $to, false );
+		$response = Proxy::get( $to, array( 'cached' => false ) );
 
 		if ( \is_wp_error( $response ) ) {
 			return $response;

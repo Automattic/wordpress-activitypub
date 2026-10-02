@@ -10,7 +10,7 @@ namespace Activitypub\Transformer;
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
-use Activitypub\Http;
+use Activitypub\Proxy;
 
 use function Activitypub\get_upload_baseurl;
 use function Activitypub\object_to_uri;
@@ -194,7 +194,7 @@ abstract class Base {
 
 		// The authors of the replied-to and the quoted object are addressed like mentions.
 		foreach ( \array_filter( $referenced ) as $uri ) {
-			$object = Http::get_remote_object( $uri );
+			$object = Proxy::get( $uri );
 			if ( $object && ! \is_wp_error( $object ) && isset( $object['attributedTo'] ) ) {
 				$referenced_authors[] = object_to_uri( $object['attributedTo'] );
 			}

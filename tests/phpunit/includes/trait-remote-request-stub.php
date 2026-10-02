@@ -1,0 +1,131 @@
+<?php
+/**
+ * Stub for remote requests in tests.
+ *
+ * @package Activitypub
+ */
+
+namespace Activitypub\Tests;
+
+/**
+ * Answers `pre_http_request` from a table of URLs and counts the requests.
+ */
+trait Remote_Request_Stub {
+	/**
+	 * The number of requests the stub answered.
+	 *
+	 * @var int
+	 */
+	protected $requests = 0;
+
+	/**
+	 * What the stub answers, keyed by URL: an array served as JSON, an int status code,
+	 * a transport error, or a prepared response array.
+	 *
+	 * @var array<string, array|int|\WP_Error>
+	 */
+	protected $responses = array();
+
+	/**
+	 * Start answering remote requests from the table.
+	 */
+	protected function stub_remote_requests() {
+		$this->requests  = 0;
+		$this->responses = array();
+		\add_filter( 'pre_http_request', array( $this, 'stub_remote_request' ), 10, 3 );
+	}
+
+	/**
+	 * Stop answering remote requests.
+	 */
+	protected function unstub_remote_requests() {
+		\remove_filter( 'pre_http_request', array( $this, 'stub_remote_request' ) );
+	}
+
+	/**
+	 * Answer one request from the table.
+	 *
+	 * @param false|array $pre  The pre-empted response.
+	 * @param array       $args The request arguments.
+	 * @param string      $url  The URL.
+	 *
+	 * @return array|\WP_Error The response.
+	 */
+	public function stub_remote_request( $pre, $args, $url ) {
+		++$this->requests;
+		$answer = $this->responses[ $url ] ?? 404;
+
+		if ( \is_wp_error( $answer ) ) {
+			return $answer;
+		}
+
+		if ( \is_array( $answer ) && isset( $answer['response'] ) ) {
+			return $answer;
+		}
+
+		if ( \is_int( $answer ) ) {
+			return $this->served_from(
+				$url,
+				array(
+					'response' => array( 'code' => $answer ),
+					'body'     => '',
+					'headers'  => array(),
+				)
+			);
+		}
+
+		return $this->served_from(
+			$url,
+			array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode( $answer ),
+				'headers'  => array( 'content-type' => 'application/activity+json' ),
+			)
+		);
+	}
+
+	/**
+	 * Name the URL a response was served from, the way the HTTP API does.
+	 *
+	 * A real response carries the `http_response` object `Http::effective_url()` reads, so the
+	 * stub carries it too: without it the proxy cannot tell where a document came from, and a
+	 * test would silently exercise that case instead of the ordinary one.
+	 *
+	 * @param string $url      The URL the response was served from.
+	 * @param array  $response The response.
+	 *
+	 * @return array The response, with its origin named.
+	 */
+	protected function served_from( $url, $response ) {
+		$requests_response      = new \WpOrg\Requests\Response();
+		$requests_response->url = $url;
+
+		$response['http_response'] = new \WP_HTTP_Requests_Response( $requests_response );
+
+		return $response;
+	}
+
+	/**
+	 * A response that was redirected to another URL.
+	 *
+	 * @param string    $served_from The URL the response was served from.
+	 * @param array|int $answer      The object, or a status code.
+	 *
+	 * @return array The response.
+	 */
+	protected function redirected( $served_from, $answer ) {
+		$response = \is_int( $answer )
+			? array(
+				'response' => array( 'code' => $answer ),
+				'body'     => '',
+			)
+			: array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode( $answer ),
+			);
+
+		$response['headers'] = array();
+
+		return $this->served_from( $served_from, $response );
+	}
+}

@@ -10,7 +10,7 @@ namespace Activitypub\Handler;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Interactions;
 use Activitypub\Comment;
-use Activitypub\Http;
+use Activitypub\Proxy;
 
 use function Activitypub\is_activity;
 use function Activitypub\is_activity_public;
@@ -60,9 +60,16 @@ class Announce {
 
 		$object_url = object_to_uri( $announcement['object'] );
 
+		/*
+		 * The filter below recognizes the request by its URL, and `Proxy::get()` drops the
+		 * fragment before it fetches, so the comparison uses that form. The identifier itself
+		 * is passed on as it arrived, so the proxy still gets to refuse what it should refuse.
+		 */
+		$requested_url = \strip_fragment_from_url( $object_url );
+
 		// Force no redirects for this object's request only, so the requested host stays the authoritative origin.
-		$no_redirects = static function ( $args, $url ) use ( $object_url ) {
-			if ( $url === $object_url ) {
+		$no_redirects = static function ( $args, $url ) use ( $requested_url ) {
+			if ( $url === $requested_url ) {
 				$args['redirection'] = 0;
 			}
 			return $args;
@@ -77,7 +84,7 @@ class Announce {
 		 * attacker content while the host check below still saw the trusted host.
 		 */
 		\add_filter( 'http_request_args', $no_redirects, 10, 2 );
-		$object = Http::get_remote_object( $object_url, false );
+		$object = Proxy::get( $object_url, array( 'cached' => false ) );
 		\remove_filter( 'http_request_args', $no_redirects, 10 );
 
 		if ( ! $object || \is_wp_error( $object ) || ! \is_array( $object ) ) {
@@ -99,11 +106,11 @@ class Announce {
 		}
 
 		/*
-		 * The requested URL is not always the host that answered: get_remote_object() re-fetches a
+		 * The requested URL is not always the host that answered: Proxy::get() re-fetches a
 		 * document from the id it declares when the two disagree, and returns the re-fetched copy.
 		 * Bind the actor to that id as well, which an authentic activity shares a host with.
 		 *
-		 * Only when the document declares one. The id is derived exactly as get_remote_object()
+		 * Only when the document declares one. The id is derived exactly as Proxy::get()
 		 * derives it, so the two cannot disagree about what counts as declared: whatever it treats
 		 * as id-less it returns as served, without re-fetching, and the origin check above is
 		 * already authoritative for those. Binding them here would drop relayed activities that

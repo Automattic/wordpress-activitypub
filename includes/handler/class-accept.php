@@ -10,7 +10,7 @@ namespace Activitypub\Handler;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
-use Activitypub\Http;
+use Activitypub\Proxy;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\get_object_id;
@@ -145,7 +145,7 @@ class Accept {
 		}
 
 		// Fetches the quoted object, so it runs after the free checks above.
-		$quoted = Http::get_remote_object( $quoted_uri );
+		$quoted = Proxy::get( $quoted_uri );
 
 		if ( \is_wp_error( $quoted ) || empty( $quoted['attributedTo'] ) ) {
 			return;
@@ -157,7 +157,13 @@ class Accept {
 		}
 
 		// Uncached: a stamp is fetched once, right when it is presented, never served stale.
-		$stamp = Http::get_remote_object( $stamp_uri, false );
+		$stamp = Proxy::get(
+			$stamp_uri,
+			array(
+				'cached' => false,
+				'ttl'    => 0,
+			)
+		);
 
 		/*
 		 * The stamp must bind exactly this quote post to exactly this quoted object and be

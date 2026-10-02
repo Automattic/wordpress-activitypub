@@ -9,7 +9,7 @@ namespace Activitypub\Transformer;
 
 use Activitypub\Activity\Base_Object;
 use Activitypub\Comment as Comment_Helper;
-use Activitypub\Http;
+use Activitypub\Proxy;
 
 use function Activitypub\get_user_id;
 use function Activitypub\is_post_disabled;
@@ -33,7 +33,7 @@ class Factory {
 		}
 
 		if ( \is_string( $data ) && \filter_var( $data, FILTER_VALIDATE_URL ) ) {
-			$response = Http::get_remote_object( $data );
+			$response = Proxy::get( $data );
 
 			if ( \is_wp_error( $response ) ) {
 				return $response;
