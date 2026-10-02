@@ -288,6 +288,8 @@ class Proxy {
 	 * @param string                 $id    The ActivityPub id.
 	 * @param array|\WP_Error|string $value The entry, or the id it is an alias of.
 	 * @param int                    $ttl   Seconds to keep it. Nothing is written for zero.
+	 *
+	 * @return void
 	 */
 	private static function cache_set( $id, $value, $ttl ) {
 		if ( $ttl <= 0 ) {
@@ -419,7 +421,7 @@ class Proxy {
 
 		$data = \json_decode( \wp_remote_retrieve_body( $response ), true );
 
-		if ( ! $data ) {
+		if ( ! \is_array( $data ) || ! $data ) {
 			return new \WP_Error(
 				'activitypub_invalid_json',
 				\__( 'No valid JSON data', 'activitypub' ),

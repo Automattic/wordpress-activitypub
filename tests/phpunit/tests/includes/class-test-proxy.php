@@ -600,6 +600,51 @@ class Test_Proxy extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * JSON scalars and empty documents are rejected and remembered as invalid JSON.
+	 *
+	 * @dataProvider invalid_json_document_provider
+	 * @covers ::get
+	 *
+	 * @param string $body The JSON response body.
+	 */
+	public function test_get_rejects_non_object_json( $body ) {
+		$id                     = 'https://example.com/notes/invalid';
+		$this->responses[ $id ] = $this->served_from(
+			$id,
+			array(
+				'response' => array( 'code' => 200 ),
+				'body'     => $body,
+				'headers'  => array( 'content-type' => 'application/activity+json' ),
+			)
+		);
+
+		$first = Proxy::get( $id );
+		$this->assertWPError( $first );
+		$this->assertSame( 'activitypub_invalid_json', $first->get_error_code() );
+		$this->assertSame( 400, $first->get_error_data()['status'] );
+		$this->assertEquals( $first, Proxy::get( $id ) );
+		$this->assertSame( 1, $this->requests );
+	}
+
+	/**
+	 * Non-object JSON and empty documents.
+	 *
+	 * @return array The response bodies.
+	 */
+	public function invalid_json_document_provider() {
+		return array(
+			'string'       => array( '"Person"' ),
+			'integer'      => array( '1' ),
+			'float'        => array( '1.5' ),
+			'true'         => array( 'true' ),
+			'false'        => array( 'false' ),
+			'null'         => array( 'null' ),
+			'empty array'  => array( '[]' ),
+			'empty object' => array( '{}' ),
+		);
+	}
+
+	/**
 	 * When the requested host serves a document that fails to confirm on its declared host,
 	 * that failure is remembered for the requested URL.
 	 *
@@ -634,6 +679,7 @@ class Test_Proxy extends \WP_UnitTestCase {
 		Proxy::get( $id );
 
 		$this->assertSame( 2, $this->requests );
-		$this->assertFalse( \get_option( '_transient_activitypub_object:' . \hash( 'sha256', $id ) ) );
+		$this->assertFalse( \get_option( '_transient_activitypub_object_' . \hash( 'sha256', $id ) ) );
+		$this->assertFalse( \get_option( '_transient_timeout_activitypub_object_' . \hash( 'sha256', $id ) ) );
 	}
 }
