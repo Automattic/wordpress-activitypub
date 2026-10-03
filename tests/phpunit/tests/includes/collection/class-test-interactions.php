@@ -146,6 +146,90 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Creation and updates apply the image limit after filtering invalid and non-image attachments.
+	 *
+	 * @dataProvider comment_image_limit_provider
+	 * @covers ::add_comment
+	 * @covers ::update_comment
+	 *
+	 * @param int|null $limit    Filtered limit, or null to use the default.
+	 * @param int      $expected Expected number of image blocks.
+	 */
+	public function test_comment_image_attachment_limit( $limit, $expected ) {
+		$activity                         = $this->create_test_object( 'https://example.com/limited-images' );
+		$activity['object']['attachment'] = array(
+			array(
+				'type' => 'Image',
+				'url'  => '/invalid.jpg',
+			),
+			array(
+				'type' => 'Audio',
+				'url'  => 'https://example.com/audio.mp3',
+			),
+			array(
+				'type' => 'Video',
+				'url'  => 'https://example.com/video.mp4',
+			),
+		);
+		for ( $i = 1; $i <= 5; ++$i ) {
+			$activity['object']['attachment'][] = array(
+				'type'      => 'Document',
+				'mediaType' => 'image/jpeg',
+				'url'       => 'https://example.com/photo-' . $i . '.jpg',
+			);
+		}
+		$limit_filter = static function () use ( $limit ) {
+			return $limit;
+		};
+		if ( null !== $limit ) {
+			\add_filter( 'activitypub_comment_image_limit', $limit_filter );
+		}
+
+		$comment_id = Interactions::add_comment( $activity );
+		$created    = \get_comment( $comment_id )->comment_content;
+
+		$activity['object']['content'] = 'Updated text.';
+		foreach ( $activity['object']['attachment'] as &$attachment ) {
+			$attachment['url'] = \str_replace( 'photo-', 'updated-', $attachment['url'] );
+		}
+		unset( $attachment );
+		$result  = Interactions::update_comment( $activity );
+		$updated = \get_comment( $comment_id )->comment_content;
+		\remove_filter( 'activitypub_comment_image_limit', $limit_filter );
+
+		$this->assertIsInt( $comment_id );
+		$this->assertNotWPError( $result );
+		$this->assertNotFalse( $result );
+		$this->assertStringContainsString( 'Updated text.', $updated );
+		foreach ( array(
+			'photo-'   => $created,
+			'updated-' => $updated,
+		) as $prefix => $content ) {
+			$this->assertSame( $expected, \substr_count( $content, '<!-- wp:activitypub/image' ) );
+			$this->assertStringNotContainsString( $prefix . ( $expected + 1 ) . '.jpg', $content );
+			for ( $i = 1; $i <= $expected; ++$i ) {
+				$this->assertStringContainsString( $prefix . $i . '.jpg', $content );
+			}
+		}
+		$this->assertStringNotContainsString( 'photo-', $updated );
+	}
+
+	/**
+	 * Default and customized comment image limits.
+	 *
+	 * @return array Test cases.
+	 */
+	public function comment_image_limit_provider() {
+		return array(
+			'default'  => array( null, 3 ),
+			'lower'    => array( 1, 1 ),
+			'higher'   => array( 5, 5 ),
+			'disabled' => array( 0, 0 ),
+			'negative' => array( -1, 0 ),
+		);
+	}
+
+	/**
 	 * An attachment URL in the text does not replace the attachment's image.
 	 *
 	 * @dataProvider linked_image_content_provider

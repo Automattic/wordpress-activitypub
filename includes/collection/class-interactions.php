@@ -161,7 +161,7 @@ class Interactions {
 		 */
 		$content                         = Sanitize::comment_content( $activity['object']['content'] ?? '' );
 		$content                         = Emoji::wrap_in_content( $content, $activity['object'] );
-		$content                        .= process_remote_images( '', Remote_Posts::extract_attachments( $activity['object'] ) );
+		$content                        .= process_remote_images( '', self::get_image_attachments( $activity['object'] ) );
 		$comment_data['comment_content'] = \addslashes( $content );
 
 		$result = self::persist( $comment_data, self::UPDATE );
@@ -525,7 +525,7 @@ class Interactions {
 		// Sanitize remote HTML before adding our own emoji and image blocks.
 		$content         = Sanitize::comment_content( $activity['object']['content'] ?? '' );
 		$content         = Emoji::wrap_in_content( $content, $activity['object'] );
-		$content        .= process_remote_images( '', Remote_Posts::extract_attachments( $activity['object'] ) );
+		$content        .= process_remote_images( '', self::get_image_attachments( $activity['object'] ) );
 		$comment_content = \addslashes( $content );
 
 		return array(
@@ -535,6 +535,30 @@ class Interactions {
 			'comment_author_email' => $comment_author_email,
 			'comment_meta'         => self::prepare_remote_comment_meta( $activity ),
 		);
+	}
+
+	/**
+	 * Get the image attachments displayed in a remote comment.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $activity_object The ActivityPub object.
+	 * @return array Image attachments.
+	 */
+	private static function get_image_attachments( $activity_object ) {
+		$attachments = \wp_list_filter( Remote_Posts::extract_attachments( $activity_object ), array( 'type' => 'image' ) );
+
+		/**
+		 * Filters the maximum number of image attachments displayed in a Fediverse comment.
+		 *
+		 * @since unreleased
+		 *
+		 * @param int   $limit           Maximum number of images. Default 3. Zero disables image attachments.
+		 * @param array $activity_object The ActivityPub object.
+		 */
+		$limit = \max( 0, (int) \apply_filters( 'activitypub_comment_image_limit', 3, $activity_object ) );
+
+		return \array_slice( $attachments, 0, $limit );
 	}
 
 	/**
