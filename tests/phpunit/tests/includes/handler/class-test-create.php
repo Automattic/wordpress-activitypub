@@ -20,6 +20,125 @@ use Activitypub\Tombstone;
  * @coversDefaultClass \Activitypub\Handler\Create
  */
 class Test_Create extends \WP_UnitTestCase {
+	/**
+	 * Missing text is allowed only when there is an image the import path can use.
+	 *
+	 * @dataProvider image_only_object_provider
+	 * @covers ::validate_object
+	 *
+	 * @param array $fields   The object fields in addition to its id.
+	 * @param bool  $expected Whether the object is valid.
+	 */
+	public function test_validate_image_only_objects( $fields, $expected ) {
+		$object  = \array_merge( array( 'id' => 'https://example.com/note' ), $fields );
+		$request = new \WP_REST_Request( 'POST' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'   => 'Create',
+					'object' => $object,
+				)
+			)
+		);
+		$this->assertSame( $expected, Create::validate_object( true, $object, $request ) );
+		$this->assertFalse( Create::validate_object( false, $object, $request ), 'Earlier validators retain their veto.' );
+		unset( $object['id'] );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'   => 'Create',
+					'object' => $object,
+				)
+			)
+		);
+		$this->assertFalse( Create::validate_object( true, $object, $request ), 'Images cannot replace the required object id.' );
+	}
+
+	/**
+	 * Text, supported images, and unsupported or malformed media.
+	 *
+	 * @return array The object fields and validation result.
+	 */
+	public function image_only_object_provider() {
+		$cases = array(
+			'empty text'             => array( array( 'content' => '' ), true ),
+			'missing text and image' => array( array(), false ),
+			'Image object'           => array(
+				array(
+					'attachment' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/photo.jpg',
+					),
+				),
+				true,
+			),
+			'image Document'         => array(
+				array(
+					'attachment' => array(
+						array(
+							'type'      => 'Document',
+							'mediaType' => 'IMAGE/JPEG',
+							'url'       => 'https://example.com/photo.jpg',
+						),
+					),
+				),
+				true,
+			),
+			'image fallback'         => array( array( 'image' => 'https://example.com/photo.jpg' ), true ),
+			'Audio object'           => array(
+				array(
+					'attachment' => array(
+						'type' => 'Audio',
+						'url'  => 'https://example.com/audio.mp3',
+					),
+				),
+				false,
+			),
+			'Video object'           => array(
+				array(
+					'attachment' => array(
+						'type' => 'Video',
+						'url'  => 'https://example.com/video.mp4',
+					),
+				),
+				false,
+			),
+			'missing image URL'      => array( array( 'attachment' => array( 'type' => 'Image' ) ), false ),
+			'unsafe protocol'        => array(
+				array(
+					'attachment' => array(
+						'type' => 'Image',
+						'url'  => 'javascript:alert(1)',
+					),
+				),
+				false,
+			),
+		);
+		foreach ( array(
+			42,
+			true,
+			array(
+				'type' => 'Image',
+				'url'  => 42,
+			),
+			'/photo.jpg',
+			'//remote.example/photo.jpg',
+			'ftp://remote.example/photo.jpg',
+			'https://',
+		) as $url ) {
+			$cases[] = array(
+				array(
+					'attachment' => array(
+						'type' => 'Image',
+						'url'  => $url,
+					),
+				),
+				false,
+			);
+		}
+		return $cases;
+	}
 
 	/**
 	 * User ID.

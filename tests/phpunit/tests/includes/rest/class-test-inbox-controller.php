@@ -114,6 +114,33 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$response = \rest_do_request( $request );
 		$this->assertEquals( 202, $response->get_status() );
 
+		// Image-only replies must pass the same REST validation as text replies.
+		unset( $json['object']['content'] );
+		$json['id']                  .= '/image';
+		$json['object']['id']        .= '/image';
+		$json['object']['attachment'] = array(
+			'type' => 'Image',
+			'url'  => 'https://remote.example/photo.jpg',
+		);
+		$request                      = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $json ) );
+		$this->assertSame( 202, \rest_do_request( $request )->get_status() );
+		foreach ( array(
+			42,
+			true,
+			array(
+				'type' => 'Image',
+				'url'  => 42,
+			),
+			'/photo.jpg',
+			'//remote.example/photo.jpg',
+		) as $url ) {
+			$json['object']['attachment']['url'] = $url;
+			$request->set_body( \wp_json_encode( $json ) );
+			$this->assertSame( 400, \rest_do_request( $request )->get_status() );
+		}
+
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
 	}
 

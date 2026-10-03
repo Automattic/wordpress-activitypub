@@ -19,6 +19,82 @@ use function Activitypub\object_to_uri;
  * @coversDefaultClass \Activitypub\Collection\Remote_Posts
  */
 class Test_Remote_Posts extends \WP_UnitTestCase {
+	/**
+	 * Invalid attachment URLs are skipped for both attachments and representative images.
+	 *
+	 * @covers ::extract_attachments
+	 */
+	public function test_extract_attachments_rejects_invalid_urls() {
+		$valid = array(
+			'type' => 'Image',
+			'url'  => 'https://example.com/photo.jpg',
+			'name' => 'Photo',
+		);
+		foreach ( array(
+			42,
+			true,
+			array(
+				'type' => 'Image',
+				'url'  => 42,
+			),
+			'/photo.jpg',
+			'//remote.example/photo.jpg',
+			'ftp://remote.example/photo.jpg',
+			'https://',
+		) as $url ) {
+			$invalid = array(
+				'type' => 'Image',
+				'url'  => $url,
+			);
+			$this->assertSame( array(), Remote_Posts::extract_attachments( array( 'attachment' => $invalid ) ) );
+			$this->assertSame( array(), Remote_Posts::extract_attachments( array( 'image' => $invalid ) ) );
+			$this->assertSame(
+				array(
+					array(
+						'url'  => $valid['url'],
+						'alt'  => 'Photo',
+						'type' => 'image',
+					),
+				),
+				Remote_Posts::extract_attachments( array( 'attachment' => array( $invalid, $valid ) ) )
+			);
+		}
+	}
+
+	/**
+	 * Lists and single attachments retain URL, description, and type regardless of MIME casing.
+	 *
+	 * @covers ::extract_attachments
+	 */
+	public function test_extract_attachments_classifies_object_types_and_mime_casing() {
+		$cases = array(
+			array( array( 'type' => 'Audio' ), 'audio' ),
+			array( array( 'type' => 'Video' ), 'video' ),
+			array( array( 'type' => 'Image' ), 'image' ),
+			array( array( 'type' => 'Document' ), 'document' ),
+			array( array( 'mediaType' => 'IMAGE/JPEG' ), 'image' ),
+			array( array( 'mediaType' => 'AUDIO/MPEG' ), 'audio' ),
+			array( array( 'mediaType' => 'VIDEO/MP4' ), 'video' ),
+		);
+		foreach ( $cases as $case ) {
+			$attachment         = $case[0];
+			$attachment['url']  = 'https://example.com/media';
+			$attachment['name'] = 'Media description';
+			foreach ( array( array( $attachment ), $attachment, (object) $attachment ) as $input ) {
+				$this->assertSame(
+					array(
+						array(
+							'url'  => 'https://example.com/media',
+							'alt'  => 'Media description',
+							'type' => $case[1],
+						),
+					),
+					Remote_Posts::extract_attachments( array( 'attachment' => $input ) )
+				);
+			}
+		}
+	}
+
 
 	/**
 	 * Set up test environment.

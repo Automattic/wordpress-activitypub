@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Collection;
 
+use Activitypub\Cache\Media;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 
@@ -18,6 +19,283 @@ use function Activitypub\object_id_to_comment;
  * @coversDefaultClass \Activitypub\Collection\Interactions
  */
 class Test_Interactions extends \WP_UnitTestCase {
+	/**
+	 * Create and update strip remote blocks before adding our own image blocks.
+	 *
+	 * @covers ::add_comment
+	 * @covers ::update_comment
+	 */
+	public function test_comment_images_reject_remote_blocks_and_non_image_objects() {
+		$activity                         = $this->create_test_object( 'https://example.com/remote-block-reply' );
+		$activity['object']['attachment'] = array(
+			array(
+				'type' => 'Image',
+				'url'  => 'https://example.com/photo.jpg',
+			),
+			array(
+				'type' => 'Audio',
+				'url'  => 'https://example.com/audio.mp3',
+			),
+			array(
+				'type' => 'Video',
+				'url'  => 'https://example.com/video.mp4',
+			),
+		);
+		$activity['object']['content']    = '<<!-- -->!-- wp:activitypub/test-probe /--><p>Safe text.</p>';
+		$comment_id                       = Interactions::add_comment( $activity );
+		$this->assertIsInt( $comment_id );
+		$content = \get_comment( $comment_id )->comment_content;
+		$this->assertStringNotContainsString( '<!-- wp:activitypub/test-probe', $content );
+		$this->assertStringNotContainsString( 'audio.mp3', $content );
+		$this->assertStringNotContainsString( 'video.mp4', $content );
+		$this->assertStringContainsString( '<!-- wp:activitypub/image', $content );
+		$this->assertStringContainsString( 'photo.jpg', $content );
+
+		$activity['object']['content'] = '<!<script></script>-- wp:activitypub/test-probe /--><p>Updated text.</p>';
+		$result                        = Interactions::update_comment( $activity );
+		$this->assertNotWPError( $result );
+		$this->assertNotFalse( $result );
+		$content = \get_comment( $comment_id )->comment_content;
+		$this->assertStringNotContainsString( '<!-- wp:activitypub/test-probe', $content );
+		$this->assertStringNotContainsString( 'audio.mp3', $content );
+		$this->assertStringNotContainsString( 'video.mp4', $content );
+		$this->assertStringContainsString( '<!-- wp:activitypub/image', $content );
+		$this->assertStringContainsString( 'Updated text.', $content );
+	}
+
+	/**
+	 * Image-only comments reuse the post's lazy image cache and retain alt text.
+	 *
+	 * @group activitypub
+	 * @covers ::add_comment
+	 */
+	public function test_image_only_comment_uses_post_cache() {
+		$url                              = 'https://example.com/photo.jpg?a=1&b=2';
+		$activity                         = $this->create_test_object( 'https://example.com/image-reply' );
+		$activity['object']['attachment'] = array(
+			array(
+				'type'      => 'Document',
+				'mediaType' => 'image/jpeg',
+				'url'       => $url,
+				'name'      => 'A "cat" & her kittens',
+			),
+		);
+		unset( $activity['object']['content'] );
+		$downloads = 0;
+		$download  = static function () use ( &$downloads ) {
+			++$downloads;
+			$file = \wp_tempnam( 'comment-image.jpg' );
+			\copy( AP_TESTS_DIR . '/data/assets/test.jpg', $file );
+			return array(
+				'file'      => $file,
+				'mime_type' => 'image/jpeg',
+			);
+		};
+		Media::init();
+		\add_filter( 'activitypub_pre_download_url', $download );
+		$comment_id = Interactions::add_comment( $activity );
+		$comment    = \get_comment( $comment_id );
+		$before     = $downloads;
+		$rendered   = \apply_filters( 'comment_text', $comment->comment_content, $comment );
+		$again      = \apply_filters( 'comment_text', $comment->comment_content, $comment );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+		$cached = Media::get( $url, self::$post_id );
+		\wp_delete_comment( $comment_id, true );
+		$after_delete = Media::get( $url, self::$post_id );
+		Media::invalidate_entity( self::$post_id );
+
+		$this->assertIsInt( $comment_id );
+		$this->assertStringContainsString( '<!-- wp:activitypub/image', $comment->comment_content );
+		$this->assertSame( 0, $before );
+		$this->assertSame( 1, $downloads );
+		$this->assertStringContainsString( '/activitypub/posts/' . self::$post_id . '/', $rendered );
+		$this->assertStringContainsString( 'alt="A &quot;cat&quot; &amp; her kittens"', $rendered );
+		$this->assertSame( $rendered, $again );
+		$this->assertNotFalse( $cached );
+		$this->assertSame( $cached, $after_delete );
+	}
+
+	/**
+	 * Updating a comment replaces its image blocks without a separate cache lifecycle.
+	 *
+	 * @group activitypub
+	 * @covers ::update_comment
+	 */
+	public function test_update_comment_images() {
+		$activity                         = $this->create_test_object( 'https://example.com/update-images' );
+		$activity['object']['attachment'] = array(
+			array(
+				'mediaType' => 'image/jpeg',
+				'url'       => 'https://example.com/old.jpg',
+			),
+		);
+		$comment_id                       = Interactions::add_comment( $activity );
+		$this->assertIsInt( $comment_id );
+
+		$activity['object']['attachment'][0]['url'] = 'https://example.com/new.jpg';
+		$result                                     = Interactions::update_comment( $activity );
+		$this->assertNotWPError( $result );
+		$this->assertNotFalse( $result );
+		$content = \get_comment( $comment_id )->comment_content;
+		$this->assertStringContainsString( 'new.jpg', $content );
+		$this->assertStringNotContainsString( 'old.jpg', $content );
+
+		unset( $activity['object']['attachment'] );
+		Interactions::update_comment( $activity );
+		$this->assertStringNotContainsString( '<!-- wp:activitypub/image', \get_comment( $comment_id )->comment_content );
+	}
+
+	/**
+	 * Creation and updates apply the image limit after filtering invalid and non-image attachments.
+	 *
+	 * @dataProvider comment_image_limit_provider
+	 * @covers ::add_comment
+	 * @covers ::update_comment
+	 *
+	 * @param int|null $limit    Filtered limit, or null to use the default.
+	 * @param int      $expected Expected number of image blocks.
+	 */
+	public function test_comment_image_attachment_limit( $limit, $expected ) {
+		$activity                         = $this->create_test_object( 'https://example.com/limited-images' );
+		$activity['object']['attachment'] = array(
+			array(
+				'type' => 'Image',
+				'url'  => '/invalid.jpg',
+			),
+			array(
+				'type' => 'Audio',
+				'url'  => 'https://example.com/audio.mp3',
+			),
+			array(
+				'type' => 'Video',
+				'url'  => 'https://example.com/video.mp4',
+			),
+		);
+		for ( $i = 1; $i <= 5; ++$i ) {
+			$activity['object']['attachment'][] = array(
+				'type'      => 'Document',
+				'mediaType' => 'image/jpeg',
+				'url'       => 'https://example.com/photo-' . $i . '.jpg',
+			);
+		}
+		$limit_filter = static function () use ( $limit ) {
+			return $limit;
+		};
+		if ( null !== $limit ) {
+			\add_filter( 'activitypub_comment_image_limit', $limit_filter );
+		}
+
+		$comment_id = Interactions::add_comment( $activity );
+		$created    = \get_comment( $comment_id )->comment_content;
+
+		$activity['object']['content'] = 'Updated text.';
+		foreach ( $activity['object']['attachment'] as &$attachment ) {
+			$attachment['url'] = \str_replace( 'photo-', 'updated-', $attachment['url'] );
+		}
+		unset( $attachment );
+		$result  = Interactions::update_comment( $activity );
+		$updated = \get_comment( $comment_id )->comment_content;
+		\remove_filter( 'activitypub_comment_image_limit', $limit_filter );
+
+		$this->assertIsInt( $comment_id );
+		$this->assertNotWPError( $result );
+		$this->assertNotFalse( $result );
+		$this->assertStringContainsString( 'Updated text.', $updated );
+		foreach ( array(
+			'photo-'   => $created,
+			'updated-' => $updated,
+		) as $prefix => $content ) {
+			$this->assertSame( $expected, \substr_count( $content, '<!-- wp:activitypub/image' ) );
+			$this->assertStringNotContainsString( $prefix . ( $expected + 1 ) . '.jpg', $content );
+			for ( $i = 1; $i <= $expected; ++$i ) {
+				$this->assertStringContainsString( $prefix . $i . '.jpg', $content );
+			}
+		}
+		$this->assertStringNotContainsString( 'photo-', $updated );
+	}
+
+	/**
+	 * Default and customized comment image limits.
+	 *
+	 * @return array Test cases.
+	 */
+	public function comment_image_limit_provider() {
+		return array(
+			'default'  => array( null, 3 ),
+			'lower'    => array( 1, 1 ),
+			'higher'   => array( 5, 5 ),
+			'disabled' => array( 0, 0 ),
+			'negative' => array( -1, 0 ),
+		);
+	}
+
+	/**
+	 * An attachment URL in the text does not replace the attachment's image.
+	 *
+	 * @dataProvider linked_image_content_provider
+	 * @covers ::add_comment
+	 * @covers ::update_comment
+	 *
+	 * @param string $content Remote comment content with an attachment URL.
+	 */
+	public function test_comment_preserves_linked_image_attachments( $content ) {
+		$url                              = 'https://example.com/photo.jpg';
+		$activity                         = $this->create_test_object( 'https://example.com/linked-image-reply' );
+		$activity['object']['content']    = $content;
+		$activity['object']['attachment'] = array(
+			array(
+				'type' => 'Image',
+				'url'  => $url,
+				'name' => 'Photo description',
+			),
+		);
+		$comment_id                       = Interactions::add_comment( $activity );
+		$this->assertIsInt( $comment_id );
+		$stored = \get_comment( $comment_id )->comment_content;
+		$this->assertSame( 1, \substr_count( $stored, '<!-- wp:activitypub/image' ) );
+		$this->assertStringContainsString( 'Photo description', $stored );
+
+		$activity['object']['content']              = \str_replace( 'photo.jpg', 'updated.jpg', $content );
+		$activity['object']['attachment'][0]['url'] = 'https://example.com/updated.jpg';
+		$result                                     = Interactions::update_comment( $activity );
+		$this->assertNotWPError( $result );
+		$this->assertNotFalse( $result );
+		$stored = \get_comment( $comment_id )->comment_content;
+		$this->assertSame( 1, \substr_count( $stored, '<!-- wp:activitypub/image' ) );
+		$this->assertStringContainsString( 'updated.jpg', $stored );
+		$this->assertStringNotContainsString( 'photo.jpg', $stored );
+	}
+
+	/**
+	 * Text and links that reference an attached image.
+	 *
+	 * @return array Test cases.
+	 */
+	public function linked_image_content_provider() {
+		return array(
+			'plain URL'    => array( '<p>Photo: https://example.com/photo.jpg</p>' ),
+			'link'         => array( '<p><a href="https://example.com/photo.jpg">Photo</a></p>' ),
+			'linked image' => array( '<p><a href="https://example.com/photo.jpg"><img src="https://example.com/photo.jpg" alt="Photo" /></a></p>' ),
+		);
+	}
+
+	/**
+	 * Remote HTML cannot supply trusted image blocks or executable attributes.
+	 *
+	 * @group activitypub
+	 * @covers ::add_comment
+	 */
+	public function test_image_comment_strips_untrusted_markup() {
+		$activity                      = $this->create_test_object( 'https://example.com/hostile-image-reply' );
+		$activity['object']['content'] = '<!-- wp:activitypub/image {"url":"https://example.com/injected.jpg"} --><img src="https://example.com/injected.jpg" onerror="alert(1)"><!-- /wp:activitypub/image --><p>Safe text.</p>';
+		$comment_id                    = Interactions::add_comment( $activity );
+		$this->assertIsInt( $comment_id );
+		$content = \get_comment( $comment_id )->comment_content;
+		$this->assertStringNotContainsString( '<!-- wp:', $content );
+		$this->assertStringNotContainsString( 'injected.jpg', $content );
+		$this->assertStringNotContainsString( 'onerror', $content );
+		$this->assertStringContainsString( 'Safe text.', $content );
+	}
 
 	/**
 	 * User ID.

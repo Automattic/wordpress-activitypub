@@ -387,7 +387,7 @@ class Remote_Posts {
 	 *
 	 * @return array Array of attachments with 'url', 'alt', and 'type' keys.
 	 */
-	private static function extract_attachments( $activity_object ) {
+	public static function extract_attachments( $activity_object ) {
 		$items = $activity_object['attachment'] ?? array();
 
 		/*
@@ -401,15 +401,13 @@ class Remote_Posts {
 			if ( \is_string( $items ) ) {
 				$items = array( 'url' => $items );
 			}
+		}
 
-			if ( \is_object( $items ) ) {
-				$items = \get_object_vars( $items );
-			}
-
-			// A single `Image` object rather than a list of them.
-			if ( \is_array( $items ) && ! \array_is_list( $items ) ) {
-				$items = array( $items );
-			}
+		if ( \is_object( $items ) ) {
+			$items = \get_object_vars( $items );
+		}
+		if ( \is_array( $items ) && ! \array_is_list( $items ) ) {
+			$items = array( $items );
 		}
 
 		if ( empty( $items ) || ! \is_array( $items ) ) {
@@ -433,15 +431,23 @@ class Remote_Posts {
 			if ( empty( $url ) || ! \is_string( $url ) ) {
 				continue;
 			}
+			if ( ! \filter_var( $url, FILTER_VALIDATE_URL ) || ! \esc_url_raw( $url, array( 'http', 'https' ) ) ) {
+				continue;
+			}
 
-			$mime_type = $attachment['mediaType'] ?? '';
+			$mime_type = \is_string( $attachment['mediaType'] ?? null ) ? \strtolower( $attachment['mediaType'] ) : '';
 
-			if ( \str_starts_with( $mime_type, 'video/' ) ) {
+			if ( '' === $mime_type ) {
+				$type = \is_string( $attachment['type'] ?? null ) ? \strtolower( $attachment['type'] ) : 'image';
+				$type = \in_array( $type, array( 'image', 'audio', 'video' ), true ) ? $type : 'document';
+			} elseif ( \str_starts_with( $mime_type, 'video/' ) ) {
 				$type = 'video';
 			} elseif ( \str_starts_with( $mime_type, 'audio/' ) ) {
 				$type = 'audio';
-			} else {
+			} elseif ( \str_starts_with( $mime_type, 'image/' ) ) {
 				$type = 'image';
+			} else {
+				$type = 'document';
 			}
 
 			$attachments[] = array(
