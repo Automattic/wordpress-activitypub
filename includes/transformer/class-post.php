@@ -578,7 +578,11 @@ class Post extends Base {
 	 * The summary will be generated based on the user settings and only if the
 	 * object type is not set to `note`.
 	 *
-	 * @return string|null The summary or null if the object type is `note`.
+	 * ActivityStreams defines `summary` as HTML, and Mastodon inserts it as-is
+	 * when converting an Article, so the plain-text summary is escaped and its
+	 * paragraphs are wrapped in `<p>` tags.
+	 *
+	 * @return string|null The HTML summary or null if the object type is `note`.
 	 */
 	protected function get_summary() {
 		if ( 'Note' === $this->get_type() ) {
@@ -589,7 +593,7 @@ class Post extends Base {
 			return $this->summary;
 		}
 
-		$this->summary = generate_post_summary( $this->item );
+		$this->summary = \trim( \wpautop( \esc_html( generate_post_summary( $this->item ) ) ) );
 
 		return $this->summary;
 	}

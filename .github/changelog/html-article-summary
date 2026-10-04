@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Post excerpts shared to the Fediverse now keep their spacing and paragraph breaks in apps such as Mastodon for iOS.

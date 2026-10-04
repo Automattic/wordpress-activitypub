@@ -2703,4 +2703,44 @@ class Test_Post extends \WP_UnitTestCase {
 		$this->assertArrayNotHasKey( 'dcterms:subject', $array );
 		$this->assertArrayNotHasKey( 'dcterms', $array );
 	}
+
+	/**
+	 * The Article summary is sent as escaped HTML with one paragraph per block.
+	 *
+	 * @covers ::get_summary
+	 */
+	public function test_article_summary_is_html() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Summary test',
+				'post_excerpt' => "First & one.\n\nSecond < two.",
+				'post_status'  => 'publish',
+			)
+		);
+
+		$object = Post::transform( \get_post( $post_id ) )->to_object();
+
+		$this->assertSame( 'Article', $object->get_type() );
+		$this->assertSame( "<p>First &amp; one.</p>\n<p>Second &lt; two.</p>", $object->get_summary() );
+	}
+
+	/**
+	 * A Note carries no summary.
+	 *
+	 * @covers ::get_summary
+	 */
+	public function test_note_has_no_summary() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => '',
+				'post_excerpt' => 'An excerpt.',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$object = Post::transform( \get_post( $post_id ) )->to_object();
+
+		$this->assertSame( 'Note', $object->get_type() );
+		$this->assertEmpty( $object->get_summary() );
+	}
 }
