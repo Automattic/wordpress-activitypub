@@ -228,14 +228,8 @@ class Post extends Base {
 	 * or below the threshold are *legacy* and use their permalink as the ID,
 	 * which means a slug change effectively renames the federated object.
 	 *
-	 * Known limitation: a legacy post whose slug changes in the same save as
-	 * a soft-delete transition (e.g. publish → draft + new post_name) will
-	 * emit a Delete targeting the new permalink, while remote servers cached
-	 * the original. The trash case mitigates this via the `wp_trash_post`
-	 * hook caching the pre-transition URL in `_activitypub_canonical_url`,
-	 * but draft / pending / private / password-applied transitions do not.
-	 * If you maintain a site that pre-dates the ID migration, avoid editing
-	 * the slug in the same save as the visibility change.
+	 * On withdrawal, the saved canonical URL preserves the published identity
+	 * even if the status change also changes the permalink or slug.
 	 *
 	 * @return string The Posts ID.
 	 */
@@ -257,11 +251,16 @@ class Post extends Base {
 	 * @return string The Posts URL.
 	 */
 	public function get_url() {
-		$post = $this->item;
+		$post          = $this->item;
+		$canonical_url = \get_post_meta( $post->ID, '_activitypub_canonical_url', true );
+
+		if ( $canonical_url ) {
+			return \esc_url_raw( $canonical_url );
+		}
 
 		switch ( \get_post_status( $post ) ) {
 			case 'trash':
-				$permalink = \get_post_meta( $post->ID, '_activitypub_canonical_url', true );
+				$permalink = '';
 				break;
 			case 'draft':
 				// Get_sample_permalink is in wp-admin, not always loaded.

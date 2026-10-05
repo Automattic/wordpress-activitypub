@@ -159,6 +159,13 @@ class Post {
 			$type = 'Delete';
 		}
 
+		if ( 'Delete' === $type && $post_before && 'publish' === $old_status ) {
+			// Keep the published identity even when withdrawal changes the permalink or slug.
+			\add_post_meta( $post_id, '_activitypub_canonical_url', \get_permalink( $post_before ), true );
+		} elseif ( $is_queryable ) {
+			\delete_post_meta( $post_id, '_activitypub_canonical_url' );
+		}
+
 		add_to_outbox( $post, $type, (int) $post->post_author );
 	}
 

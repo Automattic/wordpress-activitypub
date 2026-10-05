@@ -8,7 +8,10 @@
 namespace Activitypub\Tests\Scheduler;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Outbox;
 use Activitypub\Scheduler\Post;
+
+use function Activitypub\get_object_id;
 
 /**
  * Test Post scheduler class.
@@ -1050,6 +1053,132 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 				),
 			),
 		);
+	}
+
+	/**
+	 * Withdrawal transitions with legacy and modern IDs and both permalink modes.
+	 *
+	 * @return array[] Test cases.
+	 */
+	public function data_withdrawal_states() {
+		$states = $this->data_hidden_states();
+		foreach ( array( 'trash', 'auto-draft', 'inherit', 'withdrawn_test' ) as $status ) {
+			$states[ $status ] = array( array( 'hide' => array( 'post' => array( 'post_status' => $status ) ) ) );
+		}
+		$states['disabled post type']        = array( array( 'hide' => array( 'disable' => true ) ) );
+		$states['private with changed slug'] = array(
+			array(
+				'hide' => array(
+					'post' => array(
+						'post_status' => 'private',
+						'post_name'   => 'changed-slug',
+					),
+				),
+			),
+		);
+
+		$cases = array();
+		foreach ( $states as $name => $state ) {
+			foreach ( array( true, false ) as $legacy ) {
+				foreach ( array( '/%postname%/', '' ) as $structure ) {
+					$key           = $name . ( $legacy ? ' legacy' : ' modern' ) . ( $structure ? ' pretty' : ' plain' );
+					$cases[ $key ] = array( $state[0]['hide'], $legacy, $structure );
+				}
+			}
+		}
+		return $cases;
+	}
+
+	/**
+	 * Withdrawal must target the published ID and remove its complete outbox history.
+	 *
+	 * @dataProvider data_withdrawal_states
+	 * @covers ::triage
+	 *
+	 * @param array  $state     The withdrawal state.
+	 * @param bool   $legacy    Whether to use a legacy permalink ID.
+	 * @param string $structure The permalink structure.
+	 */
+	public function test_withdrawal_preserves_object_id_and_removes_history( $state, $legacy, $structure ) {
+		$this->set_permalink_structure( $structure );
+		\update_option( 'activitypub_last_post_with_permalink_as_id', $legacy ? PHP_INT_MAX : 0 );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+		\wp_set_current_user( 0 );
+		\register_post_status( 'withdrawn_test', array( 'public' => false ) );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author'  => self::$user_id,
+				'post_status'  => 'publish',
+				'post_name'    => 'withdrawal-test',
+				'post_content' => 'Previously public content.',
+			)
+		);
+		$id      = get_object_id( \get_post( $post_id ) );
+		$creates = $this->get_outbox_items_for( $id, 'Create' );
+		$this->assertCount( 1, $creates );
+		\wp_update_post(
+			array(
+				'ID'          => $creates[0]->ID,
+				'post_status' => 'publish',
+			)
+		);
+		\wp_update_post(
+			array(
+				'ID'           => $post_id,
+				'post_content' => 'Updated public content.',
+			)
+		);
+		$updates = $this->get_outbox_items_for( $id, 'Update' );
+		$this->assertCount( 1, $updates );
+
+		if ( ! empty( $state['disable'] ) ) {
+			\remove_post_type_support( 'post', 'activitypub' );
+		}
+		if ( 'trash' === ( $state['post']['post_status'] ?? '' ) ) {
+			\wp_trash_post( $post_id );
+		} else {
+			$this->apply_post_state( $post_id, $state );
+		}
+		\add_post_type_support( 'post', 'activitypub' );
+		unset( $GLOBALS['wp_post_statuses']['withdrawn_test'] );
+
+		$deletes = $this->get_outbox_items_for( $id, 'Delete' );
+		$this->assertCount( 1, $deletes, 'The Delete must target the original published ID.' );
+		$stored = \json_decode( $deletes[0]->post_content, true );
+		$this->assertSame( $id, $stored['object']['id'] );
+		$this->assertSame( 'Tombstone', $stored['object']['type'] );
+		$this->assertArrayNotHasKey( 'content', $stored['object'] );
+		$this->assertNull( \get_post( $creates[0]->ID ), 'Already-sent snapshots must be removed.' );
+		$this->assertNull( \get_post( $updates[0]->ID ), 'Pending snapshots must be removed.' );
+		$this->assertWPError( Outbox::maybe_get_activity( $creates[0]->ID ) );
+
+		// Republishing must clear the saved URL, including before a later withdrawal.
+		if ( 'trash' === \get_post_status( $post_id ) ) {
+			\wp_untrash_post( $post_id );
+		}
+		$this->apply_post_state(
+			$post_id,
+			array(
+				'post' => array(
+					'post_status'   => 'publish',
+					'post_password' => '',
+					'post_name'     => 'republished-test',
+				),
+				'meta' => array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ),
+			)
+		);
+		$this->assertSame( '', \get_post_meta( $post_id, '_activitypub_canonical_url', true ) );
+		$republished_id = get_object_id( \get_post( $post_id ) );
+		$this->assertSame( $legacy ? \get_permalink( $post_id ) : $id, $republished_id );
+		$this->assertCount( 1, $this->get_outbox_items_for( $republished_id, 'Create' ) );
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'private',
+			)
+		);
+		$this->assertCount( 1, $this->get_outbox_items_for( $republished_id, 'Delete' ) );
 	}
 
 	/**
