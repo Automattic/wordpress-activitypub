@@ -1131,6 +1131,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		);
 		$updates = $this->get_outbox_items_for( $id, 'Update' );
 		$this->assertCount( 1, $updates );
+		$this->assertNotWPError( Outbox::maybe_get_activity( $creates[0] ) );
 
 		if ( ! empty( $state['disable'] ) ) {
 			\remove_post_type_support( 'post', 'activitypub' );
@@ -1151,7 +1152,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$this->assertArrayNotHasKey( 'content', $stored['object'] );
 		$this->assertNull( \get_post( $creates[0]->ID ), 'Already-sent snapshots must be removed.' );
 		$this->assertNull( \get_post( $updates[0]->ID ), 'Pending snapshots must be removed.' );
-		$this->assertWPError( Outbox::maybe_get_activity( $creates[0]->ID ) );
+		$this->assertWPError( Outbox::maybe_get_activity( $creates[0] ) );
 
 		// Republishing must clear the saved URL, including before a later withdrawal.
 		if ( 'trash' === \get_post_status( $post_id ) ) {
