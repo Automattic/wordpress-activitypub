@@ -21,6 +21,13 @@ use function Activitypub\is_post_publicly_queryable;
  */
 class Post {
 	/**
+	 * Core media REST updates that will receive wp_after_insert_post.
+	 *
+	 * @var \WP_REST_Request[]
+	 */
+	private static $rest_attachment_updates = array();
+
+	/**
 	 * Initialize the class, registering WordPress hooks.
 	 *
 	 * @return void
@@ -34,6 +41,8 @@ class Post {
 		\add_action( 'add_attachment', array( self::class, 'transition_attachment_status' ) );
 		\add_action( 'edit_attachment', array( self::class, 'transition_attachment_status' ) );
 		\add_action( 'delete_attachment', array( self::class, 'transition_attachment_status' ) );
+		\add_filter( 'rest_pre_insert_attachment', array( self::class, 'defer_attachment_update' ), 10, 2 );
+		\add_filter( 'rest_request_after_callbacks', array( self::class, 'clear_attachment_update' ), 10, 3 );
 
 		/*
 		 * Sticky post transitions (featured collection).
@@ -63,7 +72,7 @@ class Post {
 		}
 
 		$post = \get_post( $post_id );
-		if ( ! $post || 'publish' !== $post->post_status || ACTIVITYPUB_OBJECT_STATE_FEDERATED !== get_wp_object_state( $post ) || is_post_disabled( $post ) ) {
+		if ( ! $post || 'publish' !== \get_post_status( $post ) || ACTIVITYPUB_OBJECT_STATE_FEDERATED !== get_wp_object_state( $post ) || is_post_disabled( $post ) ) {
 			return;
 		}
 
@@ -189,6 +198,41 @@ class Post {
 	}
 
 	/**
+	 * Defer core media REST updates until their metadata has been saved.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \stdClass|\WP_Error $post    Prepared attachment or error.
+	 * @param \WP_REST_Request    $request REST request.
+	 * @return \stdClass|\WP_Error The unchanged prepared attachment or error.
+	 */
+	public static function defer_attachment_update( $post, $request ) {
+		if ( ! \is_wp_error( $post ) && ! empty( $post->ID ) ) {
+			self::$rest_attachment_updates[ $post->ID ] = $request;
+		}
+		return $post;
+	}
+
+	/**
+	 * Clear unconsumed markers when a REST update fails before saving.
+	 *
+	 * @since unreleased
+	 *
+	 * @param mixed            $response REST response.
+	 * @param array            $handler  Route handler.
+	 * @param \WP_REST_Request $request  REST request.
+	 * @return mixed The unchanged response.
+	 */
+	public static function clear_attachment_update( $response, $handler, $request ) {
+		foreach ( self::$rest_attachment_updates as $post_id => $pending_request ) {
+			if ( $request === $pending_request ) {
+				unset( self::$rest_attachment_updates[ $post_id ] );
+			}
+		}
+		return $response;
+	}
+
+	/**
 	 * Schedules Activities for attachment transitions.
 	 *
 	 * @param int $post_id Attachment ID.
@@ -219,8 +263,13 @@ class Post {
 				$type = 'Create';
 				break;
 			case 'edit_attachment':
-				$type = 'Update';
-				break;
+				// Core REST saves call wp_after_insert_post after applying their metadata.
+				if ( isset( self::$rest_attachment_updates[ $post_id ] ) ) {
+					unset( self::$rest_attachment_updates[ $post_id ] );
+					return;
+				}
+				self::triage( $post_id, $post, true, $post );
+				return;
 			case 'delete_attachment':
 				$type = 'Delete';
 				break;
