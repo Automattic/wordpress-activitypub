@@ -90,6 +90,11 @@ class Post {
 	 * @return void
 	 */
 	public static function triage( $post_id, $post, $update, $post_before ) {
+		$is_queryable = is_post_publicly_queryable( $post );
+		if ( $is_queryable ) {
+			\delete_post_meta( $post_id, '_activitypub_canonical_url' );
+		}
+
 		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
 			return;
 		}
@@ -99,11 +104,6 @@ class Post {
 		}
 
 		$object_status = get_wp_object_state( $post );
-		$is_queryable  = is_post_publicly_queryable( $post );
-
-		if ( $is_queryable ) {
-			\delete_post_meta( $post_id, '_activitypub_canonical_url' );
-		}
 
 		// If the post is already soft-deleted and still non-public, do not create any more activities.
 		if ( ACTIVITYPUB_OBJECT_STATE_DELETED === $object_status && ! $is_queryable ) {
@@ -240,15 +240,7 @@ class Post {
 	 * @return void
 	 */
 	public static function transition_attachment_status( $post_id ) {
-		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
-			return;
-		}
-
 		if ( ! \post_type_supports( 'attachment', 'activitypub' ) ) {
-			return;
-		}
-
-		if ( is_post_disabled( $post_id ) ) {
 			return;
 		}
 
@@ -258,18 +250,28 @@ class Post {
 			return;
 		}
 
+		if ( 'edit_attachment' === \current_action() ) {
+			// Core REST saves call wp_after_insert_post after applying their metadata.
+			if ( isset( self::$rest_attachment_updates[ $post_id ] ) ) {
+				unset( self::$rest_attachment_updates[ $post_id ] );
+				return;
+			}
+			self::triage( $post_id, $post, true, $post );
+			return;
+		}
+
+		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+			return;
+		}
+
+		if ( is_post_disabled( $post_id ) ) {
+			return;
+		}
+
 		switch ( \current_action() ) {
 			case 'add_attachment':
 				$type = 'Create';
 				break;
-			case 'edit_attachment':
-				// Core REST saves call wp_after_insert_post after applying their metadata.
-				if ( isset( self::$rest_attachment_updates[ $post_id ] ) ) {
-					unset( self::$rest_attachment_updates[ $post_id ] );
-					return;
-				}
-				self::triage( $post_id, $post, true, $post );
-				return;
 			case 'delete_attachment':
 				$type = 'Delete';
 				break;

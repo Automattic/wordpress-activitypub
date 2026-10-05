@@ -1497,6 +1497,88 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Save paths used when republishing with federation disabled.
+	 *
+	 * @return array[] Test cases.
+	 */
+	public function data_disabled_republication() {
+		return array(
+			'post'            => array( false, false ),
+			'post REST'       => array( false, true ),
+			'attachment'      => array( true, false ),
+			'attachment REST' => array( true, true ),
+		);
+	}
+
+	/**
+	 * URL cleanup must not depend on outgoing federation being enabled.
+	 *
+	 * @dataProvider data_disabled_republication
+	 * @covers ::triage
+	 * @covers ::transition_attachment_status
+	 *
+	 * @param bool $attachment Whether to use an attachment.
+	 * @param bool $rest       Whether to republish through REST.
+	 */
+	public function test_disabled_republication_clears_canonical_url( $attachment, $rest ) {
+		$this->set_permalink_structure( '/%postname%/' );
+		\update_option( 'activitypub_last_post_with_permalink_as_id', PHP_INT_MAX );
+		\wp_set_current_user( self::$user_id );
+		if ( $attachment ) {
+			\add_post_type_support( 'attachment', 'activitypub' );
+			$post_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		} else {
+			$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		}
+		$id = get_object_id( \get_post( $post_id ) );
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'private',
+			)
+		);
+		$this->assertSame( $id, \get_post_meta( $post_id, '_activitypub_canonical_url', true ) );
+		$this->assertCount( 1, $this->get_outbox_items_for( $id, 'Delete' ) );
+
+		\add_filter( 'activitypub_is_post_disabled', '__return_true' );
+		\wp_update_post(
+			array(
+				'ID'        => $post_id,
+				'post_name' => 'still-private',
+			)
+		);
+		$hidden_url = \get_post_meta( $post_id, '_activitypub_canonical_url', true );
+		$status     = $attachment ? 'inherit' : 'publish';
+		if ( $rest ) {
+			$request = new \WP_REST_Request( 'POST', '/wp/v2/' . ( $attachment ? 'media/' : 'posts/' ) . $post_id );
+			$request->set_param( 'status', 'publish' );
+			$request->set_param( 'slug', 'republished-with-federation-disabled' );
+			$result = \rest_get_server()->dispatch( $request )->get_status();
+		} else {
+			$result = \wp_update_post(
+				array(
+					'ID'          => $post_id,
+					'post_status' => $status,
+					'post_name'   => 'republished-with-federation-disabled',
+				)
+			);
+		}
+		\remove_filter( 'activitypub_is_post_disabled', '__return_true' );
+		if ( $attachment ) {
+			\remove_post_type_support( 'attachment', 'activitypub' );
+		}
+
+		$this->assertSame( $rest ? 200 : $post_id, $result );
+		$this->assertSame( $id, $hidden_url, 'An edit that stays private must retain the saved URL.' );
+		$this->assertSame( '', \get_post_meta( $post_id, '_activitypub_canonical_url', true ) );
+		$new_id = get_object_id( \get_post( $post_id ) );
+		$this->assertNotSame( $id, $new_id );
+		$this->assertSame( \get_permalink( $post_id ), $new_id );
+		$this->assertCount( 0, $this->get_outbox_items_for( $new_id ), 'Disabled federation must not enqueue activities.' );
+		$this->assertCount( 1, $this->get_outbox_items_for( $id ), 'Disabled federation must leave the existing Delete untouched.' );
+	}
+
+	/**
 	 * Rescheduling must retain the published URL for a later withdrawal.
 	 *
 	 * @covers ::save_canonical_url
