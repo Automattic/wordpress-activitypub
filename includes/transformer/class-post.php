@@ -20,6 +20,8 @@ use function Activitypub\get_content_visibility;
 use function Activitypub\get_content_warning;
 use function Activitypub\get_enclosures;
 use function Activitypub\get_max_attachments;
+use function Activitypub\get_post_id;
+use function Activitypub\get_post_url;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\is_post_publicly_queryable;
 use function Activitypub\is_single_user;
@@ -234,15 +236,7 @@ class Post extends Base {
 	 * @return string The Posts ID.
 	 */
 	public function get_id() {
-		$last_legacy_id = (int) \get_option( 'activitypub_last_post_with_permalink_as_id', 0 );
-		$post_id        = (int) $this->item->ID;
-
-		if ( $post_id > $last_legacy_id ) {
-			// Generate URI based on post ID.
-			return \add_query_arg( 'p', $post_id, \home_url( '/' ) );
-		}
-
-		return $this->get_url();
+		return get_post_id( $this->item->ID );
 	}
 
 	/**
@@ -251,31 +245,7 @@ class Post extends Base {
 	 * @return string The Posts URL.
 	 */
 	public function get_url() {
-		$post          = $this->item;
-		$canonical_url = \get_post_meta( $post->ID, '_activitypub_canonical_url', true );
-
-		if ( $canonical_url ) {
-			return \esc_url_raw( $canonical_url );
-		}
-
-		switch ( \get_post_status( $post ) ) {
-			case 'trash':
-				$permalink = '';
-				break;
-			case 'draft':
-				// Get_sample_permalink is in wp-admin, not always loaded.
-				if ( ! \function_exists( '\get_sample_permalink' ) ) {
-					require_once ABSPATH . 'wp-admin/includes/post.php';
-				}
-				$sample    = \get_sample_permalink( $post->ID );
-				$permalink = \str_replace( array( '%pagename%', '%postname%' ), $sample[1], $sample[0] );
-				break;
-			default:
-				$permalink = \get_permalink( $post );
-				break;
-		}
-
-		return \esc_url_raw( $permalink );
+		return get_post_url( $this->item );
 	}
 
 	/**

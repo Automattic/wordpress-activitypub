@@ -1148,6 +1148,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$this->assertCount( 1, $deletes, 'The Delete must target the original published ID.' );
 		$stored = \json_decode( $deletes[0]->post_content, true );
 		$this->assertSame( $id, $stored['object']['id'] );
+		$this->assertSame( $stored['object']['id'], get_object_id( \get_post( $post_id ) ) );
 		$this->assertSame( 'Tombstone', $stored['object']['type'] );
 		$this->assertArrayNotHasKey( 'content', $stored['object'] );
 		$this->assertNull( \get_post( $creates[0]->ID ), 'Already-sent snapshots must be removed.' );
