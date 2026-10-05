@@ -19,6 +19,14 @@ use function Activitypub\get_object_id;
  * @coversDefaultClass \Activitypub\Scheduler\Post
  */
 class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
+	/**
+	 * Restore rewrite state after permalink tests.
+	 */
+	public function tear_down() {
+		parent::tear_down();
+		self::flush_cache();
+		$GLOBALS['wp_rewrite']->init();
+	}
 
 	/**
 	 * Test post activity scheduling for attachments.
@@ -1080,8 +1088,8 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$cases = array();
 		foreach ( $states as $name => $state ) {
 			foreach ( array( true, false ) as $legacy ) {
-				foreach ( array( '/%postname%/', '' ) as $structure ) {
-					$key           = $name . ( $legacy ? ' legacy' : ' modern' ) . ( $structure ? ' pretty' : ' plain' );
+				foreach ( array( '/%postname%/', '/%category%/%postname%/', '' ) as $structure ) {
+					$key           = $name . ( $legacy ? ' legacy ' : ' modern ' ) . $structure;
 					$cases[ $key ] = array( $state[0]['hide'], $legacy, $structure );
 				}
 			}
@@ -1105,13 +1113,15 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
 		\wp_set_current_user( 0 );
 		\register_post_status( 'withdrawn_test', array( 'public' => false ) );
+		$category = self::factory()->category->create( array( 'slug' => 'original-category' ) );
 
 		$post_id = self::factory()->post->create(
 			array(
-				'post_author'  => self::$user_id,
-				'post_status'  => 'publish',
-				'post_name'    => 'withdrawal-test',
-				'post_content' => 'Previously public content.',
+				'post_author'   => self::$user_id,
+				'post_status'   => 'publish',
+				'post_name'     => 'withdrawal-test',
+				'post_content'  => 'Previously public content.',
+				'post_category' => array( $category ),
 			)
 		);
 		$id      = get_object_id( \get_post( $post_id ) );
@@ -1132,6 +1142,8 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$updates = $this->get_outbox_items_for( $id, 'Update' );
 		$this->assertCount( 1, $updates );
 		$this->assertNotWPError( Outbox::maybe_get_activity( $creates[0] ) );
+
+		$state['post']['post_category'] = array( self::factory()->category->create( array( 'slug' => 'changed-category' ) ) );
 
 		if ( ! empty( $state['disable'] ) ) {
 			\remove_post_type_support( 'post', 'activitypub' );
@@ -1181,6 +1193,133 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			)
 		);
 		$this->assertCount( 1, $this->get_outbox_items_for( $republished_id, 'Delete' ) );
+	}
+
+	/**
+	 * REST updates apply terms after updating the post fields.
+	 *
+	 * @covers ::save_canonical_url
+	 * @covers ::triage
+	 */
+	public function test_rest_withdrawal_preserves_category_permalink() {
+		$this->set_permalink_structure( '/%category%/%postname%/' );
+		\update_option( 'activitypub_last_post_with_permalink_as_id', PHP_INT_MAX );
+		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$old_category = self::factory()->category->create( array( 'slug' => 'old-category' ) );
+		$new_category = self::factory()->category->create( array( 'slug' => 'new-category' ) );
+		$post_id      = self::factory()->post->create(
+			array(
+				'post_author'   => self::$user_id,
+				'post_status'   => 'publish',
+				'post_category' => array( $old_category ),
+			)
+		);
+		$id           = get_object_id( \get_post( $post_id ) );
+		$this->assertCount( 1, $this->get_outbox_items_for( $id, 'Create' ) );
+
+		$request = new \WP_REST_Request( 'POST', '/wp/v2/posts/' . $post_id );
+		$request->set_param( 'status', 'private' );
+		$request->set_param( 'categories', array( $new_category ) );
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array( $new_category ), \wp_get_post_categories( $post_id ) );
+		$this->assertSame( $id, get_object_id( \get_post( $post_id ) ) );
+		$this->assertCount( 1, $this->get_outbox_items_for( $id, 'Delete' ) );
+		$this->assertCount( 0, $this->get_outbox_items_for( $id, 'Create' ) );
+	}
+
+	/**
+	 * Public edits must release the saved URL before the next withdrawal.
+	 *
+	 * @covers ::save_canonical_url
+	 * @covers ::triage
+	 */
+	public function test_public_category_edit_does_not_keep_stale_canonical_url() {
+		$this->set_permalink_structure( '/%category%/%postname%/' );
+		\update_option( 'activitypub_last_post_with_permalink_as_id', PHP_INT_MAX );
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$old_id  = get_object_id( \get_post( $post_id ) );
+		\wp_update_post(
+			array(
+				'ID'            => $post_id,
+				'post_category' => array( self::factory()->category->create( array( 'slug' => 'updated-category' ) ) ),
+			)
+		);
+
+		$id = get_object_id( \get_post( $post_id ) );
+		$this->assertNotSame( $old_id, $id );
+		$this->assertSame( \get_permalink( $post_id ), $id );
+		$this->assertSame( '', \get_post_meta( $post_id, '_activitypub_canonical_url', true ) );
+		$this->assertCount( 1, $this->get_outbox_items_for( $id, 'Update' ) );
+
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'pending',
+			)
+		);
+		$this->assertSame( $id, get_object_id( \get_post( $post_id ) ) );
+		$this->assertCount( 1, $this->get_outbox_items_for( $id, 'Delete' ) );
+		$this->assertCount( 0, $this->get_outbox_items_for( $id, 'Update' ) );
+	}
+
+	/**
+	 * Skipped public edits must not leave a saved URL behind.
+	 *
+	 * @covers ::save_canonical_url
+	 */
+	public function test_disabled_federation_does_not_save_canonical_url() {
+		$this->set_permalink_structure( '/%postname%/' );
+		\update_option( 'activitypub_last_post_with_permalink_as_id', PHP_INT_MAX );
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$old_id  = get_object_id( \get_post( $post_id ) );
+
+		\add_filter( 'activitypub_is_post_disabled', '__return_true' );
+		\wp_update_post(
+			array(
+				'ID'        => $post_id,
+				'post_name' => 'edited-with-federation-disabled',
+			)
+		);
+		\remove_filter( 'activitypub_is_post_disabled', '__return_true' );
+
+		$this->assertSame( '', \get_post_meta( $post_id, '_activitypub_canonical_url', true ) );
+		$this->assertNotSame( $old_id, get_object_id( \get_post( $post_id ) ) );
+		$this->assertSame( \get_permalink( $post_id ), get_object_id( \get_post( $post_id ) ) );
+	}
+
+	/**
+	 * Rescheduling must retain the published URL for a later withdrawal.
+	 *
+	 * @covers ::save_canonical_url
+	 * @covers ::triage
+	 */
+	public function test_rescheduled_legacy_post_withdrawal_preserves_published_id() {
+		$this->set_permalink_structure( '/%year%/%monthnum%/%postname%/' );
+		\update_option( 'activitypub_last_post_with_permalink_as_id', PHP_INT_MAX );
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$id      = get_object_id( \get_post( $post_id ) );
+		\wp_update_post(
+			array(
+				'ID'            => $post_id,
+				'post_status'   => 'future',
+				'post_date'     => \gmdate( 'Y-m-d H:i:s', \time() + YEAR_IN_SECONDS ),
+				'post_date_gmt' => \gmdate( 'Y-m-d H:i:s', \time() + YEAR_IN_SECONDS ),
+			)
+		);
+		$this->assertCount( 0, $this->get_outbox_items_for( $id, 'Delete' ) );
+		$this->assertSame( $id, get_object_id( \get_post( $post_id ) ) );
+
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'pending',
+			)
+		);
+		$this->assertSame( $id, get_object_id( \get_post( $post_id ) ) );
+		$this->assertCount( 1, $this->get_outbox_items_for( $id, 'Delete' ) );
+		$this->assertCount( 0, $this->get_outbox_items_for( $id, 'Create' ) );
 	}
 
 	/**

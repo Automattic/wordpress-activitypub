@@ -27,6 +27,7 @@ class Post {
 	 */
 	public static function init() {
 		// Post transitions.
+		\add_action( 'pre_post_update', array( self::class, 'save_canonical_url' ) );
 		\add_action( 'wp_after_insert_post', array( self::class, 'triage' ), 33, 4 );
 
 		// Attachment transitions.
@@ -46,6 +47,27 @@ class Post {
 		 */
 		\add_action( 'post_stuck', array( self::class, 'schedule_featured_add' ) );
 		\add_action( 'post_unstuck', array( self::class, 'schedule_featured_remove' ) );
+	}
+
+	/**
+	 * Preserve the published URL before post fields and terms change.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $post_id Post ID.
+	 * @return void
+	 */
+	public static function save_canonical_url( $post_id ) {
+		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+			return;
+		}
+
+		$post = \get_post( $post_id );
+		if ( ! $post || 'publish' !== $post->post_status || ACTIVITYPUB_OBJECT_STATE_FEDERATED !== get_wp_object_state( $post ) || is_post_disabled( $post ) ) {
+			return;
+		}
+
+		\add_post_meta( $post_id, '_activitypub_canonical_url', \get_permalink( $post_id ), true );
 	}
 
 	/**
@@ -69,6 +91,10 @@ class Post {
 
 		$object_status = get_wp_object_state( $post );
 		$is_queryable  = is_post_publicly_queryable( $post );
+
+		if ( $is_queryable ) {
+			\delete_post_meta( $post_id, '_activitypub_canonical_url' );
+		}
 
 		// If the post is already soft-deleted and still non-public, do not create any more activities.
 		if ( ACTIVITYPUB_OBJECT_STATE_DELETED === $object_status && ! $is_queryable ) {
@@ -157,13 +183,6 @@ class Post {
 		// If the post was federated before but is now non-public, it should be a Delete activity.
 		if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status && ! $is_queryable ) {
 			$type = 'Delete';
-		}
-
-		if ( 'Delete' === $type && $post_before && 'publish' === $old_status ) {
-			// Keep the published identity even when withdrawal changes the permalink or slug.
-			\add_post_meta( $post_id, '_activitypub_canonical_url', \get_permalink( $post_before ), true );
-		} elseif ( $is_queryable ) {
-			\delete_post_meta( $post_id, '_activitypub_canonical_url' );
 		}
 
 		add_to_outbox( $post, $type, (int) $post->post_author );
