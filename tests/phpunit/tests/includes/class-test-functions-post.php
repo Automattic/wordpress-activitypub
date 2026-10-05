@@ -16,6 +16,15 @@ use function Activitypub\get_post_url;
 class Test_Functions_Post extends \WP_UnitTestCase {
 
 	/**
+	 * Restore rewrite state after the database options have been rolled back.
+	 */
+	public function tear_down() {
+		parent::tear_down();
+		self::flush_cache();
+		$GLOBALS['wp_rewrite']->init();
+	}
+
+	/**
 	 * Saved canonical URLs take precedence only for legacy IDs.
 	 *
 	 * @covers \Activitypub\get_post_id
