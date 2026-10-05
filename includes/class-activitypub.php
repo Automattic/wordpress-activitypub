@@ -119,13 +119,18 @@ class Activitypub {
 	}
 
 	/**
-	 * Delete permalink from meta.
+	 * Delete the saved permalink for posts without a federation history.
 	 *
 	 * @param int $post_id The Post ID.
 	 *
 	 * @return void
 	 */
 	public static function untrash_post( $post_id ) {
+		// Federated URLs remain valid until a public save clears them.
+		if ( \in_array( get_wp_object_state( \get_post( $post_id ) ), array( ACTIVITYPUB_OBJECT_STATE_FEDERATED, ACTIVITYPUB_OBJECT_STATE_DELETED ), true ) ) {
+			return;
+		}
+
 		\delete_post_meta( $post_id, '_activitypub_canonical_url' );
 	}
 

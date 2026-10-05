@@ -23,7 +23,7 @@ class Post {
 	/**
 	 * Core media REST updates that will receive wp_after_insert_post.
 	 *
-	 * @var \WP_REST_Request[]
+	 * @var array<int, array{requests: \WP_REST_Request[], before: \WP_Post|null, saved: bool}>
 	 */
 	private static $rest_attachment_updates = array();
 
@@ -67,16 +67,23 @@ class Post {
 	 * @return void
 	 */
 	public static function save_canonical_url( $post_id ) {
-		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+		// Repeated saves in one media request must retain the first published URL.
+		if ( ! empty( self::$rest_attachment_updates[ $post_id ]['saved'] ) ) {
 			return;
 		}
 
 		$post = \get_post( $post_id );
-		if ( ! $post || 'publish' !== \get_post_status( $post ) || ACTIVITYPUB_OBJECT_STATE_FEDERATED !== get_wp_object_state( $post ) || is_post_disabled( $post ) ) {
+		if ( ! $post || 'publish' !== \get_post_status( $post ) || ACTIVITYPUB_OBJECT_STATE_FEDERATED !== get_wp_object_state( $post ) ) {
 			return;
 		}
 
-		\add_post_meta( $post_id, '_activitypub_canonical_url', \get_permalink( $post_id ), true );
+		// Trashing changes the slug before this hook; the trash hook already saved its URL.
+		if ( is_post_publicly_queryable( $post ) && ! \get_post_meta( $post_id, '_wp_trash_meta_status', true ) ) {
+			// A previous save may have written fields but failed before its completion hooks.
+			\update_post_meta( $post_id, '_activitypub_canonical_url', \get_permalink( $post_id ) );
+		} else {
+			\add_post_meta( $post_id, '_activitypub_canonical_url', \get_permalink( $post_id ), true );
+		}
 	}
 
 	/**
@@ -90,8 +97,12 @@ class Post {
 	 * @return void
 	 */
 	public static function triage( $post_id, $post, $update, $post_before ) {
+		if ( isset( self::$rest_attachment_updates[ $post_id ] ) && \count( self::$rest_attachment_updates[ $post_id ]['requests'] ) > 1 ) {
+			return;
+		}
+		unset( self::$rest_attachment_updates[ $post_id ] );
 		$is_queryable = is_post_publicly_queryable( $post );
-		if ( $is_queryable ) {
+		if ( 'publish' === \get_post_status( $post ) && $is_queryable ) {
 			\delete_post_meta( $post_id, '_activitypub_canonical_url' );
 		}
 
@@ -208,13 +219,21 @@ class Post {
 	 */
 	public static function defer_attachment_update( $post, $request ) {
 		if ( ! \is_wp_error( $post ) && ! empty( $post->ID ) ) {
-			self::$rest_attachment_updates[ $post->ID ] = $request;
+			if ( isset( self::$rest_attachment_updates[ $post->ID ] ) ) {
+				self::$rest_attachment_updates[ $post->ID ]['requests'][] = $request;
+				return $post;
+			}
+			self::$rest_attachment_updates[ $post->ID ] = array(
+				'requests' => array( $request ),
+				'before'   => \get_post( $post->ID ),
+				'saved'    => false,
+			);
 		}
 		return $post;
 	}
 
 	/**
-	 * Clear unconsumed markers when a REST update fails before saving.
+	 * Finish saved media updates when REST exits before its completion hook.
 	 *
 	 * @since unreleased
 	 *
@@ -224,9 +243,18 @@ class Post {
 	 * @return mixed The unchanged response.
 	 */
 	public static function clear_attachment_update( $response, $handler, $request ) {
-		foreach ( self::$rest_attachment_updates as $post_id => $pending_request ) {
-			if ( $request === $pending_request ) {
+		foreach ( self::$rest_attachment_updates as $post_id => $pending ) {
+			$key = \array_search( $request, $pending['requests'], true );
+			if ( false === $key ) {
+				continue;
+			}
+			unset( self::$rest_attachment_updates[ $post_id ]['requests'][ $key ] );
+			if ( empty( self::$rest_attachment_updates[ $post_id ]['requests'] ) ) {
 				unset( self::$rest_attachment_updates[ $post_id ] );
+				$post = \get_post( $post_id );
+				if ( $pending['saved'] && $post ) {
+					self::triage( $post_id, $post, true, $pending['before'] );
+				}
 			}
 		}
 		return $response;
@@ -253,7 +281,7 @@ class Post {
 		if ( 'edit_attachment' === \current_action() ) {
 			// Core REST saves call wp_after_insert_post after applying their metadata.
 			if ( isset( self::$rest_attachment_updates[ $post_id ] ) ) {
-				unset( self::$rest_attachment_updates[ $post_id ] );
+				self::$rest_attachment_updates[ $post_id ]['saved'] = true;
 				return;
 			}
 			self::triage( $post_id, $post, true, $post );

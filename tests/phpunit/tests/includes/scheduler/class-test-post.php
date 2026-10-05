@@ -125,8 +125,12 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 */
 	public function data_rest_attachment_visibility() {
 		return array(
-			'public edit' => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ),
-			'local edit'  => array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
+			'public edit'             => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, '' ),
+			'local edit'              => array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, '' ),
+			'public nested save'      => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, 'save' ),
+			'local nested save'       => array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, 'save' ),
+			'public nested REST save' => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, 'rest' ),
+			'local nested REST save'  => array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, 'rest' ),
 		);
 	}
 
@@ -139,8 +143,9 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * @covers ::triage
 	 *
 	 * @param string $visibility Requested visibility.
+	 * @param string $nested     Nested save path, if any.
 	 */
-	public function test_rest_attachment_edit_preserves_permalink( $visibility ) {
+	public function test_rest_attachment_edit_preserves_permalink( $visibility, $nested ) {
 		$this->set_permalink_structure( '/%postname%/' );
 		\update_option( 'activitypub_last_post_with_permalink_as_id', PHP_INT_MAX );
 		\add_post_type_support( 'attachment', 'activitypub' );
@@ -159,10 +164,31 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$id      = get_object_id( \get_post( $post_id ) );
 		$this->assertCount( 1, $this->get_outbox_items_for( $id, 'Create' ) );
 
+		$nested_saved = false;
+		$resave       = static function () use ( $post_id, $nested, &$nested_saved ) {
+			if ( ! $nested || $nested_saved ) {
+				return;
+			}
+			$nested_saved = true;
+			if ( 'rest' === $nested ) {
+				$inner = new \WP_REST_Request( 'POST', '/wp/v2/media/' . $post_id );
+				$inner->set_param( 'title', 'Nested REST edit' );
+				\rest_get_server()->dispatch( $inner );
+			} else {
+				\wp_update_post(
+					array(
+						'ID'         => $post_id,
+						'post_title' => 'Nested native edit',
+					)
+				);
+			}
+		};
+		\add_action( 'rest_insert_attachment', $resave );
 		$request = new \WP_REST_Request( 'POST', '/wp/v2/media/' . $post_id );
 		$request->set_param( 'slug', 'rest-updated-attachment' );
 		$request->set_param( 'meta', array( 'activitypub_content_visibility' => $visibility ) );
 		$response = \rest_get_server()->dispatch( $request );
+		\remove_action( 'rest_insert_attachment', $resave );
 		\unregister_post_meta( 'attachment', 'activitypub_content_visibility' );
 		\remove_post_type_support( 'attachment', 'custom-fields' );
 		\remove_post_type_support( 'attachment', 'activitypub' );
@@ -1508,6 +1534,207 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			'attachment'      => array( true, false ),
 			'attachment REST' => array( true, true ),
 		);
+	}
+
+	/**
+	 * A skipped withdrawal must retain the URL for a later Delete.
+	 *
+	 * @dataProvider data_disabled_republication
+	 * @covers ::save_canonical_url
+	 *
+	 * @param bool $attachment Whether to use an attachment.
+	 * @param bool $rest       Whether to withdraw through REST.
+	 */
+	public function test_disabled_withdrawal_preserves_canonical_url( $attachment, $rest ) {
+		$this->set_permalink_structure( '/%postname%/' );
+		\update_option( 'activitypub_last_post_with_permalink_as_id', PHP_INT_MAX );
+		\wp_set_current_user( self::$user_id );
+		if ( $attachment ) {
+			\add_post_type_support( 'attachment', 'activitypub' );
+			$post_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		} else {
+			$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		}
+		$id = get_object_id( \get_post( $post_id ) );
+		\add_filter( 'activitypub_is_post_disabled', '__return_true' );
+		if ( $rest ) {
+			$request = new \WP_REST_Request( 'POST', '/wp/v2/' . ( $attachment ? 'media/' : 'posts/' ) . $post_id );
+			$request->set_param( 'status', 'private' );
+			$request->set_param( 'slug', 'withdrawn-while-disabled' );
+			$result = \rest_get_server()->dispatch( $request )->get_status();
+		} else {
+			$result = \wp_update_post(
+				array(
+					'ID'          => $post_id,
+					'post_status' => 'private',
+					'post_name'   => 'withdrawn-while-disabled',
+				)
+			);
+		}
+		\remove_filter( 'activitypub_is_post_disabled', '__return_true' );
+		$this->assertSame( $rest ? 200 : $post_id, $result );
+		$this->assertCount( 0, $this->get_outbox_items_for( $id, 'Delete' ) );
+
+		\wp_update_post( array( 'ID' => $post_id ) );
+		if ( $attachment ) {
+			\remove_post_type_support( 'attachment', 'activitypub' );
+		}
+		$this->assertSame( $id, get_object_id( \get_post( $post_id ) ) );
+		$this->assertCount( 1, $this->get_outbox_items_for( $id, 'Delete' ) );
+		$this->assertCount( 0, $this->get_outbox_items_for( $id, 'Create' ) );
+	}
+
+	/**
+	 * Preview access must not discard a withdrawn post's identity.
+	 *
+	 * @dataProvider data_non_public_status_transitions
+	 * @covers ::triage
+	 *
+	 * @param string $status The withdrawn status.
+	 */
+	public function test_preview_save_preserves_canonical_url( $status ) {
+		$this->set_permalink_structure( '/%postname%/' );
+		\update_option( 'activitypub_last_post_with_permalink_as_id', PHP_INT_MAX );
+		\wp_set_current_user( self::$user_id );
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$id      = get_object_id( \get_post( $post_id ) );
+		\add_filter( 'activitypub_is_post_disabled', '__return_true' );
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => $status,
+				'post_name'   => 'withdrawn-before-preview',
+			)
+		);
+		\remove_filter( 'activitypub_is_post_disabled', '__return_true' );
+
+		\set_query_var( 'preview', true );
+		\wp_update_post(
+			array(
+				'ID'        => $post_id,
+				'post_name' => 'edited-in-preview',
+			)
+		);
+		$preview_id = get_object_id( \get_post( $post_id ) );
+		\set_query_var( 'preview', false );
+
+		$this->assertSame( $id, $preview_id );
+		$this->assertSame( $id, \get_post_meta( $post_id, '_activitypub_canonical_url', true ) );
+		\wp_update_post( array( 'ID' => $post_id ) );
+		$this->assertCount( 1, $this->get_outbox_items_for( $id, 'Delete' ) );
+	}
+
+	/**
+	 * Partial public saves must not pin an old URL on the next withdrawal.
+	 *
+	 * @dataProvider data_disabled_republication
+	 * @covers ::save_canonical_url
+	 * @covers ::clear_attachment_update
+	 *
+	 * @param bool $attachment Whether to use an attachment.
+	 * @param bool $rest       Whether the failure happens in REST.
+	 */
+	public function test_partial_public_save_preserves_current_url( $attachment, $rest ) {
+		$this->set_permalink_structure( '/%postname%/' );
+		\update_option( 'activitypub_last_post_with_permalink_as_id', PHP_INT_MAX );
+		\wp_set_current_user( self::$user_id );
+		$post_type = $attachment ? 'attachment' : 'post';
+		if ( $attachment ) {
+			\add_post_type_support( 'attachment', 'activitypub' );
+			$post_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		} else {
+			$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		}
+		$old_id = get_object_id( \get_post( $post_id ) );
+		if ( $rest ) {
+			\register_rest_field(
+				$post_type,
+				'test_failure',
+				array(
+					'update_callback' => static function () {
+						return new \WP_Error( 'test_partial_save', 'Rejected after writing.', array( 'status' => 400 ) );
+					},
+				)
+			);
+			$request = new \WP_REST_Request( 'POST', '/wp/v2/' . ( $attachment ? 'media/' : 'posts/' ) . $post_id );
+			$request->set_param( 'slug', 'partially-updated' );
+			$request->set_param( 'test_failure', true );
+			$response = \rest_get_server()->dispatch( $request );
+			unset( $GLOBALS['wp_rest_additional_fields'][ $post_type ]['test_failure'] );
+			$this->assertSame( 400, $response->get_status() );
+		} else {
+			$result = \wp_update_post(
+				array(
+					'ID'            => $post_id,
+					'post_name'     => 'partially-updated',
+					'page_template' => 'missing-template.php',
+				),
+				true
+			);
+			$this->assertWPError( $result );
+		}
+		$id = \get_permalink( $post_id );
+		$this->assertNotSame( $old_id, $id );
+		$this->assertSame( $id, get_object_id( \get_post( $post_id ) ) );
+
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'private',
+				'post_name'   => 'withdrawn-after-partial-save',
+			)
+		);
+		if ( $attachment ) {
+			\remove_post_type_support( 'attachment', 'activitypub' );
+		}
+		$this->assertSame( $id, get_object_id( \get_post( $post_id ) ) );
+		$this->assertCount( 1, $this->get_outbox_items_for( $id, 'Delete' ) );
+	}
+
+	/**
+	 * A media REST failure after writing must still finish a deferred withdrawal.
+	 *
+	 * @covers ::clear_attachment_update
+	 * @covers ::transition_attachment_status
+	 */
+	public function test_partial_rest_attachment_withdrawal_is_processed() {
+		$this->set_permalink_structure( '/%postname%/' );
+		\update_option( 'activitypub_last_post_with_permalink_as_id', PHP_INT_MAX );
+		\add_post_type_support( 'attachment', 'activitypub' );
+		\wp_set_current_user( self::$user_id );
+		$post_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		$id      = get_object_id( \get_post( $post_id ) );
+		$reject  = static function () {
+			return new \WP_Error( 'test_rejected_attachment', 'Rejected before writing.', array( 'status' => 400 ) );
+		};
+		$nested  = static function () use ( $post_id, $reject ) {
+			\add_filter( 'rest_pre_insert_attachment', $reject, 20 );
+			\rest_get_server()->dispatch( new \WP_REST_Request( 'POST', '/wp/v2/media/' . $post_id ) );
+			\remove_filter( 'rest_pre_insert_attachment', $reject, 20 );
+		};
+		\add_action( 'rest_insert_attachment', $nested );
+		\register_rest_field(
+			'attachment',
+			'test_failure',
+			array(
+				'update_callback' => static function () {
+					return new \WP_Error( 'test_partial_save', 'Rejected after writing.', array( 'status' => 400 ) );
+				},
+			)
+		);
+		$request = new \WP_REST_Request( 'POST', '/wp/v2/media/' . $post_id );
+		$request->set_param( 'status', 'private' );
+		$request->set_param( 'slug', 'partially-withdrawn' );
+		$request->set_param( 'test_failure', true );
+		$response = \rest_get_server()->dispatch( $request );
+		\remove_action( 'rest_insert_attachment', $nested );
+		unset( $GLOBALS['wp_rest_additional_fields']['attachment']['test_failure'] );
+		\remove_post_type_support( 'attachment', 'activitypub' );
+
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( 'private', \get_post_status( $post_id ) );
+		$this->assertCount( 1, $this->get_outbox_items_for( $id, 'Delete' ) );
+		$this->assertCount( 0, $this->get_outbox_items_for( $id, 'Create' ) );
 	}
 
 	/**

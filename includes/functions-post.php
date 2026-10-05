@@ -448,7 +448,8 @@ function get_post_id( $id ) {
 function get_post_url( $post ) {
 	$canonical_url = \get_post_meta( $post->ID, '_activitypub_canonical_url', true );
 
-	if ( $canonical_url ) {
+	// Partial saves can leave metadata behind without running the completion hooks.
+	if ( $canonical_url && ( ACTIVITYPUB_OBJECT_STATE_DELETED === get_wp_object_state( $post ) || 'publish' !== \get_post_status( $post ) || ! is_post_publicly_queryable( $post ) ) ) {
 		return \esc_url_raw( $canonical_url );
 	}
 
