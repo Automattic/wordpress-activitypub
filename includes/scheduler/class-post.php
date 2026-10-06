@@ -21,13 +21,6 @@ use function Activitypub\is_post_publicly_queryable;
  */
 class Post {
 	/**
-	 * Core media REST updates that will receive wp_after_insert_post.
-	 *
-	 * @var array<int, array{requests: \WP_REST_Request[], before: \WP_Post|null, saved: bool}>
-	 */
-	private static $rest_attachment_updates = array();
-
-	/**
 	 * Initialize the class, registering WordPress hooks.
 	 *
 	 * @return void
@@ -41,8 +34,6 @@ class Post {
 		\add_action( 'add_attachment', array( self::class, 'transition_attachment_status' ) );
 		\add_action( 'edit_attachment', array( self::class, 'transition_attachment_status' ) );
 		\add_action( 'delete_attachment', array( self::class, 'transition_attachment_status' ) );
-		\add_filter( 'rest_pre_insert_attachment', array( self::class, 'defer_attachment_update' ), 10, 2 );
-		\add_filter( 'rest_request_after_callbacks', array( self::class, 'clear_attachment_update' ), 10, 3 );
 
 		/*
 		 * Sticky post transitions (featured collection).
@@ -67,23 +58,12 @@ class Post {
 	 * @return void
 	 */
 	public static function save_canonical_url( $post_id ) {
-		// Repeated saves in one media request must retain the first published URL.
-		if ( ! empty( self::$rest_attachment_updates[ $post_id ]['saved'] ) ) {
-			return;
-		}
-
 		$post = \get_post( $post_id );
-		if ( ! $post || 'publish' !== \get_post_status( $post ) || ACTIVITYPUB_OBJECT_STATE_FEDERATED !== get_wp_object_state( $post ) ) {
+		if ( ! $post || 'attachment' === $post->post_type || 'publish' !== $post->post_status || ACTIVITYPUB_OBJECT_STATE_FEDERATED !== get_wp_object_state( $post ) ) {
 			return;
 		}
 
-		// Trashing changes the slug before this hook; the trash hook already saved its URL.
-		if ( is_post_publicly_queryable( $post ) && ! \get_post_meta( $post_id, '_wp_trash_meta_status', true ) ) {
-			// A previous save may have written fields but failed before its completion hooks.
-			\update_post_meta( $post_id, '_activitypub_canonical_url', \get_permalink( $post_id ) );
-		} else {
-			\add_post_meta( $post_id, '_activitypub_canonical_url', \get_permalink( $post_id ), true );
-		}
+		\add_post_meta( $post_id, '_activitypub_canonical_url', \get_permalink( $post_id ), true );
 	}
 
 	/**
@@ -97,12 +77,8 @@ class Post {
 	 * @return void
 	 */
 	public static function triage( $post_id, $post, $update, $post_before ) {
-		if ( isset( self::$rest_attachment_updates[ $post_id ] ) && \count( self::$rest_attachment_updates[ $post_id ]['requests'] ) > 1 ) {
-			return;
-		}
-		unset( self::$rest_attachment_updates[ $post_id ] );
 		$is_queryable = is_post_publicly_queryable( $post );
-		if ( 'publish' === \get_post_status( $post ) && $is_queryable ) {
+		if ( 'attachment' !== $post->post_type && 'publish' === $post->post_status && $is_queryable ) {
 			\delete_post_meta( $post_id, '_activitypub_canonical_url' );
 		}
 
@@ -209,58 +185,6 @@ class Post {
 	}
 
 	/**
-	 * Defer core media REST updates until their metadata has been saved.
-	 *
-	 * @since unreleased
-	 *
-	 * @param \stdClass|\WP_Error $post    Prepared attachment or error.
-	 * @param \WP_REST_Request    $request REST request.
-	 * @return \stdClass|\WP_Error The unchanged prepared attachment or error.
-	 */
-	public static function defer_attachment_update( $post, $request ) {
-		if ( ! \is_wp_error( $post ) && ! empty( $post->ID ) ) {
-			if ( isset( self::$rest_attachment_updates[ $post->ID ] ) ) {
-				self::$rest_attachment_updates[ $post->ID ]['requests'][] = $request;
-				return $post;
-			}
-			self::$rest_attachment_updates[ $post->ID ] = array(
-				'requests' => array( $request ),
-				'before'   => \get_post( $post->ID ),
-				'saved'    => false,
-			);
-		}
-		return $post;
-	}
-
-	/**
-	 * Finish saved media updates when REST exits before its completion hook.
-	 *
-	 * @since unreleased
-	 *
-	 * @param mixed            $response REST response.
-	 * @param array            $handler  Route handler.
-	 * @param \WP_REST_Request $request  REST request.
-	 * @return mixed The unchanged response.
-	 */
-	public static function clear_attachment_update( $response, $handler, $request ) {
-		foreach ( self::$rest_attachment_updates as $post_id => $pending ) {
-			$key = \array_search( $request, $pending['requests'], true );
-			if ( false === $key ) {
-				continue;
-			}
-			unset( self::$rest_attachment_updates[ $post_id ]['requests'][ $key ] );
-			if ( empty( self::$rest_attachment_updates[ $post_id ]['requests'] ) ) {
-				unset( self::$rest_attachment_updates[ $post_id ] );
-				$post = \get_post( $post_id );
-				if ( $pending['saved'] && $post ) {
-					self::triage( $post_id, $post, true, $pending['before'] );
-				}
-			}
-		}
-		return $response;
-	}
-
-	/**
 	 * Schedules Activities for attachment transitions.
 	 *
 	 * @param int $post_id Attachment ID.
@@ -268,7 +192,15 @@ class Post {
 	 * @return void
 	 */
 	public static function transition_attachment_status( $post_id ) {
+		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+			return;
+		}
+
 		if ( ! \post_type_supports( 'attachment', 'activitypub' ) ) {
+			return;
+		}
+
+		if ( is_post_disabled( $post_id ) ) {
 			return;
 		}
 
@@ -278,27 +210,12 @@ class Post {
 			return;
 		}
 
-		if ( 'edit_attachment' === \current_action() ) {
-			// Core REST saves call wp_after_insert_post after applying their metadata.
-			if ( isset( self::$rest_attachment_updates[ $post_id ] ) ) {
-				self::$rest_attachment_updates[ $post_id ]['saved'] = true;
-				return;
-			}
-			self::triage( $post_id, $post, true, $post );
-			return;
-		}
-
-		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
-			return;
-		}
-
-		if ( is_post_disabled( $post_id ) ) {
-			return;
-		}
-
 		switch ( \current_action() ) {
 			case 'add_attachment':
 				$type = 'Create';
+				break;
+			case 'edit_attachment':
+				$type = 'Update';
 				break;
 			case 'delete_attachment':
 				$type = 'Delete';

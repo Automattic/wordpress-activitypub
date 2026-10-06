@@ -47,6 +47,40 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Attachments use saved URLs only while trashed, as before.
+	 *
+	 * @covers \Activitypub\get_post_url
+	 */
+	public function test_restored_attachment_uses_current_permalink() {
+		$this->set_permalink_structure( '/%postname%/' );
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'attachment',
+				'post_status' => 'inherit',
+				'post_name'   => 'original-attachment',
+			)
+		);
+		$url     = \get_permalink( $post_id );
+		\wp_trash_post( $post_id );
+		$this->assertSame( $url, get_post_url( \get_post( $post_id ) ) );
+
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'inherit',
+			)
+		);
+		\wp_update_post(
+			array(
+				'ID'        => $post_id,
+				'post_name' => 'restored-attachment',
+			)
+		);
+		$this->assertNotSame( $url, \get_permalink( $post_id ) );
+		$this->assertSame( \get_permalink( $post_id ), get_post_url( \get_post( $post_id ) ) );
+	}
+
+	/**
 	 * A legacy draft without a saved URL retains its sample permalink.
 	 *
 	 * @covers \Activitypub\get_post_id

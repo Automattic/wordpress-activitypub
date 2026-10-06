@@ -21,25 +21,6 @@ use Activitypub\Relay;
  */
 class Test_Activitypub extends \WP_UnitTestCase {
 	/**
-	 * Restoring a federated post to draft must retain its saved URL.
-	 *
-	 * @covers ::untrash_post
-	 */
-	public function test_untrash_preserves_federated_canonical_url() {
-		$post_id = self::factory()->post->create( array( 'post_status' => 'private' ) );
-		$url     = 'https://example.org/original-permalink/';
-		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
-		\update_post_meta( $post_id, '_activitypub_canonical_url', $url );
-		\add_filter( 'activitypub_is_post_disabled', '__return_true' );
-		\wp_trash_post( $post_id );
-		\wp_untrash_post( $post_id );
-		\remove_filter( 'activitypub_is_post_disabled', '__return_true' );
-
-		$this->assertSame( 'draft', \get_post_status( $post_id ) );
-		$this->assertSame( $url, \get_post_meta( $post_id, '_activitypub_canonical_url', true ) );
-	}
-
-	/**
 	 * Test environment.
 	 */
 	public function test_test_env() {

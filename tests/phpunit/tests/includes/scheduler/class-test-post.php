@@ -20,193 +20,12 @@ use function Activitypub\get_object_id;
  */
 class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	/**
-	 * Attachment permalink scenarios.
-	 *
-	 * @return array[] Test cases.
-	 */
-	public function data_attachment_permalinks() {
-		return array(
-			'legacy unattached' => array( true, false ),
-			'legacy attached'   => array( true, true ),
-			'modern unattached' => array( false, false ),
-			'modern attached'   => array( false, true ),
-		);
-	}
-
-	/**
-	 * Inherited public attachments retain their identity during withdrawal.
-	 *
-	 * @dataProvider data_attachment_permalinks
-	 * @covers ::save_canonical_url
-	 * @covers ::transition_attachment_status
-	 * @covers ::triage
-	 *
-	 * @param bool $legacy   Whether to use legacy permalink IDs.
-	 * @param bool $attached Whether the attachment has a public parent.
-	 */
-	public function test_attachment_withdrawal_preserves_permalink( $legacy, $attached ) {
-		$this->set_permalink_structure( '/%postname%/' );
-		\update_option( 'activitypub_last_post_with_permalink_as_id', $legacy ? PHP_INT_MAX : 0 );
-		\add_post_type_support( 'attachment', 'activitypub' );
-		\wp_set_current_user( self::$user_id );
-		$parent_id = $attached ? self::factory()->post->create( array( 'post_author' => self::$user_id ) ) : 0;
-		$post_id   = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg', $parent_id );
-		$id        = get_object_id( \get_post( $post_id ) );
-		$creates   = $this->get_outbox_items_for( $id, 'Create' );
-		$this->assertSame( 'inherit', \get_post( $post_id )->post_status );
-		$this->assertCount( 1, $creates );
-
-		\wp_update_post(
-			array(
-				'ID'          => $post_id,
-				'post_status' => 'private',
-				'post_name'   => 'withdrawn-attachment',
-			)
-		);
-		\remove_post_type_support( 'attachment', 'activitypub' );
-
-		$this->assertSame( $id, get_object_id( \get_post( $post_id ) ) );
-		$this->assertCount( 1, $this->get_outbox_items_for( $id, 'Delete' ) );
-		$this->assertNull( \get_post( $creates[0]->ID ) );
-		$this->assertCount( 0, $this->get_outbox_items_for( $id, 'Update' ) );
-	}
-
-	/**
-	 * Public edits must not emit an intermediate Update with the saved URL.
-	 *
-	 * @covers ::save_canonical_url
-	 * @covers ::transition_attachment_status
-	 * @covers ::triage
-	 */
-	public function test_public_attachment_edit_uses_current_permalink() {
-		$this->set_permalink_structure( '/%postname%/' );
-		\update_option( 'activitypub_last_post_with_permalink_as_id', PHP_INT_MAX );
-		\add_post_type_support( 'attachment', 'activitypub' );
-		\wp_set_current_user( self::$user_id );
-		$post_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
-		$old_id  = get_object_id( \get_post( $post_id ) );
-
-		\wp_update_post(
-			array(
-				'ID'        => $post_id,
-				'post_name' => 'renamed-attachment',
-			)
-		);
-		$id = get_object_id( \get_post( $post_id ) );
-		$this->assertNotSame( $old_id, $id );
-		$this->assertSame( \get_permalink( $post_id ), $id );
-		$this->assertSame( '', \get_post_meta( $post_id, '_activitypub_canonical_url', true ) );
-		$this->assertCount( 0, $this->get_outbox_items_for( $old_id, 'Update' ) );
-		$this->assertCount( 1, $this->get_outbox_items_for( $id, 'Update' ) );
-
-		\wp_update_post(
-			array(
-				'ID'          => $post_id,
-				'post_status' => 'private',
-			)
-		);
-		\remove_post_type_support( 'attachment', 'activitypub' );
-		$this->assertCount( 1, $this->get_outbox_items_for( $id, 'Delete' ) );
-	}
-
-	/**
 	 * Restore rewrite state after permalink tests.
 	 */
 	public function tear_down() {
 		parent::tear_down();
 		self::flush_cache();
 		$GLOBALS['wp_rewrite']->init();
-	}
-
-	/**
-	 * REST attachment visibility scenarios.
-	 *
-	 * @return array[] Test cases.
-	 */
-	public function data_rest_attachment_visibility() {
-		return array(
-			'public edit'             => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, '' ),
-			'local edit'              => array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, '' ),
-			'public nested save'      => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, 'save' ),
-			'local nested save'       => array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, 'save' ),
-			'public nested REST save' => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, 'rest' ),
-			'local nested REST save'  => array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, 'rest' ),
-		);
-	}
-
-	/**
-	 * REST metadata must be applied before choosing the attachment identity.
-	 *
-	 * @dataProvider data_rest_attachment_visibility
-	 * @covers ::save_canonical_url
-	 * @covers ::transition_attachment_status
-	 * @covers ::triage
-	 *
-	 * @param string $visibility Requested visibility.
-	 * @param string $nested     Nested save path, if any.
-	 */
-	public function test_rest_attachment_edit_preserves_permalink( $visibility, $nested ) {
-		$this->set_permalink_structure( '/%postname%/' );
-		\update_option( 'activitypub_last_post_with_permalink_as_id', PHP_INT_MAX );
-		\add_post_type_support( 'attachment', 'activitypub' );
-		\add_post_type_support( 'attachment', 'custom-fields' );
-		\register_post_meta(
-			'attachment',
-			'activitypub_content_visibility',
-			array(
-				'type'         => 'string',
-				'single'       => true,
-				'show_in_rest' => true,
-			)
-		);
-		\wp_set_current_user( self::$user_id );
-		$post_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
-		$id      = get_object_id( \get_post( $post_id ) );
-		$this->assertCount( 1, $this->get_outbox_items_for( $id, 'Create' ) );
-
-		$nested_saved = false;
-		$resave       = static function () use ( $post_id, $nested, &$nested_saved ) {
-			if ( ! $nested || $nested_saved ) {
-				return;
-			}
-			$nested_saved = true;
-			if ( 'rest' === $nested ) {
-				$inner = new \WP_REST_Request( 'POST', '/wp/v2/media/' . $post_id );
-				$inner->set_param( 'title', 'Nested REST edit' );
-				\rest_get_server()->dispatch( $inner );
-			} else {
-				\wp_update_post(
-					array(
-						'ID'         => $post_id,
-						'post_title' => 'Nested native edit',
-					)
-				);
-			}
-		};
-		\add_action( 'rest_insert_attachment', $resave );
-		$request = new \WP_REST_Request( 'POST', '/wp/v2/media/' . $post_id );
-		$request->set_param( 'slug', 'rest-updated-attachment' );
-		$request->set_param( 'meta', array( 'activitypub_content_visibility' => $visibility ) );
-		$response = \rest_get_server()->dispatch( $request );
-		\remove_action( 'rest_insert_attachment', $resave );
-		\unregister_post_meta( 'attachment', 'activitypub_content_visibility' );
-		\remove_post_type_support( 'attachment', 'custom-fields' );
-		\remove_post_type_support( 'attachment', 'activitypub' );
-
-		$this->assertSame( 200, $response->get_status() );
-		$this->assertSame( $visibility, \get_post_meta( $post_id, 'activitypub_content_visibility', true ) );
-		$this->assertCount( 0, $this->get_outbox_items_for( $id, 'Update' ), 'The early attachment hook must not emit an intermediate Update.' );
-		if ( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === $visibility ) {
-			$this->assertSame( $id, get_object_id( \get_post( $post_id ) ) );
-			$this->assertCount( 1, $this->get_outbox_items_for( $id, 'Delete' ) );
-			$this->assertCount( 0, $this->get_outbox_items_for( $id, 'Create' ) );
-		} else {
-			$new_id = get_object_id( \get_post( $post_id ) );
-			$this->assertNotSame( $id, $new_id );
-			$this->assertSame( \get_permalink( $post_id ), $new_id );
-			$this->assertSame( '', \get_post_meta( $post_id, '_activitypub_canonical_url', true ) );
-			$this->assertCount( 1, $this->get_outbox_items_for( $new_id, 'Update' ) );
-		}
 	}
 
 	/**
@@ -257,58 +76,6 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$this->assertSame( 'Delete', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
 
 		remove_post_type_support( 'attachment', 'activitypub' );
-	}
-
-	/**
-	 * Custom REST saves must still run after an aborted core media request.
-	 *
-	 * @covers ::defer_attachment_update
-	 * @covers ::clear_attachment_update
-	 * @covers ::transition_attachment_status
-	 */
-	public function test_custom_rest_attachment_update_after_failed_media_request() {
-		$this->set_permalink_structure( '/%postname%/' );
-		\update_option( 'activitypub_last_post_with_permalink_as_id', PHP_INT_MAX );
-		\add_post_type_support( 'attachment', 'activitypub' );
-		\wp_set_current_user( self::$user_id );
-		$post_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
-		$id      = get_object_id( \get_post( $post_id ) );
-
-		$reject = static function () {
-			return new \WP_Error( 'test_rejected_attachment', 'Rejected for testing.', array( 'status' => 400 ) );
-		};
-		\add_filter( 'rest_pre_insert_attachment', $reject, 20 );
-		$request  = new \WP_REST_Request( 'POST', '/wp/v2/media/' . $post_id );
-		$response = \rest_get_server()->dispatch( $request );
-		\remove_filter( 'rest_pre_insert_attachment', $reject, 20 );
-		$this->assertSame( 400, $response->get_status() );
-
-		\rest_get_server()->register_route(
-			'activitypub-test/v1',
-			'/activitypub-test/v1/attachment',
-			array(
-				array(
-					'methods'             => 'POST',
-					'permission_callback' => '__return_true',
-					'callback'            => static function () use ( $post_id ) {
-						return \wp_update_post(
-							array(
-								'ID'          => $post_id,
-								'post_status' => 'private',
-								'post_name'   => 'custom-rest-attachment',
-							)
-						);
-					},
-				),
-			)
-		);
-		$response = \rest_get_server()->dispatch( new \WP_REST_Request( 'POST', '/activitypub-test/v1/attachment' ) );
-		\remove_post_type_support( 'attachment', 'activitypub' );
-
-		$this->assertSame( 200, $response->get_status() );
-		$this->assertSame( $id, get_object_id( \get_post( $post_id ) ) );
-		$this->assertCount( 1, $this->get_outbox_items_for( $id, 'Delete' ) );
-		$this->assertCount( 0, $this->get_outbox_items_for( $id, 'Create' ) );
 	}
 
 	/**
@@ -1523,16 +1290,14 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
-	 * Save paths used when republishing with federation disabled.
+	 * Post save paths with federation disabled.
 	 *
 	 * @return array[] Test cases.
 	 */
 	public function data_disabled_republication() {
 		return array(
-			'post'            => array( false, false ),
-			'post REST'       => array( false, true ),
-			'attachment'      => array( true, false ),
-			'attachment REST' => array( true, true ),
+			'post'      => array( false ),
+			'post REST' => array( true ),
 		);
 	}
 
@@ -1542,23 +1307,17 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * @dataProvider data_disabled_republication
 	 * @covers ::save_canonical_url
 	 *
-	 * @param bool $attachment Whether to use an attachment.
-	 * @param bool $rest       Whether to withdraw through REST.
+	 * @param bool $rest Whether to withdraw through REST.
 	 */
-	public function test_disabled_withdrawal_preserves_canonical_url( $attachment, $rest ) {
+	public function test_disabled_withdrawal_preserves_canonical_url( $rest ) {
 		$this->set_permalink_structure( '/%postname%/' );
 		\update_option( 'activitypub_last_post_with_permalink_as_id', PHP_INT_MAX );
 		\wp_set_current_user( self::$user_id );
-		if ( $attachment ) {
-			\add_post_type_support( 'attachment', 'activitypub' );
-			$post_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
-		} else {
-			$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
-		}
-		$id = get_object_id( \get_post( $post_id ) );
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$id      = get_object_id( \get_post( $post_id ) );
 		\add_filter( 'activitypub_is_post_disabled', '__return_true' );
 		if ( $rest ) {
-			$request = new \WP_REST_Request( 'POST', '/wp/v2/' . ( $attachment ? 'media/' : 'posts/' ) . $post_id );
+			$request = new \WP_REST_Request( 'POST', '/wp/v2/posts/' . $post_id );
 			$request->set_param( 'status', 'private' );
 			$request->set_param( 'slug', 'withdrawn-while-disabled' );
 			$result = \rest_get_server()->dispatch( $request )->get_status();
@@ -1576,9 +1335,6 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$this->assertCount( 0, $this->get_outbox_items_for( $id, 'Delete' ) );
 
 		\wp_update_post( array( 'ID' => $post_id ) );
-		if ( $attachment ) {
-			\remove_post_type_support( 'attachment', 'activitypub' );
-		}
 		$this->assertSame( $id, get_object_id( \get_post( $post_id ) ) );
 		$this->assertCount( 1, $this->get_outbox_items_for( $id, 'Delete' ) );
 		$this->assertCount( 0, $this->get_outbox_items_for( $id, 'Create' ) );
@@ -1625,139 +1381,19 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
-	 * Partial public saves must not pin an old URL on the next withdrawal.
-	 *
-	 * @dataProvider data_disabled_republication
-	 * @covers ::save_canonical_url
-	 * @covers ::clear_attachment_update
-	 *
-	 * @param bool $attachment Whether to use an attachment.
-	 * @param bool $rest       Whether the failure happens in REST.
-	 */
-	public function test_partial_public_save_preserves_current_url( $attachment, $rest ) {
-		$this->set_permalink_structure( '/%postname%/' );
-		\update_option( 'activitypub_last_post_with_permalink_as_id', PHP_INT_MAX );
-		\wp_set_current_user( self::$user_id );
-		$post_type = $attachment ? 'attachment' : 'post';
-		if ( $attachment ) {
-			\add_post_type_support( 'attachment', 'activitypub' );
-			$post_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
-		} else {
-			$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
-		}
-		$old_id = get_object_id( \get_post( $post_id ) );
-		if ( $rest ) {
-			\register_rest_field(
-				$post_type,
-				'test_failure',
-				array(
-					'update_callback' => static function () {
-						return new \WP_Error( 'test_partial_save', 'Rejected after writing.', array( 'status' => 400 ) );
-					},
-				)
-			);
-			$request = new \WP_REST_Request( 'POST', '/wp/v2/' . ( $attachment ? 'media/' : 'posts/' ) . $post_id );
-			$request->set_param( 'slug', 'partially-updated' );
-			$request->set_param( 'test_failure', true );
-			$response = \rest_get_server()->dispatch( $request );
-			unset( $GLOBALS['wp_rest_additional_fields'][ $post_type ]['test_failure'] );
-			$this->assertSame( 400, $response->get_status() );
-		} else {
-			$result = \wp_update_post(
-				array(
-					'ID'            => $post_id,
-					'post_name'     => 'partially-updated',
-					'page_template' => 'missing-template.php',
-				),
-				true
-			);
-			$this->assertWPError( $result );
-		}
-		$id = \get_permalink( $post_id );
-		$this->assertNotSame( $old_id, $id );
-		$this->assertSame( $id, get_object_id( \get_post( $post_id ) ) );
-
-		\wp_update_post(
-			array(
-				'ID'          => $post_id,
-				'post_status' => 'private',
-				'post_name'   => 'withdrawn-after-partial-save',
-			)
-		);
-		if ( $attachment ) {
-			\remove_post_type_support( 'attachment', 'activitypub' );
-		}
-		$this->assertSame( $id, get_object_id( \get_post( $post_id ) ) );
-		$this->assertCount( 1, $this->get_outbox_items_for( $id, 'Delete' ) );
-	}
-
-	/**
-	 * A media REST failure after writing must still finish a deferred withdrawal.
-	 *
-	 * @covers ::clear_attachment_update
-	 * @covers ::transition_attachment_status
-	 */
-	public function test_partial_rest_attachment_withdrawal_is_processed() {
-		$this->set_permalink_structure( '/%postname%/' );
-		\update_option( 'activitypub_last_post_with_permalink_as_id', PHP_INT_MAX );
-		\add_post_type_support( 'attachment', 'activitypub' );
-		\wp_set_current_user( self::$user_id );
-		$post_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
-		$id      = get_object_id( \get_post( $post_id ) );
-		$reject  = static function () {
-			return new \WP_Error( 'test_rejected_attachment', 'Rejected before writing.', array( 'status' => 400 ) );
-		};
-		$nested  = static function () use ( $post_id, $reject ) {
-			\add_filter( 'rest_pre_insert_attachment', $reject, 20 );
-			\rest_get_server()->dispatch( new \WP_REST_Request( 'POST', '/wp/v2/media/' . $post_id ) );
-			\remove_filter( 'rest_pre_insert_attachment', $reject, 20 );
-		};
-		\add_action( 'rest_insert_attachment', $nested );
-		\register_rest_field(
-			'attachment',
-			'test_failure',
-			array(
-				'update_callback' => static function () {
-					return new \WP_Error( 'test_partial_save', 'Rejected after writing.', array( 'status' => 400 ) );
-				},
-			)
-		);
-		$request = new \WP_REST_Request( 'POST', '/wp/v2/media/' . $post_id );
-		$request->set_param( 'status', 'private' );
-		$request->set_param( 'slug', 'partially-withdrawn' );
-		$request->set_param( 'test_failure', true );
-		$response = \rest_get_server()->dispatch( $request );
-		\remove_action( 'rest_insert_attachment', $nested );
-		unset( $GLOBALS['wp_rest_additional_fields']['attachment']['test_failure'] );
-		\remove_post_type_support( 'attachment', 'activitypub' );
-
-		$this->assertSame( 400, $response->get_status() );
-		$this->assertSame( 'private', \get_post_status( $post_id ) );
-		$this->assertCount( 1, $this->get_outbox_items_for( $id, 'Delete' ) );
-		$this->assertCount( 0, $this->get_outbox_items_for( $id, 'Create' ) );
-	}
-
-	/**
 	 * URL cleanup must not depend on outgoing federation being enabled.
 	 *
 	 * @dataProvider data_disabled_republication
 	 * @covers ::triage
-	 * @covers ::transition_attachment_status
 	 *
-	 * @param bool $attachment Whether to use an attachment.
-	 * @param bool $rest       Whether to republish through REST.
+	 * @param bool $rest Whether to republish through REST.
 	 */
-	public function test_disabled_republication_clears_canonical_url( $attachment, $rest ) {
+	public function test_disabled_republication_clears_canonical_url( $rest ) {
 		$this->set_permalink_structure( '/%postname%/' );
 		\update_option( 'activitypub_last_post_with_permalink_as_id', PHP_INT_MAX );
 		\wp_set_current_user( self::$user_id );
-		if ( $attachment ) {
-			\add_post_type_support( 'attachment', 'activitypub' );
-			$post_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
-		} else {
-			$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
-		}
-		$id = get_object_id( \get_post( $post_id ) );
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$id      = get_object_id( \get_post( $post_id ) );
 		\wp_update_post(
 			array(
 				'ID'          => $post_id,
@@ -1775,9 +1411,8 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			)
 		);
 		$hidden_url = \get_post_meta( $post_id, '_activitypub_canonical_url', true );
-		$status     = $attachment ? 'inherit' : 'publish';
 		if ( $rest ) {
-			$request = new \WP_REST_Request( 'POST', '/wp/v2/' . ( $attachment ? 'media/' : 'posts/' ) . $post_id );
+			$request = new \WP_REST_Request( 'POST', '/wp/v2/posts/' . $post_id );
 			$request->set_param( 'status', 'publish' );
 			$request->set_param( 'slug', 'republished-with-federation-disabled' );
 			$result = \rest_get_server()->dispatch( $request )->get_status();
@@ -1785,15 +1420,12 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			$result = \wp_update_post(
 				array(
 					'ID'          => $post_id,
-					'post_status' => $status,
+					'post_status' => 'publish',
 					'post_name'   => 'republished-with-federation-disabled',
 				)
 			);
 		}
 		\remove_filter( 'activitypub_is_post_disabled', '__return_true' );
-		if ( $attachment ) {
-			\remove_post_type_support( 'attachment', 'activitypub' );
-		}
 
 		$this->assertSame( $rest ? 200 : $post_id, $result );
 		$this->assertSame( $id, $hidden_url, 'An edit that stays private must retain the saved URL.' );
