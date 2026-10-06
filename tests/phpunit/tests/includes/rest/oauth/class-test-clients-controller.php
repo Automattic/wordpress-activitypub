@@ -226,10 +226,14 @@ class Test_Clients_Controller extends \WP_UnitTestCase {
 			return \apply_filters( 'rest_post_dispatch', \rest_get_server()->dispatch( $request ), \rest_get_server(), $request );
 		};
 
+		$window = (int) \floor( \time() / MINUTE_IN_SECONDS );
 		$first  = $register( 'Counter App' );
 		$second = $register( 'Counter App Again' );
 
 		\remove_filter( 'activitypub_rate_limit', $allowance );
+		if ( (int) \floor( \time() / MINUTE_IN_SECONDS ) !== $window ) {
+			$this->markTestSkipped( 'The minute turned over during registration, so the second request may have a fresh allowance.' );
+		}
 
 		$this->assertEquals( 201, $first->get_status() );
 		$this->assertSame( '0', $first->get_headers()['RateLimit-Remaining'], 'The first one spends the allowance.' );
