@@ -39,6 +39,31 @@ export const defaultLayouts = {
 	},
 };
 
+/**
+ * Apply a sidebar shortcut as an ordinary, editable filter.
+ *
+ * @param view   Saved feed view.
+ * @param params Route parameters.
+ * @return Feed view with the shortcut applied.
+ */
+export function getFeedView( view: ViewType, params: Record< string, string > ): ViewType {
+	if ( ! params.taxonomy ) {
+		return view;
+	}
+	const field = params.taxonomy === 'type' ? 'ap_object_type' : 'ap_tag';
+	return {
+		...view,
+		filters: [
+			...( view.filters ?? [] ).filter( ( filter ) => filter.field !== field ),
+			{
+				field,
+				operator: params.taxonomy === 'type' ? 'is' : 'isAny',
+				value: params.taxonomy === 'type' ? Number( params.termId ) : [ Number( params.termId ) ],
+			},
+		],
+	};
+}
+
 // The fields the list and the inspector read; everything else stays on the server.
 const FIELDS: string[] = [
 	'id',

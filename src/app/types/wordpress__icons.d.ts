@@ -24,6 +24,8 @@ declare module '@wordpress/icons' {
 	export const chevronRight: ReactElement;
 	export const cog: ReactElement;
 	export const postList: ReactElement;
+	export const tag: ReactElement;
+	export const funnel: ReactElement;
 
 	// Icons used in src/app/components/site-hub/index.tsx
 	export const menu: ReactElement;

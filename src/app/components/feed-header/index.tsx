@@ -14,7 +14,7 @@ import type { ReactNode } from 'react';
 /**
  * WordPress dependencies
  */
-import { __experimentalHStack as HStack } from '@wordpress/components';
+import { __experimentalHStack as HStack, Slot } from '@wordpress/components';
 
 /**
  * Internal dependencies
@@ -26,6 +26,7 @@ import './style.scss';
 export default function FeedHeader(): ReactNode {
 	return (
 		<HStack className="feed-header" justify="space-between" alignment="center">
+			<Slot name="SidebarToggle" />
 			<p className="feed-header__description">
 				<FeedDescription />
 			</p>

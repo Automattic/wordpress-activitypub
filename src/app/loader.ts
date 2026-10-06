@@ -13,6 +13,7 @@ interface MenuItem {
 	label: string;
 	to: string;
 	parent?: string;
+	parent_type?: 'drilldown' | 'dropdown';
 }
 
 interface LoaderData {

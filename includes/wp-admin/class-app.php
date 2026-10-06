@@ -240,9 +240,16 @@ class App {
 	private static function get_menu_items() {
 		$menu_items = array(
 			array(
-				'id'    => 'feed',
-				'label' => \__( 'Feed', 'activitypub' ),
-				'to'    => '/',
+				'id'          => 'feed',
+				'label'       => \__( 'Feed', 'activitypub' ),
+				'to'          => '/feed',
+				'parent_type' => 'drilldown',
+			),
+			array(
+				'id'     => 'feed-all',
+				'label'  => \__( 'All posts', 'activitypub' ),
+				'to'     => '/',
+				'parent' => 'feed',
 			),
 		);
 
@@ -258,6 +265,11 @@ class App {
 		$routes = array(
 			array(
 				'path'           => '/',
+				'content_module' => self::FEED_CONTENT_MODULE,
+				'route_module'   => self::FEED_ROUTE_MODULE,
+			),
+			array(
+				'path'           => '/feed/$taxonomy/$termId',
 				'content_module' => self::FEED_CONTENT_MODULE,
 				'route_module'   => self::FEED_ROUTE_MODULE,
 			),

@@ -19,11 +19,32 @@
 	display: none;
 }
 
+@media (min-width: 782px) {
+
+	.activitypub-app-layout {
+
+		.boot-layout__sidebar {
+			width: 300px;
+		}
+
+		.boot-layout__surfaces:has(.boot-layout__inspector) .boot-layout__stage {
+			flex: 0 1 380px;
+			max-width: 50%;
+			min-width: 0;
+		}
+
+		.boot-layout__inspector {
+			max-width: none;
+			min-width: 0;
+		}
+	}
+}
+
 // WordPress up to 7.1 ships a `wp-components` whose `ItemGroup` fills every
 // `path` (`path { fill: currentColor }`), turning the stroke-based icons of
 // `@wordpress/icons` 17 in boot's menu into solid boxes. Components 40.1.0
 // dropped that rule (gutenberg#78808); remove this once the minimum WordPress
 // version ships it.
-.boot-navigation-item svg[style*="fill: none"] path {
+.boot-navigation-item svg[style*="fill: none"] path:not([fill]) {
 	fill: none;
 }

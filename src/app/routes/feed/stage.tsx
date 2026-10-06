@@ -18,8 +18,10 @@ import { DataViews } from '@wordpress/dataviews/wp';
 import type { Field, View as DataViewsView } from '@wordpress/dataviews/wp';
 import { useView } from '@wordpress/views';
 import { useSelect } from '@wordpress/data';
-import { useViewportMatch } from '@wordpress/compose';
-import { useNavigate, useSearch } from '@wordpress/route';
+import { useNavigate, useSearch, useParams } from '@wordpress/route';
+import { Button, __experimentalHStack as HStack } from '@wordpress/components';
+import { funnel } from '@wordpress/icons';
+import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies
@@ -28,7 +30,14 @@ import { useFeed } from '../../hooks/use-feed';
 import type { FeedQuery } from '../../hooks/use-feed';
 import { titleField, dateField, metadataField, contentField, objectTypeField, tagField } from '../../components/fields';
 import EmptyState from '../../components/empty-state';
-import { DEFAULT_VIEW, defaultLayouts, getFeedViewUpdate, normalizeFieldOrder, viewToQuery } from './utils';
+import {
+	DEFAULT_VIEW,
+	defaultLayouts,
+	getFeedView,
+	getFeedViewUpdate,
+	normalizeFieldOrder,
+	viewToQuery,
+} from './utils';
 import type { ViewType } from './utils';
 import { STORE_NAME } from '../../store';
 import type { AppSelectors } from '../../store';
@@ -44,6 +53,11 @@ interface SearchParams {
 export default function FeedStage(): ReactNode {
 	const navigate: UseNavigateResult< string > = useNavigate();
 	const searchParams: SearchParams = useSearch( { strict: false } ) as SearchParams;
+	const routeParams = useParams( { strict: false } ) as Record< string, string >;
+	const [ showFilters, setShowFilters ] = useState( true );
+	useEffect( () => {
+		setShowFilters( true );
+	}, [ routeParams.taxonomy, routeParams.termId ] );
 
 	// The selection lives in the URL; the inspector shows the first selected post.
 	// No view transition: boot would animate the stage resize as a pinned-corner crossfade.
@@ -52,7 +66,7 @@ export default function FeedStage(): ReactNode {
 			void navigate( {
 				search: ( ( prev: Record< string, unknown > ): Record< string, unknown > => ( {
 					...prev,
-					postIds: items.length > 0 ? items : undefined,
+					postIds: items,
 				} ) ) as never,
 				viewTransition: false,
 			} );
@@ -65,37 +79,44 @@ export default function FeedStage(): ReactNode {
 		[]
 	);
 
-	// Page and search live in the URL, so the view survives reloads and back/forward.
-	const handleChangeQueryParams = useCallback(
-		( params: SearchParams ): void => {
-			void navigate( {
-				search: ( ( prev: Record< string, unknown > ): Record< string, unknown > => ( {
-					...prev,
-					...params,
-				} ) ) as never,
-			} );
-		},
-		[ navigate ]
-	);
-
 	// Use the views hook to persist user preferences
-	const { view, updateView } = useView( {
+	const { view: savedView, updateView } = useView( {
 		kind: 'postType',
 		name: 'ap_post',
 		slug: 'feed',
 		defaultView: DEFAULT_VIEW,
 		defaultLayouts,
 		queryParams: searchParams,
-		onChangeQueryParams: handleChangeQueryParams,
 	} );
+	const view = useMemo( () => getFeedView( savedView, routeParams ), [ savedView, routeParams ] );
 
 	// Wrap updateView to reset page when filters change and to translate
 	// dataviews' infinite-scroll `startPosition` into our page-based loader.
 	const updateFeedView = useCallback(
 		( updatedView: ViewType ): void => {
-			updateView( getFeedViewUpdate( view, updatedView ) );
+			const nextView = getFeedViewUpdate( view, updatedView );
+			const filtersChanged = JSON.stringify( view.filters ) !== JSON.stringify( nextView.filters );
+			if ( filtersChanged ) {
+				setShowFilters( true );
+			}
+			updateView( nextView );
+			if ( filtersChanged || nextView.page !== view.page || nextView.search !== view.search ) {
+				void navigate( {
+					// Edited shortcut filters become a regular feed view, so the URL cannot reapply them.
+					to:
+						filtersChanged || ! routeParams.taxonomy
+							? '/'
+							: `/feed/${ routeParams.taxonomy }/${ routeParams.termId }`,
+					search: ( ( prev: Record< string, unknown > ): Record< string, unknown > => ( {
+						...prev,
+						page: nextView.page,
+						search: nextView.search,
+						postIds: filtersChanged ? undefined : prev.postIds,
+					} ) ) as never,
+				} );
+			}
 		},
-		[ view, updateView ]
+		[ view, updateView, navigate, routeParams ]
 	);
 
 	// Reset view to default state when actor switches
@@ -115,19 +136,9 @@ export default function FeedStage(): ReactNode {
 	const query: FeedQuery = useMemo( (): FeedQuery => viewToQuery( view, activeActorId ), [ view, activeActorId ] );
 	const { feed, isResolving, totalItems, totalPages } = useFeed( query );
 
-	// Type and tag sit in the filter bar permanently where there is room for it;
-	// on small screens they stay behind the filter button like every other filter.
-	const isMobileViewport: boolean = useViewportMatch( 'medium', '<' );
 	const fields: Field< FeedPost >[] = useMemo(
-		(): Field< FeedPost >[] => [
-			metadataField,
-			titleField,
-			contentField,
-			dateField,
-			{ ...objectTypeField, filterBy: { ...objectTypeField.filterBy, isPrimary: ! isMobileViewport } },
-			{ ...tagField, filterBy: { ...tagField.filterBy, isPrimary: ! isMobileViewport } },
-		],
-		[ isMobileViewport ]
+		(): Field< FeedPost >[] => [ metadataField, titleField, contentField, dateField, objectTypeField, tagField ],
+		[]
 	);
 
 	// Normalize view.fields to maintain the canonical order defined in fields array
@@ -202,6 +213,28 @@ export default function FeedStage(): ReactNode {
 				totalPages,
 			} }
 			defaultLayouts={ defaultLayouts }
-		/>
+		>
+			<HStack className="dataviews__view-actions" alignment="flex-start" spacing={ 1 }>
+				<HStack className="dataviews__search" justify="flex-start" spacing={ 2 }>
+					<DataViews.Search />
+					{ view.filters?.length ? (
+						<Button
+							icon={ funnel }
+							size="compact"
+							label={ __( 'Filter', 'activitypub' ) }
+							aria-expanded={ showFilters }
+							isPressed={ showFilters }
+							onClick={ () => setShowFilters( ! showFilters ) }
+						/>
+					) : (
+						<DataViews.FiltersToggle />
+					) }
+				</HStack>
+				<DataViews.ViewConfig />
+			</HStack>
+			{ showFilters && <DataViews.Filters className="dataviews-filters__container" /> }
+			<DataViews.Layout />
+			<DataViews.Footer />
+		</DataViews>
 	);
 }

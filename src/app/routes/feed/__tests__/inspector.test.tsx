@@ -11,9 +11,11 @@ import type { AppSettings, Comment, FeedPost } from '../../../types';
 // Mock router hooks
 const mockNavigate = jest.fn();
 let mockSearchParams: { postIds?: string[] } = { postIds: [ '1' ] };
+let mockRouteParams: Record< string, string > = {};
 
 jest.mock( '@wordpress/route', () => ( {
 	useSearch: () => mockSearchParams,
+	useParams: () => mockRouteParams,
 	useNavigate: () => mockNavigate,
 } ) );
 
@@ -140,20 +142,12 @@ jest.mock( '../../../store', () => ( {
 	STORE_NAME: 'activitypub/app',
 } ) );
 
-// Mock use-tag-filter hook to avoid loading @wordpress/views
-const mockUpdateTagFilter = jest.fn();
-jest.mock( '../../../hooks/use-tag-filter', () => ( {
-	useTagFilter: () => ( {
-		selectedTagId: null,
-		updateTagFilter: mockUpdateTagFilter,
-	} ),
-} ) );
-
 describe( 'FeedInspector', () => {
 	beforeEach( () => {
 		jest.clearAllMocks();
 		// Reset mock search params to default
 		mockSearchParams = { postIds: [ '1' ] };
+		mockRouteParams = {};
 	} );
 
 	const renderInspector = ( postId: number = 1 ) => {
@@ -338,6 +332,20 @@ describe( 'FeedInspector', () => {
 			expect( screen.getByText( 'Test post content' ) ).toBeInTheDocument();
 		} );
 
+		it.each( [ {}, { taxonomy: 'tag', termId: '7' } ] )( 'opens tag links as sidebar views from %j', ( params ) => {
+			mockRouteParams = params;
+			mockUseEntityRecords.mockImplementation( ( kind ) => ( {
+				records: kind === 'taxonomy' ? [ { id: 7, name: 'fediverse' } ] : [],
+				isResolving: false,
+			} ) );
+			renderInspector();
+			fireEvent.click( screen.getByText( '#fediverse' ) );
+			expect( mockNavigate ).toHaveBeenCalledWith( {
+				to: params.taxonomy ? '/' : '/feed/tag/7',
+				search: {},
+			} );
+		} );
+
 		/*
 		 * `title.rendered`, `content.rendered` and `comment.content.rendered` are all
 		 * server-sanitised. A remote actor can still get an entity-encoded payload past
@@ -518,7 +526,7 @@ describe( 'FeedInspector', () => {
 			expect( screen.getByText( 'Close' ) ).toBeInTheDocument();
 		} );
 
-		it( 'should navigate to remove postIds when close button is clicked', () => {
+		it( 'should preserve an explicit empty selection when close button is clicked', () => {
 			renderInspector();
 
 			const closeButton = screen.getByText( 'Close' );
@@ -530,12 +538,11 @@ describe( 'FeedInspector', () => {
 				viewTransition: false,
 			} );
 
-			// Verify the search function removes postIds
+			// An empty selection prevents the desktop default from reopening the inspector.
 			const navigateCall = mockNavigate.mock.calls[ 0 ][ 0 ];
 			const searchFn = navigateCall.search;
 			const result = searchFn( { postIds: [ '1' ], otherParam: 'value' } );
-			expect( result ).toEqual( { otherParam: 'value' } );
-			expect( result.postIds ).toBeUndefined();
+			expect( result ).toEqual( { otherParam: 'value', postIds: [] } );
 		} );
 	} );
 } );

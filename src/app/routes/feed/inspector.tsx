@@ -26,8 +26,7 @@ import { close } from '@wordpress/icons';
  */
 import Avatar from '../../components/avatar';
 import { getRelativeTime, safeUrl } from '../../utils';
-import { useTagFilter } from '../../hooks/use-tag-filter';
-import { useSearch, useNavigate } from '@wordpress/route';
+import { useSearch, useNavigate, useParams } from '@wordpress/route';
 import type { ActorInfo, Comment, FeedPost } from '../../types';
 
 interface RenderHTMLProps {
@@ -56,15 +55,16 @@ interface SearchParams {
 export default function FeedInspector(): ReactNode {
 	const search: SearchParams = useSearch( { strict: false } ) as SearchParams;
 	const navigate: UseNavigateResult< string > = useNavigate();
+	const params = useParams( { strict: false } ) as Record< string, string >;
 	const id: number | undefined = search.postIds?.[ 0 ] ? Number( search.postIds[ 0 ] ) : undefined;
 
-	// Close inspector by removing postIds from search params
+	// Keep an explicit empty selection so the desktop default does not reopen it.
 	const onClose: () => void = (): void => {
 		void navigate( {
-			search: ( ( prev: Record< string, unknown > ): Record< string, unknown > => {
-				const { postIds: _, ...rest } = prev as SearchParams;
-				return rest;
-			} ) as never,
+			search: ( ( prev: Record< string, unknown > ): Record< string, unknown > => ( {
+				...prev,
+				postIds: [],
+			} ) ) as never,
 			viewTransition: false,
 		} );
 	};
@@ -82,8 +82,7 @@ export default function FeedInspector(): ReactNode {
 		include: tagIds,
 	} );
 
-	// Use the shared tag filter hook - must be called before early return
-	const { selectedTagId, updateTagFilter } = useTagFilter();
+	const selectedTagId = params.taxonomy === 'tag' ? Number( params.termId ) : null;
 
 	// Early return if no id (shouldn't happen due to route config, but handle gracefully)
 	if ( ! id ) {
@@ -91,8 +90,7 @@ export default function FeedInspector(): ReactNode {
 	}
 
 	const handleTagClick: ( tagId: number ) => void = ( tagId: number ): void => {
-		// Apply filter and close inspector
-		updateTagFilter( tagId, { onComplete: onClose } );
+		void navigate( { to: selectedTagId === tagId ? '/' : `/feed/tag/${ tagId }`, search: {} as never } );
 	};
 
 	if ( isLoading ) {

@@ -1,4 +1,33 @@
-import { DEFAULT_VIEW, getFeedViewUpdate, normalizeFieldOrder, viewToQuery } from '../utils';
+import { DEFAULT_VIEW, getFeedView, getFeedViewUpdate, normalizeFieldOrder, viewToQuery } from '../utils';
+
+describe( 'getFeedView', () => {
+	it( 'keeps the main feed configurable', () => {
+		expect( getFeedView( DEFAULT_VIEW, {} ) ).toBe( DEFAULT_VIEW );
+	} );
+	it.each( [
+		[ 'type', 'ap_object_type', 'is', 7 ],
+		[ 'tag', 'ap_tag', 'isAny', [ 7 ] ],
+	] )( 'uses an editable filter for %s shortcuts', ( taxonomy, field, operator, value ) => {
+		expect( getFeedView( DEFAULT_VIEW, { taxonomy: taxonomy as string, termId: '7' } ) ).toEqual( {
+			...DEFAULT_VIEW,
+			filters: [ { field, operator, value } ],
+		} );
+	} );
+	it( 'replaces a saved tag filter but preserves other filters', () => {
+		const view = {
+			...DEFAULT_VIEW,
+			filters: [
+				{ field: 'ap_tag', operator: 'isAny' as const, value: [ 3 ] },
+				{ field: 'ap_object_type', operator: 'is' as const, value: 8 },
+			],
+		};
+		expect( getFeedView( view, { taxonomy: 'tag', termId: '7' } ).filters ).toEqual( [
+			view.filters[ 1 ],
+			{ field: 'ap_tag', operator: 'isAny', value: [ 7 ] },
+		] );
+		expect( view.filters[ 0 ].value ).toEqual( [ 3 ] );
+	} );
+} );
 
 const FIELDS = [ { id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' } ];
 
