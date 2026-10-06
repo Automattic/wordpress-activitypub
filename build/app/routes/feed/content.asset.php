@@ -3,6 +3,6 @@
 		'@wordpress/boot',
 		'@wordpress/route'
 	),
-	'version' => 'f13e632acf180c7345a5',
+	'version' => '1c01b56293446530c0f2',
 	'type' => 'module'
 );

@@ -1,8 +1,7 @@
 <?php return array(
 	'dependencies' => array(
-		'@wordpress/boot',
-		'@wordpress/route'
+		'@wordpress/boot'
 	),
-	'version' => 'bab18b354cdb814efec7',
+	'version' => '60e84e5aed88f93fd988',
 	'type' => 'module'
 );

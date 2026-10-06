@@ -2,10 +2,6 @@
  * Type definitions for ActivityPub App
  */
 
-export interface AppSettings {
-	namespace: string;
-}
-
 export interface Follower {
 	id: string;
 	actor: string;

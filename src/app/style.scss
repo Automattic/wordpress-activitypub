@@ -3,9 +3,6 @@
  * This compiles to style-index.css
  */
 
-// Import global styles (design tokens, body styles, root element)
-@use "./styles/design-tokens";
-
 // Main layout container: boot's full-page shell fills it.
 .activitypub-app-layout {
 	position: fixed;

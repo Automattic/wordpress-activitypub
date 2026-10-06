@@ -11,7 +11,7 @@ import { init } from '../init';
 jest.mock( '@wordpress/data', () => ( { dispatch: jest.fn(), resolveSelect: jest.fn() } ) );
 jest.mock( '@wordpress/boot', () => ( { store: 'wordpress/boot' } ), { virtual: true } );
 jest.mock( '@wordpress/core-data', () => ( { store: 'core' } ) );
-jest.mock( '../components/object-types', () => ( {
+jest.mock( '../object-types', () => ( {
 	objectTypeConfig: {
 		Article: { label: 'Articles', icon: 'article-icon' },
 		Note: { label: 'Notes & Updates', icon: 'note-icon' },

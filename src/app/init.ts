@@ -11,7 +11,7 @@ import { __ } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { objectTypeConfig } from './components/object-types';
+import { objectTypeConfig } from './object-types';
 
 /**
  * Boot init module: runs after menu items and routes are registered, before
