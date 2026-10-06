@@ -86,6 +86,16 @@ class Test_Create extends \WP_UnitTestCase {
 				true,
 			),
 			'image fallback'         => array( array( 'image' => 'https://example.com/photo.jpg' ), true ),
+			'Unicode image URL'      => array(
+				array(
+					'attachment' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/uploads/写真.jpg',
+					),
+				),
+				true,
+			),
+			'Unicode image fallback' => array( array( 'image' => 'https://example.com/uploads/写真.jpg' ), true ),
 			'Audio object'           => array(
 				array(
 					'attachment' => array(
@@ -126,12 +136,26 @@ class Test_Create extends \WP_UnitTestCase {
 			'//remote.example/photo.jpg',
 			'ftp://remote.example/photo.jpg',
 			'https://',
+			'http://127.0.0.1/photo.jpg',
+			'http://192.168.1.1/photo.jpg',
+			'https://user:pass@example.com/photo.jpg',
 		) as $url ) {
 			$cases[] = array(
 				array(
 					'attachment' => array(
 						'type' => 'Image',
 						'url'  => $url,
+					),
+				),
+				false,
+			);
+		}
+		foreach ( array( 42, true, null, array( 'Image' ) ) as $type ) {
+			$cases[] = array(
+				array(
+					'attachment' => array(
+						'type' => $type,
+						'url'  => 'https://example.com/photo.jpg',
 					),
 				),
 				false,

@@ -41,6 +41,15 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 			'//remote.example/photo.jpg',
 			'ftp://remote.example/photo.jpg',
 			'https://',
+			'https:photo.jpg',
+			'javascript:alert(1)',
+			'http://127.0.0.1/photo.jpg',
+			'http://10.0.0.1/photo.jpg',
+			'http://172.16.0.1/photo.jpg',
+			'http://192.168.1.1/photo.jpg',
+			'http://[::1]/photo.jpg',
+			'https://user:pass@example.com/photo.jpg',
+			'https://example.com:22/photo.jpg',
 		) as $url ) {
 			$invalid = array(
 				'type' => 'Image',
@@ -62,6 +71,34 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Unicode paths remain usable for image, audio, and video attachments.
+	 *
+	 * @covers ::extract_attachments
+	 */
+	public function test_extract_attachments_preserves_unicode_urls() {
+		foreach ( array(
+			'image' => 'https://example.com/uploads/写真.jpg',
+			'audio' => 'http://example.com/uploads/音声.mp3',
+			'video' => 'HTTPS://example.com/uploads/動画.mp4',
+		) as $type => $url ) {
+			$attachment = array(
+				'type' => \ucfirst( $type ),
+				'url'  => $url,
+			);
+			$this->assertSame(
+				array(
+					array(
+						'url'  => $url,
+						'alt'  => '',
+						'type' => $type,
+					),
+				),
+				Remote_Posts::extract_attachments( array( 'attachment' => $attachment ) )
+			);
+		}
+	}
+
+	/**
 	 * Lists and single attachments retain URL, description, and type regardless of MIME casing.
 	 *
 	 * @covers ::extract_attachments
@@ -72,6 +109,11 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 			array( array( 'type' => 'Video' ), 'video' ),
 			array( array( 'type' => 'Image' ), 'image' ),
 			array( array( 'type' => 'Document' ), 'document' ),
+			array( array( 'type' => 42 ), 'document' ),
+			array( array( 'type' => null ), 'document' ),
+			array( array( 'type' => true ), 'document' ),
+			array( array( 'type' => array( 'Image' ) ), 'document' ),
+			array( array(), 'image' ),
 			array( array( 'mediaType' => 'IMAGE/JPEG' ), 'image' ),
 			array( array( 'mediaType' => 'AUDIO/MPEG' ), 'audio' ),
 			array( array( 'mediaType' => 'VIDEO/MP4' ), 'video' ),

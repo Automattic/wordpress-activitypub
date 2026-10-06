@@ -20,6 +20,113 @@ use function Activitypub\object_id_to_comment;
  */
 class Test_Interactions extends \WP_UnitTestCase {
 	/**
+	 * Unsafe attachments never become blocks, including when caching is unavailable.
+	 *
+	 * @covers ::add_comment
+	 * @covers ::update_comment
+	 */
+	public function test_comment_images_reject_unsafe_urls_before_creating_blocks() {
+		$activity = $this->create_test_object( 'https://example.com/unsafe-images' );
+		foreach ( array(
+			'http://127.0.0.1/photo.jpg',
+			'http://10.0.0.1/photo.jpg',
+			'http://172.16.0.1/photo.jpg',
+			'http://192.168.1.1/photo.jpg',
+			'http://[::1]/photo.jpg',
+			'https://user:pass@example.com/photo.jpg',
+		) as $url ) {
+			$activity['object']['attachment'][] = array(
+				'type' => 'Image',
+				'url'  => $url,
+			);
+		}
+		$comment_id = 0;
+		foreach ( array( 'https://example.com/写真.jpg', 'https://example.com/updated.jpg' ) as $url ) {
+			$object                           = $activity;
+			$object['object']['attachment'][] = array(
+				'type' => 'Image',
+				'url'  => $url,
+			);
+			if ( $comment_id ) {
+				$result = Interactions::update_comment( $object );
+				$this->assertNotWPError( $result );
+				$this->assertNotFalse( $result );
+			} else {
+				$comment_id = Interactions::add_comment( $object );
+				$this->assertIsInt( $comment_id );
+			}
+			$comment = \get_comment( $comment_id );
+			$this->assertSame( 1, \substr_count( $comment->comment_content, '<!-- wp:activitypub/image' ) );
+			foreach ( $activity['object']['attachment'] as $attachment ) {
+				$this->assertStringNotContainsString( $attachment['url'], $comment->comment_content );
+			}
+			\add_filter( 'activitypub_should_cache_url', '__return_false' );
+			$rendered = \apply_filters( 'comment_text', $comment->comment_content, $comment );
+			\remove_filter( 'activitypub_should_cache_url', '__return_false' );
+			$image = new \WP_HTML_Tag_Processor( $rendered );
+			$this->assertTrue( $image->next_tag( 'IMG' ) );
+			$this->assertSame( $url, $image->get_attribute( 'src' ) );
+			$this->assertFalse( $image->next_tag( 'IMG' ) );
+		}
+	}
+
+	/**
+	 * Plain-text descriptions survive import and updates without becoming HTML or blocks.
+	 *
+	 * @dataProvider image_description_provider
+	 * @covers ::add_comment
+	 * @covers ::update_comment
+	 *
+	 * @param string $description The attachment description.
+	 */
+	public function test_comment_image_descriptions_remain_plain_text( $description ) {
+		\wp_set_current_user( 0 );
+		\kses_init();
+		$activity   = $this->create_test_object( 'https://example.com/plain-text-description' );
+		$comment_id = 0;
+		foreach ( array( $description, 'Updated: ' . $description ) as $name ) {
+			$activity['object']['attachment'] = array(
+				'type' => 'Image',
+				'url'  => 'https://example.com/description.jpg',
+				'name' => $name,
+			);
+			if ( $comment_id ) {
+				$result = Interactions::update_comment( $activity );
+				$this->assertNotWPError( $result );
+				$this->assertNotFalse( $result );
+			} else {
+				$comment_id = Interactions::add_comment( $activity );
+				$this->assertIsInt( $comment_id );
+			}
+			$comment = \get_comment( $comment_id );
+			\add_filter( 'activitypub_should_cache_url', '__return_false' );
+			$rendered = \apply_filters( 'comment_text', $comment->comment_content, $comment );
+			\remove_filter( 'activitypub_should_cache_url', '__return_false' );
+			$image = new \WP_HTML_Tag_Processor( $rendered );
+			$this->assertTrue( $image->next_tag( 'IMG' ) );
+			$this->assertSame( $name, $image->get_attribute( 'alt' ) );
+			$this->assertNull( $image->get_attribute( 'onerror' ) );
+			$this->assertFalse( $image->next_tag() );
+			$this->assertSame( 1, \substr_count( $comment->comment_content, '<!-- wp:' ) );
+		}
+	}
+
+	/**
+	 * Literal punctuation and markup-looking text in descriptions.
+	 *
+	 * @return array Descriptions.
+	 */
+	public function image_description_provider() {
+		return array(
+			array( 'width<height' ),
+			array( 'Check x<y and y>z' ),
+			array( '"quotes", & and literal &lt;' ),
+			array( '<script>alert(1)</script> " onerror="alert(1)' ),
+			array( '<!-- wp:core/html --><img src=x onerror=alert(1)><!-- /wp:core/html -->' ),
+		);
+	}
+
+	/**
 	 * Create and update strip remote blocks before adding our own image blocks.
 	 *
 	 * @covers ::add_comment
