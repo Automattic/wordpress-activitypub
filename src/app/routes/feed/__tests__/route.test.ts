@@ -5,7 +5,7 @@
 /**
  * WordPress dependencies
  */
-import { resolveSelect, select } from '@wordpress/data';
+import { dispatch, resolveSelect, select } from '@wordpress/data';
 import { loadView } from '@wordpress/views';
 import { redirect, notFound } from '@wordpress/route';
 
@@ -49,6 +49,7 @@ describe( 'feed route', () => {
 
 	beforeEach( () => {
 		jest.clearAllMocks();
+		getActiveActorId.mockResolvedValue( 0 );
 		isViewportMatch.mockReturnValue( true );
 		( select as jest.Mock ).mockReturnValue( { isViewportMatch } );
 		mockLoadView.mockResolvedValue( DEFAULT_VIEW );
@@ -72,7 +73,7 @@ describe( 'feed route', () => {
 	it.each( [ '0', '42' ] )( 'preloads account %s without changing the saved account', async ( actorId ) => {
 		const context = { params: { actorId }, search: {} };
 		await route.loader?.( context );
-		expect( getActiveActorId ).not.toHaveBeenCalled();
+		expect( dispatch ).not.toHaveBeenCalled();
 		expect( getEntityRecords ).toHaveBeenCalledWith(
 			'postType',
 			'ap_post',
@@ -80,6 +81,26 @@ describe( 'feed route', () => {
 		);
 		expect( redirect ).not.toHaveBeenCalled();
 	} );
+
+	it.each( [ 0, 42 ] )(
+		'uses the reset view only when preloading a different account (current: %s)',
+		async ( activeActorId ) => {
+			getActiveActorId.mockResolvedValue( activeActorId );
+			const view = {
+				...DEFAULT_VIEW,
+				perPage: 50,
+				filters: [ { field: 'ap_tag', operator: 'isAny' as const, value: [ 7 ] } ],
+			};
+			mockLoadView.mockResolvedValue( view );
+			await route.loader?.( { params: { actorId: '42' }, search: {} } );
+			expect( getEntityRecords ).toHaveBeenCalledWith(
+				'postType',
+				'ap_post',
+				viewToQuery( activeActorId === 42 ? view : DEFAULT_VIEW, 42 )
+			);
+			expect( dispatch ).not.toHaveBeenCalled();
+		}
+	);
 
 	it.each( [ '43', '-1', '00', 'NaN', '42.0' ] )( 'rejects invalid and foreign accounts %s', async ( actorId ) => {
 		await expect( route.loader?.( { params: { actorId }, search: {} } ) ).rejects.toThrow( 'Not found' );

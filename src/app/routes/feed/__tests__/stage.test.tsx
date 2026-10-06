@@ -98,6 +98,59 @@ describe( 'FeedStage filters', () => {
 		act( () => onChangeView( { ...view, search: 'hello' } ) );
 		expect( navigate.mock.calls[ 0 ][ 0 ].to ).toBe( '/feed/tag/7' );
 		expect( navigate.mock.calls[ 0 ][ 0 ].search( {} ).search ).toBe( 'hello' );
+		expect( updateView.mock.calls[ 0 ][ 0 ].filters ).toEqual( [] );
+	} );
+
+	it.each( [
+		[ 'tag', { startPosition: 21 } ],
+		[ 'type', { fields: [ 'metadata', 'title.rendered' ] } ],
+		[ 'tag', { sort: { field: 'date', direction: 'asc' as const } } ],
+	] )( 'does not save a %s shortcut during an unrelated view update (%j)', ( taxonomy, changes ) => {
+		( useParams as jest.Mock ).mockReturnValue( { taxonomy, termId: '7' } );
+		const { unmount } = render( <FeedStage /> );
+		const { view, onChangeView } = mockDataViews.mock.calls[ 0 ][ 0 ];
+		act( () => onChangeView( { ...view, ...changes } ) );
+		const persistedView = updateView.mock.calls[ 0 ][ 0 ];
+		expect( persistedView.filters ).toEqual( [] );
+		expect( persistedView ).toMatchObject( changes );
+
+		// All posts mounts a new route using the shared preference.
+		unmount();
+		( useParams as jest.Mock ).mockReturnValue( {} );
+		( useView as jest.Mock ).mockReturnValue( { view: persistedView, updateView } );
+		render( <FeedStage /> );
+		expect( useFeed ).toHaveBeenLastCalledWith(
+			expect.not.objectContaining( { [ taxonomy === 'tag' ? 'ap_tag' : 'ap_object_type' ]: expect.anything() } )
+		);
+	} );
+
+	it( 'preserves a saved same-field filter when a shortcut temporarily replaces it', () => {
+		const filters = [
+			{ field: 'ap_tag', operator: 'isAny' as const, value: [ 3 ] },
+			{ field: 'date', operator: 'before' as const, value: '2026-01-01T00:00:00' },
+		];
+		( useView as jest.Mock ).mockReturnValue( { view: { ...DEFAULT_VIEW, filters }, updateView } );
+		render( <FeedStage /> );
+		const { view, onChangeView } = mockDataViews.mock.calls[ 0 ][ 0 ];
+		act( () => onChangeView( { ...view, fields: [ 'title.rendered' ] } ) );
+		expect( updateView ).toHaveBeenCalledWith( expect.objectContaining( { filters } ) );
+	} );
+
+	it( 'queries the reset view on the first render of a different account route', () => {
+		( useParams as jest.Mock ).mockReturnValue( { actorId: '7' } );
+		( useView as jest.Mock ).mockReturnValue( {
+			view: {
+				...DEFAULT_VIEW,
+				fields: [ 'title.rendered' ],
+				filters: [ { field: 'ap_tag', operator: 'isAny', value: [ 7 ] } ],
+				perPage: 50,
+			},
+			updateView,
+		} );
+		render( <FeedStage /> );
+		expect( useFeed ).toHaveBeenCalledWith( expect.objectContaining( { user_id: 7, per_page: 20, page: 1 } ) );
+		expect( useFeed ).not.toHaveBeenCalledWith( expect.objectContaining( { ap_tag: expect.anything() } ) );
+		expect( mockDataViews.mock.calls[ 0 ][ 0 ].view.fields ).toEqual( [ 'title.rendered' ] );
 	} );
 
 	it( 'uses the account from the route before its preference is saved', () => {

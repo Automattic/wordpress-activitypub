@@ -40,13 +40,21 @@ export const defaultLayouts = {
 };
 
 /**
- * Apply a sidebar shortcut as an ordinary, editable filter.
+ * Resolve account switches and editable sidebar shortcuts without saving preferences.
  *
- * @param view   Saved feed view.
- * @param params Route parameters.
- * @return Feed view with the shortcut applied.
+ * @param view          Saved feed view.
+ * @param params        Route parameters.
+ * @param activeActorId Currently selected account.
+ * @return Feed view for the destination route.
  */
-export function getFeedView( view: ViewType, params: Record< string, string > ): ViewType {
+export function getFeedView(
+	view: ViewType,
+	params: Record< string, string >,
+	activeActorId: number | null
+): ViewType {
+	if ( params.actorId !== undefined && Number( params.actorId ) !== activeActorId ) {
+		return { ...DEFAULT_VIEW, fields: view.fields };
+	}
 	if ( ! params.taxonomy ) {
 		return view;
 	}

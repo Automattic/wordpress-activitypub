@@ -19,12 +19,14 @@ import { useEffect } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import { replace } from '@wordpress/icons';
 import { useParams } from '@wordpress/route';
+import { useView } from '@wordpress/views';
 
 /**
  * Internal dependencies
  */
 import { STORE_NAME } from '../../store';
 import type { AppSelectors, AppActions } from '../../store';
+import { DEFAULT_VIEW, defaultLayouts } from '../../routes/feed/utils';
 
 // Actor mode constants matching PHP definitions.
 // Hopefully temporary—there's just no good way to query these currently.
@@ -36,6 +38,13 @@ export default function AccountMenu(): ReactNode {
 	const { actorId } = useParams( { strict: false } ) as { actorId?: string };
 	const { setActiveActor } = useDispatch( STORE_NAME ) as AppActions;
 	const { registerMenuItem } = useDispatch( bootStore );
+	const { view, updateView } = useView( {
+		kind: 'postType',
+		name: 'ap_post',
+		slug: 'feed',
+		defaultView: DEFAULT_VIEW,
+		defaultLayouts,
+	} );
 
 	const { currentUser, activeActorId, actorMode, hasUserCap, hasBlogCap } = useSelect(
 		( select ) => ( {
@@ -75,21 +84,26 @@ export default function AccountMenu(): ReactNode {
 		if ( ! isReady ) {
 			return;
 		}
+		const switchActor = ( nextActorId: number ): void => {
+			// Reset on the committed switch, including when the route remounts the feed.
+			updateView( { ...DEFAULT_VIEW, fields: view.fields } );
+			setActiveActor( nextActorId );
+		};
 		if ( actorId !== undefined ) {
 			// Commit only after navigation: core also runs route loaders when links are hovered.
 			if ( actorId === '0' && canUseBlogActor && activeActorId !== 0 ) {
-				setActiveActor( 0 );
+				switchActor( 0 );
 			} else if ( actorId === String( currentUserId ) && canUseUserActor && activeActorId !== currentUserId ) {
-				setActiveActor( currentUserId );
+				switchActor( currentUserId );
 			}
 			return;
 		}
 		if ( isSiteActor && ! canUseBlogActor && canUseUserActor && currentUserId ) {
 			// Blog actor is selected but not available, switch to user actor.
-			setActiveActor( currentUserId );
+			switchActor( currentUserId );
 		} else if ( ! isSiteActor && ! canUseUserActor && canUseBlogActor ) {
 			// User actor is selected but not available, switch to blog actor.
-			setActiveActor( 0 );
+			switchActor( 0 );
 		}
 	}, [
 		isReady,
@@ -100,6 +114,8 @@ export default function AccountMenu(): ReactNode {
 		canUseBlogActor,
 		currentUserId,
 		setActiveActor,
+		updateView,
+		view.fields,
 	] );
 
 	const userName: string = currentUser?.name || __( 'Your account', 'activitypub' );

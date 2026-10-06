@@ -89,7 +89,10 @@ export default function FeedStage(): ReactNode {
 		defaultLayouts,
 		queryParams: searchParams,
 	} );
-	const view = useMemo( () => getFeedView( savedView, routeParams ), [ savedView, routeParams ] );
+	const view = useMemo(
+		() => getFeedView( savedView, routeParams, savedActorId ),
+		[ savedView, routeParams, savedActorId ]
+	);
 
 	// Wrap updateView to reset page when filters change and to translate
 	// dataviews' infinite-scroll `startPosition` into our page-based loader.
@@ -100,7 +103,8 @@ export default function FeedStage(): ReactNode {
 			if ( filtersChanged ) {
 				setShowFilters( true );
 			}
-			updateView( nextView );
+			// Shortcut filters belong to the route until the user edits them.
+			updateView( { ...nextView, filters: filtersChanged ? nextView.filters : savedView.filters } );
 			if ( filtersChanged || nextView.page !== view.page || nextView.search !== view.search ) {
 				let to = routeParams.taxonomy ? `/feed/${ routeParams.taxonomy }/${ routeParams.termId }` : '/';
 				if ( routeParams.actorId !== undefined ) {
@@ -118,22 +122,8 @@ export default function FeedStage(): ReactNode {
 				} );
 			}
 		},
-		[ view, updateView, navigate, routeParams ]
+		[ view, savedView.filters, updateView, navigate, routeParams ]
 	);
-
-	// Reset view to default state when actor switches
-	const prevActiveActorId = useRef( activeActorId );
-	useEffect( (): void => {
-		if ( prevActiveActorId.current !== activeActorId ) {
-			// Actor changed - reset to default view, preserving only field visibility
-			updateView( {
-				...DEFAULT_VIEW,
-				fields: view.fields,
-			} );
-			prevActiveActorId.current = activeActorId;
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps -- updateView changes reference frequently; condition guards against repeated calls
-	}, [ activeActorId ] );
 
 	const query: FeedQuery = useMemo( (): FeedQuery => viewToQuery( view, activeActorId ), [ view, activeActorId ] );
 	const { feed, isResolving, totalItems, totalPages } = useFeed( query );

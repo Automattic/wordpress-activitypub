@@ -52,7 +52,8 @@ export const route: RouteConfig = {
 			throw notFound();
 		}
 		const { page, search: term } = search as { page?: number; search?: string };
-		let userId: number | null;
+		const activeActorId = await ( resolveSelect( STORE_NAME ) as AppSelectors ).getActiveActorId();
+		let userId = activeActorId;
 		if ( params.actorId !== undefined ) {
 			const isSite = params.actorId === '0';
 			const [ currentUser, site, canUseActor ] = await Promise.all( [
@@ -72,8 +73,6 @@ export const route: RouteConfig = {
 				throw notFound();
 			}
 			userId = Number( params.actorId );
-		} else {
-			userId = await ( resolveSelect( STORE_NAME ) as AppSelectors ).getActiveActorId();
 		}
 		const view = await loadView( {
 			kind: 'postType',
@@ -87,7 +86,7 @@ export const route: RouteConfig = {
 		const posts = await resolveSelect( coreStore ).getEntityRecords< FeedPost >(
 			'postType',
 			'ap_post',
-			viewToQuery( getFeedView( view, params ), userId )
+			viewToQuery( getFeedView( view, params, activeActorId ), userId )
 		);
 
 		// Resolve the default selection before core animates the new layout.
