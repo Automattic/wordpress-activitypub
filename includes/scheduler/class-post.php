@@ -27,6 +27,7 @@ class Post {
 	 */
 	public static function init() {
 		// Post transitions.
+		\add_action( 'pre_post_update', array( self::class, 'save_canonical_url' ) );
 		\add_action( 'wp_after_insert_post', array( self::class, 'triage' ), 33, 4 );
 
 		// Attachment transitions.
@@ -49,6 +50,23 @@ class Post {
 	}
 
 	/**
+	 * Preserve the published URL before post fields and terms change.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $post_id Post ID.
+	 * @return void
+	 */
+	public static function save_canonical_url( $post_id ) {
+		$post = \get_post( $post_id );
+		if ( ! $post || 'attachment' === $post->post_type || 'publish' !== $post->post_status || ACTIVITYPUB_OBJECT_STATE_FEDERATED !== get_wp_object_state( $post ) ) {
+			return;
+		}
+
+		\add_post_meta( $post_id, '_activitypub_canonical_url', \get_permalink( $post_id ), true );
+	}
+
+	/**
 	 * Triage post transitions and determine the appropriate Activity type.
 	 *
 	 * @param int      $post_id     Post ID.
@@ -59,6 +77,11 @@ class Post {
 	 * @return void
 	 */
 	public static function triage( $post_id, $post, $update, $post_before ) {
+		$is_queryable = is_post_publicly_queryable( $post );
+		if ( 'attachment' !== $post->post_type && 'publish' === $post->post_status && $is_queryable ) {
+			\delete_post_meta( $post_id, '_activitypub_canonical_url' );
+		}
+
 		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
 			return;
 		}
@@ -68,7 +91,6 @@ class Post {
 		}
 
 		$object_status = get_wp_object_state( $post );
-		$is_queryable  = is_post_publicly_queryable( $post );
 
 		// If the post is already soft-deleted and still non-public, do not create any more activities.
 		if ( ACTIVITYPUB_OBJECT_STATE_DELETED === $object_status && ! $is_queryable ) {

@@ -431,7 +431,45 @@ function get_post_id( $id ) {
 		return \add_query_arg( 'p', $post_id, \home_url( '/' ) );
 	}
 
-	return \get_permalink( $post_id );
+	$post = \get_post( $post_id );
+
+	return $post ? get_post_url( $post ) : \get_permalink( $post_id );
+}
+
+/**
+ * Get the post URL, preserving its published permalink after withdrawal.
+ *
+ * @since unreleased
+ *
+ * @param \WP_Post $post The post.
+ *
+ * @return string The post URL.
+ */
+function get_post_url( $post ) {
+	$canonical_url = \get_post_meta( $post->ID, '_activitypub_canonical_url', true );
+
+	if ( $canonical_url && 'attachment' !== $post->post_type ) {
+		return \esc_url_raw( $canonical_url );
+	}
+
+	switch ( \get_post_status( $post ) ) {
+		case 'trash':
+			$permalink = $canonical_url;
+			break;
+		case 'draft':
+			// Get_sample_permalink is in wp-admin, not always loaded.
+			if ( ! \function_exists( '\get_sample_permalink' ) ) {
+				require_once ABSPATH . 'wp-admin/includes/post.php';
+			}
+			$sample    = \get_sample_permalink( $post->ID );
+			$permalink = \str_replace( array( '%pagename%', '%postname%' ), $sample[1], $sample[0] );
+			break;
+		default:
+			$permalink = \get_permalink( $post );
+			break;
+	}
+
+	return \esc_url_raw( $permalink );
 }
 
 /**
