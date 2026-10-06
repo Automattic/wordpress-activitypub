@@ -7,10 +7,95 @@
 
 namespace Activitypub\Tests;
 
+use function Activitypub\get_post_id;
+use function Activitypub\get_post_url;
+
 /**
  * Test class for Post Functions.
  */
 class Test_Functions_Post extends \WP_UnitTestCase {
+
+	/**
+	 * Restore rewrite state after the database options have been rolled back.
+	 */
+	public function tear_down() {
+		parent::tear_down();
+		self::flush_cache();
+		$GLOBALS['wp_rewrite']->init();
+	}
+
+	/**
+	 * Saved canonical URLs take precedence only for legacy IDs.
+	 *
+	 * @covers \Activitypub\get_post_id
+	 * @covers \Activitypub\get_post_url
+	 */
+	public function test_get_post_id_uses_saved_canonical_url() {
+		$this->set_permalink_structure( '/%postname%/' );
+		$post_id = self::factory()->post->create( array( 'post_status' => 'private' ) );
+		\update_option( 'activitypub_last_post_with_permalink_as_id', $post_id );
+		$this->assertSame( \get_permalink( $post_id ), get_post_id( $post_id ) );
+
+		$url = \home_url( '/previously-published/' );
+		\update_post_meta( $post_id, '_activitypub_canonical_url', $url );
+		$this->assertSame( $url, get_post_id( $post_id ) );
+		$this->assertSame( $url, get_post_url( \get_post( $post_id ) ) );
+
+		\update_option( 'activitypub_last_post_with_permalink_as_id', 0 );
+		$this->assertSame( \add_query_arg( 'p', $post_id, \home_url( '/' ) ), get_post_id( $post_id ) );
+		$this->assertSame( $url, get_post_url( \get_post( $post_id ) ) );
+	}
+
+	/**
+	 * Attachments use saved URLs only while trashed, as before.
+	 *
+	 * @covers \Activitypub\get_post_url
+	 */
+	public function test_restored_attachment_uses_current_permalink() {
+		$this->set_permalink_structure( '/%postname%/' );
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'attachment',
+				'post_status' => 'inherit',
+				'post_name'   => 'original-attachment',
+			)
+		);
+		$url     = \get_permalink( $post_id );
+		\wp_trash_post( $post_id );
+		$this->assertSame( $url, get_post_url( \get_post( $post_id ) ) );
+
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'inherit',
+			)
+		);
+		\wp_update_post(
+			array(
+				'ID'        => $post_id,
+				'post_name' => 'restored-attachment',
+			)
+		);
+		$this->assertNotSame( $url, \get_permalink( $post_id ) );
+		$this->assertSame( \get_permalink( $post_id ), get_post_url( \get_post( $post_id ) ) );
+	}
+
+	/**
+	 * A legacy draft without a saved URL retains its sample permalink.
+	 *
+	 * @covers \Activitypub\get_post_id
+	 */
+	public function test_get_post_id_preserves_draft_permalink() {
+		$this->set_permalink_structure( '/%postname%/' );
+		$post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'draft',
+				'post_name'   => 'legacy-draft',
+			)
+		);
+		\update_option( 'activitypub_last_post_with_permalink_as_id', $post_id );
+		$this->assertSame( \home_url( '/legacy-draft/' ), get_post_id( $post_id ) );
+	}
 
 	/**
 	 * Test is_post_federated function.
