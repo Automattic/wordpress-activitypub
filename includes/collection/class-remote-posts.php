@@ -430,14 +430,19 @@ class Remote_Posts {
 			if ( empty( $url ) || ! \is_string( $url ) ) {
 				continue;
 			}
-			if ( ! \filter_var( $url, FILTER_VALIDATE_URL ) || ! \esc_url_raw( $url, array( 'http', 'https' ) ) ) {
+			if (
+				! \wp_http_validate_url( $url ) ||
+				! \in_array( \strtolower( \wp_parse_url( $url, PHP_URL_SCHEME ) ?? '' ), array( 'http', 'https' ), true ) ||
+				! \esc_url_raw( $url, array( 'http', 'https' ) )
+			) {
 				continue;
 			}
 
 			$mime_type = \is_string( $attachment['mediaType'] ?? null ) ? \strtolower( $attachment['mediaType'] ) : '';
 
 			if ( '' === $mime_type ) {
-				$type = \is_string( $attachment['type'] ?? null ) ? \strtolower( $attachment['type'] ) : 'image';
+				$type = \array_key_exists( 'type', $attachment ) ? $attachment['type'] : 'Image';
+				$type = \is_string( $type ) ? \strtolower( $type ) : 'document';
 				$type = \in_array( $type, array( 'image', 'audio', 'video' ), true ) ? $type : 'document';
 			} elseif ( \str_starts_with( $mime_type, 'video/' ) ) {
 				$type = 'video';
@@ -451,8 +456,8 @@ class Remote_Posts {
 
 			$attachments[] = array(
 				'url'  => $url,
-				// Same treatment the import path gives this field: remote JSON can hand us an array.
-				'alt'  => \is_string( $attachment['name'] ?? null ) ? \wp_strip_all_tags( $attachment['name'] ) : '',
+				// Descriptions are plain text; HTML attribute escaping happens when building the image.
+				'alt'  => \is_string( $attachment['name'] ?? null ) ? \wp_check_invalid_utf8( $attachment['name'] ) : '',
 				'type' => $type,
 			);
 		}

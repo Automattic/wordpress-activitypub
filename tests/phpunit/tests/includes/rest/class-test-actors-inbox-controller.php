@@ -326,7 +326,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$json['object']['id']        .= '/image';
 		$json['object']['attachment'] = array(
 			'type' => 'Image',
-			'url'  => 'https://remote.example/photo.jpg',
+			'url'  => 'https://example.com/photo.jpg',
 		);
 		$request                      = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/1/inbox' );
 		$request->set_header( 'Content-Type', 'application/activity+json' );
@@ -341,6 +341,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 			),
 			'/photo.jpg',
 			'//remote.example/photo.jpg',
+			'http://127.0.0.1/photo.jpg',
 		) as $url ) {
 			$json['object']['attachment']['url'] = $url;
 			$request->set_body( \wp_json_encode( $json ) );
