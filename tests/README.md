@@ -41,6 +41,7 @@ Every test file mirrors the source file it tests: same path below `tests/phpunit
 - Add new tests to the existing test file of the source file they cover. Tests for a REST route go into the test file of the controller that registers it.
 - Do not create test files that span several source files. If a test needs a new kind of file, document the pattern here first.
 - Shared setup belongs in `tests/phpunit/includes/`, not in a test file.
+- Snippet tests mirror `snippets/` below `tests/phpunit/tests/snippets/`. Load the opt-in snippet explicitly and remove its hooks in teardown.
 
 The pre-commit hook enforces this with `bin/precommit/check-test-file-location.js`. A few older test files predate the rule and are listed as exceptions there; do not add to that list.
 

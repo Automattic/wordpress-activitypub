@@ -18,6 +18,7 @@ Think of snippets as a testing ground, similar to WordPress' [feature plugin](ht
 | [Auto-Approve Reactions](auto-approve-reactions/) | Automatically approves all incoming ActivityPub reactions (likes, reposts, and quotes) without manual moderation. |
 | [Keep the Featured Image out of the Fediverse](no-featured-image/) | Stops the featured image being federated, so it does not take a slot from the images in the post. |
 | [Inspect Internal Storage](inspect-internal-storage/) | Makes the plugin's internal Inbox, Outbox, and remote post (`ap_post`) storage visible in the WordPress admin for inspection and debugging. |
+| [Allow ActivityPub through Disable WP REST API](disable-wp-rest-api/) | Keeps ActivityPub endpoints available while the free Disable WP REST API plugin restricts other REST requests. |
 
 ## How to Use
 
