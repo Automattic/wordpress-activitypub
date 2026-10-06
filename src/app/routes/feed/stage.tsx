@@ -74,10 +74,11 @@ export default function FeedStage(): ReactNode {
 		[ navigate ]
 	);
 	// Get active actor ID from store
-	const activeActorId: number | null = useSelect(
+	const savedActorId: number | null = useSelect(
 		( select ): number | null => ( select( STORE_NAME ) as AppSelectors ).getActiveActorId(),
 		[]
 	);
+	const activeActorId = routeParams.actorId !== undefined ? Number( routeParams.actorId ) : savedActorId;
 
 	// Use the views hook to persist user preferences
 	const { view: savedView, updateView } = useView( {
@@ -101,12 +102,13 @@ export default function FeedStage(): ReactNode {
 			}
 			updateView( nextView );
 			if ( filtersChanged || nextView.page !== view.page || nextView.search !== view.search ) {
+				let to = routeParams.taxonomy ? `/feed/${ routeParams.taxonomy }/${ routeParams.termId }` : '/';
+				if ( routeParams.actorId !== undefined ) {
+					to = `/account/${ routeParams.actorId }`;
+				}
 				void navigate( {
 					// Edited shortcut filters become a regular feed view, so the URL cannot reapply them.
-					to:
-						filtersChanged || ! routeParams.taxonomy
-							? '/'
-							: `/feed/${ routeParams.taxonomy }/${ routeParams.termId }`,
+					to: filtersChanged ? '/' : to,
 					search: ( ( prev: Record< string, unknown > ): Record< string, unknown > => ( {
 						...prev,
 						page: nextView.page,

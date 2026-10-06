@@ -26,6 +26,7 @@ declare module '@wordpress/icons' {
 	export const postList: ReactElement;
 	export const tag: ReactElement;
 	export const funnel: ReactElement;
+	export const replace: ReactElement;
 
 	// Icons used in src/app/components/site-hub/index.tsx
 	export const menu: ReactElement;

@@ -52,7 +52,29 @@ export const route: RouteConfig = {
 			throw notFound();
 		}
 		const { page, search: term } = search as { page?: number; search?: string };
-		const userId: number | null = await ( resolveSelect( STORE_NAME ) as AppSelectors ).getActiveActorId();
+		let userId: number | null;
+		if ( params.actorId !== undefined ) {
+			const isSite = params.actorId === '0';
+			const [ currentUser, site, canUseActor ] = await Promise.all( [
+				resolveSelect( coreStore ).getCurrentUser(),
+				resolveSelect( coreStore ).getEntityRecord( 'root', 'site' ),
+				resolveSelect( coreStore ).canUser( 'create', {
+					kind: 'postType',
+					name: isSite ? 'ap_extrafield_blog' : 'ap_extrafield',
+				} ),
+			] );
+			const mode = ( site as { activitypub_actor_mode?: string } )?.activitypub_actor_mode;
+			if (
+				! canUseActor ||
+				( mode !== 'actor_blog' && mode !== ( isSite ? 'blog' : 'actor' ) ) ||
+				( ! isSite && ( ! currentUser?.id || params.actorId !== String( currentUser.id ) ) )
+			) {
+				throw notFound();
+			}
+			userId = Number( params.actorId );
+		} else {
+			userId = await ( resolveSelect( STORE_NAME ) as AppSelectors ).getActiveActorId();
+		}
 		const view = await loadView( {
 			kind: 'postType',
 			name: 'ap_post',
@@ -71,8 +93,12 @@ export const route: RouteConfig = {
 		// Resolve the default selection before core animates the new layout.
 		// An explicit [] keeps the inspector closed; mobile starts with the list.
 		if ( search.postIds === undefined && posts?.length && select( viewportStore ).isViewportMatch( '>= medium' ) ) {
+			let to = params.taxonomy ? `/feed/${ params.taxonomy }/${ params.termId }` : '/';
+			if ( params.actorId !== undefined ) {
+				to = `/account/${ params.actorId }`;
+			}
 			throw redirect( {
-				to: params.taxonomy ? `/feed/${ params.taxonomy }/${ params.termId }` : '/',
+				to,
 				search: { ...search, postIds: [ posts[ 0 ].id.toString() ] } as never,
 				replace: true,
 			} );

@@ -69,11 +69,11 @@ describe( 'FeedStage filters', () => {
 	it( 'does not force primary or locked filters that disable the core toggle', () => {
 		render( <FeedStage /> );
 		const { fields, view } = mockDataViews.mock.calls[ 0 ][ 0 ];
-		expect( fields.some( ( field ) => field.filterBy?.isPrimary ) ).toBe( false );
+		expect( fields.some( ( field ) => field.filterBy && field.filterBy.isPrimary ) ).toBe( false );
 		expect( view.filters ).toEqual( [ { field: 'ap_tag', operator: 'isAny', value: [ 7 ] } ] );
 	} );
 
-	it.each( [ [], [ { field: 'ap_tag', operator: 'isAny', value: [ 9 ] } ] ] )(
+	it.each( [ [], [ { field: 'ap_tag', operator: 'isAny' as const, value: [ 9 ] } ] ] )(
 		'persists an edited shortcut and leaves the route that would reapply it (%j)',
 		( ...filters ) => {
 			render( <FeedStage /> );
@@ -98,6 +98,15 @@ describe( 'FeedStage filters', () => {
 		act( () => onChangeView( { ...view, search: 'hello' } ) );
 		expect( navigate.mock.calls[ 0 ][ 0 ].to ).toBe( '/feed/tag/7' );
 		expect( navigate.mock.calls[ 0 ][ 0 ].search( {} ).search ).toBe( 'hello' );
+	} );
+
+	it( 'uses the account from the route before its preference is saved', () => {
+		( useParams as jest.Mock ).mockReturnValue( { actorId: '7' } );
+		render( <FeedStage /> );
+		expect( useFeed ).toHaveBeenCalledWith( expect.objectContaining( { user_id: 7 } ) );
+		const { view, onChangeView } = mockDataViews.mock.calls[ 0 ][ 0 ];
+		act( () => onChangeView( { ...view, search: 'hello' } ) );
+		expect( navigate.mock.calls[ 0 ][ 0 ].to ).toBe( '/account/7' );
 	} );
 
 	it( 'opens linked filters, allows collapse, and reopens on another shortcut', () => {

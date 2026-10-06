@@ -273,6 +273,11 @@ class App {
 				'content_module' => self::FEED_CONTENT_MODULE,
 				'route_module'   => self::FEED_ROUTE_MODULE,
 			),
+			array(
+				'path'           => '/account/$actorId',
+				'content_module' => self::FEED_CONTENT_MODULE,
+				'route_module'   => self::FEED_ROUTE_MODULE,
+			),
 		);
 
 		/**
