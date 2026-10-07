@@ -837,6 +837,11 @@ class Remote_Actors {
 			return $no_profile_error;
 		}
 
+		// Authorization uses the requested key's host, even after actor discovery redirects.
+		if ( ! \is_string( $actor['id'] ?? null ) || ! is_same_host( $key_id, $actor['id'] ) ) {
+			return $no_key_error;
+		}
+
 		$public_key_pem = self::extract_public_key_pem( $actor );
 
 		if ( ! $public_key_pem ) {
@@ -885,6 +890,11 @@ class Remote_Actors {
 		$key_data = Proxy::get( $data['publicKey'] );
 
 		if ( \is_wp_error( $key_data ) || ! isset( $key_data['publicKeyPem'] ) ) {
+			return false;
+		}
+
+		// Check the resolved key as well as its original URL before trusting its owner claim.
+		if ( ! \is_string( $key_data['id'] ?? null ) || ! is_same_host( $data['id'], $key_data['id'] ) ) {
 			return false;
 		}
 

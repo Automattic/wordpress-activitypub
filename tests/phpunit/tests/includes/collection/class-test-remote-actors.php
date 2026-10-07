@@ -11,6 +11,7 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
 use Activitypub\Mention;
+use Activitypub\Tests\Remote_Request_Stub;
 
 /**
  * Class Test_Remote_Actors
@@ -18,6 +19,121 @@ use Activitypub\Mention;
  * @coversDefaultClass \Activitypub\Collection\Remote_Actors
  */
 class Test_Remote_Actors extends \WP_UnitTestCase {
+	use Remote_Request_Stub;
+
+	/**
+	 * Following a key or owner reference must not change the signing authority.
+	 *
+	 * @dataProvider redirected_key_reference_provider
+	 * @covers ::get_public_key
+	 *
+	 * @param bool $owner_redirect Whether discovery starts with a standalone key.
+	 * @param bool $same_host Whether the reference stays on the original host.
+	 */
+	public function test_get_public_key_redirected_reference( $owner_redirect, $same_host ) {
+		$this->stub_remote_requests();
+		$actor_url = 'https://example.com/actor';
+		$key_url   = 'https://example.com/key';
+		$host      = $same_host ? 'example.com' : 'example.org';
+		$actor     = array(
+			'id'        => $actor_url,
+			'type'      => 'Person',
+			'publicKey' => $key_url,
+		);
+		$key       = array(
+			'id'           => $key_url,
+			'owner'        => $actor_url,
+			'publicKeyPem' => $this->x509_key,
+		);
+
+		if ( $owner_redirect ) {
+			$actor['id']                   = 'https://' . $host . '/canonical-actor';
+			$actor['publicKey']            = $key;
+			$this->responses[ $key_url ]   = $key;
+			$this->responses[ $actor_url ] = $this->redirected( $actor['id'], $actor );
+			$key_id                        = $key_url;
+		} else {
+			$key['id']                     = 'https://' . $host . '/canonical-key';
+			$this->responses[ $actor_url ] = $actor;
+			$this->responses[ $key_url ]   = $this->redirected( $key['id'], $key );
+			$key_id                        = $actor_url . '#main-key';
+		}
+
+		$result = Remote_Actors::get_public_key( $key_id );
+		$this->unstub_remote_requests();
+
+		if ( $same_host ) {
+			$this->assertNotWPError( $result );
+			$this->assertSame( $this->x509_key, \openssl_pkey_get_details( $result )['key'] );
+		} else {
+			$this->assertWPError( $result );
+			$this->assertSame( 'activitypub_no_remote_key_found', $result->get_error_code() );
+		}
+	}
+
+	/**
+	 * Key and owner reference redirects.
+	 *
+	 * @return array Test cases.
+	 */
+	public function redirected_key_reference_provider() {
+		return array(
+			'foreign owner' => array( true, false ),
+			'owner alias'   => array( true, true ),
+			'foreign key'   => array( false, false ),
+			'key alias'     => array( false, true ),
+		);
+	}
+
+	/**
+	 * A key or actor without a string id cannot establish its signing authority.
+	 *
+	 * @dataProvider missing_key_identity_provider
+	 * @covers ::get_public_key
+	 *
+	 * @param bool  $reference Whether the actor links to a separate key document.
+	 * @param mixed $id The malformed identity.
+	 */
+	public function test_get_public_key_requires_resolved_identity( $reference, $id ) {
+		$this->stub_remote_requests();
+		$actor_url = 'https://example.com/actor';
+		$key_url   = 'https://example.com/key';
+		$key       = array(
+			'id'           => $id,
+			'owner'        => $actor_url,
+			'publicKeyPem' => $this->x509_key,
+		);
+		$actor     = array(
+			'id'        => $id,
+			'type'      => 'Person',
+			'publicKey' => $key,
+		);
+		if ( $reference ) {
+			$actor['id']                 = $actor_url;
+			$actor['publicKey']          = $key_url;
+			$this->responses[ $key_url ] = $key;
+		}
+		$this->responses[ $actor_url ] = $actor;
+
+		$result = Remote_Actors::get_public_key( $actor_url . '#main-key' );
+		$this->unstub_remote_requests();
+		$this->assertWPError( $result );
+		$this->assertSame( 'activitypub_no_remote_key_found', $result->get_error_code() );
+	}
+
+	/**
+	 * Documents with missing or malformed identities.
+	 *
+	 * @return array Test cases.
+	 */
+	public function missing_key_identity_provider() {
+		return array(
+			'missing actor id' => array( false, null ),
+			'missing key id'   => array( true, null ),
+			'array actor id'   => array( false, array( 'id' => 'https://example.com/actor' ) ),
+			'array key id'     => array( true, array( 'id' => 'https://example.com/key' ) ),
+		);
+	}
 
 	/**
 	 * The public key in PKCS#1 format.
@@ -1609,6 +1725,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	public function pre_get_remote_metadata_by_actor( $value, $url ) {
 		if ( 'https://example.com/author/invalid' === $url ) {
 			return array(
+				'id'        => 'https://example.com/author/invalid',
 				'name'      => 'Test Actor',
 				'url'       => 'https://example.com/author/invalid',
 				'publicKey' => array(
@@ -1844,6 +1961,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 
 		if ( 'https://example.com/author/x509' === $url_or_object ) {
 			return array(
+				'id'        => 'https://example.com/author/x509',
 				'name'      => 'Test Actor',
 				'url'       => 'https://example.com/author/x509',
 				'publicKey' => array(
@@ -1856,6 +1974,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 
 		if ( 'https://example.com/author/pkcs1' === $url_or_object ) {
 			return array(
+				'id'        => 'https://example.com/author/pkcs1',
 				'name'      => 'Test Actor',
 				'url'       => 'https://example.com/author/pkcs1',
 				'publicKey' => array(
@@ -1868,6 +1987,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 
 		if ( 'https://example.com/author/ec' === $url_or_object ) {
 			return array(
+				'id'        => 'https://example.com/author/ec',
 				'name'      => 'Test Actor',
 				'url'       => 'https://example.com/author/ec',
 				'publicKey' => array(
@@ -1880,6 +2000,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 
 		if ( 'https://example.com/author/pkcs8' === $url_or_object ) {
 			return array(
+				'id'        => 'https://example.com/author/pkcs8',
 				'name'      => 'Test Actor',
 				'url'       => 'https://example.com/author/pkcs8',
 				'publicKey' => array(
