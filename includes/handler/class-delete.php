@@ -11,7 +11,7 @@ use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
-use Activitypub\Http;
+use Activitypub\Proxy;
 use Activitypub\Tombstone;
 
 use function Activitypub\add_to_outbox;
@@ -156,7 +156,7 @@ class Delete {
 
 		// Only the quoted object's author may revoke the stamp.
 		$quoted_uri = \get_post_meta( $post->ID, '_activitypub_quote_request', true );
-		$quoted     = $quoted_uri ? Http::get_remote_object( $quoted_uri ) : null;
+		$quoted     = $quoted_uri ? Proxy::get( $quoted_uri ) : null;
 
 		if ( ! $quoted || \is_wp_error( $quoted ) || empty( $quoted['attributedTo'] ) ) {
 			return false;
@@ -174,6 +174,7 @@ class Delete {
 			return false;
 		}
 
+		Proxy::purge( $stamp_uri );
 		\delete_post_meta( $post->ID, '_activitypub_quote_authorization' );
 
 		add_to_outbox( $post, 'Update', (int) $post->post_author );
@@ -245,10 +246,19 @@ class Delete {
 	 * @return bool True on success, false otherwise.
 	 */
 	public static function maybe_delete_follower( $activity ) {
-		$follower = Remote_Actors::get_by_uri( $activity['actor'] );
+		$actor = object_to_uri( $activity['actor'] ?? '' );
 
-		// Verify that Actor is deleted.
-		if ( ! \is_wp_error( $follower ) && Tombstone::exists( $activity['actor'] ) ) {
+		// Confirm at the actor's URI; an inline Tombstone is only an untrusted claim.
+		if ( ! \is_string( $actor ) || ! $actor || ! Tombstone::exists( $actor ) ) {
+			return false;
+		}
+
+		// The actor is gone from its own host, so the cached copy goes with it.
+		Proxy::purge( $actor );
+
+		$follower = Remote_Actors::get_by_uri( $actor );
+
+		if ( ! \is_wp_error( $follower ) ) {
 			self::maybe_delete_interactions( $follower->ID );
 			self::maybe_delete_posts( $follower->ID );
 			$state = Remote_Actors::delete( $follower->ID );
@@ -346,6 +356,9 @@ class Delete {
 		$comments = Interactions::get_by_id( $id );
 
 		if ( $comments && Tombstone::exists( $id ) ) {
+			// The object is gone from its own host, so the cached copy goes with it.
+			Proxy::purge( $id );
+
 			foreach ( $comments as $comment ) {
 				// WordPress will automatically delete all comment meta including _activitypub_remote_actor_id.
 				\wp_delete_comment( $comment->comment_ID, true );
@@ -369,6 +382,9 @@ class Delete {
 
 		// Check if the object exists and is a tombstone.
 		if ( Tombstone::exists( $id ) ) {
+			// The object is gone from its own host, so the cached copy goes with it.
+			Proxy::purge( $id );
+
 			return Remote_Posts::delete_by_guid( $id );
 		}
 

@@ -9,7 +9,7 @@ namespace Activitypub\Scheduler;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
-use Activitypub\Http;
+use Activitypub\Proxy;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\is_same_actor;
@@ -85,7 +85,7 @@ class Quote_Request {
 			return;
 		}
 
-		$quoted = Http::get_remote_object( $quoted_uri );
+		$quoted = Proxy::get( $quoted_uri );
 
 		if ( \is_wp_error( $quoted ) || empty( $quoted['attributedTo'] ) ) {
 			return;
