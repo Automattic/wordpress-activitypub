@@ -89,6 +89,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		// Mock the remote key retrieval for this curve.
 		$mock_remote_key_retrieval = function () use ( $public_key ) {
 			return array(
+				'id'        => 'https://example.com/users/test',
 				'name'      => 'Test User',
 				'url'       => 'https://example.com/users/test',
 				'publicKey' => array(
@@ -131,6 +132,7 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		$mock_remote_key_retrieval = function () use ( $public_key ) {
 			return array(
+				'id'        => 'https://example.com/users/test',
 				'name'      => 'Test User',
 				'url'       => 'https://example.com/users/test',
 				'publicKey' => array(
@@ -188,6 +190,7 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		$mock_remote_key_retrieval = function () use ( $public_key ) {
 			return array(
+				'id'        => 'https://example.com/users/test',
 				'name'      => 'Test User',
 				'url'       => 'https://example.com/users/test',
 				'publicKey' => array(
@@ -229,6 +232,7 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		$mock_remote_key_retrieval = function () use ( $public_key ) {
 			return array(
+				'id'        => 'https://example.com/users/test',
 				'name'      => 'Test User',
 				'url'       => 'https://example.com/users/test',
 				'publicKey' => array(
@@ -270,6 +274,7 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		$mock_remote_key_retrieval = function () use ( $public_key ) {
 			return array(
+				'id'        => 'https://example.com/users/test',
 				'name'      => 'Test User',
 				'url'       => 'https://example.com/users/test',
 				'publicKey' => array(
@@ -300,6 +305,7 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		$mock_remote_key_retrieval = function () use ( $keys ) {
 			return array(
+				'id'        => 'https://example.org/author/admin',
 				'name'      => 'Admin',
 				'url'       => 'https://example.org/author/admin',
 				'publicKey' => array(
@@ -377,6 +383,7 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		$mock_remote_key_retrieval = function () use ( $keys ) {
 			return array(
+				'id'        => 'https://example.org/author/admin',
 				'name'      => 'Admin',
 				'url'       => 'https://example.org/author/admin',
 				'publicKey' => array(
@@ -440,6 +447,7 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		$mock_remote_key_retrieval = function () use ( $keys ) {
 			return array(
+				'id'        => 'https://example.org/author/admin',
 				'name'      => 'Admin',
 				'url'       => 'https://example.org/author/admin',
 				'publicKey' => array(
@@ -502,6 +510,7 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		$mock_remote_key_retrieval = function () use ( $keys ) {
 			return array(
+				'id'        => 'https://example.org/author/admin',
 				'name'      => 'Admin',
 				'url'       => 'https://example.org/author/admin',
 				'publicKey' => array(
@@ -559,6 +568,7 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		$mock_remote_key_retrieval = function () use ( $keys ) {
 			return array(
+				'id'        => 'https://example.org/author/admin',
 				'name'      => 'Admin',
 				'url'       => 'https://example.org/author/admin',
 				'publicKey' => array(
@@ -611,6 +621,7 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		$mock_remote_key_retrieval = function () use ( $keys ) {
 			return array(
+				'id'        => 'https://example.org/author/admin',
 				'name'      => 'Admin',
 				'url'       => 'https://example.org/author/admin',
 				'publicKey' => array(
@@ -840,6 +851,7 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		$mock_remote_key_retrieval = function () use ( $keys ) {
 			return array(
+				'id'        => 'https://example.org/author/admin',
 				'name'      => 'Admin',
 				'url'       => 'https://example.org/author/admin',
 				'publicKey' => array(
@@ -977,6 +989,7 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		$mock_remote_key_retrieval = function () use ( $keys ) {
 			return array(
+				'id'        => 'https://example.org/author/admin',
 				'name'      => 'Admin',
 				'url'       => 'https://example.org/author/admin',
 				'publicKey' => array(
@@ -1059,6 +1072,7 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		$mock_remote_key_retrieval = function () use ( $keys ) {
 			return array(
+				'id'        => 'https://example.org/author/admin',
 				'name'      => 'Admin',
 				'url'       => 'https://example.org/author/admin',
 				'publicKey' => array(
@@ -1171,6 +1185,7 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		$mock_remote_key_retrieval = function () use ( $keys ) {
 			return array(
+				'id'        => 'https://example.org/author/admin',
 				'name'      => 'Admin',
 				'url'       => 'https://example.org/author/admin',
 				'publicKey' => array(
@@ -1265,6 +1280,7 @@ class Test_Signature extends \WP_UnitTestCase {
 	private function verify_rfc9421_signature_with_keys( $keys, $algorithm ) {
 		$mock_remote_key_retrieval = function () use ( $keys ) {
 			return array(
+				'id'        => 'https://example.org/author/admin',
 				'name'      => 'Admin',
 				'url'       => 'https://example.org/author/admin',
 				'publicKey' => array(
@@ -1739,6 +1755,7 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		$mock_remote_key_retrieval = function () use ( $keys ) {
 			return array(
+				'id'        => 'https://example.org/author/admin',
 				'name'      => 'Admin',
 				'url'       => 'https://example.org/author/admin',
 				'publicKey' => array(
@@ -1875,6 +1892,7 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		$callback = function () use ( $keys ) {
 			return array(
+				'id'        => 'https://example.org/author/admin',
 				'name'      => 'Admin',
 				'url'       => 'https://example.org/author/admin',
 				'publicKey' => array(

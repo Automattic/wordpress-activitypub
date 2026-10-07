@@ -975,6 +975,7 @@ class Test_Server extends \WP_Test_REST_TestCase {
 		$keys              = Actors::get_keypair( 1 );
 		$mock_remote_actor = function () use ( $keys ) {
 			return array(
+				'id'        => 'https://example.org/author/admin',
 				'name'      => 'Admin',
 				'url'       => 'https://example.org/author/admin',
 				'publicKey' => array(

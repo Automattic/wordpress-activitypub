@@ -9,7 +9,10 @@ namespace Activitypub\Tests\Rest;
 
 use Activitypub\OAuth\Scope;
 use Activitypub\Rest\Verification;
+use Activitypub\Signature\Http_Message_Signature;
+use Activitypub\Signature\Http_Signature_Draft;
 use Activitypub\Tests\OAuth_Token_Stub;
+use Activitypub\Tests\Remote_Request_Stub;
 
 /**
  * Test class for Verification Trait.
@@ -19,6 +22,7 @@ use Activitypub\Tests\OAuth_Token_Stub;
  */
 class Test_Trait_Verification extends \WP_UnitTestCase {
 	use OAuth_Token_Stub;
+	use Remote_Request_Stub;
 
 
 	/**
@@ -65,6 +69,8 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	 * Tear down the test.
 	 */
 	public function tear_down() {
+		$this->unstub_remote_requests();
+		$this->reset__SERVER();
 		\wp_set_current_user( 0 );
 		\remove_all_filters( 'activitypub_defer_signature_verification' );
 		\remove_all_filters( 'activitypub_oauth_check_permission' );
@@ -134,6 +140,92 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		$this->assertWPError( $result );
 		$this->assertEquals( 'activitypub_signature_verification', $result->get_error_code() );
 		$this->assertEquals( 401, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Key discovery must retain the authority used to authorize the signed activity.
+	 *
+	 * @dataProvider redirected_signing_key_provider
+	 * @covers ::verify_signature
+	 *
+	 * @param string $format Signature format.
+	 * @param bool   $same_host Whether the resolved actor belongs to the requested host.
+	 */
+	public function test_verify_signature_with_redirected_signing_key( $format, $same_host ) {
+		$this->stub_remote_requests();
+		$key_id   = 'https://example.com/key-discovery#main-key';
+		$actor_id = $same_host ? 'https://example.com/actor' : 'https://example.org/actor';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		$keys = \json_decode( \file_get_contents( AP_TESTS_DIR . '/data/fixtures/http-signature-keys.json' ), true )['rsa']['2048'];
+		$this->responses['https://example.com/key-discovery'] = $this->redirected(
+			$actor_id,
+			array(
+				'id'        => $actor_id,
+				'type'      => 'Person',
+				'publicKey' => array(
+					'id'           => $actor_id . '#main-key',
+					'owner'        => $actor_id,
+					'publicKeyPem' => $keys['public_key'],
+				),
+			)
+		);
+
+		$route                     = '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox';
+		$url                       = \set_url_scheme( 'http://example.net' . \wp_parse_url( \home_url( '/' . \rest_get_url_prefix() . $route ), PHP_URL_PATH ) );
+		$signer                    = 'draft' === $format ? new Http_Signature_Draft() : new Http_Message_Signature();
+		$args                      = $signer->sign(
+			array(
+				'method'      => 'POST',
+				'body'        => \wp_json_encode(
+					array(
+						'id'     => 'https://example.com/activities/1',
+						'type'   => 'Create',
+						'actor'  => 'https://example.com/actor',
+						'object' => array(
+							'type'    => 'Note',
+							'content' => 'Test',
+						),
+					)
+				),
+				'headers'     => array(
+					'Host'         => \wp_parse_url( $url, PHP_URL_HOST ),
+					'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
+					'Content-Type' => 'application/activity+json',
+				),
+				'key_id'      => $key_id,
+				'private_key' => \openssl_pkey_get_private( $keys['private_key'] ),
+			),
+			$url
+		);
+		$_SERVER['REQUEST_URI']    = \wp_parse_url( $url, PHP_URL_PATH );
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['HTTP_HOST']      = \wp_parse_url( $url, PHP_URL_HOST );
+		$request                   = new \WP_REST_Request( 'POST', $route );
+		$request->set_headers( $args['headers'] );
+		$request->set_body( $args['body'] );
+
+		$result = $this->instance->verify_signature( $request );
+		if ( $same_host ) {
+			$this->assertTrue( $result );
+		} else {
+			$this->assertWPError( $result );
+			$this->assertSame( 'activitypub_signature_verification', $result->get_error_code() );
+			$this->assertSame( 401, $result->get_error_data()['status'] );
+		}
+	}
+
+	/**
+	 * Signature formats and actor origins.
+	 *
+	 * @return array Test cases.
+	 */
+	public function redirected_signing_key_provider() {
+		return array(
+			'draft foreign actor'   => array( 'draft', false ),
+			'draft local alias'     => array( 'draft', true ),
+			'rfc9421 foreign actor' => array( 'rfc9421', false ),
+			'rfc9421 local alias'   => array( 'rfc9421', true ),
+		);
 	}
 
 	/**
