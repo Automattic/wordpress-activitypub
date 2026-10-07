@@ -305,6 +305,40 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A saved permalink applies to the URL and legacy ID, while modern IDs stay stable.
+	 *
+	 * @covers ::get_url
+	 * @covers ::get_id
+	 */
+	public function test_get_url_uses_saved_canonical_url() {
+		$post_id = self::factory()->post->create( array( 'post_status' => 'private' ) );
+		$url     = \home_url( '/previously-published/' );
+		\update_post_meta( $post_id, '_activitypub_canonical_url', $url );
+		\update_option( 'activitypub_last_post_with_permalink_as_id', $post_id );
+
+		$transformer = new Post( \get_post( $post_id ) );
+		$this->assertSame( $url, $transformer->get_url() );
+		$this->assertSame( $url, $transformer->get_id() );
+
+		\update_option( 'activitypub_last_post_with_permalink_as_id', 0 );
+		$this->assertSame( $url, $transformer->get_url() );
+		$this->assertSame( \add_query_arg( 'p', $post_id, \home_url( '/' ) ), $transformer->get_id() );
+	}
+
+	/**
+	 * A trashed post without a saved permalink must not expose its trash URL.
+	 *
+	 * @covers ::get_url
+	 */
+	public function test_get_url_for_trash_without_saved_canonical_url() {
+		$post_id = self::factory()->post->create( array( 'post_status' => 'trash' ) );
+		$this->assertSame( '', \get_post_meta( $post_id, '_activitypub_canonical_url', true ) );
+
+		$transformer = new Post( \get_post( $post_id ) );
+		$this->assertSame( '', $transformer->get_url() );
+	}
+
+	/**
 	 * Test that to_object() omits derived fields for redacted posts.
 	 *
 	 * The is_redacted() gate fires for password-protected posts (regardless
