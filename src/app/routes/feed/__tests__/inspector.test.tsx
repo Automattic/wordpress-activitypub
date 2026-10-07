@@ -5,15 +5,16 @@
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
 import FeedInspector from '../inspector';
-import { SettingsProvider } from '../../../contexts/settings-context';
-import type { AppSettings, Comment, FeedPost } from '../../../types';
+import type { Comment, FeedPost } from '../../../types';
 
 // Mock router hooks
 const mockNavigate = jest.fn();
 let mockSearchParams: { postIds?: string[] } = { postIds: [ '1' ] };
+let mockRouteParams: Record< string, string > = {};
 
 jest.mock( '@wordpress/route', () => ( {
 	useSearch: () => mockSearchParams,
+	useParams: () => mockRouteParams,
 	useNavigate: () => mockNavigate,
 } ) );
 
@@ -43,18 +44,20 @@ jest.mock( '@wordpress/components', () => ( {
 		</button>
 	),
 	Spinner: () => <div data-testid="spinner">Loading...</div>,
-	Card: ( { children, className }: any ) => <div className={ className }>{ children }</div>,
-	CardBody: ( { children }: any ) => <div className="card-body">{ children }</div>,
-	CardHeader: ( { children }: any ) => <div className="card-header">{ children }</div>,
-} ) );
-
-jest.mock( '../../../components/page', () => ( {
-	Page: ( { children, actions }: any ) => (
-		<div data-testid="page">
-			<div className="page-actions">{ actions }</div>
+	Card: ( { children, className, isBorderless, isRounded }: any ) => (
+		<div className={ className } data-borderless={ isBorderless } data-rounded={ isRounded }>
 			{ children }
 		</div>
 	),
+	CardBody: ( { children, className }: any ) => <div className={ className }>{ children }</div>,
+	CardHeader: ( { children, isBorderless }: any ) => (
+		<div className="card-header" data-borderless={ isBorderless }>
+			{ children }
+		</div>
+	),
+	FlexBlock: ( { children }: any ) => <div>{ children }</div>,
+	__experimentalHStack: ( { children, className }: any ) => <div className={ className }>{ children }</div>,
+	__experimentalVStack: ( { children }: any ) => <div>{ children }</div>,
 } ) );
 
 const mockPost: FeedPost = {
@@ -117,10 +120,6 @@ const mockComments: Comment[] = [
 	},
 ];
 
-const mockSettings: AppSettings = {
-	namespace: 'activitypub/v1',
-};
-
 // Mock @wordpress/core-data
 const mockUseEntityRecord = jest.fn();
 const mockUseEntityRecords = jest.fn();
@@ -140,31 +139,35 @@ jest.mock( '../../../store', () => ( {
 	STORE_NAME: 'activitypub/app',
 } ) );
 
-// Mock use-tag-filter hook to avoid loading @wordpress/views
-const mockUpdateTagFilter = jest.fn();
-jest.mock( '../../../hooks/use-tag-filter', () => ( {
-	useTagFilter: () => ( {
-		selectedTagId: null,
-		updateTagFilter: mockUpdateTagFilter,
-	} ),
-} ) );
-
 describe( 'FeedInspector', () => {
 	beforeEach( () => {
 		jest.clearAllMocks();
 		// Reset mock search params to default
 		mockSearchParams = { postIds: [ '1' ] };
+		mockRouteParams = {};
 	} );
 
 	const renderInspector = ( postId: number = 1 ) => {
 		// Set the selected post in mock search params
 		mockSearchParams = { postIds: [ String( postId ) ] };
-		return render(
-			<SettingsProvider settings={ mockSettings }>
-				<FeedInspector />
-			</SettingsProvider>
-		);
+		return render( <FeedInspector /> );
 	};
+
+	it( 'uses core card props for flat surfaces and keeps the post header divider', () => {
+		mockUseEntityRecord.mockReturnValue( { record: mockPost, isResolving: false } );
+		mockUseEntityRecords.mockImplementation( ( kind: string ) => ( {
+			records: kind === 'root' ? mockComments : [],
+			isResolving: false,
+		} ) );
+		const { container } = renderInspector();
+		const cards = container.querySelectorAll( '.activitypub-inspector-card' );
+		expect( cards ).toHaveLength( 2 );
+		for ( const card of cards ) {
+			expect( card ).toHaveAttribute( 'data-borderless', 'true' );
+			expect( card ).toHaveAttribute( 'data-rounded', 'false' );
+		}
+		expect( cards[ 0 ].querySelector( '.card-header' ) ).toHaveAttribute( 'data-borderless', 'false' );
+	} );
 
 	describe( 'Loading States', () => {
 		it( 'should show spinner while loading post', () => {
@@ -336,6 +339,20 @@ describe( 'FeedInspector', () => {
 			renderInspector();
 
 			expect( screen.getByText( 'Test post content' ) ).toBeInTheDocument();
+		} );
+
+		it.each( [ {}, { taxonomy: 'tag', termId: '7' } ] )( 'opens tag links as sidebar views from %j', ( params ) => {
+			mockRouteParams = params;
+			mockUseEntityRecords.mockImplementation( ( kind ) => ( {
+				records: kind === 'taxonomy' ? [ { id: 7, name: 'fediverse' } ] : [],
+				isResolving: false,
+			} ) );
+			renderInspector();
+			fireEvent.click( screen.getByText( '#fediverse' ) );
+			expect( mockNavigate ).toHaveBeenCalledWith( {
+				to: params.taxonomy ? '/' : '/feed/tag/7',
+				search: {},
+			} );
 		} );
 
 		/*
@@ -518,7 +535,7 @@ describe( 'FeedInspector', () => {
 			expect( screen.getByText( 'Close' ) ).toBeInTheDocument();
 		} );
 
-		it( 'should navigate to remove postIds when close button is clicked', () => {
+		it( 'should preserve an explicit empty selection when close button is clicked', () => {
 			renderInspector();
 
 			const closeButton = screen.getByText( 'Close' );
@@ -530,12 +547,11 @@ describe( 'FeedInspector', () => {
 				viewTransition: false,
 			} );
 
-			// Verify the search function removes postIds
+			// An empty selection prevents the desktop default from reopening the inspector.
 			const navigateCall = mockNavigate.mock.calls[ 0 ][ 0 ];
 			const searchFn = navigateCall.search;
 			const result = searchFn( { postIds: [ '1' ], otherParam: 'value' } );
-			expect( result ).toEqual( { otherParam: 'value' } );
-			expect( result.postIds ).toBeUndefined();
+			expect( result ).toEqual( { otherParam: 'value', postIds: [] } );
 		} );
 	} );
 } );

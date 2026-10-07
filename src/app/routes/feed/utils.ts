@@ -39,6 +39,39 @@ export const defaultLayouts = {
 	},
 };
 
+/**
+ * Resolve account switches and editable sidebar shortcuts without saving preferences.
+ *
+ * @param view          Saved feed view.
+ * @param params        Route parameters.
+ * @param activeActorId Currently selected account.
+ * @return Feed view for the destination route.
+ */
+export function getFeedView(
+	view: ViewType,
+	params: Record< string, string >,
+	activeActorId: number | null
+): ViewType {
+	if ( params.actorId !== undefined && Number( params.actorId ) !== activeActorId ) {
+		return { ...DEFAULT_VIEW, fields: view.fields };
+	}
+	if ( ! params.taxonomy ) {
+		return view;
+	}
+	const field = params.taxonomy === 'type' ? 'ap_object_type' : 'ap_tag';
+	return {
+		...view,
+		filters: [
+			...( view.filters ?? [] ).filter( ( filter ) => filter.field !== field ),
+			{
+				field,
+				operator: params.taxonomy === 'type' ? 'is' : 'isAny',
+				value: params.taxonomy === 'type' ? Number( params.termId ) : [ Number( params.termId ) ],
+			},
+		],
+	};
+}
+
 // The fields the list and the inspector read; everything else stays on the server.
 const FIELDS: string[] = [
 	'id',
