@@ -10,7 +10,7 @@ namespace Activitypub\Handler;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
-use Activitypub\Http;
+use Activitypub\Proxy;
 
 use function Activitypub\is_activity_reply;
 use function Activitypub\object_to_uri;
@@ -38,6 +38,9 @@ class Update {
 	 * @return void
 	 */
 	public static function handle_update( $activity, $user_ids, $activity_object ) {
+		// The proxy only lets an actor on the object's own host retire the cached copy.
+		Proxy::delete( $activity['object'] ?? null, $activity['actor'] ?? '' );
+
 		$object_type = $activity['object']['type'] ?? '';
 
 		switch ( $object_type ) {
@@ -150,12 +153,12 @@ class Update {
 		/*
 		 * The object may be a string IRI instead of an embedded object,
 		 * in which case we need to fetch the actor data remotely.
-		 * We use Http::get_remote_object() directly instead of
+		 * We use Proxy::get() directly instead of
 		 * get_remote_metadata_by_actor() because the latter returns the
 		 * stale locally cached copy via fetch_by_uri().
 		 */
 		if ( ! \is_array( $actor ) || ! isset( $actor['id'] ) ) {
-			$object = Http::get_remote_object( $activity['actor'], false );
+			$object = Proxy::get( $activity['actor'], array( 'cached' => false ) );
 
 			if ( ! \is_wp_error( $object ) && \is_array( $object ) ) {
 				$actor = $object;

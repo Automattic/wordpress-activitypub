@@ -33,7 +33,7 @@ class Embed {
 	 */
 	public static function get_html( $url, $inline_css = true ) {
 		// Try to get ActivityPub representation.
-		$object = Http::get_remote_object( $url );
+		$object = Proxy::get( $url );
 
 		if ( \is_wp_error( $object ) || ! is_activity_object( $object ) ) {
 			return false;
@@ -67,7 +67,7 @@ class Embed {
 		 * beyond the first one.
 		 */
 		if ( ! $is_actor && $author_url ) {
-			$author = Http::get_remote_object( $author_url );
+			$author = Proxy::get( $author_url );
 
 			if ( \is_wp_error( $author ) ) {
 				$author = array();
@@ -312,7 +312,7 @@ class Embed {
 			 * This block is triggered for requests from the Federated Reply block, where we
 			 * want to inform users whether post authors will be notified of the reply.
 			 */
-			$object = Http::get_remote_object( $request->get_param( 'url' ) );
+			$object = Proxy::get( $request->get_param( 'url' ) );
 
 			if ( \is_wp_error( $object ) || ! is_activity_object( $object ) ) {
 				$response = new \WP_Error( 'oembed_invalid_url', \get_status_header_desc( 404 ), array( 'status' => 404 ) );

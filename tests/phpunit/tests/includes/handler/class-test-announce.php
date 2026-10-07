@@ -351,6 +351,114 @@ class Test_Announce extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The relay forbids redirects for the fetch of the announced activity, also when the
+	 * announced URL carries a fragment.
+	 *
+	 * `Proxy::get()` strips the fragment before it fetches, so the guard has to recognize the
+	 * request by the same normalized URL, or a redirect would be followed and the host check
+	 * below would still see the trusted host.
+	 *
+	 * @dataProvider announced_url_provider
+	 *
+	 * @covers ::handle_announce
+	 *
+	 * @param string $object_url The URL the Announce names.
+	 * @param string $message    Assertion message.
+	 */
+	public function test_handle_announce_forbids_redirects_for_the_announced_activity( $object_url, $message ) {
+		$fetched  = 'https://example.com/activities/undo-1';
+		$captured = array();
+
+		$capture = function ( $args, $url ) use ( &$captured ) {
+			$captured[ $url ] = $args['redirection'] ?? null;
+
+			return $args;
+		};
+		$serve   = function ( $pre, $args, $url ) use ( $fetched ) {
+			if ( $fetched !== $url ) {
+				return $pre;
+			}
+
+			return array(
+				'response' => array( 'code' => 200 ),
+				'headers'  => array( 'content-type' => 'application/activity+json' ),
+				'body'     => \wp_json_encode(
+					array(
+						'id'     => $fetched,
+						'type'   => 'Undo',
+						'actor'  => 'https://example.com/users/bob',
+						'object' => 'https://example.com/acts/reply-1',
+					)
+				),
+			);
+		};
+
+		\add_filter( 'http_request_args', $capture, 99, 2 );
+		\add_filter( 'pre_http_request', $serve, 10, 3 );
+
+		$announce = array(
+			'actor'  => 'https://example.com/users/bob',
+			'type'   => 'Announce',
+			'id'     => 'https://example.com/a/1',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => $object_url,
+		);
+		Announce::handle_announce( $announce, $this->user_id, Activity::init_from_array( $announce ) );
+
+		\remove_filter( 'pre_http_request', $serve, 10 );
+		\remove_filter( 'http_request_args', $capture, 99 );
+
+		$this->assertSame( 0, $captured[ $fetched ] ?? null, $message );
+	}
+
+	/**
+	 * An announced URL that hides its authority behind `user@host` is not fetched at all.
+	 *
+	 * RFC 9110 asks a recipient to treat userinfo in an http(s) URI as an error, so the proxy
+	 * refuses the identifier instead of cleaning it up into a URL the sender never sent.
+	 *
+	 * @covers ::handle_announce
+	 */
+	public function test_handle_announce_refuses_an_announced_url_with_userinfo() {
+		$requested = array();
+		$watch     = function ( $pre, $args, $url ) use ( &$requested ) {
+			$requested[] = $url;
+
+			return $pre;
+		};
+		\add_filter( 'pre_http_request', $watch, 10, 3 );
+
+		$inbox = new \MockAction();
+		\add_action( 'activitypub_inbox', array( $inbox, 'action' ) );
+
+		$announce = array(
+			'actor'  => 'https://example.com/users/bob',
+			'type'   => 'Announce',
+			'id'     => 'https://example.com/a/1',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => 'https://anything@example.com/activities/undo-1',
+		);
+		Announce::handle_announce( $announce, $this->user_id, Activity::init_from_array( $announce ) );
+
+		\remove_filter( 'pre_http_request', $watch, 10 );
+
+		$this->assertSame( array(), $requested, 'An identifier with userinfo is never requested.' );
+		$this->assertSame( 0, $inbox->get_call_count(), 'Nothing is relayed for it.' );
+	}
+
+	/**
+	 * URL spellings the announced activity may arrive as.
+	 *
+	 * @return array[]
+	 */
+	public function announced_url_provider() {
+		return array(
+			'plain'    => array( 'https://example.com/activities/undo-1', 'A plain URL is fetched without redirects.' ),
+			'fragment' => array( 'https://example.com/activities/undo-1#x', 'A fragment must not lift the redirect ban.' ),
+		);
+	}
+
+	/**
 	 * The reported PoC shape: an Undo naming a victim actor, embedded inline in the
 	 * Announce, must never be dispatched from that inline copy. It is resolved from
 	 * its id, and an unfetchable / unverifiable activity is dropped.

@@ -13,7 +13,10 @@ namespace Activitypub\Rest;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
 use Activitypub\OAuth\Scope;
+use Activitypub\Proxy;
 use Activitypub\Webfinger;
+
+use function Activitypub\is_actor;
 
 /**
  * Proxy Controller.
@@ -175,25 +178,7 @@ class Proxy_Controller extends \WP_REST_Controller {
 	public function create_item( $request ) {
 		$url = $request->get_param( 'id' );
 
-		// Try to fetch as an actor first using Remote_Actors which handles caching.
-		$post = Remote_Actors::fetch_by_various( $url );
-
-		if ( ! \is_wp_error( $post ) ) {
-			$actor = Remote_Actors::get_actor( $post );
-
-			if ( ! \is_wp_error( $actor ) ) {
-				$response = new \WP_REST_Response( $actor->to_array(), 200 );
-				$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
-
-				return $response;
-			}
-		}
-
-		/*
-		 * Fall back to fetching as a generic object. Actors are already resolved and
-		 * cached above via fetch_by_various(), so this path only proxies the object.
-		 */
-		$object = Http::get_remote_object( $url );
+		$object = Proxy::get( $url );
 
 		if ( \is_wp_error( $object ) ) {
 			/*
@@ -210,6 +195,11 @@ class Proxy_Controller extends \WP_REST_Controller {
 				\__( 'Failed to fetch the remote object.', 'activitypub' ),
 				array( 'status' => $status ?: 502 )
 			);
+		}
+
+		// Existing actor features still need an anchor, but the profile returned comes from the Proxy.
+		if ( is_actor( $object ) && ! empty( $object['id'] ) && \is_string( $object['id'] ) && \is_wp_error( Remote_Actors::get_by_uri( $object['id'] ) ) ) {
+			Remote_Actors::upsert( $object );
 		}
 
 		$response = new \WP_REST_Response( $object, 200 );
@@ -252,7 +242,7 @@ class Proxy_Controller extends \WP_REST_Controller {
 	public function get_stream( $request ) {
 		$remote_id = $request->get_param( 'id' );
 
-		$object = Http::get_remote_object( $remote_id );
+		$object = Proxy::get( $remote_id );
 
 		if ( \is_wp_error( $object ) ) {
 			return new \WP_Error(
