@@ -208,6 +208,45 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a client-authored reply is not given reply context by the server.
+	 *
+	 * A reply written through the ActivityPub API is stored with the client-authored
+	 * marker: the client sent the content and its mentions, so the server adds none,
+	 * even when the client mentioned nobody.
+	 *
+	 * @covers ::to_object
+	 */
+	public function test_content_without_reply_context_for_client_authored_comment() {
+		// Create a parent ActivityPub comment.
+		$parent_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'    => self::$post_id,
+				'comment_author_url' => 'https://remote.example/@author',
+				'comment_meta'       => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		// Create a reply comment as an app would have written it.
+		$test_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => self::$post_id,
+				'comment_parent'  => $parent_comment_id,
+				'comment_content' => 'thanks',
+				'comment_meta'    => array(
+					'_activitypub_client_authored' => 1,
+				),
+			)
+		);
+
+		$object = ( new Comment( get_comment( $test_comment_id ) ) )->to_object();
+
+		$this->assertSame( '<p>thanks</p>', $object->get_content() );
+		$this->assertEmpty( $object->get_tag(), 'The reply target must not be tagged on the server\'s own initiative.' );
+	}
+
+	/**
 	 * Data provider for content that already mentions the reply target.
 	 *
 	 * @return array[] Test parameters.

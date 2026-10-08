@@ -224,6 +224,28 @@ class Comment {
 	}
 
 	/**
+	 * Check if a comment was authored through the ActivityPub API.
+	 *
+	 * Comments created by a local user through the outbox carry the client's own
+	 * mentions, so the server does not add reply context of its own.
+	 *
+	 * @since unreleased
+	 *
+	 * @param mixed $comment Comment object or ID.
+	 *
+	 * @return boolean True if the comment was authored through the API, false otherwise.
+	 */
+	public static function was_client_authored( $comment ) {
+		$comment = \get_comment( $comment );
+
+		if ( ! $comment ) {
+			return false;
+		}
+
+		return (bool) \get_comment_meta( $comment->comment_ID, '_activitypub_client_authored', true );
+	}
+
+	/**
 	 * Check if a comment was federated.
 	 *
 	 * This function checks if a comment was federated via ActivityPub.

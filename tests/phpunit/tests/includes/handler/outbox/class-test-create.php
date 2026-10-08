@@ -479,6 +479,37 @@ class Test_Create extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test outgoing reply is marked as client-authored.
+	 *
+	 * The marker lets the transformer skip the server-side reply context: the
+	 * client sent its own mentions, so the server adds none.
+	 *
+	 * @covers ::handle_create
+	 */
+	public function test_outgoing_reply_is_marked_client_authored() {
+		\remove_action( 'wp_insert_comment', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity_on_insert' ) );
+
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$post_id  = self::factory()->post->create( array( 'post_author' => $user_id ) );
+		$activity = array(
+			'type'   => 'Create',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => '<p>Reply from an app.</p>',
+				'inReplyTo' => \get_permalink( $post_id ),
+			),
+		);
+
+		$result = Create::handle_create( $activity, $user_id );
+
+		$this->assertInstanceOf( 'WP_Comment', $result );
+		$this->assertEquals( 1, \get_comment_meta( $result->comment_ID, '_activitypub_client_authored', true ) );
+
+		\add_action( 'wp_insert_comment', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity_on_insert' ), 10, 2 );
+	}
+
+	/**
 	 * Test outgoing quotes return false.
 	 *
 	 * @covers ::handle_create
