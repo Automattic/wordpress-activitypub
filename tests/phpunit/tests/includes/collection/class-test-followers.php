@@ -11,6 +11,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Blocked_Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Tests\Uri_Test_Cases;
 
 /**
  * Test class for Activitypub Followers.
@@ -18,6 +19,7 @@ use Activitypub\Collection\Remote_Actors;
  * @coversDefaultClass \Activitypub\Collection\Followers
  */
 class Test_Followers extends \WP_UnitTestCase {
+	use Uri_Test_Cases;
 
 	/**
 	 * Actors.
@@ -98,6 +100,32 @@ class Test_Followers extends \WP_UnitTestCase {
 	public function tear_down() {
 		\remove_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ) );
 		parent::tear_down();
+	}
+
+	/**
+	 * Adding a follower must allow lookup by the original actor ID.
+	 *
+	 * @covers ::add
+	 * @covers ::get_by_uri
+	 * @dataProvider uri_provider
+	 * @group uri-lookup
+	 * @param string $uri Original actor ID.
+	 */
+	public function test_get_by_uri_with_special_characters( $uri ) {
+		$actor    = $this->actor_for_uri( $uri );
+		$metadata = static function ( $pre, $actor_uri ) use ( $actor, $uri ) {
+			return $actor_uri === $uri ? $actor : $pre;
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata, 9, 2 );
+		try {
+			$post_id = Followers::add( 1, $uri );
+		} finally {
+			\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata, 9 );
+		}
+		$this->assertIsInt( $post_id );
+		$found = Followers::get_by_uri( 1, $uri );
+		$this->assertInstanceOf( 'WP_Post', $found );
+		$this->assertSame( $post_id, $found->ID );
 	}
 
 	/**

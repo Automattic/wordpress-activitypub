@@ -11,6 +11,7 @@ use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Inbox;
 use Activitypub\Post_Types;
+use Activitypub\Tests\Uri_Test_Cases;
 
 /**
  * Test class for Inbox collection.
@@ -18,6 +19,8 @@ use Activitypub\Post_Types;
  * @coversDefaultClass \Activitypub\Collection\Inbox
  */
 class Test_Inbox extends \WP_UnitTestCase {
+	use Uri_Test_Cases;
+
 	/**
 	 * Set up the test environment.
 	 */
@@ -28,7 +31,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * An activity whose ID contains an ampersand must be found again by that ID.
+	 * An activity ID containing special characters must be found after saving.
 	 *
 	 * Every WordPress peer federates activity IDs of the form `?post_type=ap_outbox&p=123`,
 	 * so the round trip has to survive the escaping WordPress applies to the GUID column.
@@ -36,10 +39,11 @@ class Test_Inbox extends \WP_UnitTestCase {
 	 *
 	 * @covers ::add
 	 * @covers ::get_by_guid
+	 * @dataProvider uri_provider
+	 * @group uri-lookup
+	 * @param string $activity_id Original activity ID.
 	 */
-	public function test_get_by_guid_with_ampersand() {
-		$activity_id = 'https://remote.example.com/?post_type=ap_outbox&p=123';
-
+	public function test_get_by_guid_with_special_characters( $activity_id ) {
 		$activity = new Activity();
 		$activity->set_id( $activity_id );
 		$activity->set_type( 'Like' );
@@ -51,8 +55,29 @@ class Test_Inbox extends \WP_UnitTestCase {
 
 		$found = Inbox::get_by_guid( $activity_id );
 
-		$this->assertInstanceOf( 'WP_Post', $found, 'An activity ID containing an ampersand must be found again.' );
+		$this->assertInstanceOf( 'WP_Post', $found, 'The original activity ID must find the saved inbox item.' );
 		$this->assertSame( $inbox_id, $found->ID );
+	}
+
+	/**
+	 * Deduplication must find an activity after saving its original ID.
+	 *
+	 * @covers ::deduplicate
+	 * @dataProvider uri_provider
+	 * @group uri-lookup
+	 * @param string $uri Original activity ID.
+	 */
+	public function test_deduplicate_with_special_characters( $uri ) {
+		$activity = new Activity();
+		$activity->set_id( $uri );
+		$activity->set_type( 'Like' );
+		$activity->set_actor( 'https://example.com/actor' );
+		$activity->set_object( 'https://example.com/object' );
+		$post_id = Inbox::add( $activity, 1 );
+		$this->assertIsInt( $post_id );
+		$found = Inbox::deduplicate( $uri );
+		$this->assertInstanceOf( 'WP_Post', $found );
+		$this->assertSame( $post_id, $found->ID );
 	}
 
 	/**

@@ -10,6 +10,7 @@ namespace Activitypub\Tests\Collection;
 use Activitypub\Cache\Media;
 use Activitypub\Collection\Remote_Posts;
 use Activitypub\Post_Types;
+use Activitypub\Tests\Uri_Test_Cases;
 
 use function Activitypub\object_to_uri;
 
@@ -19,6 +20,7 @@ use function Activitypub\object_to_uri;
  * @coversDefaultClass \Activitypub\Collection\Remote_Posts
  */
 class Test_Remote_Posts extends \WP_UnitTestCase {
+	use Uri_Test_Cases;
 
 	/**
 	 * Set up test environment.
@@ -413,17 +415,18 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * An object whose ID contains an ampersand must be found again by that ID.
+	 * An object ID containing special characters must be found after saving.
 	 *
 	 * WordPress peers publish object IDs like `?p=123&foo=bar`, and WordPress escapes an
 	 * explicitly passed GUID, so the round trip has to survive that escaping.
 	 *
 	 * @covers ::add
 	 * @covers ::get_by_guid
+	 * @dataProvider uri_provider
+	 * @group uri-lookup
+	 * @param string $object_id Original object ID.
 	 */
-	public function test_get_by_guid_with_ampersand() {
-		$object_id = 'https://example.com/?post_type=post&p=789';
-
+	public function test_get_by_guid_with_special_characters( $object_id ) {
 		$activity = array(
 			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
@@ -440,7 +443,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 
 		$retrieved_post = Remote_Posts::get_by_guid( $object_id );
 
-		$this->assertInstanceOf( '\WP_Post', $retrieved_post, 'An object ID containing an ampersand must be found again.' );
+		$this->assertInstanceOf( '\WP_Post', $retrieved_post, 'The original object ID must find the saved remote post.' );
 		$this->assertEquals( $post->ID, $retrieved_post->ID );
 	}
 

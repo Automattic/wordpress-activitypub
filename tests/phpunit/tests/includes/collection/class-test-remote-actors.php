@@ -12,6 +12,7 @@ use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
 use Activitypub\Mention;
 use Activitypub\Tests\Remote_Request_Stub;
+use Activitypub\Tests\Uri_Test_Cases;
 
 /**
  * Class Test_Remote_Actors
@@ -20,6 +21,54 @@ use Activitypub\Tests\Remote_Request_Stub;
  */
 class Test_Remote_Actors extends \WP_UnitTestCase {
 	use Remote_Request_Stub;
+	use Uri_Test_Cases;
+
+	/**
+	 * Saving an actor must allow lookup by the original ID.
+	 *
+	 * @covers ::create
+	 * @covers ::get_by_uri
+	 * @dataProvider uri_provider
+	 * @group uri-lookup
+	 * @param string $uri Original actor ID.
+	 */
+	public function test_get_by_uri_with_special_characters( $uri ) {
+		$post_id = Remote_Actors::create( $this->actor_for_uri( $uri ) );
+		$this->assertIsInt( $post_id );
+		$found = Remote_Actors::get_by_uri( $uri );
+		$this->assertInstanceOf( 'WP_Post', $found );
+		$this->assertSame( $post_id, $found->ID );
+	}
+
+	/**
+	 * Bulk lookups must return the original IDs of saved actors.
+	 *
+	 * @covers ::get_existing_uris
+	 * @dataProvider uri_provider
+	 * @group uri-lookup
+	 * @param string $uri Original actor ID.
+	 */
+	public function test_get_existing_uris_with_special_characters( $uri ) {
+		$this->assertIsInt( Remote_Actors::create( $this->actor_for_uri( $uri ) ) );
+		$this->assertSame( array( $uri => true ), Remote_Actors::get_existing_uris( array( $uri, 'https://example.com/absent' ) ) );
+	}
+
+	/**
+	 * Repeated upserts must reuse the same actor for the original ID.
+	 *
+	 * @covers ::upsert
+	 * @dataProvider uri_provider
+	 * @group uri-lookup
+	 * @param string $uri Original actor ID.
+	 */
+	public function test_upsert_with_special_characters( $uri ) {
+		$actor  = $this->actor_for_uri( $uri );
+		$first  = Remote_Actors::upsert( $actor );
+		$second = Remote_Actors::upsert( $actor );
+		$this->assertIsInt( $first );
+		$this->assertIsInt( $second );
+		$this->assertSame( $first, $second );
+	}
 
 	/**
 	 * Following a key or owner reference must not change the signing authority.
