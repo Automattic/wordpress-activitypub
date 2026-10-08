@@ -141,14 +141,13 @@ class Followers {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = %s AND pm.meta_value = %d AND p.guid IN (%s, %s) ORDER BY p.ID ASC",
+				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = %s AND pm.meta_value = %d AND p.guid = %s",
 				array(
 					Remote_Actors::POST_TYPE,
 					self::FOLLOWER_META_KEY,
 					$user_id,
-					// What `pre_post_guid` stores on this WordPress version, and the unfiltered form; prepare() handles the escaping.
+					// What `pre_post_guid` stores on this WordPress version; prepare() handles the escaping.
 					\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $actor ), 0, 'db' ) ),
-					\esc_url_raw( $actor ),
 				)
 			)
 		);

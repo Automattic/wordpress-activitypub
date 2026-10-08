@@ -263,10 +263,9 @@ class Remote_Actors {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE guid IN (%s, %s) AND post_type=%s ORDER BY ID ASC",
-				// What `pre_post_guid` stores on this WordPress version, and the unfiltered form; prepare() handles the SQL escaping.
+				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
+				// What `pre_post_guid` stores on this WordPress version; prepare() handles the SQL escaping.
 				\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $actor_uri ), 0, 'db' ) ),
-				\esc_url_raw( $actor_uri ),
 				self::POST_TYPE
 			)
 		);
@@ -366,11 +365,10 @@ class Remote_Actors {
 		$existing = array();
 
 		foreach ( \array_chunk( \array_values( \array_unique( $uris ) ), 200 ) as $chunk ) {
-			// Map each stored spelling back to the URI the caller asked for, the same pair get_by_uri() matches.
+			// Map each stored spelling back to the URI the caller asked for, the same value get_by_uri() matches.
 			$guids = array();
 			foreach ( $chunk as $uri ) {
 				$guids[ \wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $uri ), 0, 'db' ) ) ] = $uri;
-				$guids[ \esc_url_raw( $uri ) ] = $uri;
 			}
 
 			$placeholders = \implode( ', ', \array_fill( 0, \count( $guids ), '%s' ) );

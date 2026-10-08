@@ -322,6 +322,7 @@ class Test_Following extends \WP_UnitTestCase {
 		// Create a test post (remote actor).
 		$post_id = self::factory()->post->create(
 			array(
+				'guid'        => 'https://example.com/users/unfollow-test',
 				'post_title'  => 'Test Remote Actor',
 				'post_status' => 'publish',
 				'post_type'   => Remote_Actors::POST_TYPE,
