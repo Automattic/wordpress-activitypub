@@ -90,7 +90,9 @@ class Test_Trait_Rate_Limit extends \WP_UnitTestCase {
 	 */
 	private function counted() {
 		$counted = new \ReflectionProperty( \get_class( $this->instance ), 'counted' );
-		$counted->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$counted->setAccessible( true );
+		}
 
 		return $counted;
 	}

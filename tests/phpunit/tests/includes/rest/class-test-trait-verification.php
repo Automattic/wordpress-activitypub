@@ -755,7 +755,9 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		 * This avoids coupling the test to the full verify_signature flow.
 		 */
 		$method = new \ReflectionMethod( $this->instance, 'verify_key_id' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 		$result = $method->invoke( $this->instance, $request, $key_id );
 
 		if ( $should_pass ) {
@@ -846,7 +848,9 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		 * This avoids coupling the test to the full verify_signature flow.
 		 */
 		$method = new \ReflectionMethod( $this->instance, 'verify_activity_id' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 		$result = $method->invoke( $this->instance, $request );
 
 		if ( $should_pass ) {
