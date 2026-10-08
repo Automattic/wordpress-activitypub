@@ -154,7 +154,7 @@ class Create {
 			return false;
 		}
 		if ( ! isset( $activity['object']['content'] ) ) {
-			foreach ( Remote_Posts::extract_attachments( $activity['object'] ) as $attachment ) {
+			foreach ( Remote_Posts::extract_attachments( $activity['object'], 1, 'image' ) as $attachment ) {
 				if ( 'image' === $attachment['type'] && \esc_url_raw( $attachment['url'], array( 'http', 'https' ) ) ) {
 					return $valid;
 				}
