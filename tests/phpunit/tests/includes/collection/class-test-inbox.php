@@ -60,18 +60,22 @@ class Test_Inbox extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * An inbox item saved by an older release with an `esc_url()` GUID must still be found.
+	 * Inbox items saved by older releases must still be found by their original ID.
+	 *
+	 * Releases before #3612 saved the raw ID, and #3612 saved it through `esc_url()`;
+	 * the save filters then stored `&amp;` and `&#038;` respectively.
 	 *
 	 * @covers ::get_by_guid
+	 * @covers ::deduplicate
+	 * @dataProvider uri_provider
 	 * @group uri-lookup
+	 * @param string $uri Original activity ID.
 	 */
-	public function test_get_by_guid_finds_legacy_esc_url_guid() {
+	public function test_get_by_guid_finds_legacy_guids( $uri ) {
 		global $wpdb;
 
-		$activity_id = 'https://remote.example.com/?post_type=ap_outbox&p=123';
-
 		$activity = new Activity();
-		$activity->set_id( $activity_id );
+		$activity->set_id( $uri );
 		$activity->set_type( 'Like' );
 		$activity->set_actor( 'https://remote.example.com/users/testuser' );
 		$activity->set_object( 'https://remote.example.com/objects/456' );
@@ -79,14 +83,23 @@ class Test_Inbox extends \WP_UnitTestCase {
 		$inbox_id = Inbox::add( $activity, 1 );
 		$this->assertIsInt( $inbox_id );
 
-		// Write the `&#038;` spelling older releases stored on WordPress 7.1 and earlier.
-		$wpdb->update( $wpdb->posts, array( 'guid' => \esc_url( $activity_id ) ), array( 'ID' => $inbox_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		\clean_post_cache( $inbox_id );
+		$legacy_guids = array(
+			'esc_url' => \esc_url( $uri ),
+			'raw'     => \wp_unslash( \sanitize_post_field( 'guid', $uri, 0, 'db' ) ),
+		);
 
-		$found = Inbox::get_by_guid( $activity_id );
+		foreach ( $legacy_guids as $label => $legacy_guid ) {
+			$wpdb->update( $wpdb->posts, array( 'guid' => $legacy_guid ), array( 'ID' => $inbox_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			\clean_post_cache( $inbox_id );
 
-		$this->assertInstanceOf( 'WP_Post', $found );
-		$this->assertSame( $inbox_id, $found->ID );
+			$found = Inbox::get_by_guid( $uri );
+			$this->assertInstanceOf( 'WP_Post', $found, "A {$label} GUID saved by an older release must be found." );
+			$this->assertSame( $inbox_id, $found->ID );
+
+			$primary = Inbox::deduplicate( $uri );
+			$this->assertInstanceOf( 'WP_Post', $primary, "Deduplication must find a {$label} GUID saved by an older release." );
+			$this->assertSame( $inbox_id, $primary->ID );
+		}
 	}
 
 	/**

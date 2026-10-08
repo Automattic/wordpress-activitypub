@@ -448,6 +448,49 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Remote posts saved by older releases must still be found by their original ID.
+	 *
+	 * Releases before #3612 saved the raw ID, and #3612 saved it through `esc_url()`;
+	 * the save filters then stored `&amp;` and `&#038;` respectively.
+	 *
+	 * @covers ::get_by_guid
+	 * @dataProvider uri_provider
+	 * @group uri-lookup
+	 * @param string $object_id Original object ID.
+	 */
+	public function test_get_by_guid_finds_legacy_guids( $object_id ) {
+		global $wpdb;
+
+		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
+			'object' => array(
+				'id'           => $object_id,
+				'type'         => 'Note',
+				'name'         => 'Legacy Object',
+				'content'      => '<p>Test content</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+			),
+		);
+
+		$post = Remote_Posts::add( $activity, 1 );
+		$this->assertInstanceOf( '\WP_Post', $post );
+
+		$legacy_guids = array(
+			'esc_url' => \esc_url( $object_id ),
+			'raw'     => \wp_unslash( \sanitize_post_field( 'guid', $object_id, 0, 'db' ) ),
+		);
+
+		foreach ( $legacy_guids as $label => $legacy_guid ) {
+			$wpdb->update( $wpdb->posts, array( 'guid' => $legacy_guid ), array( 'ID' => $post->ID ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			\clean_post_cache( $post->ID );
+
+			$found = Remote_Posts::get_by_guid( $object_id );
+			$this->assertInstanceOf( '\WP_Post', $found, "A {$label} GUID saved by an older release must be found." );
+			$this->assertSame( $post->ID, $found->ID );
+		}
+	}
+
+	/**
 	 * Test getting a non-existent object by GUID.
 	 *
 	 * @covers ::get_by_guid
