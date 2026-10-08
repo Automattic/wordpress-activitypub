@@ -61,7 +61,9 @@ class Test_Extra_Fields extends \WP_UnitTestCase {
 		// WordPress converts the HTML entity &#8217; to the UTF-8 right single quotation mark character.
 		$expected_name = "Void\u{2019}s Profile";
 		$this->assertEquals( $expected_name, $attachments[0]['name'] );
-		$this->assertStringContainsString( '"quotes"', $attachments[0]['value'] );
+		// wptexturize() curls the quotes when the stored content holds them literally, which WordPress 7.2's wp_kses() does.
+		$this->assertMatchesRegularExpression( '/["\x{201C}]quotes["\x{201D}]/u', $attachments[0]['value'] );
+		$this->assertStringNotContainsString( '&quot;', $attachments[0]['value'] );
 		$this->assertStringContainsString( '& ampersands', $attachments[0]['value'] );
 	}
 

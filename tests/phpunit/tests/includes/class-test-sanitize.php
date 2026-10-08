@@ -16,6 +16,7 @@ use Activitypub\Sanitize;
  * @coversDefaultClass \Activitypub\Sanitize
  */
 class Test_Sanitize extends \WP_UnitTestCase {
+	use Equal_Html;
 
 	/**
 	 * Data provider for URL list tests.
@@ -681,7 +682,7 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	 * @param string $expected Expected output.
 	 */
 	public function test_clean_html( $input, $expected ) {
-		$this->assertSame( $expected, Sanitize::clean_html( $input ) );
+		$this->assert_equal_html( $expected, Sanitize::clean_html( $input ) );
 	}
 
 	/**
