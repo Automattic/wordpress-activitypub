@@ -546,8 +546,6 @@ class Interactions {
 	 * @return array Image attachments.
 	 */
 	private static function get_image_attachments( $activity_object ) {
-		$attachments = \wp_list_filter( Remote_Posts::extract_attachments( $activity_object ), array( 'type' => 'image' ) );
-
 		/**
 		 * Filters the maximum number of image attachments displayed in a Fediverse comment.
 		 *
@@ -558,7 +556,7 @@ class Interactions {
 		 */
 		$limit = \max( 0, (int) \apply_filters( 'activitypub_comment_image_limit', 3, $activity_object ) );
 
-		return \array_slice( $attachments, 0, $limit );
+		return Remote_Posts::extract_attachments( $activity_object, $limit, 'image' );
 	}
 
 	/**

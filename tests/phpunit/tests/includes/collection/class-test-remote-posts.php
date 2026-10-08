@@ -20,6 +20,82 @@ use function Activitypub\object_to_uri;
  */
 class Test_Remote_Posts extends \WP_UnitTestCase {
 	/**
+	 * A single attachment URL is handled like the same URL in a list.
+	 *
+	 * @covers ::extract_attachments
+	 */
+	public function test_extract_single_attachment_url() {
+		$url      = 'https://example.com/photo.jpg';
+		$expected = array(
+			array(
+				'url'  => $url,
+				'alt'  => '',
+				'type' => 'image',
+			),
+		);
+		foreach ( array( 'attachment', 'image' ) as $field ) {
+			foreach ( array( $url, array( $url ) ) as $value ) {
+				$this->assertSame( $expected, Remote_Posts::extract_attachments( array( $field => $value ) ) );
+			}
+			$this->assertSame( array(), Remote_Posts::extract_attachments( array( $field => 'http://127.0.0.1/photo.jpg' ) ) );
+		}
+	}
+
+	/**
+	 * Extraction bounds validation attempts, including lists with no usable images.
+	 *
+	 * @dataProvider bounded_attachment_provider
+	 * @covers ::extract_attachments
+	 *
+	 * @param int    $limit       Requested result limit.
+	 * @param string $type        Requested attachment type.
+	 * @param string $item_type   Type of each supplied attachment.
+	 * @param int    $port        Attachment URL port.
+	 * @param int    $expected    Expected attachment count.
+	 * @param int    $validations Expected URL validation count.
+	 */
+	public function test_extract_attachments_bounds_validation( $limit, $type, $item_type, $port, $expected, $validations ) {
+		$items = array();
+		for ( $i = 1; $i <= 50; ++$i ) {
+			$items[] = array(
+				'type' => $item_type,
+				'url'  => 'https://8.8.4.' . $i . ':' . $port . '/bounded.jpg',
+			);
+		}
+		$count = 0;
+		$track = static function ( $ports ) use ( &$count ) {
+			++$count;
+			return $ports;
+		};
+		foreach ( array( 'attachment', 'image' ) as $field ) {
+			\add_filter( 'http_allowed_safe_ports', $track );
+			$count  = 0;
+			$result = Remote_Posts::extract_attachments( array( $field => $items ), $limit, $type );
+			\remove_filter( 'http_allowed_safe_ports', $track );
+			$this->assertCount( $expected, $result );
+			$this->assertSame( $validations, $count );
+		}
+	}
+
+	/**
+	 * Result limits and candidate limits are separate.
+	 *
+	 * @return array Test cases.
+	 */
+	public function bounded_attachment_provider() {
+		return array(
+			'first image'       => array( 1, 'image', 'Image', 443, 1, 1 ),
+			'three images'      => array( 3, 'image', 'Image', 443, 3, 3 ),
+			'no images'         => array( 0, 'image', 'Image', 443, 0, 0 ),
+			'negative limit'    => array( -1, 'image', 'Image', 443, 0, 0 ),
+			'invalid images'    => array( 3, 'image', 'Image', 22, 0, 20 ),
+			'other media'       => array( 3, 'image', 'Video', 443, 0, 0 ),
+			'default media'     => array( 20, '', 'Video', 443, 20, 20 ),
+			'larger site limit' => array( 25, 'image', 'Image', 443, 25, 25 ),
+		);
+	}
+
+	/**
 	 * Invalid attachment URLs are skipped for both attachments and representative images.
 	 *
 	 * @covers ::extract_attachments

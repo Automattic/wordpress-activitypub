@@ -271,18 +271,18 @@ class Test_Interactions extends \WP_UnitTestCase {
 			),
 			array(
 				'type' => 'Audio',
-				'url'  => 'https://example.com/audio.mp3',
+				'url'  => 'https://8.8.4.1:443/audio.mp3',
 			),
 			array(
 				'type' => 'Video',
-				'url'  => 'https://example.com/video.mp4',
+				'url'  => 'https://8.8.4.1:443/video.mp4',
 			),
 		);
 		for ( $i = 1; $i <= 5; ++$i ) {
 			$activity['object']['attachment'][] = array(
 				'type'      => 'Document',
 				'mediaType' => 'image/jpeg',
-				'url'       => 'https://example.com/photo-' . $i . '.jpg',
+				'url'       => 'https://8.8.4.1:443/photo-' . $i . '.jpg',
 			);
 		}
 		$limit_filter = static function () use ( $limit ) {
@@ -292,8 +292,18 @@ class Test_Interactions extends \WP_UnitTestCase {
 			\add_filter( 'activitypub_comment_image_limit', $limit_filter );
 		}
 
-		$comment_id = Interactions::add_comment( $activity );
-		$created    = \get_comment( $comment_id )->comment_content;
+		$validations = 0;
+		$track       = static function ( $ports, $host ) use ( &$validations ) {
+			if ( '8.8.4.1' === $host ) {
+				++$validations;
+			}
+			return $ports;
+		};
+		\add_filter( 'http_allowed_safe_ports', $track, 10, 2 );
+		$comment_id         = Interactions::add_comment( $activity );
+		$created            = \get_comment( $comment_id )->comment_content;
+		$create_validations = $validations;
+		$validations        = 0;
 
 		$activity['object']['content'] = 'Updated text.';
 		foreach ( $activity['object']['attachment'] as &$attachment ) {
@@ -303,7 +313,10 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$result  = Interactions::update_comment( $activity );
 		$updated = \get_comment( $comment_id )->comment_content;
 		\remove_filter( 'activitypub_comment_image_limit', $limit_filter );
+		\remove_filter( 'http_allowed_safe_ports', $track );
 
+		$this->assertSame( $expected, $create_validations, 'Creation validates only the images it will display.' );
+		$this->assertSame( $expected, $validations, 'Updates validate only the images they will display.' );
 		$this->assertIsInt( $comment_id );
 		$this->assertNotWPError( $result );
 		$this->assertNotFalse( $result );
