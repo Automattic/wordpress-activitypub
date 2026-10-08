@@ -123,7 +123,9 @@ class Test_Attachment extends WP_UnitTestCase {
 
 		$transformer = new Attachment( get_post( self::$attachment_id ) );
 		$reflection  = new \ReflectionMethod( Attachment::class, 'get_attachment' );
-		$reflection->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$reflection->setAccessible( true );
+		}
 		$result = $reflection->invoke( $transformer );
 
 		// strip_tags() reads the bare `<` as an unclosed tag, a known core limitation.
@@ -140,7 +142,9 @@ class Test_Attachment extends WP_UnitTestCase {
 
 		$transformer = new Attachment( get_post( self::$attachment_id ) );
 		$reflection  = new \ReflectionMethod( Attachment::class, 'get_attachment' );
-		$reflection->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$reflection->setAccessible( true );
+		}
 		$result = $reflection->invoke( $transformer );
 
 		// Decode first, strip second: the revived tag is removed rather than federated.

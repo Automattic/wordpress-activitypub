@@ -116,7 +116,7 @@ class Interaction_Controller extends \WP_REST_Controller {
 		$uri    = $request->get_param( 'uri' );
 		$intent = $request->get_param( 'intent' );
 		// Aliases resolve to their activity type before dispatch, so callers below only ever see the canonical intent.
-		$intent       = self::INTENT_ALIASES[ $intent ] ?? $intent;
+		$intent       = \is_string( $intent ) ? ( self::INTENT_ALIASES[ $intent ] ?? $intent ) : $intent;
 		$redirect_url = '';
 		$object       = Proxy::get( $uri );
 

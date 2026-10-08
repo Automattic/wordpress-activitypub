@@ -24,6 +24,11 @@ class Sanitize {
 	 * embedded objects) or that browsers hide by default (dialogs,
 	 * templates), so we remove them entirely before wp_kses runs.
 	 *
+	 * MathML's `annotation-xml` is an alternative representation browsers never
+	 * render. With an HTML encoding it switches back to HTML parsing, and the
+	 * HTML-API-based wp_kses() of WordPress 7.2 then drops everything from the
+	 * enclosing `<math>` on, so it goes before wp_kses runs as well.
+	 *
 	 * @var array<string>
 	 */
 	const STRIP_ELEMENTS = array(
@@ -49,6 +54,7 @@ class Sanitize {
 		'applet',
 		'noembed',
 		'noframes',
+		'annotation-xml',
 	);
 
 	/**

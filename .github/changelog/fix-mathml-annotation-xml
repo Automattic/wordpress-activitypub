@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed math formulas, and everything after them, disappearing from posts on WordPress 7.2 when the formula includes an HTML annotation.

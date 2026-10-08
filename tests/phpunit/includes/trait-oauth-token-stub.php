@@ -81,7 +81,9 @@ trait OAuth_Token_Stub {
 	 */
 	protected function set_oauth_current_token( $token ) {
 		$property = ( new \ReflectionClass( OAuth_Server::class ) )->getProperty( 'current_token' );
-		$property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$property->setAccessible( true );
+		}
 		$property->setValue( null, $token );
 	}
 
