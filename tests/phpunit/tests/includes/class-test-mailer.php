@@ -642,7 +642,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			'invalid HTML'  => array(
 				json_decode( '"<ptest"' ),
 				// The HTML-API-based wp_kses() in WordPress 7.2 drops an incomplete tag; the legacy parser escapes it.
-				\function_exists( 'wp_sanitize_html_kses' ) ? '' : '&lt;ptest',
+				'' === \wp_kses( '<!-- incomplete token', array() ) ? '' : '&lt;ptest',
 			),
 		);
 	}
@@ -683,13 +683,11 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Capture email.
 		$wp_mail_callback = function ( $args ) use ( $expected, $user_id ) {
 			// Compare only the embedded content, which is what wp_kses() produced.
-			$opener  = '<div class="ap-subtitle p-summary e-content">';
-			$start   = \strpos( $args['message'], $opener );
-			$content = '';
-			if ( false !== $start ) {
-				$start  += \strlen( $opener );
-				$content = \trim( \substr( $args['message'], $start, \strpos( $args['message'], '</div>', $start ) - $start ) );
-			}
+			$opener = '<div class="ap-subtitle p-summary e-content">';
+			$start  = \strpos( $args['message'], $opener );
+			$this->assertNotFalse( $start, 'The message must embed the content.' );
+			$start  += \strlen( $opener );
+			$content = \trim( \substr( $args['message'], $start, \strpos( $args['message'], '</div>', $start ) - $start ) );
 			$this->assert_equal_html( $expected, $content );
 			$this->assertEquals( get_user_by( 'id', $user_id )->user_email, $args['to'] );
 
