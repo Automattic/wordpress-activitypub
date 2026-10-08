@@ -140,7 +140,9 @@ class Test_Blurhash extends \WP_UnitTestCase {
 			\imagefilledrectangle( $image, 0, 0, 15, 15, $color );
 		}
 		\imagepng( $image, $path );
-		\imagedestroy( $image );
+		if ( \PHP_VERSION_ID < 80000 ) {
+			\imagedestroy( $image );
+		}
 		return $path;
 	}
 
@@ -161,7 +163,9 @@ class Test_Blurhash extends \WP_UnitTestCase {
 		$color = \imagecolorallocate( $image, $red, $green, $blue );
 		\imagefilledrectangle( $image, 0, 0, 15, 15, $color );
 		\imagepng( $image, $path );
-		\imagedestroy( $image );
+		if ( \PHP_VERSION_ID < 80000 ) {
+			\imagedestroy( $image );
+		}
 		return $path;
 	}
 
@@ -188,7 +192,9 @@ class Test_Blurhash extends \WP_UnitTestCase {
 
 		\imagesavealpha( $image, true );
 		\imagepng( $image, $path );
-		\imagedestroy( $image );
+		if ( \PHP_VERSION_ID < 80000 ) {
+			\imagedestroy( $image );
+		}
 		return $path;
 	}
 

@@ -114,7 +114,9 @@ class Test_File extends WP_UnitTestCase {
 	 */
 	public function test_validate_mime_type_accepts_valid_jpeg() {
 		$method = new \ReflectionMethod( Avatar::class, 'validate_mime_type' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		// Copy test asset to a temp file (simulates download_url() output with .tmp extension).
 		$tmp_file = \wp_tempnam( 'test-image.jpg' );
@@ -140,7 +142,9 @@ class Test_File extends WP_UnitTestCase {
 	 */
 	public function test_validate_mime_type_rejects_text_file() {
 		$method = new \ReflectionMethod( Avatar::class, 'validate_mime_type' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$tmp_file = \wp_tempnam( 'test.txt' );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents

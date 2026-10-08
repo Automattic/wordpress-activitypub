@@ -42,7 +42,9 @@ class Test_Query_Feature_Stamp extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		$instance_property = new \ReflectionProperty( Query::class, 'instance' );
-		$instance_property->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$instance_property->setAccessible( true );
+		}
 		$instance_property->setValue( null, null );
 
 		parent::tear_down();
@@ -121,7 +123,9 @@ class Test_Query_Feature_Stamp extends \WP_UnitTestCase {
 
 		$reset = function () {
 			$instance_property = new \ReflectionProperty( Query::class, 'instance' );
-			$instance_property->setAccessible( true );
+			if ( \PHP_VERSION_ID < 80100 ) {
+				$instance_property->setAccessible( true );
+			}
 			$instance_property->setValue( null, null );
 		};
 

@@ -2156,7 +2156,9 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		);
 
 		$method = new \ReflectionMethod( $this->inbox_controller, 'verify_activity_id' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 		$result = $method->invoke( $this->inbox_controller, $request );
 
 		$this->assertWPError( $result );
