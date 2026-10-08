@@ -353,7 +353,9 @@ class Test_Server extends \WP_UnitTestCase {
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		$method = new \ReflectionMethod( Server::class, 'render_authorize_form' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		ob_start();
 		$method->invoke( null );

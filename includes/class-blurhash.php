@@ -399,12 +399,15 @@ class Blurhash {
 			// resources that persist until script end; the CLI
 			// backfill processes many images in one process and
 			// would leak all of them without explicit cleanup.
-			\imagedestroy( $original );
-			if ( null !== $scaled && false !== $scaled ) {
-				\imagedestroy( $scaled );
-			}
-			if ( null !== $canvas && false !== $canvas ) {
-				\imagedestroy( $canvas );
+			// imagedestroy() is deprecated since PHP 8.5 and a no-op since 8.0.
+			if ( \PHP_VERSION_ID < 80000 ) {
+				\imagedestroy( $original );
+				if ( null !== $scaled && false !== $scaled ) {
+					\imagedestroy( $scaled );
+				}
+				if ( null !== $canvas && false !== $canvas ) {
+					\imagedestroy( $canvas );
+				}
 			}
 		}
 	}

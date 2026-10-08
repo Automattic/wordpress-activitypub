@@ -959,7 +959,9 @@ class Test_Client extends \WP_UnitTestCase {
 	 */
 	private function call_normalize_client_metadata( $data ) {
 		$method = new \ReflectionMethod( Client::class, 'normalize_client_metadata' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		return $method->invoke( null, $data );
 	}

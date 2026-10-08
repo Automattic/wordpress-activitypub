@@ -670,7 +670,9 @@ class Test_Signature extends \WP_UnitTestCase {
 	 */
 	public function test_get_signed_data_requires_time_anchor() {
 		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Signature_Draft::class, 'get_signed_data' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 		$instance = new \Activitypub\Signature\Http_Signature_Draft();
 
 		$result = $method->invoke(
@@ -695,7 +697,9 @@ class Test_Signature extends \WP_UnitTestCase {
 	 */
 	public function test_get_signed_data_enforces_created_window() {
 		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Signature_Draft::class, 'get_signed_data' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 		$instance = new \Activitypub\Signature\Http_Signature_Draft();
 
 		$now        = \time();
@@ -731,7 +735,9 @@ class Test_Signature extends \WP_UnitTestCase {
 	 */
 	public function test_get_signed_data_rejects_empty_or_zero_created( $created ) {
 		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Signature_Draft::class, 'get_signed_data' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 		$instance = new \Activitypub\Signature\Http_Signature_Draft();
 
 		$result = $method->invoke(
@@ -768,7 +774,9 @@ class Test_Signature extends \WP_UnitTestCase {
 	 */
 	public function test_get_signed_data_rejects_missing_expires_value() {
 		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Signature_Draft::class, 'get_signed_data' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 		$instance = new \Activitypub\Signature\Http_Signature_Draft();
 
 		$result = $method->invoke(
@@ -792,7 +800,9 @@ class Test_Signature extends \WP_UnitTestCase {
 	 */
 	public function test_get_signed_data_enforces_expires_window() {
 		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Signature_Draft::class, 'get_signed_data' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 		$instance = new \Activitypub\Signature\Http_Signature_Draft();
 
 		$now = \time();
@@ -823,7 +833,9 @@ class Test_Signature extends \WP_UnitTestCase {
 	 */
 	public function test_get_signed_data_accepts_expires_as_time_anchor() {
 		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Signature_Draft::class, 'get_signed_data' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 		$instance = new \Activitypub\Signature\Http_Signature_Draft();
 
 		$result = $method->invoke(
@@ -912,7 +924,9 @@ class Test_Signature extends \WP_UnitTestCase {
 	 */
 	public function test_verify_rfc9421_rejects_missing_time_anchor() {
 		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Message_Signature::class, 'verify_signature_label' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 		$instance = new \Activitypub\Signature\Http_Message_Signature();
 
 		$data = array(
@@ -942,7 +956,9 @@ class Test_Signature extends \WP_UnitTestCase {
 	 */
 	public function test_verify_rfc9421_rejects_out_of_window_expires( $offset, $code ) {
 		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Message_Signature::class, 'verify_signature_label' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 		$instance = new \Activitypub\Signature\Http_Message_Signature();
 
 		$data = array(
