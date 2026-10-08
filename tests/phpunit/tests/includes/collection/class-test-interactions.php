@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Tests\Equal_Html;
 
 use function Activitypub\object_id_to_comment;
 
@@ -18,6 +19,8 @@ use function Activitypub\object_id_to_comment;
  * @coversDefaultClass \Activitypub\Collection\Interactions
  */
 class Test_Interactions extends \WP_UnitTestCase {
+	use Equal_Html;
+
 
 	/**
 	 * User ID.
@@ -300,7 +303,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$rich_comment    = get_comment( $rich_comment_id, ARRAY_A );
 
 		// Non-emoji img tags are stripped. Only local emoji images with class="emoji" are allowed.
-		$this->assertEquals( 'Hello<br />example<p>example</p>', $rich_comment['comment_content'] );
+		$this->assert_equal_html( 'Hello<br />example<p>example</p>', $rich_comment['comment_content'] );
 
 		$rich_comment_array = array(
 			'comment_post_ID'      => self::$post_id,

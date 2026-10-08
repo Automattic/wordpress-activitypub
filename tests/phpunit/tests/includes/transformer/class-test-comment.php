@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Transformer;
 
+use Activitypub\Tests\Equal_Html;
 use Activitypub\Transformer\Comment;
 
 /**
@@ -15,6 +16,8 @@ use Activitypub\Transformer\Comment;
  * @coversDefaultClass \Activitypub\Transformer\Comment
  */
 class Test_Comment extends \WP_UnitTestCase {
+	use Equal_Html;
+
 	/**
 	 * Test post ID.
 	 *
@@ -100,7 +103,7 @@ class Test_Comment extends \WP_UnitTestCase {
 		$content = $object->get_content();
 
 		// Test that reply context is added.
-		$this->assertSame( '<p><span class="h-card"><a href="https://example.net/@remote" class="u-url mention" rel="mention">@<span>remote</span></a></span> <span class="h-card"><a href="https://remote.example/@author" class="u-url mention" rel="mention">@<span>author</span></a></span> This is a comment</p>', $content );
+		$this->assert_equal_html( '<p><span class="h-card"><a href="https://example.net/@remote" class="u-url mention" rel="mention">@<span>remote</span></a></span> <span class="h-card"><a href="https://remote.example/@author" class="u-url mention" rel="mention">@<span>author</span></a></span> This is a comment</p>', $content );
 	}
 
 	/**
@@ -138,7 +141,7 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		$object = ( new Comment( get_comment( $test_comment_id ) ) )->to_object();
 
-		$this->assertSame( $expected, $object->get_content() );
+		$this->assert_equal_html( $expected, $object->get_content() );
 		$this->assertCount( 1, $object->get_tag(), 'The actor is tagged exactly once.' );
 	}
 
