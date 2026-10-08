@@ -127,10 +127,7 @@ class Inbox {
 			'post_content' => \wp_slash( $activity->to_json( true, true ) ),
 			'post_author'  => 0, // No specific author, recipients stored in meta.
 			'post_status'  => 'publish',
-			// Store the GUID the way get_by_guid() looks it up, which is with esc_url(): an
-			// ampersand becomes `&#038;`. Passing it unescaped instead lets `pre_post_guid`
-			// store it as `&amp;`, and the two spellings never match.
-			'guid'         => \esc_url( $activity->get_id() ),
+			'guid'         => \esc_url_raw( $activity->get_id() ),
 			'meta_input'   => array(
 				'_activitypub_object_id'             => $object_id,
 				'_activitypub_activity_type'         => $activity->get_type(),
@@ -211,7 +208,9 @@ class Inbox {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
+				"SELECT ID FROM $wpdb->posts WHERE guid IN (%s, %s) AND post_type=%s ORDER BY ID ASC",
+				// What `pre_post_guid` stores on this WordPress version, and the `esc_url()` form older releases saved.
+				\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $guid ), 0, 'db' ) ),
 				\esc_url( $guid ),
 				self::POST_TYPE
 			)
@@ -496,7 +495,9 @@ class Inbox {
 		// Query for all posts with this GUID directly (get_posts doesn't supports guid parameter).
 		$post_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
-				"SELECT ID FROM {$wpdb->posts} WHERE guid=%s AND post_type=%s ORDER BY ID ASC",
+				"SELECT ID FROM {$wpdb->posts} WHERE guid IN (%s, %s) AND post_type=%s ORDER BY ID ASC",
+				// What `pre_post_guid` stores on this WordPress version, and the `esc_url()` form older releases saved.
+				\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $guid ), 0, 'db' ) ),
 				\esc_url( $guid ),
 				self::POST_TYPE
 			)

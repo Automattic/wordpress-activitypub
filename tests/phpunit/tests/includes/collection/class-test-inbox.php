@@ -60,6 +60,36 @@ class Test_Inbox extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An inbox item saved by an older release with an `esc_url()` GUID must still be found.
+	 *
+	 * @covers ::get_by_guid
+	 * @group uri-lookup
+	 */
+	public function test_get_by_guid_finds_legacy_esc_url_guid() {
+		global $wpdb;
+
+		$activity_id = 'https://remote.example.com/?post_type=ap_outbox&p=123';
+
+		$activity = new Activity();
+		$activity->set_id( $activity_id );
+		$activity->set_type( 'Like' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+		$activity->set_object( 'https://remote.example.com/objects/456' );
+
+		$inbox_id = Inbox::add( $activity, 1 );
+		$this->assertIsInt( $inbox_id );
+
+		// Write the `&#038;` spelling older releases stored on WordPress 7.1 and earlier.
+		$wpdb->update( $wpdb->posts, array( 'guid' => \esc_url( $activity_id ) ), array( 'ID' => $inbox_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		\clean_post_cache( $inbox_id );
+
+		$found = Inbox::get_by_guid( $activity_id );
+
+		$this->assertInstanceOf( 'WP_Post', $found );
+		$this->assertSame( $inbox_id, $found->ID );
+	}
+
+	/**
 	 * Deduplication must find an activity after saving its original ID.
 	 *
 	 * @covers ::deduplicate

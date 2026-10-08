@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed followers, remote profiles and received activities not being found again when their address contains an ampersand, including on WordPress 7.2.
