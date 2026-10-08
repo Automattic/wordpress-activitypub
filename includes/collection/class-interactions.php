@@ -232,7 +232,7 @@ class Interactions {
 	/**
 	 * Resolve an interaction target to its WordPress post ID.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param string   $url               The target URL.
 	 * @param int|null $parent_comment_id Optional. The resolved parent comment ID.
@@ -413,7 +413,7 @@ class Interactions {
 	 * verification cannot apply to this submission route. A named method (rather
 	 * than an anonymous closure) is used so it can be removed by reference again.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @return string Always `inactive`.
 	 */
@@ -457,7 +457,7 @@ class Interactions {
 	/**
 	 * Prepare comment fields for a local author.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param array $activity The Activity array.
 	 * @param int   $user_id  The local WordPress user ID.
@@ -485,7 +485,7 @@ class Interactions {
 	/**
 	 * Prepare comment fields for a remote author.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param array $activity The Activity array.
 	 *
@@ -540,7 +540,7 @@ class Interactions {
 	/**
 	 * Get the image attachments displayed in a remote comment.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param array $activity_object The ActivityPub object.
 	 * @return array Image attachments.
@@ -549,7 +549,7 @@ class Interactions {
 		/**
 		 * Filters the maximum number of image attachments displayed in a Fediverse comment.
 		 *
-		 * @since unreleased
+		 * @since 9.4.0
 		 *
 		 * @param int   $limit           Maximum number of images. Default 3. Zero disables image attachments.
 		 * @param array $activity_object The ActivityPub object.
@@ -562,7 +562,7 @@ class Interactions {
 	/**
 	 * Prepare ActivityPub-specific comment metadata.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param array $activity The Activity array.
 	 *
@@ -644,7 +644,7 @@ class Interactions {
 	 * Results are cached against WordPress's comment cache generation so inserts,
 	 * updates, deletions, and comment meta changes invalidate them automatically.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param int $post_id The post ID.
 	 *

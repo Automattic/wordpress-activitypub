@@ -73,7 +73,7 @@ class Comment {
 		 *
 		 * Remove a type to keep it local, add a custom type to federate it.
 		 *
-		 * @since unreleased
+		 * @since 9.4.0
 		 *
 		 * @param string[]    $allowed_types Comment type slugs that are federated.
 		 * @param \WP_Comment $comment       The comment being processed.

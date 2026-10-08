@@ -25,7 +25,7 @@ if ( ! \defined( 'ABSPATH' ) ) {
 /**
  * Allow the current ActivityPub request through Disable WP REST API.
  *
- * @since unreleased
+ * @since 9.4.0
  *
  * @param false|string|string[] $allowed Existing allowed request URIs.
  * @return false|string|string[] Allowed request URIs.

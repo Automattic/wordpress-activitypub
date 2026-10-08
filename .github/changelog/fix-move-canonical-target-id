@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix Fediverse account migration being ignored by some servers when the new account is entered using an alternate address.

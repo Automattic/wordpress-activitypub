@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 7.1
-Stable tag: 9.3.1
+Stable tag: 9.4.0
 Requires PHP: 7.4
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -116,6 +116,73 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 9.4.0 - 2026-10-08
+#### Security
+- Improve the safety of imported Fediverse posts and comments.
+- Improve verification of signing keys fetched from other servers.
+
+#### Added
+- Added a custom name and avatar for the blog profile. Your Fediverse blog account can now use its own display name and profile picture, independent of the WordPress site title and site icon.
+- Added a Federated Quote block to quote posts from the Fediverse. The author of the quoted post is asked for permission, and the quote is marked as verified once they agree.
+- Added a filter that lets plugins decide which comment types are shared with the Fediverse, so custom comment types can be kept local or sent out as replies.
+- Added a Source column to the Comments screen that links incoming replies and quote posts to the post they came from.
+- Display up to three images attached to Fediverse comments by default, with local caching and image descriptions.
+- Fediverse apps can now jump directly to the page of a collection that contains a specific item, instead of paging through from the start.
+- Posts and comments on sites using Polylang are now federated with the language Polylang assigned to them.
+- Posts published from a Mastodon app are now federated with the language the app set, and on sites using Polylang or WPML that language is stored with the multilingual plugin.
+- Profiles and posts now point at the shared Fediverse definitions for content warnings, hashtags, manual follower approval and account moves.
+- The Social Web feed can be filtered by date, to show only posts from before or after a day you pick.
+- You can now log in as a different WordPress user while authorizing an ActivityPub app without losing the authorization request.
+
+#### Changed
+- Endpoints that other sites and apps call now answer a limited number of requests per minute from the same caller, and say so in the `RateLimit-Limit`, `RateLimit-Remaining` and `RateLimit-Reset` response headers.
+- Only accounts that are enabled for ActivityPub can authorize apps to act for them.
+- Posts and profiles fetched from other servers are now cached through the WordPress object cache when the site has one. Updates and confirmed deletions clear the cached copy.
+
+#### Fixed
+- Activities read through the ActivityPub API now fall back to the date your site recorded when the activity itself carries none, so client apps show consistent timestamps.
+- Apps connected to your account now only see what you granted them access to.
+- Apps that post on behalf of the blog can now only change or delete content that the connected user is allowed to change or delete.
+- A queued activity that cannot be read no longer stops the ones queued behind it from being sent.
+- Blocking a remote account now removes it from your followers and following lists, whichever form of its address you used.
+- Connection problems with other servers now explain what went wrong instead of failing without a reason.
+- Descriptions of remote accounts with quotes or links in them are no longer saved with stray backslashes.
+- Duplicate copies of cached profile pictures and images that earlier versions left behind are removed on update, and `wp activitypub cache cleanup` removes them on demand.
+- Emoji in the blog profile ID are now dropped instead of being turned into a string of codes that other servers could not resolve.
+- Ensure that only account deletions delivered to your site can skip the usual sender verification.
+- Fewer duplicate email notifications when another server delivers the same message more than once, and a reply that mentions you no longer also sends a separate mention email.
+- Fixed a possible error when preparing an activity in the outbox whose object is not a full object.
+- Fixed normal replies from distant accounts sometimes being auto-approved just because that account had previously liked or reposted a post.
+- Fixed oversized images in email notifications from remote users. Avatars and inline post images now resize to fit the email width instead of overflowing the screen.
+- Fixed profile pictures being downloaded again on every page view, leaving a copy behind each time and filling up the uploads folder.
+- Fixed the ActivityPub API, relay mode, and OpenGraph metadata silently staying off on some multisite hosts that select the site after plugins have loaded.
+- Fixed the search page and the posts page redirecting to a category or tag, or being served as one, on sites that filter content by language, such as Polylang.
+- Fix Fediverse account migration being ignored by some servers when the new account is entered using an alternate address.
+- Fix Fediverse account migration so a move is verified before it takes effect and reliably reaches your followers on other servers.
+- Handle incomplete Fediverse object references without errors.
+- Hidden recipients of a received activity are no longer included when an app reads or streams your inbox.
+- Improve handling of post URLs when changing publication status.
+- Links in replies received from the Fediverse now display correctly on WordPress 7.1.
+- Links to a comment now open the page it is actually on, instead of a later page, on posts with many likes or reposts.
+- Links to the pages of a collection no longer pass on unknown query arguments, which could point them at the wrong address.
+- Notifications in the Social Web screen no longer show up twice.
+- Only image attachments are accepted for the blog avatar and the header images.
+- Opening a post in the Social Web screen no longer distorts the panel corners or folds the list.
+- People mentioned in a post written from a Mastodon app are notified about it again.
+- Podcast episodes and other attached files hosted outside your media library are now included when a post is sent to the Fediverse.
+- Posts no longer send a second, smaller copy of the featured image, or the site icon when there is no featured image, which some apps showed as an extra image under the post.
+- Queued activities now record their publication and edit times correctly on sites that are not set to UTC.
+- Replies sent through the ActivityPub API to posts on other servers are now delivered instead of being rejected.
+- Replies written through an ActivityPub app no longer mention the person you are replying to twice.
+- Restore spam-protection checks for regular comments after a comment arrives from the fediverse.
+- Sites that turned off comment flood protection no longer get it switched back on by an incoming comment from the Fediverse.
+- Stop ActivityPub Likes, Reposts, and Quotes from leaking into the front-end comment list on sites that also use other comment-filtering plugins.
+- The "Powered by WordPress" profile field no longer shows up twice, no longer comes back after you delete it, and no longer triggers a warning when the plugin is first activated.
+- The browser tab title of the settings page now shows the name of the current tab.
+- The Followers and Following blocks now take their colours and font from the theme, so they are readable on dark themes, and they offer the usual colour, font size and spacing controls in the editor.
+- The Reactions block no longer requests reactions in the editor for drafts, pages, and other content that is not shared to the Fediverse, which caused failed requests on every editor load.
+- Tightened the checks on the screen where you approve apps for your account.
 
 ### 9.3.1 - 2026-09-02
 #### Security

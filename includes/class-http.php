@@ -280,7 +280,7 @@ class Http {
 	/**
 	 * Get a remote object.
 	 *
-	 * @deprecated unreleased Use {@see Proxy::get()}, which owns the cache and the checks that
+	 * @deprecated 9.4.0 Use {@see Proxy::get()}, which owns the cache and the checks that
 	 *                        an object is served under its own id.
 	 *
 	 * @param array|string $url_or_object The Object or the Object URL.
@@ -289,7 +289,7 @@ class Http {
 	 * @return array|\WP_Error The Object data as array or WP_Error on failure.
 	 */
 	public static function get_remote_object( $url_or_object, $cached = true ) {
-		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Proxy::get' );
+		\_deprecated_function( __METHOD__, '9.4.0', 'Activitypub\Proxy::get' );
 
 		$args = array( 'cached' => (bool) $cached );
 
@@ -305,7 +305,7 @@ class Http {
 	 *
 	 * Short for errors worth retrying and for connection failures, longer for the rest.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param int $code The HTTP status code, 0 for a connection failure.
 	 *

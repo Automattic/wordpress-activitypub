@@ -162,7 +162,7 @@ class Remote_Actors {
 	/**
 	 * Persist prepared remote actor post data.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param array $args Prepared post data. An ID indicates an update.
 	 *
@@ -212,7 +212,7 @@ class Remote_Actors {
 	/**
 	 * Get the IDs of the local users a remote actor follows.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param int $post_id The remote actor post ID.
 	 *
@@ -234,7 +234,7 @@ class Remote_Actors {
 	 * Every write to an actor post or its follower meta has to end up here; a bare
 	 * `wp_delete_post()` or `add_post_meta()` elsewhere leaves a stale inbox list behind.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param int[] $user_ids The local users whose follower inbox lists include the actor.
 	 *
@@ -737,7 +737,7 @@ class Remote_Actors {
 	 * stopgap for a missing incoming/outgoing serialization-context split; until that exists, every
 	 * storage path (see also Inbox storage) needs the same treatment.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param Actor $actor The actor to serialize.
 	 *

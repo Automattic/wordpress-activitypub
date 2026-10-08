@@ -173,7 +173,7 @@ class Mention {
 	 * A mention link marks itself with the `mention` class, the microformats convention Mastodon
 	 * and the plugin share, or with `rel="mention"`.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param string $content The content.
 	 *

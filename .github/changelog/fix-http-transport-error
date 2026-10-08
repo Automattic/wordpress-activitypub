@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Connection problems with other servers now explain what went wrong instead of failing without a reason.

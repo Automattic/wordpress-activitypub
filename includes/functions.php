@@ -366,7 +366,7 @@ function get_embed_html( $url, $inline_css = true ) {
 /**
  * Check whether terms of a taxonomy are federated.
  *
- * @since unreleased
+ * @since 9.4.0
  *
  * @param string $taxonomy The taxonomy name.
  *

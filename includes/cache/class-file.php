@@ -347,7 +347,7 @@ abstract class File {
 	 * Each directory is scanned twice, retaining only the newest copy per hash rather than every
 	 * duplicate. Subdirectories are cleaned before this directory's files are removed.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param string $directory The cache directory to walk, subdirectories included.
 	 * @param bool   $delete    Whether to remove and move the files. Default false, count only.

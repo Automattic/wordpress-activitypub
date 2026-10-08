@@ -146,7 +146,7 @@ class Blocks {
 	 * The script reads the parameter itself and prefills the matching block, so nothing
 	 * is read here beyond the presence of the parameter.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param string $param  The URL parameter carrying the address.
 	 * @param string $script The build folder and script handle suffix.
@@ -167,7 +167,7 @@ class Blocks {
 	/**
 	 * Enqueue the quote intent script if the quotation_of GET param is set.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @return void
 	 */
@@ -846,7 +846,7 @@ class Blocks {
 	/**
 	 * Render the Quote block.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @see https://indieweb.org/quotation
 	 *
@@ -1249,7 +1249,7 @@ class Blocks {
 	 *
 	 * Receivers render the quoted post from the `quote` property; inlining the embed would duplicate it.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param string $block_content The block content.
 	 * @param array  $block         The block data.

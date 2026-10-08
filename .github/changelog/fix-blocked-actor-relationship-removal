@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Blocking a remote account now removes it from your followers and following lists, whichever form of its address you used.

@@ -268,7 +268,7 @@ class Sanitize {
 	/**
 	 * Sanitize an attachment ID that must point to an image. Returns 0 for anything else.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param int|string $value The value to sanitize.
 	 *

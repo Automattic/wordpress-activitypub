@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Ensure that only account deletions delivered to your site can skip the usual sender verification.

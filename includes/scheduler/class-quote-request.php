@@ -19,13 +19,13 @@ use function Activitypub\object_to_uri;
  * Sends the FEP-044f QuoteRequest for local quote posts.
  *
  * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md
- * @since unreleased
+ * @since 9.4.0
  */
 class Quote_Request {
 	/**
 	 * Initialize the class, registering WordPress hooks.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @return void
 	 */
@@ -36,7 +36,7 @@ class Quote_Request {
 	/**
 	 * Send a QuoteRequest for a quote post that has none out for its current quoted URL.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param int      $outbox_id The outbox item ID.
 	 * @param Activity $activity  The activity object.
@@ -124,7 +124,7 @@ class Quote_Request {
 	 *
 	 * A block whose URL was cleared quotes as little as a block that was deleted.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param \WP_Post $post The post.
 	 *

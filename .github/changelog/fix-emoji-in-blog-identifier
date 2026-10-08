@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Emoji in the blog profile ID are now dropped instead of being turned into a string of codes that other servers could not resolve.

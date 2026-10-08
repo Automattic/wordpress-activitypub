@@ -416,7 +416,7 @@ abstract class Base {
 	/**
 	 * Returns the URI of the quoted object.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @return string|null The quoted object URI or null if the item is not a quote post.
 	 */

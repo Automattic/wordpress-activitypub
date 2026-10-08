@@ -38,7 +38,7 @@ class Interaction_Controller extends \WP_REST_Controller {
 	/**
 	 * Readable intent aliases mapped to their FEP-3b86 activity-type intent.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @var string[]
 	 */
@@ -188,7 +188,7 @@ class Interaction_Controller extends \WP_REST_Controller {
 					/**
 					 * Filters the URL used for quoting an ActivityPub object.
 					 *
-					 * @since unreleased
+					 * @since 9.4.0
 					 *
 					 * @param string $redirect_url The URL to redirect to.
 					 * @param string $uri          The URI of the object to quote.
