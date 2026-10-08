@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Transformer;
 
 use Activitypub\Activity\Base_Object;
+use Activitypub\Tests\Html_Assertions;
 use Activitypub\Transformer\Post;
 
 /**
@@ -16,6 +17,8 @@ use Activitypub\Transformer\Post;
  * @coversDefaultClass \Activitypub\Transformer\Post
  */
 class Test_Post extends \WP_UnitTestCase {
+	use Html_Assertions;
+
 	/**
 	 * Reflection method for testing protected method.
 	 *
@@ -1314,7 +1317,7 @@ class Test_Post extends \WP_UnitTestCase {
 
 		// Assert that the reply block was transformed into a mention link.
 		// Note: clean_html() strips class from <p> and the mention link doesn't include u-in-reply-to class.
-		$this->assertStringContainsString( '<p><a rel="in-reply-to ugc" class="u-in-reply-to" href="https://example.com/posts/123" title="@author@example.com">@author</a></p>', $object->get_content() );
+		$this->assert_html_equals( '<p><a rel="in-reply-to ugc" class="u-in-reply-to" href="https://example.com/posts/123" title="@author@example.com">@author</a></p><p>This is a test post with a reply block first.</p>', $object->get_content() );
 
 		// Clean up.
 		remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
@@ -1346,7 +1349,7 @@ class Test_Post extends \WP_UnitTestCase {
 
 		// Assert that the reply block was not transformed into a mention link.
 		// Note: clean_html() strips target and non-allowed attributes per FEP-b2b8.
-		$this->assertStringContainsString( '<div><p><a title="This post is a response to the referenced content." href="https://example.com/posts/123" class="u-in-reply-to">&#8620;example.com/posts/123</a></p></div>', $content );
+		$this->assert_html_equals( '<p>This is a test post with a reply block that is not first.</p><div><p><a title="This post is a response to the referenced content." href="https://example.com/posts/123" class="u-in-reply-to">&#8620;example.com/posts/123</a></p></div>', $content );
 	}
 
 	/**
@@ -1400,13 +1403,11 @@ class Test_Post extends \WP_UnitTestCase {
 		// Get the content from the object.
 		$content = $object->get_content();
 
-		// Assert that the first reply block was transformed into a mention link.
-		// Note: clean_html() strips class from <p> and the mention link doesn't include u-in-reply-to class.
-		$this->assertStringContainsString( '<p><a rel="in-reply-to ugc" class="u-in-reply-to" href="https://example.com/posts/123" title="@author1@example.com">@author1</a></p>', $content );
-
-		// Assert that the second reply block was NOT transformed into a mention link (should remain as regular reply block).
-		// Note: clean_html() strips target and non-allowed attributes per FEP-b2b8.
-		$this->assertStringContainsString( '<div><p><a title="This post is a response to the referenced content." href="https://other.site/posts/456" class="u-in-reply-to">&#8620;other.site/posts/456</a></p></div>', $content );
+		// Only the first reply becomes a mention; the second retains its reply block markup.
+		$this->assert_html_equals(
+			'<p><a rel="in-reply-to ugc" class="u-in-reply-to" href="https://example.com/posts/123" title="@author1@example.com">@author1</a></p><p>This is a response to the first post, but also references another post.</p><div><p><a title="This post is a response to the referenced content." href="https://other.site/posts/456" class="u-in-reply-to">&#8620;other.site/posts/456</a></p></div>',
+			$content
+		);
 
 		// Clean up.
 		remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );

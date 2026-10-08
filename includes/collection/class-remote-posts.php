@@ -144,8 +144,9 @@ class Remote_Posts {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
+				"SELECT ID FROM $wpdb->posts WHERE guid IN (%s, %s) AND post_type=%s ORDER BY ID ASC LIMIT 1",
 				\esc_url( $guid ),
+				\esc_html( \esc_url_raw( $guid ) ),
 				self::POST_TYPE
 			)
 		);
@@ -353,9 +354,7 @@ class Remote_Posts {
 			'post_type'     => self::POST_TYPE,
 			'post_date_gmt' => $gm_date,
 			'post_date'     => \get_date_from_gmt( $gm_date ),
-			// Store the GUID the way get_by_guid() looks it up, which is with esc_url(): an
-			// ampersand becomes `&#038;`. Passing it unescaped instead lets `pre_post_guid`
-			// store it as `&amp;`, and the two spellings never match.
+			// WordPress may normalize the URL's HTML entities again when saving the GUID.
 			'guid'          => isset( $activity['id'] ) ? \esc_url( $activity['id'] ) : '',
 		);
 	}

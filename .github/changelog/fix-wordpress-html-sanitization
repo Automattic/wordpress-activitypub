@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Keep incoming posts and replies working when WordPress changes how it sanitizes HTML and links.

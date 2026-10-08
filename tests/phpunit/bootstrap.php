@@ -139,6 +139,7 @@ function tests_disable_add_to_outbox_scheduling( $pre, $event ) {
 
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
+require __DIR__ . '/includes/trait-html-assertions.php';
 require __DIR__ . '/includes/trait-oauth-token-stub.php';
 require __DIR__ . '/includes/trait-quote-post-fixtures.php';
 require __DIR__ . '/includes/trait-remote-request-stub.php';

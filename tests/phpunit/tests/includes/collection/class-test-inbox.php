@@ -38,6 +38,8 @@ class Test_Inbox extends \WP_UnitTestCase {
 	 * @covers ::get_by_guid
 	 */
 	public function test_get_by_guid_with_ampersand() {
+		global $wpdb;
+
 		$activity_id = 'https://remote.example.com/?post_type=ap_outbox&p=123';
 
 		$activity = new Activity();
@@ -53,6 +55,44 @@ class Test_Inbox extends \WP_UnitTestCase {
 
 		$this->assertInstanceOf( 'WP_Post', $found, 'An activity ID containing an ampersand must be found again.' );
 		$this->assertSame( $inbox_id, $found->ID );
+
+		// Seed the exact spellings written by different WordPress sanitizers.
+		foreach ( array( '&#038;', '&amp;' ) as $entity ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Seed legacy storage without applying the current GUID filters.
+			$wpdb->update( $wpdb->posts, array( 'guid' => \str_replace( '&', $entity, $activity_id ) ), array( 'ID' => $inbox_id ) );
+			\clean_post_cache( $inbox_id );
+			$this->assertSame( $inbox_id, Inbox::get_by_guid( $activity_id )->ID );
+			$this->assertSame( $inbox_id, Inbox::add( $activity, 1 ), 'Redelivery must reuse either stored spelling.' );
+		}
+	}
+
+	/**
+	 * Deduplication merges recipients across the GUID spellings used by WordPress versions.
+	 *
+	 * @covers ::deduplicate
+	 */
+	public function test_deduplicate_guid_entity_spellings() {
+		global $wpdb;
+
+		$guid = 'https://remote.example.com/?post_type=ap_outbox&p=123';
+		$ids  = array();
+		foreach ( array( '&#038;', '&amp;' ) as $index => $entity ) {
+			$id = self::factory()->post->create(
+				array(
+					'post_type'   => Inbox::POST_TYPE,
+					'post_status' => 'publish',
+					'meta_input'  => array( '_activitypub_user_id' => $index + 1 ),
+				)
+			);
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Seed legacy storage without applying the current GUID filters.
+			$wpdb->update( $wpdb->posts, array( 'guid' => \str_replace( '&', $entity, $guid ) ), array( 'ID' => $id ) );
+			\clean_post_cache( $id );
+			$ids[] = $id;
+		}
+
+		$this->assertSame( $ids[0], Inbox::deduplicate( $guid )->ID );
+		$this->assertEqualSets( array( 1, 2 ), Inbox::get_recipients( $ids[0] ) );
+		$this->assertNull( \get_post( $ids[1] ) );
 	}
 
 	/**

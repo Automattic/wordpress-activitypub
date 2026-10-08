@@ -16,6 +16,8 @@ use Activitypub\Sanitize;
  * @coversDefaultClass \Activitypub\Sanitize
  */
 class Test_Sanitize extends \WP_UnitTestCase {
+	use Html_Assertions;
+
 
 	/**
 	 * Data provider for URL list tests.
@@ -665,8 +667,8 @@ class Test_Sanitize extends \WP_UnitTestCase {
 				'<math dir="rtl"><mi>x</mi></math>',
 			),
 			'strips_annotation_xml'           => array(
-				'<math><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation><annotation-xml encoding="text/html"><span>x</span></annotation-xml></semantics></math>',
-				'<math><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation><span>x</span></semantics></math>',
+				'<p>Before</p><math><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation><annotation-xml encoding="text/html"><span>x</span></annotation-xml></semantics></math><p>After</p>',
+				'<p>Before</p><math><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math><p>After</p>',
 			),
 		);
 	}
@@ -681,7 +683,7 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	 * @param string $expected Expected output.
 	 */
 	public function test_clean_html( $input, $expected ) {
-		$this->assertSame( $expected, Sanitize::clean_html( $input ) );
+		$this->assert_html_equals( $expected, Sanitize::clean_html( $input ) );
 	}
 
 	/**
@@ -709,7 +711,7 @@ class Test_Sanitize extends \WP_UnitTestCase {
 
 		$input    = '<span data-custom="allowed" data-other="removed">Content</span>';
 		$expected = '<span data-custom="allowed">Content</span>';
-		$this->assertSame( $expected, Sanitize::clean_html( $input ) );
+		$this->assert_html_equals( $expected, Sanitize::clean_html( $input ) );
 
 		\remove_filter( 'activitypub_allowed_html', $allowed_html_filter );
 	}
@@ -722,11 +724,11 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	public function test_rel_attribute_preserved() {
 		$input    = '<a href="https://example.com" rel="mention">Link</a>';
 		$expected = '<a href="https://example.com" rel="mention">Link</a>';
-		$this->assertSame( $expected, Sanitize::clean_html( $input ) );
+		$this->assert_html_equals( $expected, Sanitize::clean_html( $input ) );
 
 		$input    = '<a href="https://example.com" rel="nofollow">Link</a>';
 		$expected = '<a href="https://example.com" rel="nofollow">Link</a>';
-		$this->assertSame( $expected, Sanitize::clean_html( $input ) );
+		$this->assert_html_equals( $expected, Sanitize::clean_html( $input ) );
 	}
 
 	/**

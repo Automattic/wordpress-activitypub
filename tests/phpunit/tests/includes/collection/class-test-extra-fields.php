@@ -49,7 +49,7 @@ class Test_Extra_Fields extends \WP_UnitTestCase {
 		$post = self::factory()->post->create_and_get(
 			array(
 				'post_type'    => Extra_Fields::BLOG_POST_TYPE,
-				'post_content' => 'Test content with &quot;quotes&quot; and &amp; ampersands',
+				'post_content' => '<code>Test content with &quot;quotes&quot; and &amp; ampersands</code>',
 				'post_title'   => 'Void&#8217;s Profile',
 			)
 		);

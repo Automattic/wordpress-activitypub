@@ -20,6 +20,8 @@ use WP_UnitTestCase;
  * @coversDefaultClass \Activitypub\Mailer
  */
 class Test_Mailer extends WP_UnitTestCase {
+	use Html_Assertions;
+
 	/**
 	 * A test post.
 	 *
@@ -639,7 +641,8 @@ class Test_Mailer extends WP_UnitTestCase {
 			),
 			'invalid HTML'  => array(
 				json_decode( '"<ptest"' ),
-				'',
+				// Depending on the WordPress parser, an incomplete tag is discarded or escaped as text.
+				array( '', '&lt;ptest' ),
 			),
 		);
 	}
@@ -647,8 +650,8 @@ class Test_Mailer extends WP_UnitTestCase {
 	/**
 	 * Test direct message notification text.
 	 *
-	 * @param string $text     Text to test.
-	 * @param string $expected Expected result.
+	 * @param string       $text     Text to test.
+	 * @param string|array $expected Expected markup or allowed literal outputs.
 	 *
 	 * @covers ::direct_message
 	 * @dataProvider direct_message_text_provider
@@ -679,7 +682,20 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		// Capture email.
 		$wp_mail_callback = function ( $args ) use ( $expected, $user_id ) {
-			$this->assertStringContainsString( $expected, $args['message'] );
+			$document = new \DOMDocument();
+			$document->loadHTML( '<meta charset="utf-8">' . $args['message'], LIBXML_NOERROR | LIBXML_NOWARNING );
+			$xpath = new \DOMXPath( $document );
+			$nodes = $xpath->query( '//div[contains(concat(" ", normalize-space(@class), " "), " e-content ")]' );
+			$this->assertSame( 1, $nodes->length );
+			$content = '';
+			foreach ( $nodes->item( 0 )->childNodes as $child ) {
+				$content .= $document->saveHTML( $child );
+			}
+			if ( \is_array( $expected ) ) {
+				$this->assertContains( \trim( $content ), $expected );
+			} else {
+				$this->assert_html_equals( $expected, \trim( $content ) );
+			}
 			$this->assertEquals( get_user_by( 'id', $user_id )->user_email, $args['to'] );
 
 			return $args;

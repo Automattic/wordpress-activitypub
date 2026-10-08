@@ -49,6 +49,7 @@ class Sanitize {
 		'applet',
 		'noembed',
 		'noframes',
+		'annotation-xml',
 	);
 
 	/**

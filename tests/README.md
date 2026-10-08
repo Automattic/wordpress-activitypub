@@ -199,6 +199,8 @@ $this->expectExceptionMessage( 'Error message' );
 
 ### Test Utilities
 
+`Activitypub\Tests\Html_Assertions` compares HTML using WordPress's HTML assertion where available, with libxml parsing and PHPUnit's XML comparison as a fallback for older supported WordPress versions. Use it when attribute order, equivalent entity spelling, or void-tag serialization are not the behavior under test. It preserves checks for the actual elements, attributes, and text.
+
 **Creating test data:**
 ```php
 // Create test user.

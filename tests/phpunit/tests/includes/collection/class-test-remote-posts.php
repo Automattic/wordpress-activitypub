@@ -422,6 +422,8 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	 * @covers ::get_by_guid
 	 */
 	public function test_get_by_guid_with_ampersand() {
+		global $wpdb;
+
 		$object_id = 'https://example.com/?post_type=post&p=789';
 
 		$activity = array(
@@ -442,6 +444,15 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 
 		$this->assertInstanceOf( '\WP_Post', $retrieved_post, 'An object ID containing an ampersand must be found again.' );
 		$this->assertEquals( $post->ID, $retrieved_post->ID );
+
+		// Seed the exact spellings written by different WordPress sanitizers.
+		foreach ( array( '&#038;', '&amp;' ) as $entity ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Seed legacy storage without applying the current GUID filters.
+			$wpdb->update( $wpdb->posts, array( 'guid' => \str_replace( '&', $entity, $object_id ) ), array( 'ID' => $post->ID ) );
+			\clean_post_cache( $post->ID );
+			$this->assertSame( $post->ID, Remote_Posts::get_by_guid( $object_id )->ID );
+			$this->assertSame( $post->ID, Remote_Posts::add( $activity, 1 )->ID, 'Reimport must reuse either stored spelling.' );
+		}
 	}
 
 	/**
