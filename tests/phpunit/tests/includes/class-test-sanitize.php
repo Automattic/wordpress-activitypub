@@ -667,7 +667,15 @@ class Test_Sanitize extends \WP_UnitTestCase {
 			),
 			'strips_annotation_xml'           => array(
 				'<math><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation><annotation-xml encoding="text/html"><span>x</span></annotation-xml></semantics></math>',
-				'<math><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation><span>x</span></semantics></math>',
+				'<math><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation></semantics></math>',
+			),
+			'keeps_text_after_annotation_xml' => array(
+				'<p>Before</p><math><semantics><mi>x</mi><annotation-xml encoding="text/html"><span>x</span></annotation-xml></semantics></math><p>After</p>',
+				'<p>Before</p><math><semantics><mi>x</mi></semantics></math><p>After</p>',
+			),
+			'keeps_text_after_mathml'         => array(
+				'<p>Before</p><math display="block"><mrow><msup><mi>x</mi><mn>2</mn></msup></mrow></math><p>After</p>',
+				'<p>Before</p><math display="block"><mrow><msup><mi>x</mi><mn>2</mn></msup></mrow></math><p>After</p>',
 			),
 		);
 	}
