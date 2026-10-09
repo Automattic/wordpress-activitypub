@@ -340,6 +340,7 @@ class Sanitize {
 
 		$content = \wpautop( $content );
 		$content = self::clean_html( self::strip_html_comments( $content ) );
+		$content = self::strip_html_comments( $content );
 
 		/*
 		 * `do_shortcode()` runs on `the_content` right after `do_blocks()`, so a remote
@@ -375,7 +376,8 @@ class Sanitize {
 			return '';
 		}
 
-		return \wp_kses( self::strip_html_comments( $content ), self::get_allowed_comment_html(), \wp_allowed_protocols() );
+		$content = \wp_kses( self::strip_html_comments( $content ), self::get_allowed_comment_html(), \wp_allowed_protocols() );
+		return self::strip_html_comments( $content );
 	}
 
 	/**
@@ -446,8 +448,11 @@ class Sanitize {
 	 * @return string The content without HTML comments.
 	 */
 	private static function strip_html_comments( $content ) {
-		// preg_replace() returns null if PCRE bails; an empty string is the safe reading.
-		return \preg_replace( '/<!--.*?-->/s', '', $content ) ?? '';
+		/*
+		 * A separator prevents the surrounding text from forming another comment delimiter.
+		 * preg_replace() returns null if PCRE bails; an empty string is the safe reading.
+		 */
+		return \preg_replace( '/<!--.*?(?:-->|$)/s', ' ', $content ) ?? '';
 	}
 
 	/**
