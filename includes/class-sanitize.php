@@ -321,8 +321,9 @@ class Sanitize {
 	 * the FEP-b2b8 allowlist, which carries no `style` attribute and no interactive, scripting
 	 * or embed elements. Remote content is held to the FEP its own author federates under.
 	 *
-	 * HTML comments are stripped first, because this content is stored and later runs
-	 * through `do_blocks()`, which would otherwise reconstitute a remote block delimiter.
+	 * HTML comments are stripped before and after cleaning, because this content is stored
+	 * and later runs through `do_blocks()`, which would otherwise reconstitute a remote block
+	 * delimiter. The second pass catches comments that only appear once markup is removed.
 	 *
 	 * @param string $content The content to sanitize.
 	 *
