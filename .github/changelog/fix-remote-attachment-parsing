@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Skip unusable attachments on posts from other servers instead of showing them as broken images.
