@@ -20,6 +20,194 @@ use Activitypub\Tombstone;
  * @coversDefaultClass \Activitypub\Handler\Create
  */
 class Test_Create extends \WP_UnitTestCase {
+	/**
+	 * Image-only validation stops at the first usable image and bounds rejected candidates.
+	 *
+	 * @covers ::validate_object
+	 */
+	public function test_image_only_validation_is_bounded() {
+		foreach ( array(
+			443 => 1,
+			22  => 20,
+		) as $port => $expected ) {
+			$object = array(
+				'id'         => 'https://example.com/bounded-images',
+				'attachment' => array(),
+			);
+			for ( $i = 1; $i <= 50; ++$i ) {
+				$object['attachment'][] = array(
+					'type' => 'Image',
+					'url'  => 'https://8.8.4.' . $i . ':' . $port . '/photo.jpg',
+				);
+			}
+			$request = new \WP_REST_Request( 'POST' );
+			$request->set_header( 'Content-Type', 'application/activity+json' );
+			$request->set_body(
+				\wp_json_encode(
+					array(
+						'type'   => 'Create',
+						'object' => $object,
+					)
+				)
+			);
+			$count = 0;
+			$track = static function ( $ports ) use ( &$count ) {
+				++$count;
+				return $ports;
+			};
+			\add_filter( 'http_allowed_safe_ports', $track );
+			$valid = Create::validate_object( true, $object, $request );
+			\remove_filter( 'http_allowed_safe_ports', $track );
+			$this->assertSame( 443 === $port, $valid );
+			$this->assertSame( $expected, $count );
+		}
+	}
+
+	/**
+	 * Missing text is allowed only when there is an image the import path can use.
+	 *
+	 * @dataProvider image_only_object_provider
+	 * @covers ::validate_object
+	 *
+	 * @param array $fields   The object fields in addition to its id.
+	 * @param bool  $expected Whether the object is valid.
+	 */
+	public function test_validate_image_only_objects( $fields, $expected ) {
+		$object  = \array_merge( array( 'id' => 'https://example.com/note' ), $fields );
+		$request = new \WP_REST_Request( 'POST' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'   => 'Create',
+					'object' => $object,
+				)
+			)
+		);
+		$this->assertSame( $expected, Create::validate_object( true, $object, $request ) );
+		$this->assertFalse( Create::validate_object( false, $object, $request ), 'Earlier validators retain their veto.' );
+		unset( $object['id'] );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'   => 'Create',
+					'object' => $object,
+				)
+			)
+		);
+		$this->assertFalse( Create::validate_object( true, $object, $request ), 'Images cannot replace the required object id.' );
+	}
+
+	/**
+	 * Text, supported images, and unsupported or malformed media.
+	 *
+	 * @return array The object fields and validation result.
+	 */
+	public function image_only_object_provider() {
+		$cases = array(
+			'empty text'             => array( array( 'content' => '' ), true ),
+			'missing text and image' => array( array(), false ),
+			'Image object'           => array(
+				array(
+					'attachment' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/photo.jpg',
+					),
+				),
+				true,
+			),
+			'image Document'         => array(
+				array(
+					'attachment' => array(
+						array(
+							'type'      => 'Document',
+							'mediaType' => 'IMAGE/JPEG',
+							'url'       => 'https://example.com/photo.jpg',
+						),
+					),
+				),
+				true,
+			),
+			'image fallback'         => array( array( 'image' => 'https://example.com/photo.jpg' ), true ),
+			'single attachment URL'  => array( array( 'attachment' => 'https://example.com/photo.jpg' ), true ),
+			'unsafe attachment URL'  => array( array( 'attachment' => 'http://127.0.0.1/photo.jpg' ), false ),
+			'Unicode image URL'      => array(
+				array(
+					'attachment' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/uploads/写真.jpg',
+					),
+				),
+				true,
+			),
+			'Unicode image fallback' => array( array( 'image' => 'https://example.com/uploads/写真.jpg' ), true ),
+			'Audio object'           => array(
+				array(
+					'attachment' => array(
+						'type' => 'Audio',
+						'url'  => 'https://example.com/audio.mp3',
+					),
+				),
+				false,
+			),
+			'Video object'           => array(
+				array(
+					'attachment' => array(
+						'type' => 'Video',
+						'url'  => 'https://example.com/video.mp4',
+					),
+				),
+				false,
+			),
+			'missing image URL'      => array( array( 'attachment' => array( 'type' => 'Image' ) ), false ),
+			'unsafe protocol'        => array(
+				array(
+					'attachment' => array(
+						'type' => 'Image',
+						'url'  => 'javascript:alert(1)',
+					),
+				),
+				false,
+			),
+		);
+		foreach ( array(
+			42,
+			true,
+			array(
+				'type' => 'Image',
+				'url'  => 42,
+			),
+			'/photo.jpg',
+			'//remote.example/photo.jpg',
+			'ftp://remote.example/photo.jpg',
+			'https://',
+			'http://127.0.0.1/photo.jpg',
+			'http://192.168.1.1/photo.jpg',
+			'https://user:pass@example.com/photo.jpg',
+		) as $url ) {
+			$cases[] = array(
+				array(
+					'attachment' => array(
+						'type' => 'Image',
+						'url'  => $url,
+					),
+				),
+				false,
+			);
+		}
+		foreach ( array( 42, true, null, array( 'Image' ) ) as $type ) {
+			$cases[] = array(
+				array(
+					'attachment' => array(
+						'type' => $type,
+						'url'  => 'https://example.com/photo.jpg',
+					),
+				),
+				false,
+			);
+		}
+		return $cases;
+	}
 
 	/**
 	 * User ID.

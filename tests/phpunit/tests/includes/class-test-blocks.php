@@ -13,6 +13,7 @@ use Activitypub\Collection\Interactions;
 use Activitypub\Transformer\Post;
 
 use function Activitypub\object_to_uri;
+use function Activitypub\process_remote_images;
 
 /**
  * Test class for Blocks.
@@ -20,6 +21,56 @@ use function Activitypub\object_to_uri;
  * @coversDefaultClass \Activitypub\Blocks
  */
 class Test_Blocks extends \WP_UnitTestCase {
+	/**
+	 * URLs supplied by JSON are not HTML entity encoded.
+	 *
+	 * @covers ::render_image_block
+	 */
+	public function test_render_image_block_preserves_literal_url_entities() {
+		$url     = 'https://example.com/a&amp;b.jpg';
+		$seen    = null;
+		$filter  = static function ( $value ) use ( &$seen ) {
+			$seen = $value;
+			return false;
+		};
+		$content = '<img src="https://example.com/a&amp;amp;b.jpg" />';
+		\add_filter( 'activitypub_remote_media_url', $filter, 1 );
+		Blocks::render_image_block( array( 'url' => $url ), $content );
+		\remove_filter( 'activitypub_remote_media_url', $filter, 1 );
+
+		$this->assertSame( $url, $seen );
+	}
+
+	/**
+	 * Generated image URLs survive comment KSES without changing the resource.
+	 *
+	 * @covers ::render_image_block
+	 */
+	public function test_render_image_block_preserves_generated_urls_through_kses() {
+		$seen   = null;
+		$filter = static function ( $value ) use ( &$seen ) {
+			$seen = $value;
+			return false;
+		};
+		\add_filter( 'activitypub_remote_media_url', $filter, 1 );
+		$results = array();
+		foreach ( array( 'https://example.com/photo.jpg?a=1&b=2', 'https://example.com/a&amp;b.jpg' ) as $url ) {
+			$content = process_remote_images( '', array( array( 'url' => $url ) ) );
+			$content = \wp_kses( $content, array() );
+			$block   = \parse_blocks( \trim( $content ) )[0];
+			$output  = Blocks::render_image_block( $block['attrs'], $block['innerHTML'] );
+			$img     = new \WP_HTML_Tag_Processor( $output );
+			$img->next_tag( 'IMG' );
+			$results[] = array( $url, $seen, $img->get_attribute( 'src' ) );
+		}
+		\remove_filter( 'activitypub_remote_media_url', $filter, 1 );
+
+		foreach ( $results as $result ) {
+			$this->assertSame( $result[0], $result[1] );
+			$this->assertSame( $result[0], $result[2] );
+		}
+	}
+
 
 	/**
 	 * User ID for Extra Fields block tests.

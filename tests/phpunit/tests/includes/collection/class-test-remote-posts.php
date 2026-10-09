@@ -23,6 +23,200 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	use Uri_Test_Cases;
 
 	/**
+	 * A single attachment URL is handled like the same URL in a list.
+	 *
+	 * @covers ::extract_attachments
+	 */
+	public function test_extract_single_attachment_url() {
+		$url      = 'https://example.com/photo.jpg';
+		$expected = array(
+			array(
+				'url'  => $url,
+				'alt'  => '',
+				'type' => 'image',
+			),
+		);
+		foreach ( array( 'attachment', 'image' ) as $field ) {
+			foreach ( array( $url, array( $url ) ) as $value ) {
+				$this->assertSame( $expected, Remote_Posts::extract_attachments( array( $field => $value ) ) );
+			}
+			$this->assertSame( array(), Remote_Posts::extract_attachments( array( $field => 'http://127.0.0.1/photo.jpg' ) ) );
+		}
+	}
+
+	/**
+	 * Extraction bounds validation attempts, including lists with no usable images.
+	 *
+	 * @dataProvider bounded_attachment_provider
+	 * @covers ::extract_attachments
+	 *
+	 * @param int    $limit       Requested result limit.
+	 * @param string $type        Requested attachment type.
+	 * @param string $item_type   Type of each supplied attachment.
+	 * @param int    $port        Attachment URL port.
+	 * @param int    $expected    Expected attachment count.
+	 * @param int    $validations Expected URL validation count.
+	 */
+	public function test_extract_attachments_bounds_validation( $limit, $type, $item_type, $port, $expected, $validations ) {
+		$items = array();
+		for ( $i = 1; $i <= 50; ++$i ) {
+			$items[] = array(
+				'type' => $item_type,
+				'url'  => 'https://8.8.4.' . $i . ':' . $port . '/bounded.jpg',
+			);
+		}
+		$count = 0;
+		$track = static function ( $ports ) use ( &$count ) {
+			++$count;
+			return $ports;
+		};
+		foreach ( array( 'attachment', 'image' ) as $field ) {
+			\add_filter( 'http_allowed_safe_ports', $track );
+			$count  = 0;
+			$result = Remote_Posts::extract_attachments( array( $field => $items ), $limit, $type );
+			\remove_filter( 'http_allowed_safe_ports', $track );
+			$this->assertCount( $expected, $result );
+			$this->assertSame( $validations, $count );
+		}
+	}
+
+	/**
+	 * Result limits and candidate limits are separate.
+	 *
+	 * @return array Test cases.
+	 */
+	public function bounded_attachment_provider() {
+		return array(
+			'first image'       => array( 1, 'image', 'Image', 443, 1, 1 ),
+			'three images'      => array( 3, 'image', 'Image', 443, 3, 3 ),
+			'no images'         => array( 0, 'image', 'Image', 443, 0, 0 ),
+			'negative limit'    => array( -1, 'image', 'Image', 443, 0, 0 ),
+			'invalid images'    => array( 3, 'image', 'Image', 22, 0, 20 ),
+			'other media'       => array( 3, 'image', 'Video', 443, 0, 0 ),
+			'default media'     => array( 20, '', 'Video', 443, 20, 20 ),
+			'larger site limit' => array( 25, 'image', 'Image', 443, 25, 25 ),
+		);
+	}
+
+	/**
+	 * Invalid attachment URLs are skipped for both attachments and representative images.
+	 *
+	 * @covers ::extract_attachments
+	 */
+	public function test_extract_attachments_rejects_invalid_urls() {
+		$valid = array(
+			'type' => 'Image',
+			'url'  => 'https://example.com/photo.jpg',
+			'name' => 'Photo',
+		);
+		foreach ( array(
+			42,
+			true,
+			array(
+				'type' => 'Image',
+				'url'  => 42,
+			),
+			'/photo.jpg',
+			'//remote.example/photo.jpg',
+			'ftp://remote.example/photo.jpg',
+			'https://',
+			'https:photo.jpg',
+			'javascript:alert(1)',
+			'http://127.0.0.1/photo.jpg',
+			'http://10.0.0.1/photo.jpg',
+			'http://172.16.0.1/photo.jpg',
+			'http://192.168.1.1/photo.jpg',
+			'http://[::1]/photo.jpg',
+			'https://user:pass@example.com/photo.jpg',
+			'https://example.com:22/photo.jpg',
+		) as $url ) {
+			$invalid = array(
+				'type' => 'Image',
+				'url'  => $url,
+			);
+			$this->assertSame( array(), Remote_Posts::extract_attachments( array( 'attachment' => $invalid ) ) );
+			$this->assertSame( array(), Remote_Posts::extract_attachments( array( 'image' => $invalid ) ) );
+			$this->assertSame(
+				array(
+					array(
+						'url'  => $valid['url'],
+						'alt'  => 'Photo',
+						'type' => 'image',
+					),
+				),
+				Remote_Posts::extract_attachments( array( 'attachment' => array( $invalid, $valid ) ) )
+			);
+		}
+	}
+
+	/**
+	 * Unicode paths remain usable for image, audio, and video attachments.
+	 *
+	 * @covers ::extract_attachments
+	 */
+	public function test_extract_attachments_preserves_unicode_urls() {
+		foreach ( array(
+			'image' => 'https://example.com/uploads/写真.jpg',
+			'audio' => 'http://example.com/uploads/音声.mp3',
+			'video' => 'HTTPS://example.com/uploads/動画.mp4',
+		) as $type => $url ) {
+			$attachment = array(
+				'type' => \ucfirst( $type ),
+				'url'  => $url,
+			);
+			$this->assertSame(
+				array(
+					array(
+						'url'  => $url,
+						'alt'  => '',
+						'type' => $type,
+					),
+				),
+				Remote_Posts::extract_attachments( array( 'attachment' => $attachment ) )
+			);
+		}
+	}
+
+	/**
+	 * Lists and single attachments retain URL, description, and type regardless of MIME casing.
+	 *
+	 * @covers ::extract_attachments
+	 */
+	public function test_extract_attachments_classifies_object_types_and_mime_casing() {
+		$cases = array(
+			array( array( 'type' => 'Audio' ), 'audio' ),
+			array( array( 'type' => 'Video' ), 'video' ),
+			array( array( 'type' => 'Image' ), 'image' ),
+			array( array( 'type' => 'Document' ), 'document' ),
+			array( array( 'type' => 42 ), 'document' ),
+			array( array( 'type' => null ), 'document' ),
+			array( array( 'type' => true ), 'document' ),
+			array( array( 'type' => array( 'Image' ) ), 'document' ),
+			array( array(), 'image' ),
+			array( array( 'mediaType' => 'IMAGE/JPEG' ), 'image' ),
+			array( array( 'mediaType' => 'AUDIO/MPEG' ), 'audio' ),
+			array( array( 'mediaType' => 'VIDEO/MP4' ), 'video' ),
+		);
+		foreach ( $cases as $case ) {
+			$attachment         = $case[0];
+			$attachment['url']  = 'https://example.com/media';
+			$attachment['name'] = 'Media description';
+			foreach ( array( array( $attachment ), $attachment, (object) $attachment ) as $input ) {
+				$this->assertSame(
+					array(
+						array(
+							'url'  => 'https://example.com/media',
+							'alt'  => 'Media description',
+							'type' => $case[1],
+						),
+					),
+					Remote_Posts::extract_attachments( array( 'attachment' => $input ) )
+				);
+			}
+		}
+	}
+
+	/**
 	 * Set up test environment.
 	 */
 	public function set_up() {
