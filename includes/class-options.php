@@ -34,6 +34,7 @@ class Options {
 		\add_filter( 'activitypub_scheduler_async_batch_pause', array( self::class, 'filter_scheduler_batch_pause' ), 10, 2 );
 
 		\add_filter( 'pre_option_activitypub_allow_likes', array( self::class, 'maybe_disable_interactions' ) );
+		\add_filter( 'pre_option_activitypub_allow_dislikes', array( self::class, 'maybe_disable_interactions' ) );
 		\add_filter( 'pre_option_activitypub_allow_replies', array( self::class, 'maybe_disable_interactions' ) );
 
 		\add_filter( 'default_option_activitypub_negotiate_content', array( self::class, 'default_option_activitypub_negotiate_content' ) );
@@ -176,6 +177,17 @@ class Options {
 				'type'              => 'integer',
 				'description'       => 'Allow reposts.',
 				'default'           => '1',
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		\register_setting(
+			'activitypub',
+			'activitypub_allow_dislikes',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Allow dislikes.',
+				'default'           => '0',
 				'sanitize_callback' => 'absint',
 			)
 		);

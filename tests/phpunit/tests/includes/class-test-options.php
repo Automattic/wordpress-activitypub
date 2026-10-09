@@ -564,4 +564,13 @@ class Test_Options extends \WP_UnitTestCase {
 
 		$this->assertSame( 0, \sanitize_option( 'activitypub_header_image', $attachment_id ) );
 	}
+
+	/**
+	 * The server-wide switch for incoming interactions covers dislikes too.
+	 *
+	 * @covers ::init
+	 */
+	public function test_dislikes_follow_the_interactions_switch() {
+		$this->assertNotFalse( \has_filter( 'pre_option_activitypub_allow_dislikes', array( Options::class, 'maybe_disable_interactions' ) ) );
+	}
 }
