@@ -239,6 +239,10 @@ class Migration {
 			// A filesystem walk, so off the upgrade request and onto cron.
 			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_remove_duplicate_cache_files' );
 		}
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) && ! \wp_next_scheduled( 'activitypub_update_comment_counts' ) ) {
+			// Reactions no longer count as comments, even when receiving them is turned off.
+			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_update_comment_counts' );
+		}
 
 		/*
 		 * Defer the flush to late in the `init` cycle (priority 20). Migration::init

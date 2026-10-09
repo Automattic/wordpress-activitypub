@@ -109,6 +109,7 @@ class Jetpack {
 	 * @return array The comment types with ActivityPub types added.
 	 */
 	public static function add_comment_types( $comment_types ) {
+		$comment_types[] = 'dislike';
 		$comment_types[] = 'like';
 		$comment_types[] = 'quote';
 		$comment_types[] = 'repost';
