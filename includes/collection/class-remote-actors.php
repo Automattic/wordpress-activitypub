@@ -264,8 +264,8 @@ class Remote_Actors {
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
-				// Normalize the way upsert() stores the GUID; prepare() handles the SQL escaping.
-				\esc_url_raw( $actor_uri ),
+				// What `pre_post_guid` stores on this WordPress version; prepare() handles the SQL escaping.
+				\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $actor_uri ), 0, 'db' ) ),
 				self::POST_TYPE
 			)
 		);
@@ -365,19 +365,27 @@ class Remote_Actors {
 		$existing = array();
 
 		foreach ( \array_chunk( \array_values( \array_unique( $uris ) ), 200 ) as $chunk ) {
-			$placeholders = \implode( ', ', \array_fill( 0, \count( $chunk ), '%s' ) );
+			// Map each stored spelling back to the URI the caller asked for, the same value get_by_uri() matches.
+			$guids = array();
+			foreach ( $chunk as $uri ) {
+				$guids[ \wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $uri ), 0, 'db' ) ) ] = $uri;
+			}
+
+			$placeholders = \implode( ', ', \array_fill( 0, \count( $guids ), '%s' ) );
 
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$found = $wpdb->get_col(
 				$wpdb->prepare(
 					"SELECT guid FROM $wpdb->posts WHERE post_type = %s AND guid IN ( $placeholders )",
-					\array_merge( array( self::POST_TYPE ), $chunk )
+					\array_merge( array( self::POST_TYPE ), \array_map( 'strval', \array_keys( $guids ) ) )
 				)
 			);
 			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
-			foreach ( $found as $uri ) {
-				$existing[ $uri ] = true;
+			foreach ( $found as $guid ) {
+				if ( isset( $guids[ $guid ] ) ) {
+					$existing[ $guids[ $guid ] ] = true;
+				}
 			}
 		}
 

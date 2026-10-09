@@ -15,6 +15,22 @@ use Activitypub\Tombstone;
  * @coversDefaultClass \Activitypub\Tombstone
  */
 class Test_Tombstone extends \WP_UnitTestCase {
+	use Uri_Test_Cases;
+
+	/**
+	 * A buried URL must be found using the original identifier.
+	 *
+	 * @covers ::bury
+	 * @covers ::exists_local
+	 * @dataProvider uri_provider
+	 * @group uri-lookup
+	 * @param string $uri Original URL.
+	 */
+	public function test_exists_local_with_special_characters( $uri ) {
+		$this->assertFalse( Tombstone::exists_local( $uri ) );
+		Tombstone::bury( $uri );
+		$this->assertTrue( Tombstone::exists_local( $uri ) );
+	}
 
 	/**
 	 * Response code is 404 -> is_tombstone returns true

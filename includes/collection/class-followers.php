@@ -146,8 +146,8 @@ class Followers {
 					Remote_Actors::POST_TYPE,
 					self::FOLLOWER_META_KEY,
 					$user_id,
-					// Normalize the way the actor's GUID was stored; prepare() handles the escaping.
-					\esc_url_raw( $actor ),
+					// What `pre_post_guid` stores on this WordPress version; prepare() handles the escaping.
+					\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $actor ), 0, 'db' ) ),
 				)
 			)
 		);

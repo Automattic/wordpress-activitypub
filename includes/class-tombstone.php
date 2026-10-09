@@ -283,7 +283,7 @@ class Tombstone {
 					'post_type'   => self::POST_TYPE,
 					'post_status' => 'publish',
 					'post_name'   => \md5( $normalized ),
-					'guid'        => $url,
+					'guid'        => \esc_url_raw( $url ),
 					'post_author' => 0,
 				),
 				true

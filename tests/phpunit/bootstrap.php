@@ -143,6 +143,7 @@ require __DIR__ . '/includes/trait-equal-html.php';
 require __DIR__ . '/includes/trait-oauth-token-stub.php';
 require __DIR__ . '/includes/trait-quote-post-fixtures.php';
 require __DIR__ . '/includes/trait-remote-request-stub.php';
+require __DIR__ . '/includes/trait-uri-test-cases.php';
 require __DIR__ . '/includes/class-activitypub-outbox-testcase.php';
 require __DIR__ . '/includes/class-activitypub-testcase-cache-http.php';
 require __DIR__ . '/includes/class-test-rest-controller-testcase.php';
