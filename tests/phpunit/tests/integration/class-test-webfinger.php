@@ -230,6 +230,26 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The blog subject on an internationalized domain resolves back to the blog.
+	 *
+	 * @covers ::add_pseudo_user_discovery
+	 */
+	public function test_blog_subject_resolves_on_idn_domain() {
+		$set_home = static function () {
+			return 'https://café.example';
+		};
+		\add_filter( 'pre_option_home', $set_home );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$jrd = Webfinger::add_pseudo_user_discovery( array(), 'https://café.example' );
+
+		$this->assertSame( Actors::BLOG_USER_ID, Actors::get_id_by_resource( $jrd['subject'] ) );
+
+		\remove_filter( 'pre_option_home', $set_home );
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
 	 * Test add_pseudo_user_discovery with invalid resource.
 	 *
 	 * @covers ::add_pseudo_user_discovery

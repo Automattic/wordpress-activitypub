@@ -13,7 +13,7 @@ defined( 'ACTIVITYPUB_NOTE_LENGTH' ) || define( 'ACTIVITYPUB_NOTE_LENGTH', 500 )
 defined( 'ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS' ) || define( 'ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS', 4 );
 defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?:(?<=\s)|(?<=<p>)|(?<=<br>)|^)#([A-Za-z0-9_]+)(?:(?=\s|[[:punct:]]|$))' );
 // Letters and digits of any script, so internationalized handles match too. Use it with the `u` modifier.
-defined( 'ACTIVITYPUB_USERNAME_REGEXP' ) || define( 'ACTIVITYPUB_USERNAME_REGEXP', '(?:([\p{L}\p{M}\p{N}\._+%-]+)@((?:[\p{L}\p{M}\p{N}_-]+\.)+[\p{L}\p{M}][\p{L}\p{M}\p{N}-]*))' );
+defined( 'ACTIVITYPUB_USERNAME_REGEXP' ) || define( 'ACTIVITYPUB_USERNAME_REGEXP', '(?:([\p{L}\p{M}\p{N}\._+%-]+)@((?:[\p{L}\p{M}\p{N}_-]+\.)+[\p{L}\p{M}](?:[\p{L}\p{M}\p{N}-]*[\p{L}\p{M}\p{N}])?))' );
 defined( 'ACTIVITYPUB_URL_REGEXP' ) || define( 'ACTIVITYPUB_URL_REGEXP', '(https?:|www\.)\S+[\w\/]' );
 defined( 'ACTIVITYPUB_CUSTOM_POST_CONTENT' ) || define( 'ACTIVITYPUB_CUSTOM_POST_CONTENT', "[ap_title type=\"html\"]\n\n[ap_content]\n\n[ap_hashtags]" );
 defined( 'ACTIVITYPUB_DISABLE_REWRITES' ) || define( 'ACTIVITYPUB_DISABLE_REWRITES', false );

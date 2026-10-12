@@ -93,6 +93,8 @@ class Test_Functions_Url extends \WP_UnitTestCase {
 			'telugu'  => array( 'ఉదాహరణ.example', 'xn--noc6ci4b4b3a.example' ),
 			'chinese' => array( 'example.中国', 'example.xn--fiqs8s' ),
 			'latin'   => array( 'café.example', 'xn--caf-dma.example' ),
+			'upper'   => array( 'CAFÉ.example', 'xn--caf-dma.example' ),
+			'nfd'     => array( "cafe\u{0301}.example", 'xn--caf-dma.example' ),
 			'a-label' => array( 'xn--caf-dma.example', 'xn--caf-dma.example' ),
 			'ascii'   => array( 'Example.org', 'Example.org' ),
 			'ipv6'    => array( '[2001:db8::1]', '[2001:db8::1]' ),

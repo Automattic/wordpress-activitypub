@@ -835,16 +835,17 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	 */
 	public function data_invalid_accts() {
 		return array(
-			'empty string'   => array( '' ),
-			'plain word'     => array( 'user' ),
-			'url'            => array( 'https://example.com/users/user' ),
-			'mailto uri'     => array( 'mailto:user@example.com' ),
-			'host only'      => array( '@example.com' ),
-			'no tld'         => array( 'user@host' ),
-			'trailing slash' => array( 'user@example.com/' ),
-			'null'           => array( null ),
-			'integer'        => array( 42 ),
-			'array'          => array( array( 'user@example.com' ) ),
+			'trailing hyphen' => array( 'user@example.com-' ),
+			'empty string'    => array( '' ),
+			'plain word'      => array( 'user' ),
+			'url'             => array( 'https://example.com/users/user' ),
+			'mailto uri'      => array( 'mailto:user@example.com' ),
+			'host only'       => array( '@example.com' ),
+			'no tld'          => array( 'user@host' ),
+			'trailing slash'  => array( 'user@example.com/' ),
+			'null'            => array( null ),
+			'integer'         => array( 42 ),
+			'array'           => array( array( 'user@example.com' ) ),
 		);
 	}
 

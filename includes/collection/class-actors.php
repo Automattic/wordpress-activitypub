@@ -291,7 +291,7 @@ class Actors {
 			// Check for acct URIs.
 			case 'acct':
 				$uri        = \str_replace( 'acct:', '', $uri );
-				$identifier = \substr( $uri, 0, \strrpos( $uri, '@' ) );
+				$identifier = \rawurldecode( \substr( $uri, 0, \strrpos( $uri, '@' ) ) );
 				$host       = normalize_host( fold_host( \substr( \strrchr( $uri, '@' ), 1 ) ) );
 				$blog_host  = normalize_host( fold_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) ) );
 

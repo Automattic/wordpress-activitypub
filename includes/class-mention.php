@@ -58,7 +58,7 @@ class Mention {
 	 */
 	public static function the_content( $the_content ) {
 		// The pattern needs valid UTF-8; on anything else it fails and would drop the text it ran on.
-		if ( ! \wp_check_invalid_utf8( $the_content ) ) {
+		if ( ! \preg_match( '//u', $the_content ) ) {
 			return $the_content;
 		}
 

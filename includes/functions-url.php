@@ -73,8 +73,13 @@ function to_ascii_host( $host ) {
 		return $host;
 	}
 
+	// Equivalent spellings (case, composed or decomposed accents) must give the same A-label.
+	if ( \function_exists( 'normalizer_normalize' ) ) {
+		$host = \normalizer_normalize( $host ) ?: $host;
+	}
+
 	try {
-		return \strtolower( IdnaEncoder::encode( $host ) );
+		return \strtolower( IdnaEncoder::encode( \mb_strtolower( $host, 'UTF-8' ) ) );
 	} catch ( Requests_Exception $e ) {
 		return $host;
 	}
