@@ -1,0 +1,4 @@
+Significance: patch
+Type: deprecated
+
+The option to turn off content filters in the post template is deprecated and will be removed in a future version.

@@ -73,6 +73,24 @@ class Test_Shortcodes extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Switching off the content filters is deprecated, but still works.
+	 *
+	 * @covers ::content
+	 */
+	public function test_content_apply_filters_no_is_deprecated() {
+		global $post;
+
+		$this->setExpectedDeprecated( 'Activitypub\Shortcodes::content' );
+
+		$post = $this->post; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		setup_postdata( $post );
+		$content = do_shortcode( '[ap_content apply_filters="no"]' );
+		wp_reset_postdata();
+
+		$this->assertStringContainsString( 'Lorem ipsum', $content );
+	}
+
+	/**
 	 * Test the content shortcode with password protected content.
 	 */
 	public function test_password_protected_content() {

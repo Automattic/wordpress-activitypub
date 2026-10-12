@@ -185,6 +185,8 @@ class Shortcodes {
 			/** This filter is documented in wp-includes/post-template.php */
 			$content = \apply_filters( 'the_content', $content );
 		} else {
+			\_deprecated_argument( __METHOD__, 'unreleased', \esc_html__( 'To keep a filter out of federated content, remove it in the activitypub_before_get_content action instead.', 'activitypub' ) );
+
 			if ( site_supports_blocks() ) {
 				$content = \do_blocks( $content );
 			}
