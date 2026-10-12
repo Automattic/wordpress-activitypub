@@ -9,6 +9,9 @@
 
 namespace Activitypub;
 
+use WpOrg\Requests\Exception as Requests_Exception;
+use WpOrg\Requests\IdnaEncoder;
+
 /**
  * Get the REST URL relative to this plugin's namespace.
  *
@@ -51,11 +54,39 @@ function normalize_host( $host ) {
 }
 
 /**
+ * Convert a host to its ASCII form.
+ *
+ * An internationalized host is converted to its IDNA A-label (`café.example` becomes
+ * `xn--caf-dma.example`), which is the form `acct:` URIs and DNS use. ASCII hosts, IPv6
+ * literals included, are returned as they are.
+ *
+ * @since unreleased
+ *
+ * @param string $host The host.
+ *
+ * @return string The host in ASCII form, or the host as it is if it cannot be converted.
+ */
+function to_ascii_host( $host ) {
+	$host = (string) $host;
+
+	if ( ! \preg_match( '/[^\x00-\x7F]/', $host ) ) {
+		return $host;
+	}
+
+	try {
+		return \strtolower( IdnaEncoder::encode( $host ) );
+	} catch ( Requests_Exception $e ) {
+		return $host;
+	}
+}
+
+/**
  * Fold a host to its canonical spelling for comparison.
  *
  * Hosts are case-insensitive, IPv6 literals are bracketed in a URI but not in a stored host,
- * and a trailing dot is the same fully qualified name. Two spellings that differ only in those
- * ways address the same host, so anything comparing hosts has to fold them first.
+ * a trailing dot is the same fully qualified name, and an internationalized host is the same as
+ * its A-label. Two spellings that differ only in those ways address the same host, so anything
+ * comparing hosts has to fold them first.
  *
  * Unlike {@see normalize_host()} this is lossless: it does not strip `www.`, which is a
  * different host rather than a different spelling of one.
@@ -67,7 +98,7 @@ function normalize_host( $host ) {
  * @return string The folded host.
  */
 function fold_host( $host ) {
-	return \rtrim( \trim( \strtolower( (string) $host ), '[]' ), '.' );
+	return to_ascii_host( \rtrim( \trim( \strtolower( (string) $host ), '[]' ), '.' ) );
 }
 
 /**

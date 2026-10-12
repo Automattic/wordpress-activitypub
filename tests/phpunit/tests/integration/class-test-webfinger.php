@@ -206,6 +206,30 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * On an internationalized domain the `acct:` subject uses the A-label.
+	 *
+	 * @covers ::add_user_discovery
+	 * @covers ::add_pseudo_user_discovery
+	 */
+	public function test_subject_uses_a_label() {
+		$set_home = static function () {
+			return 'https://café.example';
+		};
+		\add_filter( 'pre_option_home', $set_home );
+
+		$user    = get_user_by( 'id', self::$user_ids['author'] );
+		$subject = 'acct:' . $user->user_login . '@xn--caf-dma.example';
+
+		$user_jrd   = Webfinger::add_user_discovery( array(), $subject, $user );
+		$pseudo_jrd = Webfinger::add_pseudo_user_discovery( array(), $subject );
+
+		\remove_filter( 'pre_option_home', $set_home );
+
+		$this->assertSame( $subject, $user_jrd['subject'] );
+		$this->assertSame( $subject, $pseudo_jrd['subject'] );
+	}
+
+	/**
 	 * Test add_pseudo_user_discovery with invalid resource.
 	 *
 	 * @covers ::add_pseudo_user_discovery

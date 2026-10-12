@@ -68,4 +68,46 @@ class Test_Functions_Url extends \WP_UnitTestCase {
 			array( 'www.example.com', 'example.com' ),
 		);
 	}
+
+	/**
+	 * Internationalized hosts are converted to their A-label, everything else is returned as it is.
+	 *
+	 * @covers \Activitypub\to_ascii_host
+	 * @dataProvider ascii_host_provider
+	 *
+	 * @param string $host     The host.
+	 * @param string $expected The expected host.
+	 */
+	public function test_to_ascii_host( $host, $expected ) {
+		$this->assertSame( $expected, \Activitypub\to_ascii_host( $host ) );
+	}
+
+	/**
+	 * Hosts from the SWICG notes on internationalized handles, and ASCII hosts.
+	 *
+	 * @return array[]
+	 */
+	public function ascii_host_provider() {
+		return array(
+			'thai'    => array( 'ตัวอย่าง.example', 'xn--72c1a1bt4awk9o.example' ),
+			'telugu'  => array( 'ఉదాహరణ.example', 'xn--noc6ci4b4b3a.example' ),
+			'chinese' => array( 'example.中国', 'example.xn--fiqs8s' ),
+			'latin'   => array( 'café.example', 'xn--caf-dma.example' ),
+			'a-label' => array( 'xn--caf-dma.example', 'xn--caf-dma.example' ),
+			'ascii'   => array( 'Example.org', 'Example.org' ),
+			'ipv6'    => array( '[2001:db8::1]', '[2001:db8::1]' ),
+			'empty'   => array( '', '' ),
+		);
+	}
+
+	/**
+	 * The Unicode form and the A-label of a host fold to the same value.
+	 *
+	 * @covers \Activitypub\fold_host
+	 */
+	public function test_fold_host_folds_internationalized_hosts() {
+		$this->assertSame( 'xn--caf-dma.example', \Activitypub\fold_host( 'café.example' ) );
+		$this->assertSame( 'xn--caf-dma.example', \Activitypub\fold_host( 'café.example.' ) );
+		$this->assertSame( 'xn--caf-dma.example', \Activitypub\fold_host( 'XN--CAF-DMA.example' ) );
+	}
 }

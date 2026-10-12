@@ -87,6 +87,14 @@ class Test_Webfinger extends \WP_UnitTestCase {
 			// A digit or hyphen in the scheme must not make this read as a handle.
 			array( 'web3://example.org/@pfefferle', 'web3://example.org/@pfefferle', 'example.org' ),
 			array( 'view-source://example.org/x', 'view-source://example.org/x', 'example.org' ),
+			// Internationalized handles: the userpart is percent-encoded and the host is the A-label.
+			array( 'ελπίδα@ఉదాహరణ.example', 'acct:%CE%B5%CE%BB%CF%80%CE%AF%CE%B4%CE%B1@xn--noc6ci4b4b3a.example', 'xn--noc6ci4b4b3a.example' ),
+			array( 'acct:小明@example.中国', 'acct:%E5%B0%8F%E6%98%8E@example.xn--fiqs8s', 'example.xn--fiqs8s' ),
+			array( 'user1@café.example', 'acct:user1@xn--caf-dma.example', 'xn--caf-dma.example' ),
+			// Already in that form, or ASCII that is allowed as it is: unchanged.
+			array( 'acct:ren%C3%A9e@xn--d5b6ci4b4b3a.example', 'acct:ren%C3%A9e@xn--d5b6ci4b4b3a.example', 'xn--d5b6ci4b4b3a.example' ),
+			array( "anne.o'neill+notes@example.org", "acct:anne.o'neill+notes@example.org", 'example.org' ),
+			array( 'https://ఉదాహరణ.example/@user1', 'https://ఉదాహరణ.example/@user1', 'xn--noc6ci4b4b3a.example' ),
 		);
 	}
 
@@ -793,6 +801,18 @@ class Test_Webfinger extends \WP_UnitTestCase {
 			'dots in local part'  => array( 'first.last@example.com' ),
 			'underscore in local' => array( 'first_last@example.com' ),
 			'dash in local'       => array( 'first-last@example.com' ),
+			'plus in local'       => array( 'anne.notes+news@example.com' ),
+			'accented local'      => array( 'renée@example.com' ),
+			'cyrillic local'      => array( 'иван@example.com' ),
+			'greek local'         => array( 'ελπίδα@example.com' ),
+			'chinese local'       => array( '小明@example.com' ),
+			'devanagari local'    => array( 'किरण@example.com' ),
+			'arabic local'        => array( 'ليلى@example.com' ),
+			'encoded local'       => array( 'ren%C3%A9e@example.com' ),
+			'unicode host'        => array( 'user1@ఉదాహరణ.example' ),
+			'unicode tld'         => array( 'user1@example.中国' ),
+			'a-label host'        => array( 'user1@xn--caf-dma.example' ),
+			'a-label tld'         => array( 'user1@example.xn--fiqs8s' ),
 		);
 	}
 

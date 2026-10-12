@@ -24,7 +24,7 @@ class Test_Mention extends \WP_UnitTestCase {
 	 * @var array[]
 	 */
 	public static $actors = array(
-		'username@example.org' => array(
+		'username@example.org'  => array(
 			'@context'          => 'https://www.w3.org/ns/activitystreams',
 			'id'                => 'https://example.org/users/username',
 			'type'              => 'Person',
@@ -32,6 +32,15 @@ class Test_Mention extends \WP_UnitTestCase {
 			'name'              => 'username',
 			'preferredUsername' => 'username',
 			'inbox'             => 'https://example.org/users/username/inbox',
+		),
+		'ελπίδα@ఉదాహరణ.example' => array(
+			'@context'          => 'https://www.w3.org/ns/activitystreams',
+			'id'                => 'https://xn--noc6ci4b4b3a.example/users/elpida',
+			'type'              => 'Person',
+			'url'               => 'https://xn--noc6ci4b4b3a.example/@elpida',
+			'name'              => 'ελπίδα',
+			'preferredUsername' => 'ελπίδα',
+			'inbox'             => 'https://xn--noc6ci4b4b3a.example/users/elpida/inbox',
 		),
 	);
 
@@ -93,6 +102,9 @@ ENDPRE;
 			array( '<!-- @pfefferle@notiz.blog -->', '<!-- @pfefferle@notiz.blog -->' ),
 			array( $code, $code ),
 			array( $pre, $pre ),
+			array( 'hallo @ελπίδα@ఉదాహరణ.example test', 'hallo <a rel="mention" class="u-url mention" href="https://xn--noc6ci4b4b3a.example/@elpida">@ελπίδα</a> test' ),
+			// Invalid UTF-8 is left alone rather than lost.
+			array( "hallo @username@example.org \xC3\x28", "hallo @username@example.org \xC3\x28" ),
 		);
 	}
 
@@ -117,6 +129,26 @@ ENDPRE;
 								'rel'  => 'self',
 								'type' => 'application/activity+json',
 								'href' => 'https://example.org/users/username',
+							),
+						),
+					)
+				),
+				'response' => array( 'code' => 200 ),
+			);
+		}
+
+		// The lookup URL for `ελπίδα@ఉదాహరణ.example`, as the SWICG notes on internationalized handles spell it.
+		if ( 'https://xn--noc6ci4b4b3a.example/.well-known/webfinger?resource=acct%3A%25CE%25B5%25CE%25BB%25CF%2580%25CE%25AF%25CE%25B4%25CE%25B1%40xn--noc6ci4b4b3a.example' === $url ) {
+			return array(
+				'headers'  => array( 'content-type' => 'application/jrd+json' ),
+				'body'     => wp_json_encode(
+					array(
+						'subject' => 'acct:%CE%B5%CE%BB%CF%80%CE%AF%CE%B4%CE%B1@xn--noc6ci4b4b3a.example',
+						'links'   => array(
+							array(
+								'rel'  => 'self',
+								'type' => 'application/activity+json',
+								'href' => 'https://xn--noc6ci4b4b3a.example/users/elpida',
 							),
 						),
 					)

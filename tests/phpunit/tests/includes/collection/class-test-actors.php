@@ -107,6 +107,43 @@ class Test_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An `acct:` resource matches the blog host in its Unicode form, as A-label and in any case.
+	 *
+	 * @covers ::get_id_by_resource
+	 * @dataProvider idn_resource_provider
+	 *
+	 * @param string $home               The home URL.
+	 * @param string $webfinger_resource The WebFinger resource.
+	 */
+	public function test_get_id_by_resource_on_idn_domain( $home, $webfinger_resource ) {
+		$set_home = static function () use ( $home ) {
+			return $home;
+		};
+		\add_filter( 'pre_option_home', $set_home );
+
+		$user_id = Actors::get_id_by_resource( $webfinger_resource );
+
+		\remove_filter( 'pre_option_home', $set_home );
+
+		$this->assertEquals( 1, $user_id );
+	}
+
+	/**
+	 * Home URLs and resources on an internationalized domain.
+	 *
+	 * @return array[]
+	 */
+	public function idn_resource_provider() {
+		return array(
+			'unicode home, unicode resource' => array( 'https://café.example', 'acct:admin@café.example' ),
+			'unicode home, a-label resource' => array( 'https://café.example', 'acct:admin@xn--caf-dma.example' ),
+			'a-label home, unicode resource' => array( 'https://xn--caf-dma.example', 'acct:admin@café.example' ),
+			'a-label home, upper case'       => array( 'https://xn--caf-dma.example', 'acct:admin@XN--CAF-DMA.example' ),
+			'ascii home, upper case'         => array( 'https://example.org', 'acct:admin@EXAMPLE.ORG' ),
+		);
+	}
+
+	/**
 	 * Resource provider.
 	 *
 	 * @return array[]

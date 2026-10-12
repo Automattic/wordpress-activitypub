@@ -13,6 +13,7 @@ use Activitypub\Model\Blog;
 use Activitypub\Model\User;
 use Activitypub\Signature;
 
+use function Activitypub\fold_host;
 use function Activitypub\is_user_type_disabled;
 use function Activitypub\normalize_host;
 use function Activitypub\normalize_url;
@@ -291,10 +292,10 @@ class Actors {
 			case 'acct':
 				$uri        = \str_replace( 'acct:', '', $uri );
 				$identifier = \substr( $uri, 0, \strrpos( $uri, '@' ) );
-				$host       = normalize_host( \substr( \strrchr( $uri, '@' ), 1 ) );
-				$blog_host  = normalize_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) );
+				$host       = normalize_host( fold_host( \substr( \strrchr( $uri, '@' ), 1 ) ) );
+				$blog_host  = normalize_host( fold_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) ) );
 
-				if ( $blog_host !== $host && normalize_host( \get_option( 'activitypub_old_host' ) ) !== $host ) {
+				if ( $blog_host !== $host && normalize_host( fold_host( \get_option( 'activitypub_old_host' ) ) ) !== $host ) {
 					return new \WP_Error(
 						'activitypub_wrong_host',
 						\__( 'Resource host does not match blog host', 'activitypub' ),
