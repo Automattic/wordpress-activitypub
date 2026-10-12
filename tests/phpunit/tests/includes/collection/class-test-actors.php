@@ -107,6 +107,19 @@ class Test_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An `acct:` resource whose host folds to nothing does not match the blog.
+	 *
+	 * @covers ::get_id_by_resource
+	 */
+	public function test_get_id_by_resource_rejects_empty_host() {
+		\delete_option( 'activitypub_old_host' );
+
+		foreach ( array( 'acct:*@.', 'acct:*@[]', 'acct:*@' ) as $webfinger_resource ) {
+			$this->assertWPError( Actors::get_id_by_resource( $webfinger_resource ), $webfinger_resource );
+		}
+	}
+
+	/**
 	 * An `acct:` resource matches the blog host in its Unicode form, as A-label and in any case.
 	 *
 	 * @covers ::get_id_by_resource

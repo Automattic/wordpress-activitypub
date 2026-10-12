@@ -295,7 +295,8 @@ class Actors {
 				$host       = normalize_host( fold_host( \substr( \strrchr( $uri, '@' ), 1 ) ) );
 				$blog_host  = normalize_host( fold_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) ) );
 
-				if ( $blog_host !== $host && normalize_host( fold_host( \get_option( 'activitypub_old_host' ) ) ) !== $host ) {
+				// A host of `.` or `[]` folds away to nothing, which would otherwise match an unset old host.
+				if ( '' === $host || ( $blog_host !== $host && normalize_host( fold_host( \get_option( 'activitypub_old_host' ) ) ) !== $host ) ) {
 					return new \WP_Error(
 						'activitypub_wrong_host',
 						\__( 'Resource host does not match blog host', 'activitypub' ),
