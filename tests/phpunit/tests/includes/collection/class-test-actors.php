@@ -107,6 +107,21 @@ class Test_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A blog identifier that was stored percent-encoded still resolves.
+	 *
+	 * @covers ::get_id_by_resource
+	 */
+	public function test_get_id_by_resource_with_encoded_blog_identifier() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_blog_identifier', 'test-blog-%e2%9d%a4%ef%b8%8f' );
+
+		$this->assertSame( Actors::BLOG_USER_ID, Actors::get_id_by_resource( 'acct:test-blog-%e2%9d%a4%ef%b8%8f@' . \wp_parse_url( \home_url(), \PHP_URL_HOST ) ) );
+
+		\delete_option( 'activitypub_blog_identifier' );
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
 	 * An `acct:` resource whose host folds to nothing does not match the blog.
 	 *
 	 * @covers ::get_id_by_resource

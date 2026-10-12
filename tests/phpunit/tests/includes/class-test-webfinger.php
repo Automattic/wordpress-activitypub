@@ -844,6 +844,8 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	 */
 	public function data_invalid_accts() {
 		return array(
+			'cjk after tld'   => array( 'user@example.com今日は' ),
+			'kana after tld'  => array( 'user@example.comです' ),
 			'trailing hyphen' => array( 'user@example.com-' ),
 			'empty string'    => array( '' ),
 			'plain word'      => array( 'user' ),

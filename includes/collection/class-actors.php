@@ -291,7 +291,7 @@ class Actors {
 			// Check for acct URIs.
 			case 'acct':
 				$uri        = \str_replace( 'acct:', '', $uri );
-				$identifier = \rawurldecode( \substr( $uri, 0, \strrpos( $uri, '@' ) ) );
+				$identifier = \substr( $uri, 0, \strrpos( $uri, '@' ) );
 				$host       = normalize_host( fold_host( \substr( \strrchr( $uri, '@' ), 1 ) ) );
 				$blog_host  = normalize_host( fold_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) ) );
 
@@ -305,11 +305,18 @@ class Actors {
 				}
 
 				// Prepare wildcards https://github.com/mastodon/mastodon/issues/22213.
-				if ( \in_array( $identifier, array( '_', '*', '' ), true ) ) {
+				if ( \in_array( \rawurldecode( $identifier ), array( '_', '*', '' ), true ) ) {
 					return self::BLOG_USER_ID;
 				}
 
-				return self::get_id_by_username( $identifier );
+				// The literal goes first: older blog identifiers were stored percent-encoded.
+				$user_id = self::get_id_by_username( $identifier );
+
+				if ( \is_wp_error( $user_id ) && \rawurldecode( $identifier ) !== $identifier ) {
+					$user_id = self::get_id_by_username( \rawurldecode( $identifier ) );
+				}
+
+				return $user_id;
 			default:
 				return new \WP_Error(
 					'activitypub_wrong_scheme',
