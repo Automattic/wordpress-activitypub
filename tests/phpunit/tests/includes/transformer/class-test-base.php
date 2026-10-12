@@ -105,6 +105,28 @@ class Test_Base extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Switching to the visitor and back keeps the kses filters the caller had set up.
+	 *
+	 * @covers ::transform_object_properties
+	 */
+	public function test_transform_object_properties_keeps_kses_state() {
+		$had_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
+		$user_id  = self::factory()->user->create( array( 'role' => 'author' ) );
+		$post_id  = self::factory()->post->create( array( 'post_author' => $user_id ) );
+
+		\wp_set_current_user( $user_id );
+		\kses_remove_filters();
+
+		( new Post( \get_post( $post_id ) ) )->to_object();
+
+		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
+
+		$had_kses ? \kses_init_filters() : \kses_remove_filters();
+
+		$this->assertFalse( $has_kses, 'Filters removed by the caller stay removed.' );
+	}
+
+	/**
 	 * Test that the audience is set correctly.
 	 *
 	 * @dataProvider data_provider_set_audience
