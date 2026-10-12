@@ -73,9 +73,9 @@ function to_ascii_host( $host ) {
 		return $host;
 	}
 
-	// Equivalent spellings (case, composed or decomposed accents) must give the same A-label.
-	if ( \function_exists( 'normalizer_normalize' ) ) {
-		$host = \normalizer_normalize( $host ) ?: $host;
+	// UTS #46 maps equivalent spellings (case, width, decomposed accents) to the same A-label.
+	if ( \function_exists( 'idn_to_ascii' ) ) {
+		return \idn_to_ascii( $host, \IDNA_NONTRANSITIONAL_TO_ASCII, \INTL_IDNA_VARIANT_UTS46 ) ?: $host;
 	}
 
 	if ( \function_exists( 'mb_strtolower' ) ) {

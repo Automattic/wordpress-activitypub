@@ -112,6 +112,16 @@ class Test_Functions_Url extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A fullwidth host gives the same A-label as its plain form.
+	 *
+	 * @requires extension intl
+	 * @covers \Activitypub\to_ascii_host
+	 */
+	public function test_to_ascii_host_maps_fullwidth_hosts() {
+		$this->assertSame( 'xn--caf-dma.example', \Activitypub\to_ascii_host( 'ｃａｆé.example' ) );
+	}
+
+	/**
 	 * The Unicode form and the A-label of a host fold to the same value.
 	 *
 	 * @covers \Activitypub\fold_host
