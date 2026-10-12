@@ -89,6 +89,13 @@ abstract class Base {
 		// Save activity in the context of an activitypub request.
 		\add_filter( 'activitypub_is_activitypub_request', '__return_true' );
 
+		/*
+		 * Render as a logged-out visitor. The object is federated and served to everyone, so it
+		 * must not show what plugins only show the current user.
+		 */
+		$current_user_id = \get_current_user_id();
+		\wp_set_current_user( 0 );
+
 		$vars = $activity_object->get_object_var_keys();
 
 		foreach ( $vars as $var ) {
@@ -121,6 +128,8 @@ abstract class Base {
 				}
 			}
 		}
+
+		\wp_set_current_user( $current_user_id );
 
 		// Remove activity in the context of an activitypub request.
 		\remove_filter( 'activitypub_is_activitypub_request', '__return_true' );
