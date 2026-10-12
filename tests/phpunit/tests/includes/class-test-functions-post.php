@@ -711,6 +711,48 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Building the summary puts the global post back the way it was.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 */
+	public function test_generate_post_summary_restores_global_post() {
+		$queried = self::factory()->post->create();
+		$current = self::factory()->post->create_and_get( array( 'post_excerpt' => '' ) );
+
+		$this->go_to( \get_permalink( $queried ) );
+		$GLOBALS['post'] = $current; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		\Activitypub\generate_post_summary( $current );
+
+		$this->assertSame( $current->ID, $GLOBALS['post']->ID );
+	}
+
+	/**
+	 * Lines that only hold whitespace collapse like empty lines.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 */
+	public function test_generate_post_summary_collapses_whitespace_lines() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => 'First',
+				'post_excerpt' => '',
+			)
+		);
+
+		$spaces = static function ( $content ) {
+			return $content . "\n   \n   \nSecond";
+		};
+		\add_filter( 'the_content', $spaces, 99 );
+
+		$summary = \Activitypub\generate_post_summary( $post_id );
+
+		\remove_filter( 'the_content', $spaces, 99 );
+
+		$this->assertSame( "First\n\nSecond", $summary );
+	}
+
+	/**
 	 * Data provider for test_generate_post_summary.
 	 *
 	 * @return array[]
