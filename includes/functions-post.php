@@ -378,20 +378,25 @@ function generate_post_summary( $post, $length = 500 ) {
 		 * Run the content filters, so the summary never shows what they hide. Shortcodes are
 		 * removed first, their output does not belong in a summary.
 		 */
+		$previous_post   = $GLOBALS['post'] ?? null;
 		$GLOBALS['post'] = $post; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		\setup_postdata( $post );
 
 		/** This filter is documented in wp-includes/post-template.php */
 		$content = \apply_filters( 'the_content', \strip_shortcodes( $content ) );
 
-		\wp_reset_postdata();
+		// `wp_reset_postdata()` would restore the main query's post, not the one set before.
+		$GLOBALS['post'] = $previous_post; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		if ( $previous_post ) {
+			\setup_postdata( $previous_post );
+		}
 	}
 
 	$content = \strip_shortcodes( $content );
 	$content = \wp_strip_all_tags( $content );
 	$content = \html_entity_decode( $content, ENT_QUOTES, 'UTF-8' );
 	$content = \trim( $content );
-	$content = \preg_replace( '/\R+/mu', "\n\n", $content );
+	$content = \preg_replace( '/\s*\R\s*/u', "\n\n", $content );
 	$content = \preg_replace( '/[\r\t]/u', '', $content );
 	$content = $content . $more;
 
