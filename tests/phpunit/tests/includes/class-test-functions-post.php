@@ -682,6 +682,35 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The summary is built from the filtered content, so it never shows what `the_content` hides.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 */
+	public function test_generate_post_summary_applies_content_filters() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => 'Teaser <!-- cut --> Hidden text',
+				'post_excerpt' => '',
+			)
+		);
+
+		$cut = static function ( $content ) use ( $post_id ) {
+			if ( \get_the_ID() !== $post_id ) {
+				return $content;
+			}
+
+			return \strstr( $content, '<!-- cut -->', true );
+		};
+		\add_filter( 'the_content', $cut, 8 );
+
+		$summary = \Activitypub\generate_post_summary( $post_id );
+
+		\remove_filter( 'the_content', $cut, 8 );
+
+		$this->assertSame( 'Teaser', $summary );
+	}
+
+	/**
 	 * Data provider for test_generate_post_summary.
 	 *
 	 * @return array[]

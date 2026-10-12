@@ -355,6 +355,7 @@ function generate_post_summary( $post, $length = 500 ) {
 	$length       = $length - \mb_strlen( $excerpt_more, 'UTF-8' );
 
 	$content = \sanitize_post_field( 'post_excerpt', $post->post_excerpt, $post->ID );
+	$more    = '';
 
 	if ( $content ) {
 		// Ignore length if excerpt is set.
@@ -368,9 +369,22 @@ function generate_post_summary( $post, $length = 500 ) {
 			! empty( $content_parts['extended'] ) &&
 			! empty( $content_parts['main'] )
 		) {
-			$content = \trim( $content_parts['main'] ) . ' ' . $excerpt_more;
+			$content = $content_parts['main'];
+			$more    = ' ' . $excerpt_more;
 			$length  = null;
 		}
+
+		/*
+		 * Run the content filters, so the summary never shows what they hide. Shortcodes are
+		 * removed first, their output does not belong in a summary.
+		 */
+		$GLOBALS['post'] = $post; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		\setup_postdata( $post );
+
+		/** This filter is documented in wp-includes/post-template.php */
+		$content = \apply_filters( 'the_content', \strip_shortcodes( $content ) );
+
+		\wp_reset_postdata();
 	}
 
 	$content = \strip_shortcodes( $content );
@@ -379,6 +393,7 @@ function generate_post_summary( $post, $length = 500 ) {
 	$content = \trim( $content );
 	$content = \preg_replace( '/\R+/mu', "\n\n", $content );
 	$content = \preg_replace( '/[\r\t]/u', '', $content );
+	$content = $content . $more;
 
 	if ( $length && \mb_strlen( $content, 'UTF-8' ) > $length ) {
 		$content = \wordwrap( $content, $length, '</activitypub-summary>' );
