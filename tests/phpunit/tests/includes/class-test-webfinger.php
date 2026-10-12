@@ -775,6 +775,15 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A username that starts with `@` keeps it in the `acct:` URI.
+	 *
+	 * @covers ::get_acct
+	 */
+	public function test_get_acct_keeps_leading_at_in_username() {
+		$this->assertSame( 'acct:@alice@example.org', Webfinger::get_acct( '@alice@example.org' ) );
+	}
+
+	/**
 	 * Test that valid acct identifiers are recognized.
 	 *
 	 * @covers ::is_acct

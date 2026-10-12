@@ -78,8 +78,12 @@ function to_ascii_host( $host ) {
 		$host = \normalizer_normalize( $host ) ?: $host;
 	}
 
+	if ( \function_exists( 'mb_strtolower' ) ) {
+		$host = \mb_strtolower( $host, 'UTF-8' );
+	}
+
 	try {
-		return \strtolower( IdnaEncoder::encode( \mb_strtolower( $host, 'UTF-8' ) ) );
+		return \strtolower( IdnaEncoder::encode( $host ) );
 	} catch ( Requests_Exception $e ) {
 		return $host;
 	}

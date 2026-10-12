@@ -94,12 +94,21 @@ class Test_Functions_Url extends \WP_UnitTestCase {
 			'chinese' => array( 'example.中国', 'example.xn--fiqs8s' ),
 			'latin'   => array( 'café.example', 'xn--caf-dma.example' ),
 			'upper'   => array( 'CAFÉ.example', 'xn--caf-dma.example' ),
-			'nfd'     => array( "cafe\u{0301}.example", 'xn--caf-dma.example' ),
 			'a-label' => array( 'xn--caf-dma.example', 'xn--caf-dma.example' ),
 			'ascii'   => array( 'Example.org', 'Example.org' ),
 			'ipv6'    => array( '[2001:db8::1]', '[2001:db8::1]' ),
 			'empty'   => array( '', '' ),
 		);
+	}
+
+	/**
+	 * A decomposed accent gives the same A-label as the composed one.
+	 *
+	 * @requires extension intl
+	 * @covers \Activitypub\to_ascii_host
+	 */
+	public function test_to_ascii_host_normalizes_decomposed_hosts() {
+		$this->assertSame( 'xn--caf-dma.example', \Activitypub\to_ascii_host( "cafe\u{0301}.example" ) );
 	}
 
 	/**

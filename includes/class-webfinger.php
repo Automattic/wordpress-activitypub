@@ -72,7 +72,8 @@ class Webfinger {
 	 * @return string The `acct:` URI.
 	 */
 	public static function get_acct( $handle ) {
-		$identifier_and_host = self::get_identifier_and_host( $handle );
+		// With the scheme in front, a username that starts with `@` keeps it.
+		$identifier_and_host = self::get_identifier_and_host( 'acct:' . $handle );
 
 		if ( \is_wp_error( $identifier_and_host ) ) {
 			return 'acct:' . $handle;
