@@ -1,4 +1,4 @@
-Significance: patch
-Type: deprecated
+Significance: minor
+Type: removed
 
-The option to turn off content filters in the post template is deprecated and will be removed in a future version.
+The option to turn off content filters in the post template was removed. Federated posts now always use the regular content filters.
