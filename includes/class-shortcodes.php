@@ -151,7 +151,7 @@ class Shortcodes {
 	 *
 	 * @return string The post content.
 	 */
-	public static function content( $attributes, $content, $tag ) {
+	public static function content( $attributes, $content, $tag ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 		$item = self::get_item();
 
 		if ( ! $item ) {
