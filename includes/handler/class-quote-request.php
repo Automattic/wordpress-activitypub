@@ -12,8 +12,10 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Proxy;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 use function Activitypub\user_can_activitypub;
@@ -57,7 +59,19 @@ class Quote_Request {
 		}
 
 		// Use the post author as the responding actor — they own the quoted content.
-		$user_id        = (int) $post->post_author;
+		$user_id = (int) $post->post_author;
+
+		/*
+		 * The approval is issued for the instrument, so it has to be the requesting actor's own
+		 * post. Sharing the actor's host is not enough, and the copy in the request is no proof.
+		 */
+		$instrument = Proxy::get( object_to_uri( $activity['instrument'] ) );
+
+		if ( \is_wp_error( $instrument ) || ! is_same_actor( $instrument['attributedTo'] ?? null, $activity['actor'] ) ) {
+			self::queue_reject( $activity, $user_id );
+			return;
+		}
+
 		$content_policy = \get_post_meta( $post_id, 'activitypub_interaction_policy_quote', true );
 
 		// Fall back to global default if not set.

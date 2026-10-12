@@ -65,6 +65,97 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 
 		// Initialize the Quote Request handler.
 		Quote_Request::init();
+
+		// The quote post of the sample request belongs to the requesting actor.
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( self::class, 'mock_instrument' ), 10, 2 );
+	}
+
+	/**
+	 * Serve the quote posts used in these tests.
+	 *
+	 * @param mixed  $pre The pre-filtered value.
+	 * @param string $id  The requested ID.
+	 *
+	 * @return mixed The quote post, or the pre-filtered value for other IDs.
+	 */
+	public static function mock_instrument( $pre, $id ) {
+		$authors = array(
+			'https://remote.example.com/posts/456'  => 'https://remote.example.com/users/remote_user',
+			'https://remote.example.com/posts/b'    => 'https://remote.example.com/users/b',
+			'https://remote.example.com/posts/gone' => null,
+		);
+
+		if ( ! \array_key_exists( $id, $authors ) ) {
+			return $pre;
+		}
+
+		if ( ! $authors[ $id ] ) {
+			return new \WP_Error( 'activitypub_http_error', 'Not Found', array( 'status' => 404 ) );
+		}
+
+		return array(
+			'id'           => $id,
+			'type'         => 'Note',
+			'attributedTo' => $authors[ $id ],
+		);
+	}
+
+	/**
+	 * A quote is only approved for the requesting actor's own post.
+	 *
+	 * The instrument only has to share the actor's host to pass validation, so another account on
+	 * that host could otherwise get an approval for a post that is not theirs.
+	 *
+	 * @dataProvider instrument_owner_data
+	 * @covers ::handle_quote_request
+	 *
+	 * @param string $instrument The quote post.
+	 * @param string $expected   The expected response type.
+	 */
+	public function test_handle_quote_request_requires_instrument_owner( $instrument, $expected ) {
+		$activity               = $this->create_quote_request_activity();
+		$activity['instrument'] = $instrument;
+
+		Quote_Request::handle_quote_request( $activity, self::$user_id );
+
+		$outbox = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				'author'      => self::$user_id,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'     => '_activitypub_activity_type',
+						'value'   => array( 'Accept', 'Reject' ),
+						'compare' => 'IN',
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 1, $outbox );
+		$this->assertSame( $expected, \json_decode( $outbox[0]->post_content, true )['type'] );
+
+		$quoted_by = \get_post_meta( self::$post_id, '_activitypub_quoted_by' );
+		if ( 'Accept' === $expected ) {
+			$this->assertSame( array( $instrument ), $quoted_by );
+		} else {
+			$this->assertEmpty( $quoted_by );
+		}
+	}
+
+	/**
+	 * Quote posts by the requesting actor, by someone else, and one that cannot be fetched.
+	 *
+	 * @return array Test cases.
+	 */
+	public function instrument_owner_data() {
+		return array(
+			'own post'             => array( 'https://remote.example.com/posts/456', 'Accept' ),
+			'post by someone else' => array( 'https://remote.example.com/posts/b', 'Reject' ),
+			'post cannot be found' => array( 'https://remote.example.com/posts/gone', 'Reject' ),
+		);
 	}
 
 	/**
