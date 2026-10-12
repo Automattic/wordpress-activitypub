@@ -137,7 +137,7 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 		$this->assertCount( 1, $outbox );
 		$this->assertSame( $expected, \json_decode( $outbox[0]->post_content, true )['type'] );
 
-		$quoted_by = \get_post_meta( self::$post_id, '_activitypub_quoted_by' );
+		$quoted_by = \get_post_meta( self::$post_id, '_activitypub_quoted_by', false );
 		if ( 'Accept' === $expected ) {
 			$this->assertSame( array( $instrument ), $quoted_by );
 		} else {
