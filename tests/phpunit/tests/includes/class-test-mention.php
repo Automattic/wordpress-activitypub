@@ -103,8 +103,8 @@ ENDPRE;
 			array( $code, $code ),
 			array( $pre, $pre ),
 			array( 'hallo @ελπίδα@ఉదాహరణ.example test', 'hallo <a rel="mention" class="u-url mention" href="https://xn--noc6ci4b4b3a.example/@elpida">@ελπίδα</a> test' ),
-			// Invalid UTF-8 is left alone rather than lost.
-			array( "hallo @username@example.org \xC3\x28", "hallo @username@example.org \xC3\x28" ),
+			// Invalid UTF-8 still links ASCII handles, and the stray byte is kept.
+			array( "hallo @username@example.org \xC3\x28", "hallo <a rel=\"mention\" class=\"u-url mention\" href=\"https://example.org/users/username\">@username</a> \xC3\x28" ),
 		);
 	}
 
@@ -215,6 +215,17 @@ ENDPRE;
 		}
 
 		return $pre;
+	}
+
+	/**
+	 * An ASCII handle is extracted from content that is not valid UTF-8.
+	 *
+	 * @covers ::extract_mentions
+	 */
+	public function test_extract_mentions_in_invalid_utf8() {
+		$mentions = Mention::extract_mentions( array(), "hallo @username@example.org \xC3\x28" );
+
+		$this->assertArrayHasKey( '@username@example.org', $mentions );
 	}
 
 	/**

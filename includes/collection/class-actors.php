@@ -305,18 +305,19 @@ class Actors {
 				}
 
 				// Prepare wildcards https://github.com/mastodon/mastodon/issues/22213.
-				if ( \in_array( \rawurldecode( $identifier ), array( '_', '*', '' ), true ) ) {
+				$username = \rawurldecode( $identifier );
+
+				if ( \in_array( $username, array( '_', '*', '' ), true ) ) {
 					return self::BLOG_USER_ID;
 				}
 
-				// The literal goes first: older blog identifiers were stored percent-encoded.
-				$user_id = self::get_id_by_username( $identifier );
-
-				if ( \is_wp_error( $user_id ) && \rawurldecode( $identifier ) !== $identifier ) {
-					$user_id = self::get_id_by_username( \rawurldecode( $identifier ) );
+				// Older blog identifiers were stored percent-encoded in lowercase; clients may send uppercase hex.
+				$blog_identifier = \get_option( 'activitypub_blog_identifier' );
+				if ( \is_string( $blog_identifier ) && 0 === \strcasecmp( $blog_identifier, $identifier ) ) {
+					$username = $blog_identifier;
 				}
 
-				return $user_id;
+				return self::get_id_by_username( $username );
 			default:
 				return new \WP_Error(
 					'activitypub_wrong_scheme',

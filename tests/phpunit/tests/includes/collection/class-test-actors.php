@@ -116,6 +116,25 @@ class Test_Actors extends \WP_UnitTestCase {
 		\update_option( 'activitypub_blog_identifier', 'test-blog-%e2%9d%a4%ef%b8%8f' );
 
 		$this->assertSame( Actors::BLOG_USER_ID, Actors::get_id_by_resource( 'acct:test-blog-%e2%9d%a4%ef%b8%8f@' . \wp_parse_url( \home_url(), \PHP_URL_HOST ) ) );
+		// Remote clients encode with uppercase hex.
+		$this->assertSame( Actors::BLOG_USER_ID, Actors::get_id_by_resource( 'acct:test-blog-%E2%9D%A4%EF%B8%8F@' . \wp_parse_url( \home_url(), \PHP_URL_HOST ) ) );
+
+		\delete_option( 'activitypub_blog_identifier' );
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * A user whose login is the encoded userpart without `%` does not take the blog's subject.
+	 *
+	 * @covers ::get_id_by_resource
+	 */
+	public function test_get_id_by_resource_decodes_before_user_lookup() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_blog_identifier', 'renée' );
+		$user_id = self::factory()->user->create( array( 'user_login' => 'renC3A9e' ) );
+		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
+
+		$this->assertSame( Actors::BLOG_USER_ID, Actors::get_id_by_resource( 'acct:ren%C3%A9e@' . \wp_parse_url( \home_url(), \PHP_URL_HOST ) ) );
 
 		\delete_option( 'activitypub_blog_identifier' );
 		\delete_option( 'activitypub_actor_mode' );

@@ -57,12 +57,10 @@ class Mention {
 	 * @return string The filtered post-content.
 	 */
 	public static function the_content( $the_content ) {
-		// The pattern needs valid UTF-8; on anything else it fails and would drop the text it ran on.
-		if ( ! \preg_match( '//u', $the_content ) ) {
-			return $the_content;
-		}
+		// The `u` modifier fails on invalid UTF-8, so such content is matched byte-wise like before.
+		$modifier = \preg_match( '//u', $the_content ) ? 'u' : '';
 
-		return enrich_content_data( $the_content, '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/u', array( self::class, 'replace_with_links' ) );
+		return enrich_content_data( $the_content, '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/' . $modifier, array( self::class, 'replace_with_links' ) );
 	}
 
 	/**
@@ -146,7 +144,7 @@ class Mention {
 	 * @return array The discovered mentions.
 	 */
 	public static function extract_mentions( $mentions, $post_content ) {
-		\preg_match_all( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/iu', $post_content, $matches );
+		\preg_match_all( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/i' . ( \preg_match( '//u', $post_content ) ? 'u' : '' ), $post_content, $matches );
 		foreach ( $matches[0] ?? array() as $match ) {
 			$link = Webfinger::resolve( $match );
 			if ( ! \is_wp_error( $link ) ) {
