@@ -107,7 +107,8 @@ function to_ascii_host( $host ) {
  * @return string The folded host.
  */
 function fold_host( $host ) {
-	return to_ascii_host( \rtrim( \trim( \strtolower( (string) $host ), '[]' ), '.' ) );
+	// Trimmed again after the conversion, which maps dots like `。` to `.`.
+	return \rtrim( to_ascii_host( \rtrim( \trim( \strtolower( (string) $host ), '[]' ), '.' ) ), '.' );
 }
 
 /**

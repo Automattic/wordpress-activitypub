@@ -122,6 +122,16 @@ class Test_Functions_Url extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An ideographic full stop at the end is trimmed like an ASCII dot.
+	 *
+	 * @requires extension intl
+	 * @covers \Activitypub\fold_host
+	 */
+	public function test_fold_host_trims_ideographic_trailing_dot() {
+		$this->assertSame( 'xn--caf-dma.example', \Activitypub\fold_host( 'café.example。' ) );
+	}
+
+	/**
 	 * The Unicode form and the A-label of a host fold to the same value.
 	 *
 	 * @covers \Activitypub\fold_host
