@@ -728,7 +728,7 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Lines that only hold whitespace collapse like empty lines.
+	 * Line breaks and lines that only hold whitespace collapse into a single space.
 	 *
 	 * @covers \Activitypub\generate_post_summary
 	 */
@@ -749,7 +749,73 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 
 		\remove_filter( 'the_content', $spaces, 99 );
 
-		$this->assertSame( "First\n\nSecond", $summary );
+		$this->assertSame( 'First Second', $summary );
+	}
+
+	/**
+	 * Content that plugins only add outside of excerpts, like a subscribe prompt, stays out of the summary.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 */
+	public function test_generate_post_summary_builds_an_excerpt() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => 'Hello',
+				'post_excerpt' => '',
+			)
+		);
+
+		$prompt = static function ( $content ) {
+			return \doing_filter( 'get_the_excerpt' ) ? $content : $content . ' Subscribe to continue reading';
+		};
+		\add_filter( 'the_content', $prompt );
+
+		$summary = \Activitypub\generate_post_summary( $post_id );
+
+		\remove_filter( 'the_content', $prompt );
+
+		$this->assertSame( 'Hello', $summary );
+	}
+
+	/**
+	 * A theme's read-more link is replaced by the plugin's own.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 */
+	public function test_generate_post_summary_replaces_read_more() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => \str_repeat( 'word ', 60 ),
+				'post_excerpt' => '',
+			)
+		);
+
+		$read_more = static function () {
+			return ' <a href="#">Continue reading</a>';
+		};
+		\add_filter( 'excerpt_more', $read_more );
+
+		$summary = \Activitypub\generate_post_summary( $post_id );
+
+		\remove_filter( 'excerpt_more', $read_more );
+
+		$this->assertStringEndsWith( 'word […]', $summary );
+	}
+
+	/**
+	 * Blocks that are not text, like a search form, stay out of the summary.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 */
+	public function test_generate_post_summary_skips_non_text_blocks() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:paragraph --><p>Hello</p><!-- /wp:paragraph --><!-- wp:search {"label":"Search","buttonText":"Search"} /-->',
+				'post_excerpt' => '',
+			)
+		);
+
+		$this->assertSame( 'Hello', \Activitypub\generate_post_summary( $post_id ) );
 	}
 
 	/**
@@ -785,7 +851,7 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 				array(
 					'post_content' => 'Hello World <!--more--> More',
 				),
-				'Hello World […]',
+				'Hello World',
 			),
 			array(
 				'Excerpt with shortcode',
@@ -822,7 +888,7 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 				array(
 					'post_content' => 'Hello World Hello <!--more--> World Hello World Hello World Hello World',
 				),
-				'Hello World Hello […]',
+				'Hello […]',
 				1,
 			),
 			array(
