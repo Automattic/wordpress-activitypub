@@ -103,6 +103,7 @@ ENDPRE;
 			array( $code, $code ),
 			array( $pre, $pre ),
 			array( 'hallo @ελπίδα@ఉదాహరణ.example test', 'hallo <a rel="mention" class="u-url mention" href="https://xn--noc6ci4b4b3a.example/@elpida">@ελπίδα</a> test' ),
+			array( 'hallo @username@example.org-thanks', 'hallo <a rel="mention" class="u-url mention" href="https://example.org/users/username">@username</a>-thanks' ),
 			// Invalid UTF-8 still links ASCII handles, and the stray byte is kept.
 			array( "hallo @username@example.org \xC3\x28", "hallo <a rel=\"mention\" class=\"u-url mention\" href=\"https://example.org/users/username\">@username</a> \xC3\x28" ),
 		);
