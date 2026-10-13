@@ -230,6 +230,26 @@ ENDPRE;
 	}
 
 	/**
+	 * Content that is not valid UTF-8 never has a multibyte character cut into a host.
+	 *
+	 * @covers ::extract_mentions
+	 */
+	public function test_extract_mentions_in_invalid_utf8_skips_non_ascii_hosts() {
+		$hosts = array();
+		$log   = static function ( $pre, $args, $url ) use ( &$hosts ) {
+			$hosts[] = \wp_parse_url( $url, \PHP_URL_HOST );
+			return $pre;
+		};
+		\add_filter( 'pre_http_request', $log, 5, 3 );
+
+		Mention::extract_mentions( array(), "hallo \xC3\x28 @user@example.\xC3\xA9" );
+
+		\remove_filter( 'pre_http_request', $log, 5 );
+
+		$this->assertSame( array(), $hosts );
+	}
+
+	/**
 	 * A mention written as a link, the way clients and Mastodon do, is extracted like a handle.
 	 *
 	 * @covers ::extract_mentions

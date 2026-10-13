@@ -118,6 +118,8 @@ class Test_Actors extends \WP_UnitTestCase {
 		$this->assertSame( Actors::BLOG_USER_ID, Actors::get_id_by_resource( 'acct:test-blog-%e2%9d%a4%ef%b8%8f@' . \wp_parse_url( \home_url(), \PHP_URL_HOST ) ) );
 		// Remote clients encode with uppercase hex.
 		$this->assertSame( Actors::BLOG_USER_ID, Actors::get_id_by_resource( 'acct:test-blog-%E2%9D%A4%EF%B8%8F@' . \wp_parse_url( \home_url(), \PHP_URL_HOST ) ) );
+		// And some send the userpart unencoded.
+		$this->assertSame( Actors::BLOG_USER_ID, Actors::get_id_by_resource( 'acct:test-blog-❤️@' . \wp_parse_url( \home_url(), \PHP_URL_HOST ) ) );
 
 		\delete_option( 'activitypub_blog_identifier' );
 		\delete_option( 'activitypub_actor_mode' );

@@ -822,6 +822,7 @@ class Test_Webfinger extends \WP_UnitTestCase {
 			'unicode tld'         => array( 'user1@example.中国' ),
 			'a-label host'        => array( 'user1@xn--caf-dma.example' ),
 			'a-label tld'         => array( 'user1@example.xn--fiqs8s' ),
+			'mixed-script tld'    => array( 'user1@example.vermögensberater' ),
 		);
 	}
 

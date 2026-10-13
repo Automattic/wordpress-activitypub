@@ -311,9 +311,9 @@ class Actors {
 					return self::BLOG_USER_ID;
 				}
 
-				// Older blog identifiers were stored percent-encoded in lowercase; clients may send uppercase hex.
+				// Older blog identifiers were stored percent-encoded; clients send any hex case or no encoding.
 				$blog_identifier = \get_option( 'activitypub_blog_identifier' );
-				if ( \is_string( $blog_identifier ) && 0 === \strcasecmp( $blog_identifier, $identifier ) ) {
+				if ( \is_string( $blog_identifier ) && \rawurldecode( $blog_identifier ) === $username ) {
 					$username = $blog_identifier;
 				}
 
