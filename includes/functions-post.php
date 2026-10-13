@@ -355,21 +355,21 @@ function generate_post_summary( $post, $length = 500 ) {
 
 	/*
 	 * Let core build the excerpt. It runs the content filters, so the summary never shows what
-	 * they hide, and plugins can tell an excerpt from the full post. A theme's read-more link
-	 * is replaced by our own.
+	 * they hide, and plugins can tell an excerpt from the full post. Core's word limit is lifted,
+	 * so the length below applies and no theme read-more link is added.
 	 */
-	$read_more = static function () use ( $excerpt_more ) {
-		return ' ' . $excerpt_more;
+	$no_limit = static function () {
+		return \PHP_INT_MAX - 1; // `wp_trim_words()` adds one.
 	};
 
 	$previous_post   = $GLOBALS['post'] ?? null;
 	$GLOBALS['post'] = $post; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 	\setup_postdata( $post );
-	\add_filter( 'excerpt_more', $read_more, \PHP_INT_MAX );
+	\add_filter( 'excerpt_length', $no_limit, \PHP_INT_MAX );
 
 	$content = \get_the_excerpt( $post );
 
-	\remove_filter( 'excerpt_more', $read_more, \PHP_INT_MAX );
+	\remove_filter( 'excerpt_length', $no_limit, \PHP_INT_MAX );
 
 	// `wp_reset_postdata()` would restore the main query's post, not the one set before.
 	$GLOBALS['post'] = $previous_post; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
@@ -380,8 +380,8 @@ function generate_post_summary( $post, $length = 500 ) {
 	// Mastodon shows the summary as plain text. Core strips shortcodes only from generated excerpts.
 	$content = \html_entity_decode( \wp_strip_all_tags( \strip_shortcodes( $content ) ), ENT_QUOTES, 'UTF-8' );
 
-	// A manual excerpt is used as written.
-	if ( ! $post->post_excerpt && $length && \mb_strlen( $content, 'UTF-8' ) > $length ) {
+	// A manual excerpt is used as written. Core treats one with only whitespace as empty.
+	if ( '' === \trim( $post->post_excerpt ) && $length && \mb_strlen( $content, 'UTF-8' ) > $length ) {
 		$content = \wordwrap( $content, $length, '</activitypub-summary>' );
 		$content = \explode( '</activitypub-summary>', $content, 2 );
 		$content = $content[0] . ' ' . $excerpt_more;

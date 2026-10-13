@@ -785,7 +785,7 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 	public function test_generate_post_summary_replaces_read_more() {
 		$post_id = self::factory()->post->create(
 			array(
-				'post_content' => \str_repeat( 'word ', 60 ),
+				'post_content' => \str_repeat( 'word ', 200 ),
 				'post_excerpt' => '',
 			)
 		);
@@ -800,6 +800,38 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 		\remove_filter( 'excerpt_more', $read_more );
 
 		$this->assertStringEndsWith( 'word […]', $summary );
+	}
+
+	/**
+	 * The summary length is ours, not core's excerpt length.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 */
+	public function test_generate_post_summary_uses_its_own_length() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => \str_repeat( 'word ', 150 ),
+				'post_excerpt' => '',
+			)
+		);
+
+		$this->assertSame( \trim( \str_repeat( 'word ', 150 ) ), \Activitypub\generate_post_summary( $post_id, 1000 ) );
+	}
+
+	/**
+	 * An excerpt that only holds whitespace counts as empty, so the length still applies.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 */
+	public function test_generate_post_summary_treats_blank_excerpt_as_empty() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => \str_repeat( 'word ', 200 ),
+				'post_excerpt' => '  ',
+			)
+		);
+
+		$this->assertStringEndsWith( 'word […]', \Activitypub\generate_post_summary( $post_id ) );
 	}
 
 	/**
