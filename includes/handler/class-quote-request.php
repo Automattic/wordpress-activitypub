@@ -67,7 +67,15 @@ class Quote_Request {
 		 */
 		$instrument = Proxy::get( object_to_uri( $activity['instrument'] ) );
 
-		if ( \is_wp_error( $instrument ) || ! is_same_actor( $instrument['attributedTo'] ?? null, $activity['actor'] ) ) {
+		/*
+		 * Without the post there is nothing to decide: a Reject would be final, and an Accept would be
+		 * unproven. So the request is dropped, like any inbox activity whose fetch fails.
+		 */
+		if ( \is_wp_error( $instrument ) ) {
+			return;
+		}
+
+		if ( ! is_same_actor( $instrument['attributedTo'] ?? null, $activity['actor'] ) ) {
 			self::queue_reject( $activity, $user_id );
 			return;
 		}

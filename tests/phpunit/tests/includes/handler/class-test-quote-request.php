@@ -82,15 +82,19 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 		$authors = array(
 			'https://remote.example.com/posts/456'  => 'https://remote.example.com/users/remote_user',
 			'https://remote.example.com/posts/b'    => 'https://remote.example.com/users/b',
-			'https://remote.example.com/posts/gone' => null,
+			'https://remote.example.com/posts/gone' => 410,
+			'https://remote.example.com/posts/none' => 404,
+			'https://remote.example.com/posts/down' => 503,
+			'https://remote.example.com/posts/slow' => 0,
 		);
 
 		if ( ! \array_key_exists( $id, $authors ) ) {
 			return $pre;
 		}
 
-		if ( ! $authors[ $id ] ) {
-			return new \WP_Error( 'activitypub_http_error', 'Not Found', array( 'status' => 404 ) );
+		if ( \is_int( $authors[ $id ] ) ) {
+			// A network error, like a timeout, carries no status.
+			return new \WP_Error( 'activitypub_http_error', 'Error', $authors[ $id ] ? array( 'status' => $authors[ $id ] ) : null );
 		}
 
 		return array(
@@ -109,8 +113,8 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 	 * @dataProvider instrument_owner_data
 	 * @covers ::handle_quote_request
 	 *
-	 * @param string $instrument The quote post.
-	 * @param string $expected   The expected response type.
+	 * @param string      $instrument The quote post.
+	 * @param string|null $expected   The expected response type, or null for no answer.
 	 */
 	public function test_handle_quote_request_requires_instrument_owner( $instrument, $expected ) {
 		$activity               = $this->create_quote_request_activity();
@@ -134,6 +138,11 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 			)
 		);
 
+		if ( null === $expected ) {
+			$this->assertEmpty( $outbox, 'A quote post that cannot be fetched is not answered.' );
+			return;
+		}
+
 		$this->assertCount( 1, $outbox );
 		$this->assertSame( $expected, \json_decode( $outbox[0]->post_content, true )['type'] );
 
@@ -146,7 +155,7 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
-	 * Quote posts by the requesting actor, by someone else, and one that cannot be fetched.
+	 * Quote posts by the requesting actor, by someone else, and ones that cannot be fetched.
 	 *
 	 * @return array Test cases.
 	 */
@@ -154,7 +163,10 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 		return array(
 			'own post'             => array( 'https://remote.example.com/posts/456', 'Accept' ),
 			'post by someone else' => array( 'https://remote.example.com/posts/b', 'Reject' ),
-			'post cannot be found' => array( 'https://remote.example.com/posts/gone', 'Reject' ),
+			'post is gone'         => array( 'https://remote.example.com/posts/gone', null ),
+			'post cannot be found' => array( 'https://remote.example.com/posts/none', null ),
+			'server error'         => array( 'https://remote.example.com/posts/down', null ),
+			'timeout'              => array( 'https://remote.example.com/posts/slow', null ),
 		);
 	}
 
