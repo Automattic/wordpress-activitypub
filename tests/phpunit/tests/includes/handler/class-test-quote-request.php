@@ -155,6 +155,61 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * A policy that rejects decides without the quote post, so a failed fetch cannot drop it.
+	 *
+	 * @covers ::handle_quote_request
+	 */
+	public function test_handle_quote_request_policy_reject_skips_fetch() {
+		\update_post_meta( self::$post_id, 'activitypub_interaction_policy_quote', ACTIVITYPUB_INTERACTION_POLICY_ME );
+
+		$activity               = $this->create_quote_request_activity();
+		$activity['instrument'] = 'https://remote.example.com/posts/slow';
+
+		Quote_Request::handle_quote_request( $activity, self::$user_id );
+
+		$outbox = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				'author'      => self::$user_id,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'     => '_activitypub_activity_type',
+						'value'   => array( 'Accept', 'Reject' ),
+						'compare' => 'IN',
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 1, $outbox );
+		$this->assertSame( 'Reject', \json_decode( $outbox[0]->post_content, true )['type'] );
+	}
+
+	/**
+	 * Rejecting a quote post by someone else is reported like any other rejection.
+	 *
+	 * @covers ::handle_quote_request
+	 */
+	public function test_handle_quote_request_owner_reject_fires_action() {
+		$states = array();
+		$record = static function ( $activity, $user_ids, $state ) use ( &$states ) {
+			$states[] = $state;
+		};
+		\add_action( 'activitypub_handled_quote_request', $record, 10, 3 );
+
+		$activity               = $this->create_quote_request_activity();
+		$activity['instrument'] = 'https://remote.example.com/posts/b';
+
+		Quote_Request::handle_quote_request( $activity, self::$user_id );
+
+		\remove_action( 'activitypub_handled_quote_request', $record, 10 );
+
+		$this->assertSame( array( false ), $states );
+	}
+
+	/**
 	 * Quote posts by the requesting actor, by someone else, and ones that cannot be fetched.
 	 *
 	 * @return array Test cases.

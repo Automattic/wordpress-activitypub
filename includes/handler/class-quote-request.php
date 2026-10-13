@@ -61,25 +61,6 @@ class Quote_Request {
 		// Use the post author as the responding actor — they own the quoted content.
 		$user_id = (int) $post->post_author;
 
-		/*
-		 * The approval is issued for the instrument, so it has to be the requesting actor's own
-		 * post. Sharing the actor's host is not enough, and the copy in the request is no proof.
-		 */
-		$instrument = Proxy::get( object_to_uri( $activity['instrument'] ) );
-
-		/*
-		 * Without the post there is nothing to decide: a Reject would be final, and an Accept would be
-		 * unproven. So the request is dropped, like any inbox activity whose fetch fails.
-		 */
-		if ( \is_wp_error( $instrument ) ) {
-			return;
-		}
-
-		if ( ! is_same_actor( $instrument['attributedTo'] ?? null, $activity['actor'] ) ) {
-			self::queue_reject( $activity, $user_id );
-			return;
-		}
-
 		$content_policy = \get_post_meta( $post_id, 'activitypub_interaction_policy_quote', true );
 
 		// Fall back to global default if not set.
@@ -89,22 +70,41 @@ class Quote_Request {
 
 		switch ( $content_policy ) {
 			case ACTIVITYPUB_INTERACTION_POLICY_ME:
-				self::queue_reject( $activity, $user_id );
 				$state = false;
 				break;
 			case ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS:
 				$follower = Remote_Actors::get_by_uri( object_to_uri( $activity['actor'] ) );
-				if ( ! \is_wp_error( $follower ) && Followers::follows( $follower->ID, $user_id ) ) {
-					self::queue_accept( $activity, $user_id, $post_id );
-				} else {
-					self::queue_reject( $activity, $user_id );
-					$state = false;
-				}
+				$state    = ! \is_wp_error( $follower ) && Followers::follows( $follower->ID, $user_id );
 				break;
 			case ACTIVITYPUB_INTERACTION_POLICY_ANYONE:
 			default:
-				self::queue_accept( $activity, $user_id, $post_id );
+				$state = true;
 				break;
+		}
+
+		/*
+		 * The approval is issued for the instrument, so it has to be the requesting actor's own
+		 * post. Sharing the actor's host is not enough, and the copy in the request is no proof.
+		 * A policy that rejects needs no proof, so the post is only fetched for an approval.
+		 */
+		if ( $state ) {
+			$instrument = Proxy::get( object_to_uri( $activity['instrument'] ) );
+
+			/*
+			 * Without the post there is nothing to decide: a Reject would be final, and an Accept would be
+			 * unproven. So the request is dropped, like any inbox activity whose fetch fails.
+			 */
+			if ( \is_wp_error( $instrument ) ) {
+				return;
+			}
+
+			$state = is_same_actor( $instrument['attributedTo'] ?? null, $activity['actor'] );
+		}
+
+		if ( $state ) {
+			self::queue_accept( $activity, $user_id, $post_id );
+		} else {
+			self::queue_reject( $activity, $user_id );
 		}
 
 		/**
