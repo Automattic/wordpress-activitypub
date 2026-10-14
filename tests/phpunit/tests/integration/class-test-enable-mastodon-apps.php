@@ -125,6 +125,38 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Count published posts of supported types for the requested local author.
+	 */
+	public function test_api_account_internal_statuses_count() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\update_option( 'activitypub_support_post_types', array( 'post', 'page' ) );
+		self::factory()->post->create_many( 2, array( 'post_author' => $user_id ) );
+		self::factory()->post->create(
+			array(
+				'post_author' => $user_id,
+				'post_type'   => 'page',
+			)
+		);
+		self::factory()->post->create(
+			array(
+				'post_author' => $user_id,
+				'post_status' => 'draft',
+			)
+		);
+		self::factory()->post->create(
+			array(
+				'post_author' => $user_id,
+				'post_status' => 'private',
+			)
+		);
+		self::factory()->post->create();
+
+		$account = Enable_Mastodon_Apps::api_account_internal( null, $user_id );
+
+		$this->assertSame( 3, $account->statuses_count );
+	}
+
+	/**
 	 * Test followers count.
 	 */
 	public function test_api_account_followers_internal() {

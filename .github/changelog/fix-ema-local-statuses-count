@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix local account post counts in Mastodon apps when using Enable Mastodon Apps.
