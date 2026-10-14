@@ -20,7 +20,6 @@ use Enable_Mastodon_Apps\Entity\Account;
 use Enable_Mastodon_Apps\Entity\Media_Attachment;
 use Enable_Mastodon_Apps\Entity\Notification;
 use Enable_Mastodon_Apps\Entity\Status;
-use WP_Query;
 
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\is_user_type_disabled;
@@ -367,7 +366,7 @@ class Enable_Mastodon_Apps {
 		if ( $user_id > 0 ) {
 			$query_args['author'] = $user_id;
 		}
-		$query                   = new WP_Query( $query_args );
+		$query                   = new \WP_Query( $query_args );
 		$posts                   = $query->posts;
 		$account->statuses_count = (int) $query->found_posts;
 		$account->last_status_at = ! empty( $posts ) ? new \DateTime( $posts[0]->post_date_gmt ) : $account->created_at;
