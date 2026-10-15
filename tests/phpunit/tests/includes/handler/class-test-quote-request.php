@@ -84,6 +84,21 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 			return self::mock_instrument( $pre, 'https://remote.example.com/posts/456' );
 		}
 
+		// The requesting actor's own post, requested with a trailing slash.
+		if ( 'https://remote.example.com/posts/456/' === $id ) {
+			return self::mock_instrument( $pre, 'https://remote.example.com/posts/456' );
+		}
+
+		// A video, whose `url` is its watch page rather than its id.
+		if ( 'https://remote.example.com/videos/1' === $id ) {
+			return array(
+				'id'           => $id,
+				'type'         => 'Video',
+				'url'          => 'https://remote.example.com/w/1',
+				'attributedTo' => 'https://remote.example.com/users/remote_user',
+			);
+		}
+
 		$authors = array(
 			'https://remote.example.com/posts/456'  => 'https://remote.example.com/users/remote_user',
 			'https://remote.example.com/posts/b'    => 'https://remote.example.com/users/b',
@@ -224,6 +239,8 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 			'own post'             => array( 'https://remote.example.com/posts/456', 'Accept' ),
 			'post by someone else' => array( 'https://remote.example.com/posts/b', 'Reject' ),
 			'alias of own post'    => array( 'https://remote.example.com/posts/alias', 'Reject' ),
+			'own post with slash'  => array( 'https://remote.example.com/posts/456/', 'Accept' ),
+			'own video'            => array( 'https://remote.example.com/videos/1', 'Accept' ),
 			'post is gone'         => array( 'https://remote.example.com/posts/gone', null ),
 			'post cannot be found' => array( 'https://remote.example.com/posts/none', null ),
 			'server error'         => array( 'https://remote.example.com/posts/down', null ),
