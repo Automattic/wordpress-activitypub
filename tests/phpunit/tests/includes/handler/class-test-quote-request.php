@@ -230,6 +230,56 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * A follower is only approved for their own quote post, too.
+	 *
+	 * @covers ::handle_quote_request
+	 */
+	public function test_handle_quote_request_follower_requires_instrument_owner() {
+		\update_post_meta( self::$post_id, 'activitypub_interaction_policy_quote', ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS );
+
+		$activity               = $this->create_quote_request_activity();
+		$activity['instrument'] = 'https://remote.example.com/posts/b';
+		$actor_url              = $activity['actor'];
+
+		$metadata = static function () use ( $actor_url ) {
+			return array(
+				'id'    => $actor_url,
+				'type'  => 'Person',
+				'inbox' => str_replace( '/users/', '/inbox/', $actor_url ),
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata );
+
+		$remote_actor_id = Followers::add( self::$user_id, $actor_url );
+		$this->assertNotFalse( $remote_actor_id, 'Should successfully add follower' );
+
+		Quote_Request::handle_quote_request( $activity, self::$user_id );
+
+		\wp_delete_post( $remote_actor_id, true );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata );
+
+		$outbox = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				'author'      => self::$user_id,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'     => '_activitypub_activity_type',
+						'value'   => array( 'Accept', 'Reject' ),
+						'compare' => 'IN',
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 1, $outbox );
+		$this->assertSame( 'Reject', \json_decode( $outbox[0]->post_content, true )['type'] );
+		$this->assertEmpty( \get_post_meta( self::$post_id, '_activitypub_quoted_by', false ) );
+	}
+
+	/**
 	 * Quote posts by the requesting actor, by someone else, and ones that cannot be fetched.
 	 *
 	 * @return array Test cases.
