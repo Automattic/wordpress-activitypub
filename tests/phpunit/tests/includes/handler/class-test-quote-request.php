@@ -289,7 +289,7 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 			'own post'             => array( 'https://remote.example.com/posts/456', 'Accept' ),
 			'post by someone else' => array( 'https://remote.example.com/posts/b', 'Reject' ),
 			'alias of own post'    => array( 'https://remote.example.com/posts/alias', 'Reject' ),
-			'own post with slash'  => array( 'https://remote.example.com/posts/456/', 'Accept' ),
+			'own post with slash'  => array( 'https://remote.example.com/posts/456/', 'Reject' ),
 			'own video'            => array( 'https://remote.example.com/videos/1', 'Accept' ),
 			'post is gone'         => array( 'https://remote.example.com/posts/gone', null ),
 			'post cannot be found' => array( 'https://remote.example.com/posts/none', null ),

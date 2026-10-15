@@ -15,7 +15,6 @@ use Activitypub\Collection\Remote_Actors;
 use Activitypub\Proxy;
 
 use function Activitypub\add_to_outbox;
-use function Activitypub\id_matches_url;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
@@ -100,7 +99,7 @@ class Quote_Request {
 			}
 
 			// The fetched post has to be the instrument itself; an alias or redirect could otherwise lend another post's author.
-			$state = id_matches_url( $instrument, object_to_uri( $activity['instrument'] ) ) && is_same_actor( $instrument['attributedTo'] ?? null, $activity['actor'] );
+			$state = is_same_actor( $instrument['id'] ?? null, object_to_uri( $activity['instrument'] ) ) && is_same_actor( $instrument['attributedTo'] ?? null, $activity['actor'] );
 		}
 
 		if ( $state ) {
