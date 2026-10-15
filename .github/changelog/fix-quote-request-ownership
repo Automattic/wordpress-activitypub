@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Quote requests are now only approved for posts that belong to the account asking.
