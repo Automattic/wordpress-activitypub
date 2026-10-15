@@ -98,7 +98,8 @@ class Quote_Request {
 				return;
 			}
 
-			$state = is_same_actor( $instrument['attributedTo'] ?? null, $activity['actor'] );
+			// The fetched post has to be the instrument itself; an alias or redirect could otherwise lend another post's author.
+			$state = is_same_actor( $instrument, $activity['instrument'] ) && is_same_actor( $instrument['attributedTo'] ?? null, $activity['actor'] );
 		}
 
 		if ( $state ) {
@@ -108,9 +109,11 @@ class Quote_Request {
 		}
 
 		/**
-		 * Fires after an ActivityPub QuoteRequest activity has been handled.
+		 * Fires after an ActivityPub QuoteRequest activity has been answered.
 		 *
-		 * @param array  $activity       The ActivityPub activity data.
+		 * Not fired when the quote post cannot be fetched, since the request is dropped unanswered.
+		 *
+		 * @param array  $activity      The ActivityPub activity data.
 		 * @param int[]  $user_ids       The local user IDs.
 		 * @param bool   $success        True on success, false otherwise.
 		 * @param string $content_policy The content policy for the quoted post.

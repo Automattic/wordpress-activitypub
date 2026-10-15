@@ -79,6 +79,11 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 	 * @return mixed The quote post, or the pre-filtered value for other IDs.
 	 */
 	public static function mock_instrument( $pre, $id ) {
+		// An alias that resolves to the requesting actor's own post.
+		if ( 'https://remote.example.com/posts/alias' === $id ) {
+			return self::mock_instrument( $pre, 'https://remote.example.com/posts/456' );
+		}
+
 		$authors = array(
 			'https://remote.example.com/posts/456'  => 'https://remote.example.com/users/remote_user',
 			'https://remote.example.com/posts/b'    => 'https://remote.example.com/users/b',
@@ -218,6 +223,7 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 		return array(
 			'own post'             => array( 'https://remote.example.com/posts/456', 'Accept' ),
 			'post by someone else' => array( 'https://remote.example.com/posts/b', 'Reject' ),
+			'alias of own post'    => array( 'https://remote.example.com/posts/alias', 'Reject' ),
 			'post is gone'         => array( 'https://remote.example.com/posts/gone', null ),
 			'post cannot be found' => array( 'https://remote.example.com/posts/none', null ),
 			'server error'         => array( 'https://remote.example.com/posts/down', null ),
