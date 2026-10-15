@@ -21,8 +21,8 @@ $anchor_html = array(
 <dl>
 	<dt><code>[ap_title]</code></dt>
 	<dd><?php esc_html_e( 'The post&#8217;s title.', 'activitypub' ); ?></dd>
-	<dt><code>[ap_content apply_filters="yes"]</code></dt>
-	<dd><?php echo wp_kses( __( 'The post&#8217;s content. With <code>apply_filters</code> you can decide if filters (<code>apply_filters( \'the_content\', $content )</code>) should be applied or not (default is <code>yes</code>). The values can be <code>yes</code> or <code>no</code>. <code>apply_filters</code> attribute is optional.', 'activitypub' ), $code_html ); ?></dd>
+	<dt><code>[ap_content]</code></dt>
+	<dd><?php esc_html_e( 'The post&#8217;s content.', 'activitypub' ); ?></dd>
 	<dt><code>[ap_excerpt length="400"]</code></dt>
 	<dd><?php echo wp_kses( __( 'The post&#8217;s excerpt (uses <code>the_excerpt</code> if that is set). If no excerpt is provided, will truncate at <code>length</code> (optional, default = 400).', 'activitypub' ), $code_html ); ?></dd>
 	<dt><code>[ap_image type="full"]</code></dt>
