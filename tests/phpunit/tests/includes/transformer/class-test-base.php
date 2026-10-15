@@ -73,6 +73,60 @@ class Test_Base extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Objects are rendered the way a logged-out visitor sees them.
+	 *
+	 * Plugins can decide per viewer what `the_content` shows. The object is federated and
+	 * served to everyone, so it must not carry what only the logged-in user may see.
+	 *
+	 * @covers ::transform_object_properties
+	 */
+	public function test_transform_object_properties_renders_as_visitor() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author'  => $user_id,
+				'post_content' => 'Hello',
+			)
+		);
+
+		$per_viewer = static function ( $content ) {
+			return $content . ( \is_user_logged_in() ? ' members only' : ' teaser' );
+		};
+		\add_filter( 'the_content', $per_viewer );
+		\wp_set_current_user( $user_id );
+
+		$object = ( new Post( \get_post( $post_id ) ) )->to_object();
+
+		\remove_filter( 'the_content', $per_viewer );
+
+		$this->assertStringContainsString( 'teaser', $object->get_content() );
+		$this->assertStringNotContainsString( 'members only', $object->get_content() );
+		$this->assertSame( $user_id, \get_current_user_id(), 'The current user is restored afterwards.' );
+	}
+
+	/**
+	 * Switching to the visitor and back keeps the kses filters the caller had set up.
+	 *
+	 * @covers ::transform_object_properties
+	 */
+	public function test_transform_object_properties_keeps_kses_state() {
+		$had_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
+		$user_id  = self::factory()->user->create( array( 'role' => 'author' ) );
+		$post_id  = self::factory()->post->create( array( 'post_author' => $user_id ) );
+
+		\wp_set_current_user( $user_id );
+		\kses_remove_filters();
+
+		( new Post( \get_post( $post_id ) ) )->to_object();
+
+		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
+
+		$had_kses ? \kses_init_filters() : \kses_remove_filters();
+
+		$this->assertFalse( $has_kses, 'Filters removed by the caller stay removed.' );
+	}
+
+	/**
 	 * Test that the audience is set correctly.
 	 *
 	 * @dataProvider data_provider_set_audience
