@@ -116,9 +116,6 @@ class Remote_Actor_Cleanup {
 			return null;
 		}
 
-		// Prime every registered actor taxonomy, including integration relationships.
-		\update_object_term_cache( \wp_list_pluck( $query->posts, 'ID' ), Remote_Actors::POST_TYPE );
-
 		// Parse stored outgoing activities once per batch, not once per actor.
 		$outbox_uris = self::get_outbox_uris();
 		$progress    = false;

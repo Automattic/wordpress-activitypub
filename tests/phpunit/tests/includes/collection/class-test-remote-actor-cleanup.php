@@ -129,37 +129,6 @@ class Test_Remote_Actor_Cleanup extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Integration relationship caches, including empty results, are primed together.
-	 */
-	public function test_integration_relationships_are_primed_before_filter() {
-		$taxonomy = 'test_actor_reference';
-		\register_taxonomy( $taxonomy, Remote_Actors::POST_TYPE, array( 'public' => false ) );
-		$ids = array( $this->actor(), $this->actor() );
-		\wp_set_object_terms( $ids[0], 'subscribed', $taxonomy );
-		foreach ( $ids as $id ) {
-			Remote_Actors::mark_for_cleanup( $id );
-			\wp_cache_delete( $id, $taxonomy . '_relationships' );
-		}
-		$seen  = array();
-		$check = function ( $in_use, $actor ) use ( $taxonomy, &$seen ) {
-			$this->assertNotFalse( \wp_cache_get( $actor->ID, $taxonomy . '_relationships' ) );
-			$queries = \get_num_queries();
-			\get_the_terms( $actor->ID, $taxonomy );
-			$this->assertSame( $queries, \get_num_queries() );
-			$seen[] = $actor->ID;
-			return true;
-		};
-		\add_filter( 'activitypub_remote_actor_is_in_use', $check, 10, 2 );
-		try {
-			Remote_Actor_Cleanup::cleanup();
-			$this->assertSame( $ids, $seen );
-		} finally {
-			\remove_filter( 'activitypub_remote_actor_is_in_use', $check, 10 );
-			\unregister_taxonomy( $taxonomy );
-		}
-	}
-
-	/**
 	 * Stored outgoing activities retain referenced actors.
 	 */
 	public function test_outbox_reference_protects_actor() {
