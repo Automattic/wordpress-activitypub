@@ -67,7 +67,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		};
 		\add_filter( 'activitypub_actor_cleanup_batch_size', $batch_size );
 		try {
-			Scheduler::cleanup_remote_actors();
+			\do_action( 'activitypub_cleanup_remote_actors' );
 			$this->assertNull( \get_post( $ids[0] ) );
 			$this->assertNotNull( \get_post( $ids[1] ) );
 			$this->assertNotFalse( \wp_next_scheduled( 'activitypub_cleanup_actor_candidates', array( 1 ) ) );

@@ -87,6 +87,7 @@ class Scheduler {
 		// Follower Cleanups.
 		\add_action( 'activitypub_update_remote_actors', array( self::class, 'update_remote_actors' ) );
 		\add_action( 'activitypub_cleanup_remote_actors', array( self::class, 'cleanup_remote_actors' ) );
+		\add_action( 'activitypub_cleanup_remote_actors', array( Remote_Actor_Cleanup::class, 'start_cleanup' ) );
 		self::register_async_batch_callback( 'activitypub_cleanup_actor_candidates', array( Remote_Actor_Cleanup::class, 'cleanup' ) );
 
 		// Event callbacks.
@@ -389,16 +390,6 @@ class Scheduler {
 					Remote_Actors::clear_errors( $actor->ID );
 				}
 			}
-		}
-
-		// Reuse this daily cleanup for disposable cache entries as a second pass.
-		$next = Remote_Actor_Cleanup::cleanup();
-		if ( $next && ! \wp_next_scheduled( 'activitypub_cleanup_actor_candidates', $next ) ) {
-			\wp_schedule_single_event(
-				\time() + self::get_retry_delay( 'activitypub_cleanup_actor_candidates' ),
-				'activitypub_cleanup_actor_candidates',
-				$next
-			);
 		}
 	}
 

@@ -11,8 +11,8 @@ Callers do not need to remember to cancel cleanup. Bulk existence probes and
 maintenance selection (`get_outdated()` and `get_faulty()`) do not rescue actors.
 Direct WordPress `get_post()` calls cannot be observed by this API.
 
-The existing `activitypub_cleanup_remote_actors` daily job processes nominated
-actors after its faulty-actor pass. When a full batch makes progress, the
+The existing `activitypub_cleanup_remote_actors` daily action has two independent
+callbacks: the unchanged faulty-actor cleanup and candidate cleanup. When a full batch makes progress, the
 `activitypub_cleanup_actor_candidates` hook continues through the existing async
 batch scheduler. That hook only handles continuation; it has no recurring schedule.
 Marking an actor does not create any cron events.

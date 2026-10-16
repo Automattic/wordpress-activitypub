@@ -8,6 +8,7 @@
 namespace Activitypub\Collection;
 
 use Activitypub\Moderation;
+use Activitypub\Scheduler;
 
 /**
  * Queue cache entries for deletion without treating remote accounts as deleted.
@@ -66,6 +67,22 @@ class Remote_Actor_Cleanup {
 				\wp_remove_object_terms( $id, $term->term_id, self::TAXONOMY );
 				return;
 			}
+		}
+	}
+
+	/**
+	 * Start candidate cleanup as an independent listener on the existing cron action.
+	 *
+	 * @return void
+	 */
+	public static function start_cleanup() {
+		$next = self::cleanup();
+		if ( $next && ! \wp_next_scheduled( 'activitypub_cleanup_actor_candidates', $next ) ) {
+			\wp_schedule_single_event(
+				\time() + Scheduler::get_retry_delay( 'activitypub_cleanup_actor_candidates' ),
+				'activitypub_cleanup_actor_candidates',
+				$next
+			);
 		}
 	}
 
