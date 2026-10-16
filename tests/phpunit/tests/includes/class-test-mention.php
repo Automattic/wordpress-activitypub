@@ -24,7 +24,7 @@ class Test_Mention extends \WP_UnitTestCase {
 	 * @var array[]
 	 */
 	public static $actors = array(
-		'username@example.org' => array(
+		'username@example.org'  => array(
 			'@context'          => 'https://www.w3.org/ns/activitystreams',
 			'id'                => 'https://example.org/users/username',
 			'type'              => 'Person',
@@ -32,6 +32,15 @@ class Test_Mention extends \WP_UnitTestCase {
 			'name'              => 'username',
 			'preferredUsername' => 'username',
 			'inbox'             => 'https://example.org/users/username/inbox',
+		),
+		'ελπίδα@ఉదాహరణ.example' => array(
+			'@context'          => 'https://www.w3.org/ns/activitystreams',
+			'id'                => 'https://xn--noc6ci4b4b3a.example/users/elpida',
+			'type'              => 'Person',
+			'url'               => 'https://xn--noc6ci4b4b3a.example/@elpida',
+			'name'              => 'ελπίδα',
+			'preferredUsername' => 'ελπίδα',
+			'inbox'             => 'https://xn--noc6ci4b4b3a.example/users/elpida/inbox',
 		),
 	);
 
@@ -93,6 +102,10 @@ ENDPRE;
 			array( '<!-- @pfefferle@notiz.blog -->', '<!-- @pfefferle@notiz.blog -->' ),
 			array( $code, $code ),
 			array( $pre, $pre ),
+			array( 'hallo @ελπίδα@ఉదాహరణ.example test', 'hallo <a rel="mention" class="u-url mention" href="https://xn--noc6ci4b4b3a.example/@elpida">@ελπίδα</a> test' ),
+			array( 'hallo @username@example.org-thanks', 'hallo <a rel="mention" class="u-url mention" href="https://example.org/users/username">@username</a>-thanks' ),
+			// Invalid UTF-8 still links ASCII handles, and the stray byte is kept.
+			array( "hallo @username@example.org \xC3\x28", "hallo <a rel=\"mention\" class=\"u-url mention\" href=\"https://example.org/users/username\">@username</a> \xC3\x28" ),
 		);
 	}
 
@@ -117,6 +130,26 @@ ENDPRE;
 								'rel'  => 'self',
 								'type' => 'application/activity+json',
 								'href' => 'https://example.org/users/username',
+							),
+						),
+					)
+				),
+				'response' => array( 'code' => 200 ),
+			);
+		}
+
+		// The lookup URL for `ελπίδα@ఉదాహరణ.example`, as the SWICG notes on internationalized handles spell it.
+		if ( 'https://xn--noc6ci4b4b3a.example/.well-known/webfinger?resource=acct%3A%25CE%25B5%25CE%25BB%25CF%2580%25CE%25AF%25CE%25B4%25CE%25B1%40xn--noc6ci4b4b3a.example' === $url ) {
+			return array(
+				'headers'  => array( 'content-type' => 'application/jrd+json' ),
+				'body'     => wp_json_encode(
+					array(
+						'subject' => 'acct:%CE%B5%CE%BB%CF%80%CE%AF%CE%B4%CE%B1@xn--noc6ci4b4b3a.example',
+						'links'   => array(
+							array(
+								'rel'  => 'self',
+								'type' => 'application/activity+json',
+								'href' => 'https://xn--noc6ci4b4b3a.example/users/elpida',
 							),
 						),
 					)
@@ -183,6 +216,37 @@ ENDPRE;
 		}
 
 		return $pre;
+	}
+
+	/**
+	 * An ASCII handle is extracted from content that is not valid UTF-8.
+	 *
+	 * @covers ::extract_mentions
+	 */
+	public function test_extract_mentions_in_invalid_utf8() {
+		$mentions = Mention::extract_mentions( array(), "hallo @username@example.org \xC3\x28" );
+
+		$this->assertArrayHasKey( '@username@example.org', $mentions );
+	}
+
+	/**
+	 * Content that is not valid UTF-8 never has a multibyte character cut into a host.
+	 *
+	 * @covers ::extract_mentions
+	 */
+	public function test_extract_mentions_in_invalid_utf8_skips_non_ascii_hosts() {
+		$hosts = array();
+		$log   = static function ( $pre, $args, $url ) use ( &$hosts ) {
+			$hosts[] = \wp_parse_url( $url, \PHP_URL_HOST );
+			return $pre;
+		};
+		\add_filter( 'pre_http_request', $log, 5, 3 );
+
+		Mention::extract_mentions( array(), "hallo \xC3\x28 @user@example.\xC3\xA9" );
+
+		\remove_filter( 'pre_http_request', $log, 5 );
+
+		$this->assertSame( array(), $hosts );
 	}
 
 	/**

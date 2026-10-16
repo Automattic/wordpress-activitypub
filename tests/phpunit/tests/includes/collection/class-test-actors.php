@@ -107,6 +107,92 @@ class Test_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A blog identifier that was stored percent-encoded still resolves.
+	 *
+	 * @covers ::get_id_by_resource
+	 */
+	public function test_get_id_by_resource_with_encoded_blog_identifier() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_blog_identifier', 'test-blog-%e2%9d%a4%ef%b8%8f' );
+
+		$this->assertSame( Actors::BLOG_USER_ID, Actors::get_id_by_resource( 'acct:test-blog-%e2%9d%a4%ef%b8%8f@' . \wp_parse_url( \home_url(), \PHP_URL_HOST ) ) );
+		// Remote clients encode with uppercase hex.
+		$this->assertSame( Actors::BLOG_USER_ID, Actors::get_id_by_resource( 'acct:test-blog-%E2%9D%A4%EF%B8%8F@' . \wp_parse_url( \home_url(), \PHP_URL_HOST ) ) );
+		// And some send the userpart unencoded.
+		$this->assertSame( Actors::BLOG_USER_ID, Actors::get_id_by_resource( 'acct:test-blog-❤️@' . \wp_parse_url( \home_url(), \PHP_URL_HOST ) ) );
+
+		\delete_option( 'activitypub_blog_identifier' );
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * A user whose login is the encoded userpart without `%` does not take the blog's subject.
+	 *
+	 * @covers ::get_id_by_resource
+	 */
+	public function test_get_id_by_resource_decodes_before_user_lookup() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_blog_identifier', 'renée' );
+		$user_id = self::factory()->user->create( array( 'user_login' => 'renC3A9e' ) );
+		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
+
+		$this->assertSame( Actors::BLOG_USER_ID, Actors::get_id_by_resource( 'acct:ren%C3%A9e@' . \wp_parse_url( \home_url(), \PHP_URL_HOST ) ) );
+
+		\delete_option( 'activitypub_blog_identifier' );
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * An `acct:` resource whose host folds to nothing does not match the blog.
+	 *
+	 * @covers ::get_id_by_resource
+	 */
+	public function test_get_id_by_resource_rejects_empty_host() {
+		\delete_option( 'activitypub_old_host' );
+
+		foreach ( array( 'acct:*@.', 'acct:*@[]', 'acct:*@' ) as $webfinger_resource ) {
+			$this->assertWPError( Actors::get_id_by_resource( $webfinger_resource ), $webfinger_resource );
+		}
+	}
+
+	/**
+	 * An `acct:` resource matches the blog host in its Unicode form, as A-label and in any case.
+	 *
+	 * @covers ::get_id_by_resource
+	 * @dataProvider idn_resource_provider
+	 *
+	 * @param string $home               The home URL.
+	 * @param string $webfinger_resource The WebFinger resource.
+	 */
+	public function test_get_id_by_resource_on_idn_domain( $home, $webfinger_resource ) {
+		$set_home = static function () use ( $home ) {
+			return $home;
+		};
+		\add_filter( 'pre_option_home', $set_home );
+
+		$user_id = Actors::get_id_by_resource( $webfinger_resource );
+
+		\remove_filter( 'pre_option_home', $set_home );
+
+		$this->assertEquals( 1, $user_id );
+	}
+
+	/**
+	 * Home URLs and resources on an internationalized domain.
+	 *
+	 * @return array[]
+	 */
+	public function idn_resource_provider() {
+		return array(
+			'unicode home, unicode resource' => array( 'https://café.example', 'acct:admin@café.example' ),
+			'unicode home, a-label resource' => array( 'https://café.example', 'acct:admin@xn--caf-dma.example' ),
+			'a-label home, unicode resource' => array( 'https://xn--caf-dma.example', 'acct:admin@café.example' ),
+			'a-label home, upper case'       => array( 'https://xn--caf-dma.example', 'acct:admin@XN--CAF-DMA.example' ),
+			'ascii home, upper case'         => array( 'https://example.org', 'acct:admin@EXAMPLE.ORG' ),
+		);
+	}
+
+	/**
 	 * Resource provider.
 	 *
 	 * @return array[]

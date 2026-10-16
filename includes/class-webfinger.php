@@ -40,7 +40,7 @@ class Webfinger {
 			return false;
 		}
 
-		return (bool) \preg_match( '/^(?:acct:)?@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $value );
+		return (bool) \preg_match( '/^(?:acct:)?@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/iu', $value );
 	}
 
 	/**
@@ -57,6 +57,29 @@ class Webfinger {
 		}
 
 		return $user->get_webfinger();
+	}
+
+	/**
+	 * Get the `acct:` URI for a handle.
+	 *
+	 * An internationalized handle gets the form RFC 7565 asks for: the userpart percent-encoded
+	 * and the host as A-label.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $handle The handle, `user@host`.
+	 *
+	 * @return string The `acct:` URI.
+	 */
+	public static function get_acct( $handle ) {
+		// With the scheme in front, a username that starts with `@` keeps it.
+		$identifier_and_host = self::get_identifier_and_host( 'acct:' . $handle );
+
+		if ( \is_wp_error( $identifier_and_host ) ) {
+			return 'acct:' . $handle;
+		}
+
+		return $identifier_and_host[0];
 	}
 
 	/**
@@ -212,6 +235,22 @@ class Webfinger {
 					 * a domain block on `example.com`, and `/x` would end up in the lookup URL's path.
 					 */
 					$host = \substr( $host, 0, \strcspn( $host, '/?#' ) );
+
+					/*
+					 * An internationalized handle is looked up in the form RFC 7565 asks for: the
+					 * userpart percent-encoded and the host as A-label. ASCII is left as it is.
+					 */
+					if ( 'acct' === $scheme && \preg_match( '/[^\x00-\x7F]/', $identifier ) ) {
+						$userpart   = \substr( $identifier, 0, \strrpos( $identifier, '@' ) );
+						$userpart   = \preg_replace_callback(
+							'/[^\x00-\x7F]+/',
+							static function ( $non_ascii ) {
+								return \rawurlencode( $non_ascii[0] );
+							},
+							$userpart
+						);
+						$identifier = $userpart . '@' . to_ascii_host( $host );
+					}
 				}
 				break;
 			default:
@@ -230,7 +269,7 @@ class Webfinger {
 			);
 		}
 
-		return array( $identifier, \strtolower( $host ) );
+		return array( $identifier, \strtolower( to_ascii_host( $host ) ) );
 	}
 
 	/**

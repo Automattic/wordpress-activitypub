@@ -9,6 +9,9 @@
 
 namespace Activitypub;
 
+use WpOrg\Requests\Exception as Requests_Exception;
+use WpOrg\Requests\IdnaEncoder;
+
 /**
  * Get the REST URL relative to this plugin's namespace.
  *
@@ -51,11 +54,68 @@ function normalize_host( $host ) {
 }
 
 /**
+ * Convert a host to its ASCII form.
+ *
+ * An internationalized host is converted to its IDNA A-label (`café.example` becomes
+ * `xn--caf-dma.example`), which is the form `acct:` URIs and DNS use. ASCII hosts, IPv6
+ * literals included, are returned as they are.
+ *
+ * @since unreleased
+ *
+ * @param string $host The host.
+ *
+ * @return string The host in ASCII form, or the host as it is if it cannot be converted.
+ */
+function to_ascii_host( $host ) {
+	$host = (string) $host;
+
+	if ( ! \preg_match( '/[^\x00-\x7F]/', $host ) ) {
+		return $host;
+	}
+
+	// UTS #46 maps equivalent spellings (case, width, decomposed accents) to the same A-label.
+	if ( \function_exists( 'idn_to_ascii' ) ) {
+		$ascii = \idn_to_ascii( $host, \IDNA_NONTRANSITIONAL_TO_ASCII, \INTL_IDNA_VARIANT_UTS46 );
+
+		/*
+		 * UTS #46 also maps characters away (soft hyphen, fullwidth Latin), which turns a label
+		 * into a plain ASCII name that WordPress would not connect to. A label with non-ASCII
+		 * characters has to stay an A-label, or the host is returned as it is.
+		 */
+		$labels = \preg_split( '/[.\x{3002}\x{FF0E}\x{FF61}]/u', $host );
+		if ( ! $ascii || ! $labels || \count( $labels ) !== \substr_count( $ascii, '.' ) + 1 ) {
+			return $host;
+		}
+
+		$ascii_labels = \explode( '.', $ascii );
+		foreach ( $labels as $i => $label ) {
+			if ( \preg_match( '/[^\x00-\x7F]/', $label ) && 0 !== \stripos( $ascii_labels[ $i ], 'xn--' ) ) {
+				return $host;
+			}
+		}
+
+		return $ascii;
+	}
+
+	// Without intl only case is folded: decomposed accents, fullwidth letters and dots like `。` give a different A-label.
+	if ( \function_exists( 'mb_strtolower' ) ) {
+		$host = \mb_strtolower( $host, 'UTF-8' );
+	}
+
+	try {
+		return \strtolower( IdnaEncoder::encode( $host ) );
+	} catch ( Requests_Exception $e ) {
+		return $host;
+	}
+}
+
+/**
  * Fold a host to its canonical spelling for comparison.
  *
  * Hosts are case-insensitive, IPv6 literals are bracketed in a URI but not in a stored host,
- * and a trailing dot is the same fully qualified name. Two spellings that differ only in those
- * ways address the same host, so anything comparing hosts has to fold them first.
+ * a trailing dot is the same fully qualified name, and an internationalized host is the same as
+ * its A-label. Two spellings that differ only in those ways address the same host, so anything
+ * comparing hosts has to fold them first.
  *
  * Unlike {@see normalize_host()} this is lossless: it does not strip `www.`, which is a
  * different host rather than a different spelling of one.
@@ -67,7 +127,8 @@ function normalize_host( $host ) {
  * @return string The folded host.
  */
 function fold_host( $host ) {
-	return \rtrim( \trim( \strtolower( (string) $host ), '[]' ), '.' );
+	// Trimmed again after the conversion, which maps dots like `。` to `.` when the intl extension is available.
+	return \rtrim( to_ascii_host( \rtrim( \trim( \strtolower( (string) $host ), '[]' ), '.' ) ), '.' );
 }
 
 /**
