@@ -206,12 +206,12 @@ class Webfinger {
 					$host = \substr( $identifier, \strrpos( $identifier, '@' ) + 1 );
 
 					/*
-					 * Cut anything a query or fragment starts. `wp_parse_url()` does this for the
-					 * URL forms below, but this branch takes the host off the string itself, so
+					 * Cut anything a path, query or fragment starts. `wp_parse_url()` does this for
+					 * the URL forms below, but this branch takes the host off the string itself, so
 					 * `acct:user@example.com#x` would otherwise carry `#x` into the host and miss
-					 * a domain block on `example.com`.
+					 * a domain block on `example.com`, and `/x` would end up in the lookup URL's path.
 					 */
-					$host = \substr( $host, 0, \strcspn( $host, '?#' ) );
+					$host = \substr( $host, 0, \strcspn( $host, '/?#' ) );
 				}
 				break;
 			default:

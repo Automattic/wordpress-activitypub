@@ -829,7 +829,7 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that a handle's host stops at a query or fragment.
+	 * Test that a handle's host stops at a path, query or fragment.
 	 *
 	 * The host is taken off the string itself for `acct:`-style identifiers, so without cutting
 	 * there `acct:user@example.com#x` carries `#x` into the host and misses a domain block on
@@ -847,12 +847,14 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Data provider for handle hosts with a query or fragment.
+	 * Data provider for handle hosts with a path, query or fragment.
 	 *
 	 * @return array<string, array{0:string, 1:string}>
 	 */
 	public function handle_host_suffix_provider() {
 		return array(
+			'path'         => array( 'acct:user@example.com/x', 'example.com' ),
+			'path, query'  => array( 'user@example.com/x?a=1', 'example.com' ),
 			'fragment'     => array( 'acct:user@example.com#x', 'example.com' ),
 			'query'        => array( 'user@example.com?a=1', 'example.com' ),
 			'both'         => array( 'acct:user@example.com?a=1#x', 'example.com' ),
