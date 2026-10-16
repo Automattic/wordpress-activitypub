@@ -48,6 +48,38 @@ class Test_Scheduler extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The existing cleanup job processes candidates and schedules only continuation.
+	 */
+	public function test_cleanup_remote_actors_processes_candidates() {
+		$ids = self::factory()->post->create_many(
+			2,
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'post_status' => 'publish',
+				'meta_input'  => array( '_activitypub_inbox' => 'https://example.com/inbox' ),
+			)
+		);
+		foreach ( $ids as $id ) {
+			Remote_Actors::mark_for_cleanup( $id );
+		}
+		$batch_size = static function () {
+			return 1;
+		};
+		\add_filter( 'activitypub_actor_cleanup_batch_size', $batch_size );
+		try {
+			Scheduler::cleanup_remote_actors();
+			$this->assertNull( \get_post( $ids[0] ) );
+			$this->assertNotNull( \get_post( $ids[1] ) );
+			$this->assertNotFalse( \wp_next_scheduled( 'activitypub_cleanup_actor_candidates', array( 1 ) ) );
+			$this->assertArrayNotHasKey( 'activitypub_cleanup_actor_candidates', Scheduler::SCHEDULES );
+			\do_action( 'activitypub_cleanup_actor_candidates', 1 );
+			$this->assertNull( \get_post( $ids[1] ) );
+		} finally {
+			\remove_filter( 'activitypub_actor_cleanup_batch_size', $batch_size );
+		}
+	}
+
+	/**
 	 * Test unschedule events for item.
 	 *
 	 * @covers ::unschedule_events_for_item

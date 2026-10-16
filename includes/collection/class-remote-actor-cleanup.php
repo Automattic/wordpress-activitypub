@@ -47,9 +47,6 @@ class Remote_Actor_Cleanup {
 		if ( \is_wp_error( $result ) ) {
 			return false;
 		}
-		if ( ! \wp_next_scheduled( 'activitypub_cleanup_actor_candidates' ) ) {
-			\wp_schedule_event( \time() + DAY_IN_SECONDS, 'daily', 'activitypub_cleanup_actor_candidates' );
-		}
 		return true;
 	}
 

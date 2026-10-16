@@ -37,7 +37,6 @@ class Scheduler {
 	const SCHEDULES = array(
 		'activitypub_update_remote_actors'         => 'hourly',
 		'activitypub_cleanup_remote_actors'        => 'daily',
-		'activitypub_cleanup_actor_candidates'     => 'daily',
 		'activitypub_reprocess_outbox'             => 'hourly',
 		'activitypub_outbox_purge'                 => 'daily',
 		'activitypub_inbox_purge'                  => 'daily',
@@ -390,6 +389,16 @@ class Scheduler {
 					Remote_Actors::clear_errors( $actor->ID );
 				}
 			}
+		}
+
+		// Reuse this daily cleanup for disposable cache entries as a second pass.
+		$next = Remote_Actor_Cleanup::cleanup();
+		if ( $next && ! \wp_next_scheduled( 'activitypub_cleanup_actor_candidates', $next ) ) {
+			\wp_schedule_single_event(
+				\time() + self::get_retry_delay( 'activitypub_cleanup_actor_candidates' ),
+				'activitypub_cleanup_actor_candidates',
+				$next
+			);
 		}
 	}
 
