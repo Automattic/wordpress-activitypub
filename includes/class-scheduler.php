@@ -822,7 +822,19 @@ class Scheduler {
 	 * @return int[]|null Next batch arguments when progress was made.
 	 */
 	public static function cleanup_cache_only_remote_actors_batch( $batch = 0 ) {
-		if ( ! \get_option( 'activitypub_actor_retention_migrated' ) ) {
+		/**
+		 * Whether automatic remote-actor cache cleanup may proceed.
+		 *
+		 * ActivityPub and integrations can return false while migrating references,
+		 * or disable automatic cache cleanup for any other reason.
+		 *
+		 * Example: add_filter( 'activitypub_remote_actor_cleanup_ready', '__return_false' );
+		 *
+		 * @since unreleased
+		 *
+		 * @param bool $ready Whether cleanup is ready. Default true.
+		 */
+		if ( ! \apply_filters( 'activitypub_remote_actor_cleanup_ready', true ) ) {
 			return null;
 		}
 		$limit = \max( 1, (int) \apply_filters( 'activitypub_actor_cleanup_batch_size', 20 ) );

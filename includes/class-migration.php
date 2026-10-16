@@ -33,6 +33,7 @@ class Migration {
 	 */
 	public static function init() {
 		self::maybe_migrate();
+		\add_filter( 'activitypub_remote_actor_cleanup_ready', array( self::class, 'remote_actor_cleanup_ready' ) );
 
 		Scheduler::register_async_batch_callback( 'activitypub_migrate_from_0_17', array( self::class, 'migrate_from_0_17' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_update_comment_counts', array( self::class, 'update_comment_counts' ) );
@@ -1446,6 +1447,18 @@ class Migration {
 		}
 	}
 	/**
+	 * Keep cache cleanup disabled until the AP retention migration finishes.
+	 *
+	 * @since unreleased
+	 *
+	 * @param bool $ready Whether other integrations are ready.
+	 * @return bool Whether cleanup may proceed.
+	 */
+	public static function remote_actor_cleanup_ready( $ready ) {
+		return $ready && \get_option( 'activitypub_actor_retention_migrated' );
+	}
+
+	/**
 	 * Classify legacy actors before enabling cache cleanup.
 	 *
 	 * @since unreleased
@@ -1457,6 +1470,14 @@ class Migration {
 		if ( \get_option( 'activitypub_actor_retention_migrated' ) ) {
 			return null;
 		}
+		/**
+		 * Let integrations start their own actor-reference migrations.
+		 *
+		 * Fires on each batch until the retention migration completes.
+		 *
+		 * @since unreleased
+		 */
+		\do_action( 'activitypub_before_migrate_actor_retention' );
 		$batch_size = \max( 1, (int) $batch_size );
 		$query      = new \WP_Query(
 			array(

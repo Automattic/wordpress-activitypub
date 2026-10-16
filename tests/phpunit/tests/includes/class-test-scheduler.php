@@ -1307,4 +1307,22 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		Scheduler::cleanup_cache_only_remote_actors();
 		$this->assertNull( \get_post( $id ) );
 	}
+	/**
+	 * An integration can defer cleanup after ActivityPub has finished migrating.
+	 */
+	public function test_cleanup_waits_for_integration_readiness() {
+		$id        = $this->cached_actor();
+		$not_ready = static function () {
+			return false;
+		};
+		\add_filter( 'activitypub_remote_actor_cleanup_ready', $not_ready );
+		try {
+			Scheduler::cleanup_cache_only_remote_actors();
+			$this->assertNotNull( \get_post( $id ) );
+		} finally {
+			\remove_filter( 'activitypub_remote_actor_cleanup_ready', $not_ready );
+		}
+		Scheduler::cleanup_cache_only_remote_actors();
+		$this->assertNull( \get_post( $id ) );
+	}
 }

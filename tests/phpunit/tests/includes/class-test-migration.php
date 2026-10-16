@@ -1675,4 +1675,31 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertNull( Migration::migrate_actor_retention() );
 		$this->assertTrue( (bool) \get_post_meta( $id, Remote_Actors::RETAIN_META_KEY, true ) );
 	}
+	/**
+	 * Each migration batch notifies integrations, including an empty final batch.
+	 *
+	 * @covers ::migrate_actor_retention
+	 */
+	public function test_actor_retention_notifies_integrations() {
+		\delete_option( 'activitypub_actor_retention_migrated' );
+		self::factory()->post->create( array( 'post_type' => Remote_Actors::POST_TYPE ) );
+		$started = 0;
+		$start   = static function () use ( &$started ) {
+			++$started;
+		};
+		\add_action( 'activitypub_before_migrate_actor_retention', $start );
+		try {
+			$this->assertSame( array( 100 ), Migration::migrate_actor_retention() );
+			$this->assertSame( 1, $started );
+			$this->assertFalse( Migration::remote_actor_cleanup_ready( true ) );
+			$this->assertNull( Migration::migrate_actor_retention() );
+			$this->assertSame( 2, $started );
+			$this->assertTrue( Migration::remote_actor_cleanup_ready( true ) );
+			$this->assertFalse( Migration::remote_actor_cleanup_ready( false ) );
+			$this->assertNull( Migration::migrate_actor_retention() );
+			$this->assertSame( 2, $started );
+		} finally {
+			\remove_action( 'activitypub_before_migrate_actor_retention', $start );
+		}
+	}
 }
