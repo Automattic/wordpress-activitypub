@@ -11,7 +11,7 @@ import type { Field } from '@wordpress/dataviews/wp';
  * Internal dependencies
  */
 import type { FeedPost } from '../../../types';
-import { objectTypeConfig } from '../../object-types';
+import { objectTypeConfig } from '../../../object-types';
 
 export const objectTypeField: Field< FeedPost > = {
 	id: 'ap_object_type',

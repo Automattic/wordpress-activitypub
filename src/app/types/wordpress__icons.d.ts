@@ -8,7 +8,7 @@
 declare module '@wordpress/icons' {
 	import type { ReactElement } from 'react';
 
-	// Icons used in src/app/components/object-types/index.tsx
+	// Icons used in src/app/object-types.ts
 	export const audio: ReactElement;
 	export const calendar: ReactElement;
 	export const comment: ReactElement;
@@ -24,13 +24,13 @@ declare module '@wordpress/icons' {
 	export const chevronRight: ReactElement;
 	export const cog: ReactElement;
 	export const postList: ReactElement;
+	export const tag: ReactElement;
+	export const funnel: ReactElement;
+	export const replace: ReactElement;
 
 	// Icons used in src/app/components/site-hub/index.tsx
 	export const menu: ReactElement;
 	export const search: ReactElement;
-
-	// Icons used in src/app/components/site-icon/index.tsx
-	export const wordpress: ReactElement;
 
 	// Icons used in src/app/routes/feed/inspector.tsx
 	export const close: ReactElement;

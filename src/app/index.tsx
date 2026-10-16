@@ -7,7 +7,6 @@ import type { ReactNode } from 'react';
  * Internal dependencies
  */
 import { ObjectTypeProvider } from './contexts/object-type-context';
-import { Layout } from './components/layout';
 import './store'; // Import to register the store
 import './style.scss'; // Import all styles
 
@@ -36,14 +35,13 @@ interface AppShellProps {
 /**
  * App shell used by route content modules.
  *
+ * Boot's full-page mode owns the layout (sidebar, drawer, surfaces), so the
+ * shell is the providers only.
+ *
  * @param props          Component props.
  * @param props.children Route surface children.
  * @return Wrapped app shell.
  */
 export function AppShell( { children }: AppShellProps ): ReactNode {
-	return (
-		<AppProviders>
-			<Layout>{ children }</Layout>
-		</AppProviders>
-	);
+	return <AppProviders>{ children }</AppProviders>;
 }
