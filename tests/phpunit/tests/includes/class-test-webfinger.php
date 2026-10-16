@@ -892,8 +892,11 @@ class Test_Webfinger extends \WP_UnitTestCase {
 			'ipv6, port'    => array( 'acct:user@[2001:db8::1]:8443', '2001:db8::1' ),
 			'path'          => array( 'acct:user@example.com/x', 'example.com' ),
 			'path, query'   => array( 'user@example.com/x?a=1', 'example.com' ),
-			'@ in path'     => array( 'acct:user@example.com/@evil.com', 'example.com' ),
-			'@ in fragment' => array( 'acct:user@example.com#@evil.com', 'example.com' ),
+			// An `@` after the host starts the host that is looked up, so that is the one checked.
+			'@ in path'     => array( 'acct:user@example.com/@evil.com', 'evil.com' ),
+			'@ in fragment' => array( 'acct:user@example.com#@evil.com', 'evil.com' ),
+			'# in local'    => array( 'acct:user#x@evil.com', 'evil.com' ),
+			'authority'     => array( 'xmpp://guest@example.com', 'example.com' ),
 			'fragment'      => array( 'acct:user@example.com#x', 'example.com' ),
 			'query'         => array( 'user@example.com?a=1', 'example.com' ),
 			'both'          => array( 'acct:user@example.com?a=1#x', 'example.com' ),

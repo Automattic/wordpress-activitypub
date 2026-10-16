@@ -224,20 +224,17 @@ class Webfinger {
 			case 'acct':
 			case 'mailto':
 			case 'xmpp':
+				// Split on the last `@`: a local part may contain one, the host may not.
 				if ( \strrpos( $identifier, '@' ) !== false ) {
-					/*
-					 * Parsed as a scheme-relative URL, which is the shape `user@host` already has:
-					 * the host is after the last `@` of the local part, and it ends where a port,
-					 * path, query or fragment starts. So `acct:user@example.com#x` does not carry
-					 * `#x` into the host and miss a domain block on `example.com`, and
-					 * `acct:user@example.com/@evil.com` is on `example.com`. The port is kept for
-					 * the lookup URL.
-					 */
-					$authority = \wp_parse_url( '//' . \substr( $identifier, \strlen( $scheme ) + 1 ) );
+					$host = \substr( $identifier, \strrpos( $identifier, '@' ) + 1 );
 
-					if ( ! empty( $authority['host'] ) ) {
-						$host = $authority['host'] . ( isset( $authority['port'] ) ? ':' . $authority['port'] : '' );
-					}
+					/*
+					 * Cut anything a path, query or fragment starts. `wp_parse_url()` does this for
+					 * the URL forms below, but this branch takes the host off the string itself, so
+					 * `acct:user@example.com#x` would otherwise carry `#x` into the host and miss
+					 * a domain block on `example.com`, and `/x` would end up in the lookup URL's path.
+					 */
+					$host = \substr( $host, 0, \strcspn( $host, '/?#' ) );
 
 					/*
 					 * An internationalized handle is looked up in the form RFC 7565 asks for: the
