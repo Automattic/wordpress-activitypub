@@ -80,6 +80,8 @@ class Test_Webfinger extends \WP_UnitTestCase {
 			array( 'https://example.org/@pfefferle', 'https://example.org/@pfefferle', 'example.org' ),
 			array( 'mailto:pfefferle@example.org', 'mailto:pfefferle@example.org', 'example.org' ),
 			array( 'xmpp:pfefferle@example.com', 'xmpp:pfefferle@example.com', 'example.com' ),
+			// A handle's port is kept for the lookup URL.
+			array( 'author@example.org:8443', 'acct:author@example.org:8443', 'example.org:8443' ),
 			array( '//example.org/@pfefferle', '//example.org/@pfefferle', 'example.org' ),
 			// Brackets are kept: this host is also used to build WebFinger and intent URLs.
 			array( 'https://[2001:db8::1]/@pfefferle', 'https://[2001:db8::1]/@pfefferle', '[2001:db8::1]' ),
@@ -862,7 +864,7 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that a handle's host stops at a query or fragment.
+	 * Test that a handle's host stops at a path, query or fragment.
 	 *
 	 * The host is taken off the string itself for `acct:`-style identifiers, so without cutting
 	 * there `acct:user@example.com#x` carries `#x` into the host and misses a domain block on
@@ -875,22 +877,29 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	 * @param string $identifier The identifier.
 	 * @param string $expected   The expected host.
 	 */
-	public function test_get_host_cuts_query_and_fragment( $identifier, $expected ) {
+	public function test_get_host_cuts_handle_suffixes( $identifier, $expected ) {
 		$this->assertSame( $expected, Webfinger::get_host( $identifier ) );
 	}
 
 	/**
-	 * Data provider for handle hosts with a query or fragment.
+	 * Data provider for handle hosts with a path, query or fragment.
 	 *
 	 * @return array<string, array{0:string, 1:string}>
 	 */
 	public function handle_host_suffix_provider() {
 		return array(
-			'fragment'     => array( 'acct:user@example.com#x', 'example.com' ),
-			'query'        => array( 'user@example.com?a=1', 'example.com' ),
-			'both'         => array( 'acct:user@example.com?a=1#x', 'example.com' ),
-			'plain'        => array( 'acct:user@example.com', 'example.com' ),
-			'nothing left' => array( 'user@#x', '' ),
+			'path'          => array( 'acct:user@example.com/x', 'example.com' ),
+			'path, query'   => array( 'user@example.com/x?a=1', 'example.com' ),
+			// An `@` after the host starts the host that is looked up, so that is the one checked.
+			'@ in path'     => array( 'acct:user@example.com/@evil.com', 'evil.com' ),
+			'@ in fragment' => array( 'acct:user@example.com#@evil.com', 'evil.com' ),
+			'# in local'    => array( 'acct:user#x@evil.com', 'evil.com' ),
+			'authority'     => array( 'xmpp://guest@example.com', 'example.com' ),
+			'fragment'      => array( 'acct:user@example.com#x', 'example.com' ),
+			'query'         => array( 'user@example.com?a=1', 'example.com' ),
+			'both'          => array( 'acct:user@example.com?a=1#x', 'example.com' ),
+			'plain'         => array( 'acct:user@example.com', 'example.com' ),
+			'nothing left'  => array( 'user@#x', '' ),
 		);
 	}
 
