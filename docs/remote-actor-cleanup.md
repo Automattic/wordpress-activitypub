@@ -98,6 +98,10 @@ WordPress `get_post()` calls are outside these access APIs and do not cancel
 cleanup.
 
 Candidate cleanup reads stored posts without calling those public actor getters.
+Before invoking integration filters, it primes term relationships for the entire
+actor batch, including empty results, across all registered actor taxonomies.
+This lets integrations such as Friends check subscriptions from WordPress's
+normal relationship cache without caching a potentially stale protection result.
 It preserves and unmarks actors with followers, accepted or pending follows,
 blocks, comments, remote-post references, stored inbox actor references, or
 outgoing activity references. Blog actor ID zero counts as a relationship, and
