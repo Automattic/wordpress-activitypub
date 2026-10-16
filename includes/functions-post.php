@@ -362,13 +362,20 @@ function generate_post_summary( $post, $length = 500 ) {
 		return \PHP_INT_MAX - 1; // `wp_trim_words()` adds one.
 	};
 
+	// Core drops these blocks from excerpts, but the text inside them belongs to the summary.
+	$containers = static function ( $blocks ) {
+		return \array_merge( $blocks, array( 'core/cover', 'core/details' ) );
+	};
+
 	$previous_post   = $GLOBALS['post'] ?? null;
 	$GLOBALS['post'] = $post; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 	\setup_postdata( $post );
 	\add_filter( 'excerpt_length', $no_limit, \PHP_INT_MAX );
+	\add_filter( 'excerpt_allowed_wrapper_blocks', $containers );
 
 	$content = \get_the_excerpt( $post );
 
+	\remove_filter( 'excerpt_allowed_wrapper_blocks', $containers );
 	\remove_filter( 'excerpt_length', $no_limit, \PHP_INT_MAX );
 
 	// `wp_reset_postdata()` would restore the main query's post, not the one set before.
