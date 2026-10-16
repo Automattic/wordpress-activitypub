@@ -100,12 +100,20 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 		}
 
 		$authors = array(
-			'https://remote.example.com/posts/456'  => 'https://remote.example.com/users/remote_user',
-			'https://remote.example.com/posts/b'    => 'https://remote.example.com/users/b',
-			'https://remote.example.com/posts/gone' => 410,
-			'https://remote.example.com/posts/none' => 404,
-			'https://remote.example.com/posts/down' => 503,
-			'https://remote.example.com/posts/slow' => 0,
+			'https://remote.example.com/posts/456'     => 'https://remote.example.com/users/remote_user',
+			'https://remote.example.com/posts/b'       => 'https://remote.example.com/users/b',
+			'https://remote.example.com/posts/spelled' => 'https://Remote.example.com/users/remote_user/',
+			'https://remote.example.com/posts/shared'  => array(
+				'https://remote.example.com/users/b',
+				array(
+					'type' => 'Person',
+					'id'   => 'https://remote.example.com/users/remote_user',
+				),
+			),
+			'https://remote.example.com/posts/gone'    => 410,
+			'https://remote.example.com/posts/none'    => 404,
+			'https://remote.example.com/posts/down'    => 503,
+			'https://remote.example.com/posts/slow'    => 0,
 		);
 
 		if ( ! \array_key_exists( $id, $authors ) ) {
@@ -286,15 +294,17 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 	 */
 	public function instrument_owner_data() {
 		return array(
-			'own post'             => array( 'https://remote.example.com/posts/456', 'Accept' ),
-			'post by someone else' => array( 'https://remote.example.com/posts/b', 'Reject' ),
-			'alias of own post'    => array( 'https://remote.example.com/posts/alias', 'Reject' ),
-			'own post with slash'  => array( 'https://remote.example.com/posts/456/', 'Reject' ),
-			'own video'            => array( 'https://remote.example.com/videos/1', 'Accept' ),
-			'post is gone'         => array( 'https://remote.example.com/posts/gone', null ),
-			'post cannot be found' => array( 'https://remote.example.com/posts/none', null ),
-			'server error'         => array( 'https://remote.example.com/posts/down', null ),
-			'timeout'              => array( 'https://remote.example.com/posts/slow', null ),
+			'own post'                   => array( 'https://remote.example.com/posts/456', 'Accept' ),
+			'post by someone else'       => array( 'https://remote.example.com/posts/b', 'Reject' ),
+			'alias of own post'          => array( 'https://remote.example.com/posts/alias', 'Reject' ),
+			'own post with slash'        => array( 'https://remote.example.com/posts/456/', 'Reject' ),
+			'author spelled differently' => array( 'https://remote.example.com/posts/spelled', 'Accept' ),
+			'one of several authors'     => array( 'https://remote.example.com/posts/shared', 'Accept' ),
+			'own video'                  => array( 'https://remote.example.com/videos/1', 'Accept' ),
+			'post is gone'               => array( 'https://remote.example.com/posts/gone', null ),
+			'post cannot be found'       => array( 'https://remote.example.com/posts/none', null ),
+			'server error'               => array( 'https://remote.example.com/posts/down', null ),
+			'timeout'                    => array( 'https://remote.example.com/posts/slow', null ),
 		);
 	}
 

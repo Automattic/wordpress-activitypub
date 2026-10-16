@@ -50,6 +50,14 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 		$owners = array(
 			'https://remote.example.com/users/curator/featured/42' => 'https://remote.example.com/users/curator',
 			'https://remote.example.com/users/other/featured/1'    => 'https://remote.example.com/users/other',
+			'https://remote.example.com/users/curator/featured/spelled' => 'https://Remote.example.com/users/curator/',
+			'https://remote.example.com/users/curator/featured/shared' => array(
+				'https://remote.example.com/users/other',
+				array(
+					'type' => 'Person',
+					'id'   => 'https://remote.example.com/users/curator',
+				),
+			),
 			'https://remote.example.com/users/curator/featured/gone' => 410,
 			'https://remote.example.com/users/curator/featured/slow' => 0,
 		);
@@ -361,6 +369,8 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 			'own collection'             => array( 'https://remote.example.com/users/curator/featured/42', 'Accept' ),
 			'collection of someone else' => array( 'https://remote.example.com/users/other/featured/1', 'Reject' ),
 			'alias of own collection'    => array( 'https://remote.example.com/users/curator/featured/alias', 'Reject' ),
+			'owner spelled differently'  => array( 'https://remote.example.com/users/curator/featured/spelled', 'Accept' ),
+			'one of several owners'      => array( 'https://remote.example.com/users/curator/featured/shared', 'Accept' ),
 			'collection is gone'         => array( 'https://remote.example.com/users/curator/featured/gone', null ),
 			'timeout'                    => array( 'https://remote.example.com/users/curator/featured/slow', null ),
 		);

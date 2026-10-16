@@ -16,6 +16,7 @@ use Activitypub\Proxy;
 use function Activitypub\add_to_outbox;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
+use function Activitypub\normalize_actor_uri;
 use function Activitypub\object_to_uri;
 use function Activitypub\user_can_activitypub;
 
@@ -106,7 +107,19 @@ class Feature_Request {
 			}
 
 			// The fetched collection has to be the instrument itself; an alias or redirect could otherwise lend another collection's owner.
-			$state = is_same_actor( $instrument['id'] ?? null, object_to_uri( $activity['instrument'] ) ) && is_same_actor( $instrument['attributedTo'] ?? null, $activity['actor'] );
+			$state = is_same_actor( $instrument['id'] ?? null, object_to_uri( $activity['instrument'] ) );
+
+			// `attributedTo` can list several actors, and spell them differently than the actor's own id.
+			$owners = $instrument['attributedTo'] ?? null;
+			$owners = \is_array( $owners ) && \array_is_list( $owners ) ? $owners : array( $owners );
+			$owners = \array_map(
+				static function ( $owner ) {
+					return normalize_actor_uri( object_to_uri( $owner ) );
+				},
+				$owners
+			);
+
+			$state = $state && \in_array( normalize_actor_uri( object_to_uri( $activity['actor'] ) ), \array_filter( $owners ), true );
 		}
 
 		if ( $state ) {
