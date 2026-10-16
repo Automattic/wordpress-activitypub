@@ -72,6 +72,21 @@ class Remote_Actors {
 	}
 
 	/**
+	 * Nominate a disposable cached actor for scheduled cleanup.
+	 *
+	 * Public actor access automatically cancels this nomination. This does not
+	 * represent deletion of the remote account and does not delete its content.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $id Remote actor post ID.
+	 * @return bool Whether the actor was marked.
+	 */
+	public static function mark_for_cleanup( $id ) {
+		return Remote_Actor_Cleanup::mark( $id );
+	}
+
+	/**
 	 * Get an Remote Actor from the collection.
 	 *
 	 * @param int $id The object ID.
@@ -82,6 +97,7 @@ class Remote_Actors {
 		$post = \get_post( $id );
 
 		if ( $post && self::POST_TYPE === $post->post_type ) {
+			Remote_Actor_Cleanup::accessed( $post->ID );
 			return $post;
 		}
 
@@ -287,6 +303,7 @@ class Remote_Actors {
 			);
 		}
 
+		Remote_Actor_Cleanup::accessed( $post->ID );
 		return $post;
 	}
 
@@ -338,6 +355,9 @@ class Remote_Actors {
 		);
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 
+		foreach ( $posts as $post ) {
+			Remote_Actor_Cleanup::accessed( $post->ID );
+		}
 		return \array_map( '\get_post', $posts );
 	}
 
@@ -492,6 +512,7 @@ class Remote_Actors {
 				);
 			}
 
+			Remote_Actor_Cleanup::accessed( $post->ID );
 			return $post;
 		}
 
@@ -649,6 +670,7 @@ class Remote_Actors {
 			);
 		}
 
+		Remote_Actor_Cleanup::accessed( $post->ID );
 		$json = $post->post_content;
 
 		if ( empty( $json ) ) {
@@ -925,6 +947,7 @@ class Remote_Actors {
 	 * @return string The acct of the remote actor or empty string on failure.
 	 */
 	public static function get_acct( $id ) {
+		Remote_Actor_Cleanup::accessed( $id );
 		$acct = \get_post_meta( $id, '_activitypub_acct', true );
 
 		if ( $acct ) {
@@ -967,6 +990,7 @@ class Remote_Actors {
 	 * @return string The avatar URL or a default one if not found.
 	 */
 	public static function get_avatar_url( $id ) {
+		Remote_Actor_Cleanup::accessed( $id );
 		$default_avatar_url = ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg';
 
 		// Extract remote avatar URL from actor data.

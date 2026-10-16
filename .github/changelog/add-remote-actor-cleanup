@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Allow integrations to nominate unused cached accounts for cleanup, automatically preserving accounts that are accessed again or still have local references.

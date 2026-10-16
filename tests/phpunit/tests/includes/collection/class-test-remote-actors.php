@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Remote_Actor_Cleanup;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
 use Activitypub\Mention;
@@ -22,6 +23,51 @@ use Activitypub\Tests\Uri_Test_Cases;
 class Test_Remote_Actors extends \WP_UnitTestCase {
 	use Remote_Request_Stub;
 	use Uri_Test_Cases;
+
+	/**
+	 * Every public point lookup automatically cancels a cleanup nomination.
+	 *
+	 * @dataProvider cleanup_access_provider
+	 * @param string $method Actor access method.
+	 */
+	public function test_access_cancels_cleanup( $method ) {
+		$uri = 'https://example.com/cleanup-access';
+		$id  = self::factory()->post->create(
+			array(
+				'post_type'    => Remote_Actors::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_title'   => 'cleanup-access',
+				'guid'         => $uri,
+				'post_content' => \wp_slash( \wp_json_encode( $this->actor_for_uri( $uri ) ) ),
+				'meta_input'   => array( '_activitypub_acct' => 'cleanup-access@example.com' ),
+			)
+		);
+		Remote_Actors::mark_for_cleanup( $id );
+		$this->assertTrue( \has_term( Remote_Actor_Cleanup::CANDIDATE, Remote_Actor_Cleanup::TAXONOMY, $id ) );
+		$argument = $id;
+		if ( \in_array( $method, array( 'get_by_uri', 'fetch_by_uri' ), true ) ) {
+			$argument = $uri;
+		} elseif ( 'fetch_by_acct' === $method ) {
+			$argument = 'cleanup-access@example.com';
+		} elseif ( 'search' === $method ) {
+			$argument = 'cleanup-access';
+		}
+		Remote_Actors::$method( $argument );
+		$this->assertFalse( \has_term( Remote_Actor_Cleanup::CANDIDATE, Remote_Actor_Cleanup::TAXONOMY, $id ) );
+	}
+
+	/**
+	 * Public actor access paths.
+	 *
+	 * @return array<string, string[]> Methods to exercise.
+	 */
+	public function cleanup_access_provider() {
+		$cases = array();
+		foreach ( array( 'get', 'get_by_uri', 'fetch_by_uri', 'fetch_by_acct', 'get_actor', 'get_acct', 'get_avatar_url', 'search' ) as $method ) {
+			$cases[ $method ] = array( $method );
+		}
+		return $cases;
+	}
 
 	/**
 	 * Saving an actor must allow lookup by the original ID.

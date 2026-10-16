@@ -13,6 +13,7 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Remote_Actor_Cleanup;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
 use Activitypub\OAuth\Client;
@@ -87,6 +88,16 @@ class Post_Types {
 				'delete_with_user'      => false,
 				'can_export'            => true,
 				'supports'              => array( 'custom-fields' ),
+			)
+		);
+
+		\register_taxonomy(
+			Remote_Actor_Cleanup::TAXONOMY,
+			array( Remote_Actors::POST_TYPE ),
+			array(
+				'public'    => false,
+				'rewrite'   => false,
+				'query_var' => false,
 			)
 		);
 

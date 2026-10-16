@@ -12,6 +12,7 @@ use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Remote_Actor_Cleanup;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
 use Activitypub\Scheduler\Actor;
@@ -36,6 +37,7 @@ class Scheduler {
 	const SCHEDULES = array(
 		'activitypub_update_remote_actors'         => 'hourly',
 		'activitypub_cleanup_remote_actors'        => 'daily',
+		'activitypub_cleanup_actor_candidates'     => 'daily',
 		'activitypub_reprocess_outbox'             => 'hourly',
 		'activitypub_outbox_purge'                 => 'daily',
 		'activitypub_inbox_purge'                  => 'daily',
@@ -86,6 +88,7 @@ class Scheduler {
 		// Follower Cleanups.
 		\add_action( 'activitypub_update_remote_actors', array( self::class, 'update_remote_actors' ) );
 		\add_action( 'activitypub_cleanup_remote_actors', array( self::class, 'cleanup_remote_actors' ) );
+		self::register_async_batch_callback( 'activitypub_cleanup_actor_candidates', array( Remote_Actor_Cleanup::class, 'cleanup' ) );
 
 		// Event callbacks.
 		\add_action( 'activitypub_async_batch', array( self::class, 'async_batch' ), 10, 99 );
