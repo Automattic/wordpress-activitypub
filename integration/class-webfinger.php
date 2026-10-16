@@ -8,6 +8,7 @@
 namespace Activitypub\Integration;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Webfinger as Webfinger_Util;
 
 use function Activitypub\get_rest_url_by_path;
 
@@ -45,7 +46,7 @@ class Webfinger {
 			return $jrd;
 		}
 
-		$jrd['subject'] = \sprintf( 'acct:%s', $user->get_webfinger() );
+		$jrd['subject'] = Webfinger_Util::get_acct( $user->get_webfinger() );
 
 		$jrd['aliases'][] = $user->get_id();
 		$jrd['aliases'][] = $user->get_url();
@@ -87,7 +88,7 @@ class Webfinger {
 		$aliases = \array_values( $aliases );
 
 		$profile = array(
-			'subject' => \sprintf( 'acct:%s', $user->get_webfinger() ),
+			'subject' => Webfinger_Util::get_acct( $user->get_webfinger() ),
 			'aliases' => $aliases,
 			'links'   => array(
 				array(

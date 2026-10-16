@@ -142,4 +142,22 @@ class Test_Application extends \WP_UnitTestCase {
 		$this->assertIsArray( $data );
 		$this->assertSame( 'acct:' . Application::get_webfinger(), $data['subject'] );
 	}
+
+	/**
+	 * On an internationalized domain the `acct:` subject uses the A-label.
+	 *
+	 * @covers ::get_webfinger_data
+	 */
+	public function test_webfinger_subject_uses_a_label() {
+		$set_home = static function () {
+			return 'https://café.example';
+		};
+		\add_filter( 'pre_option_home', $set_home );
+
+		$data = Application::get_webfinger_data( 'acct:application@xn--caf-dma.example' );
+
+		\remove_filter( 'pre_option_home', $set_home );
+
+		$this->assertSame( 'acct:application@xn--caf-dma.example', $data['subject'] );
+	}
 }

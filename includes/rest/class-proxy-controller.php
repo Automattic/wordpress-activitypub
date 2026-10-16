@@ -128,7 +128,7 @@ class Proxy_Controller extends \WP_REST_Controller {
 	 * @return string The sanitized value.
 	 */
 	public function sanitize_url( $url ) {
-		$decoded = \urldecode( $url );
+		$decoded = \rawurldecode( $url );
 
 		if ( Webfinger::is_acct( $decoded ) ) {
 			return $decoded;
@@ -152,7 +152,7 @@ class Proxy_Controller extends \WP_REST_Controller {
 	 * @return bool True if valid, false otherwise.
 	 */
 	public function validate_url( $url ) {
-		$decoded_url = \urldecode( $url );
+		$decoded_url = \rawurldecode( $url );
 
 		if ( Webfinger::is_acct( $decoded_url ) ) {
 			return true;

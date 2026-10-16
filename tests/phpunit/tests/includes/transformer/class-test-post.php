@@ -1614,10 +1614,10 @@ class Test_Post extends \WP_UnitTestCase {
 		// Mock mentions extraction if the post content contains mention patterns.
 		$content         = $post_data['post_content'] ?? '';
 		$mentions_filter = null;
-		if ( \preg_match( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/i', $content ) ) {
+		if ( \preg_match( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/iu', $content ) ) {
 			$mentions_filter = function ( $mentions, $post_content ) {
 				// Extract all mention patterns from content.
-				\preg_match_all( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/i', $post_content, $all_matches );
+				\preg_match_all( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/iu', $post_content, $all_matches );
 				foreach ( $all_matches[0] as $match ) {
 					$mentions[ $match ] = 'https://example.com/' . \ltrim( $match, '@' );
 				}

@@ -13,6 +13,7 @@ use Activitypub\Model\Blog;
 use Activitypub\Model\User;
 use Activitypub\Signature;
 
+use function Activitypub\fold_host;
 use function Activitypub\is_user_type_disabled;
 use function Activitypub\normalize_host;
 use function Activitypub\normalize_url;
@@ -291,10 +292,11 @@ class Actors {
 			case 'acct':
 				$uri        = \str_replace( 'acct:', '', $uri );
 				$identifier = \substr( $uri, 0, \strrpos( $uri, '@' ) );
-				$host       = normalize_host( \substr( \strrchr( $uri, '@' ), 1 ) );
-				$blog_host  = normalize_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) );
+				$host       = normalize_host( fold_host( \substr( \strrchr( $uri, '@' ), 1 ) ) );
+				$blog_host  = normalize_host( fold_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) ) );
 
-				if ( $blog_host !== $host && normalize_host( \get_option( 'activitypub_old_host' ) ) !== $host ) {
+				// A host of `.` or `[]` folds away to nothing, which would otherwise match an unset old host.
+				if ( '' === $host || ( $blog_host !== $host && normalize_host( fold_host( \get_option( 'activitypub_old_host' ) ) ) !== $host ) ) {
 					return new \WP_Error(
 						'activitypub_wrong_host',
 						\__( 'Resource host does not match blog host', 'activitypub' ),
@@ -303,11 +305,19 @@ class Actors {
 				}
 
 				// Prepare wildcards https://github.com/mastodon/mastodon/issues/22213.
-				if ( \in_array( $identifier, array( '_', '*', '' ), true ) ) {
+				$username = \rawurldecode( $identifier );
+
+				if ( \in_array( $username, array( '_', '*', '' ), true ) ) {
 					return self::BLOG_USER_ID;
 				}
 
-				return self::get_id_by_username( $identifier );
+				// Older blog identifiers were stored percent-encoded; clients send any hex case or no encoding.
+				$blog_identifier = \get_option( 'activitypub_blog_identifier' );
+				if ( \is_string( $blog_identifier ) && \rawurldecode( $blog_identifier ) === $username ) {
+					$username = $blog_identifier;
+				}
+
+				return self::get_id_by_username( $username );
 			default:
 				return new \WP_Error(
 					'activitypub_wrong_scheme',
