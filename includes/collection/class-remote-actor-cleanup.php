@@ -99,7 +99,7 @@ class Remote_Actor_Cleanup {
 			)
 		);
 		if ( ! $query->posts ) {
-			return;
+			return null;
 		}
 
 		// Parse stored outgoing activities once per batch, not once per actor.

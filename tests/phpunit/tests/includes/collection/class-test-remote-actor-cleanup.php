@@ -7,6 +7,8 @@
 
 namespace Activitypub\Tests\Collection;
 
+use Activitypub\Activity\Activity;
+use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actor_Cleanup;
 use Activitypub\Collection\Remote_Actors;
 
@@ -85,14 +87,14 @@ class Test_Remote_Actor_Cleanup extends \WP_UnitTestCase {
 	 * Stored outgoing activities retain referenced actors.
 	 */
 	public function test_outbox_reference_protects_actor() {
-		$id = $this->actor();
-		self::factory()->post->create(
-			array(
-				'post_type'    => 'ap_outbox',
-				'post_status'  => 'pending',
-				'post_content' => \wp_slash( \wp_json_encode( array( 'object' => \get_post( $id )->guid ) ) ),
-			)
-		);
+		$id       = $this->actor();
+		$activity = new Activity();
+		$activity->set_type( 'Like' );
+		$activity->set_actor( 'https://example.com/local-actor' );
+		$activity->set_object( \get_post( $id )->guid );
+		$outbox_id = Outbox::add( $activity, 0 );
+		$this->assertIsInt( $outbox_id );
+		$this->assertSame( \get_post( $id )->guid, Outbox::get_activity( $outbox_id )->get_object() );
 		Remote_Actors::mark_for_cleanup( $id );
 		Remote_Actor_Cleanup::cleanup();
 		$this->assertNotNull( \get_post( $id ) );
