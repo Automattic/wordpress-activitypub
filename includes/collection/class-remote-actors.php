@@ -22,6 +22,13 @@ use function Activitypub\object_to_uri;
  */
 class Remote_Actors {
 	/**
+	 * Protection from cache cleanup for actors with lasting references.
+	 *
+	 * @var string
+	 */
+	const RETAIN_META_KEY = '_activitypub_retain';
+
+	/**
 	 * Post type for storing remote actors.
 	 *
 	 * @var string
@@ -69,6 +76,35 @@ class Remote_Actors {
 		\wp_cache_set( self::CACHE_KEY_INBOXES, $inboxes, 'activitypub' );
 
 		return $inboxes;
+	}
+
+	/**
+	 * Classify a stored actor after use, without changing fetch signatures.
+	 *
+	 * Retention is sticky: a display-only consumer cannot remove protection
+	 * from a record used for lasting references.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int|\WP_Post $post       Stored actor or ID.
+	 * @param bool         $cache_only Whether this is only a disposable cache entry.
+	 * @return bool Whether the requested classification is stored.
+	 */
+	public static function set_cache_only( $post, $cache_only ) {
+		if ( ! $post ) {
+			return false;
+		}
+		$post = \get_post( $post );
+		if ( ! $post || self::POST_TYPE !== $post->post_type ) {
+			return false;
+		}
+		$key = self::RETAIN_META_KEY;
+		if ( $cache_only && \get_post_meta( $post->ID, $key, true ) ) {
+			return false;
+		}
+		\update_post_meta( $post->ID, $key, ! $cache_only );
+		return \metadata_exists( 'post', $post->ID, $key )
+			&& (bool) \get_post_meta( $post->ID, $key, true ) === ! $cache_only;
 	}
 
 	/**

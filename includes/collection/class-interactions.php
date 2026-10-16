@@ -559,6 +559,7 @@ class Interactions {
 		if ( $actor_uri ) {
 			$remote_actor = Remote_Actors::get_by_uri( $actor_uri );
 			if ( ! \is_wp_error( $remote_actor ) ) {
+				Remote_Actors::set_cache_only( $remote_actor, false );
 				$comment_meta['_activitypub_remote_actor_id'] = $remote_actor->ID;
 			}
 		}

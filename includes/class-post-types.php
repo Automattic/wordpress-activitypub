@@ -90,6 +90,17 @@ class Post_Types {
 			)
 		);
 
+		\register_post_meta(
+			Remote_Actors::POST_TYPE,
+			Remote_Actors::RETAIN_META_KEY,
+			array(
+				'type'              => 'boolean',
+				'single'            => true,
+				'default'           => false,
+				'sanitize_callback' => 'rest_sanitize_boolean',
+			)
+		);
+
 		// Register meta for Remote Actors post type.
 		\register_post_meta(
 			Remote_Actors::POST_TYPE,
