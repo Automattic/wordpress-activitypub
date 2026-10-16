@@ -78,6 +78,7 @@ function to_ascii_host( $host ) {
 		return \idn_to_ascii( $host, \IDNA_NONTRANSITIONAL_TO_ASCII, \INTL_IDNA_VARIANT_UTS46 ) ?: $host;
 	}
 
+	// Without intl only case is folded: decomposed accents, fullwidth letters and dots like `。` give a different A-label.
 	if ( \function_exists( 'mb_strtolower' ) ) {
 		$host = \mb_strtolower( $host, 'UTF-8' );
 	}
@@ -107,7 +108,7 @@ function to_ascii_host( $host ) {
  * @return string The folded host.
  */
 function fold_host( $host ) {
-	// Trimmed again after the conversion, which maps dots like `。` to `.`.
+	// Trimmed again after the conversion, which maps dots like `。` to `.` when the intl extension is available.
 	return \rtrim( to_ascii_host( \rtrim( \trim( \strtolower( (string) $host ), '[]' ), '.' ) ), '.' );
 }
 

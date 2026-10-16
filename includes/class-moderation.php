@@ -560,8 +560,8 @@ class Moderation {
 		/*
 		 * `is_acct()` is too strict to decide this. Its host grammar rejects a trailing-dot FQDN,
 		 * which `Webfinger::resolve()` resolves fine, and a delivery that skips resolution over a
-		 * spelling is a delivery that skips the block. All
-		 * that matters here is whether this is a handle rather than a URL already worth comparing.
+		 * spelling is a delivery that skips the block. All that matters here is whether this is a
+		 * handle rather than a URL already worth comparing.
 		 */
 		$is_handle = false === \strpos( $actor_id, '://' ) && false !== \strpos( $actor_id, '@' );
 
