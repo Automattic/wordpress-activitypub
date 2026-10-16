@@ -22,11 +22,11 @@ use function Activitypub\object_to_uri;
  */
 class Remote_Actors {
 	/**
-	 * Explicit cache classification; absence protects unclassified actors.
+	 * Protection from cache cleanup for actors with lasting references.
 	 *
 	 * @var string
 	 */
-	const CACHE_ONLY_META_KEY = '_activitypub_cache_only';
+	const RETAIN_META_KEY = '_activitypub_retain';
 
 	/**
 	 * Post type for storing remote actors.
@@ -81,8 +81,8 @@ class Remote_Actors {
 	/**
 	 * Classify a stored actor after use, without changing fetch signatures.
 	 *
-	 * Missing metadata protects unclassified actors. An explicit false is sticky:
-	 * a display-only consumer cannot downgrade a record used for lasting references.
+	 * Retention is sticky: a display-only consumer cannot remove protection
+	 * from a record used for lasting references.
 	 *
 	 * @since unreleased
 	 *
@@ -98,13 +98,13 @@ class Remote_Actors {
 		if ( ! $post || self::POST_TYPE !== $post->post_type ) {
 			return false;
 		}
-		$key = self::CACHE_ONLY_META_KEY;
-		if ( $cache_only && \metadata_exists( 'post', $post->ID, $key ) && ! \get_post_meta( $post->ID, $key, true ) ) {
+		$key = self::RETAIN_META_KEY;
+		if ( $cache_only && \get_post_meta( $post->ID, $key, true ) ) {
 			return false;
 		}
-		\update_post_meta( $post->ID, $key, (bool) $cache_only );
+		\update_post_meta( $post->ID, $key, ! $cache_only );
 		return \metadata_exists( 'post', $post->ID, $key )
-			&& (bool) \get_post_meta( $post->ID, $key, true ) === (bool) $cache_only;
+			&& (bool) \get_post_meta( $post->ID, $key, true ) === ! $cache_only;
 	}
 
 	/**

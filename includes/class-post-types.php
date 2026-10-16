@@ -92,7 +92,7 @@ class Post_Types {
 
 		\register_post_meta(
 			Remote_Actors::POST_TYPE,
-			Remote_Actors::CACHE_ONLY_META_KEY,
+			Remote_Actors::RETAIN_META_KEY,
 			array(
 				'type'              => 'boolean',
 				'single'            => true,

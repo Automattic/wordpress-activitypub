@@ -822,6 +822,9 @@ class Scheduler {
 	 * @return int[]|null Next batch arguments when progress was made.
 	 */
 	public static function cleanup_cache_only_remote_actors_batch( $batch = 0 ) {
+		if ( ! \get_option( 'activitypub_actor_retention_migrated' ) ) {
+			return null;
+		}
 		$limit = \max( 1, (int) \apply_filters( 'activitypub_actor_cleanup_batch_size', 20 ) );
 		$query = new \WP_Query(
 			array(
@@ -833,9 +836,15 @@ class Scheduler {
 				'no_found_rows'  => true,
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query'     => array(
+					'relation' => 'OR',
 					array(
-						'key'   => Remote_Actors::CACHE_ONLY_META_KEY,
-						'value' => '1',
+						'key'     => Remote_Actors::RETAIN_META_KEY,
+						'compare' => 'NOT EXISTS',
+					),
+					array(
+						'key'     => Remote_Actors::RETAIN_META_KEY,
+						'value'   => '1',
+						'compare' => '!=',
 					),
 				),
 			)
@@ -866,7 +875,7 @@ class Scheduler {
 				continue;
 			}
 			// An integration may have promoted the actor while inspecting it.
-			if ( '1' === \get_post_meta( $actor->ID, Remote_Actors::CACHE_ONLY_META_KEY, true ) ) {
+			if ( ! \get_post_meta( $actor->ID, Remote_Actors::RETAIN_META_KEY, true ) ) {
 				$progress = (bool) Remote_Actors::delete( $actor->ID ) || $progress;
 			} else {
 				$progress = true;
@@ -884,7 +893,7 @@ class Scheduler {
 	 * @param \WP_Post $actor Stored actor.
 	 * @return bool Whether the actor is referenced.
 	 */
-	private static function remote_actor_is_in_use( $actor ) {
+	public static function remote_actor_is_in_use( $actor ) {
 		foreach ( array( Followers::FOLLOWER_META_KEY, Following::FOLLOWING_META_KEY, Following::PENDING_META_KEY, Moderation::BLOCKED_ACTORS_META_KEY ) as $key ) {
 			if ( \metadata_exists( 'post', $actor->ID, $key ) ) {
 				return true;
@@ -948,7 +957,7 @@ class Scheduler {
 	 *
 	 * @return array<string, true> Referenced strings from stored outgoing activities.
 	 */
-	private static function get_outbox_uris() {
+	public static function get_outbox_uris() {
 		$uris = array();
 		$page = 1;
 		do {

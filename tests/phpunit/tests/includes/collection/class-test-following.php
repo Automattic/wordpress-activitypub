@@ -49,7 +49,7 @@ class Test_Following extends \WP_UnitTestCase {
 		Remote_Actors::set_cache_only( $post_id, true );
 		// Accept the follow request.
 		$result = Following::accept( $post_id, $user_id );
-		$this->assertFalse( (bool) \get_post_meta( $post_id, '_activitypub_cache_only', true ) );
+		$this->assertTrue( (bool) \get_post_meta( $post_id, '_activitypub_retain', true ) );
 
 		// Verify the result is a WP_Post object.
 		$this->assertInstanceOf( '\WP_Post', $result );
@@ -284,7 +284,7 @@ class Test_Following extends \WP_UnitTestCase {
 		// First follow creates the relationship and outbox activity.
 		$first_result = follow( 'https://example.com/actor/1', $user_id );
 		$this->assertIsInt( $first_result, 'First follow should return an outbox activity ID' );
-		$this->assertFalse( (bool) \get_post_meta( $remote->ID, '_activitypub_cache_only', true ) );
+		$this->assertTrue( (bool) \get_post_meta( $remote->ID, '_activitypub_retain', true ) );
 
 		// Second follow should return the same outbox activity ID.
 		$second_result = follow( 'https://example.com/actor/1', $user_id );

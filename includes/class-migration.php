@@ -42,6 +42,7 @@ class Migration {
 		Scheduler::register_async_batch_callback( 'activitypub_migrate_actor_emoji', array( self::class, 'migrate_actor_emoji' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_backfill_statistics', array( Statistics::class, 'backfill_historical_stats' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_tombstone_migrate', array( self::class, 'migrate_tombstones_to_cpt' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_migrate_actor_retention', array( self::class, 'migrate_actor_retention' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_remove_duplicate_cache_files', array( self::class, 'remove_duplicate_cache_files' ) );
 	}
 
@@ -238,6 +239,10 @@ class Migration {
 		if ( \version_compare( $version_from_db, 'unreleased', '<' ) && ! \wp_next_scheduled( 'activitypub_remove_duplicate_cache_files' ) ) {
 			// A filesystem walk, so off the upgrade request and onto cron.
 			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_remove_duplicate_cache_files' );
+		}
+
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) && ! \wp_next_scheduled( 'activitypub_migrate_actor_retention' ) ) {
+			\wp_schedule_single_event( \time(), 'activitypub_migrate_actor_retention' );
 		}
 
 		/*
@@ -1439,5 +1444,48 @@ class Migration {
 		foreach ( $items as $item_id ) {
 			\wp_delete_post( $item_id, true );
 		}
+	}
+	/**
+	 * Classify legacy actors before enabling cache cleanup.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $batch_size Maximum actors to classify per run.
+	 * @return array|null Next batch arguments, or null when complete.
+	 */
+	public static function migrate_actor_retention( $batch_size = 100 ) {
+		if ( \get_option( 'activitypub_actor_retention_migrated' ) ) {
+			return null;
+		}
+		$batch_size = \max( 1, (int) $batch_size );
+		$query      = new \WP_Query(
+			array(
+				'post_type'      => Remote_Actors::POST_TYPE,
+				'post_status'    => \array_values( \get_post_stati() ),
+				'posts_per_page' => $batch_size,
+				'orderby'        => 'ID',
+				'order'          => 'ASC',
+				'no_found_rows'  => true,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'     => array(
+					array(
+						'key'     => Remote_Actors::RETAIN_META_KEY,
+						'compare' => 'NOT EXISTS',
+					),
+				),
+			)
+		);
+		if ( ! $query->posts ) {
+			\update_option( 'activitypub_actor_retention_migrated', true, false );
+			return null;
+		}
+		$outbox_uris = Scheduler::get_outbox_uris();
+		foreach ( $query->posts as $actor ) {
+			$in_use = isset( $outbox_uris[ $actor->guid ] ) || Scheduler::remote_actor_is_in_use( $actor );
+			$in_use = \apply_filters( 'activitypub_remote_actor_is_in_use', false, $actor ) || $in_use;
+			// Do not overwrite classification written by another consumer during the scan.
+			\add_post_meta( $actor->ID, Remote_Actors::RETAIN_META_KEY, (bool) $in_use, true );
+		}
+		return array( $batch_size );
 	}
 }

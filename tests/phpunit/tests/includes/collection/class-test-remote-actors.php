@@ -42,7 +42,7 @@ class Test_Remote_Actors extends \WP_UnitTestCase {
 			)
 		);
 		Remote_Actors::set_cache_only( $id, true );
-		$this->assertTrue( (bool) \get_post_meta( $id, Remote_Actors::CACHE_ONLY_META_KEY, true ) );
+		$this->assertFalse( (bool) \get_post_meta( $id, Remote_Actors::RETAIN_META_KEY, true ) );
 		$argument = $id;
 		if ( \in_array( $method, array( 'get_by_uri', 'fetch_by_uri' ), true ) ) {
 			$argument = $uri;
@@ -52,7 +52,7 @@ class Test_Remote_Actors extends \WP_UnitTestCase {
 			$argument = 'cleanup-access';
 		}
 		Remote_Actors::$method( $argument );
-		$this->assertTrue( (bool) \get_post_meta( $id, Remote_Actors::CACHE_ONLY_META_KEY, true ) );
+		$this->assertFalse( (bool) \get_post_meta( $id, Remote_Actors::RETAIN_META_KEY, true ) );
 	}
 
 	/**
@@ -60,11 +60,11 @@ class Test_Remote_Actors extends \WP_UnitTestCase {
 	 */
 	public function test_explicit_non_cache_classification_is_sticky() {
 		$id = self::factory()->post->create( array( 'post_type' => Remote_Actors::POST_TYPE ) );
-		$this->assertFalse( (bool) \get_post_meta( $id, Remote_Actors::CACHE_ONLY_META_KEY, true ) );
+		$this->assertTrue( (bool) \get_post_meta( $id, Remote_Actors::RETAIN_META_KEY, true ) );
 		$this->assertTrue( Remote_Actors::set_cache_only( $id, true ) );
 		$this->assertTrue( Remote_Actors::set_cache_only( \get_post( $id ), false ) );
 		$this->assertFalse( Remote_Actors::set_cache_only( $id, true ) );
-		$this->assertFalse( (bool) \get_post_meta( $id, Remote_Actors::CACHE_ONLY_META_KEY, true ) );
+		$this->assertTrue( (bool) \get_post_meta( $id, Remote_Actors::RETAIN_META_KEY, true ) );
 	}
 
 	/**

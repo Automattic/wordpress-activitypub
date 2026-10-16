@@ -28,6 +28,14 @@ use function Activitypub\add_to_outbox;
  */
 class Test_Scheduler extends \WP_UnitTestCase {
 	/**
+	 * Existing scheduler tests exercise cleanup after a completed upgrade.
+	 */
+	public function set_up() {
+		parent::set_up();
+		\update_option( 'activitypub_actor_retention_migrated', true, false );
+	}
+
+	/**
 	 * Test user ID.
 	 *
 	 * @var int
@@ -1101,16 +1109,16 @@ class Test_Scheduler extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Marking is idempotent and leaves unrelated actors alone.
+	 * Both unclassified and explicitly disposable actors are removed after migration.
 	 */
-	public function test_cleanup_is_opt_in() {
+	public function test_cleanup_removes_unretained_actors() {
 		$candidate = $this->cached_actor();
 		$retained  = $this->cached_actor();
 		$this->assertTrue( Remote_Actors::set_cache_only( $candidate, true ) );
 		$this->assertTrue( Remote_Actors::set_cache_only( $candidate, true ) );
 		Scheduler::cleanup_cache_only_remote_actors_batch();
 		$this->assertNull( \get_post( $candidate ) );
-		$this->assertNotNull( \get_post( $retained ) );
+		$this->assertNull( \get_post( $retained ) );
 	}
 
 	/**
@@ -1121,7 +1129,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		Remote_Actors::set_cache_only( $id, true );
 		Remote_Actors::get_outdated();
 		Remote_Actors::get_faulty();
-		$this->assertTrue( (bool) \get_post_meta( $id, Remote_Actors::CACHE_ONLY_META_KEY, true ) );
+		$this->assertFalse( (bool) \get_post_meta( $id, Remote_Actors::RETAIN_META_KEY, true ) );
 	}
 
 	/**
@@ -1134,7 +1142,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			Remote_Actors::set_cache_only( $id, true );
 			Scheduler::cleanup_cache_only_remote_actors_batch();
 			$this->assertNotNull( \get_post( $id ) );
-			$this->assertFalse( (bool) \get_post_meta( $id, Remote_Actors::CACHE_ONLY_META_KEY, true ) );
+			$this->assertTrue( (bool) \get_post_meta( $id, Remote_Actors::RETAIN_META_KEY, true ) );
 		}
 	}
 
@@ -1257,7 +1265,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		}
 		Scheduler::cleanup_cache_only_remote_actors_batch();
 		$this->assertNotNull( \get_post( $id ) );
-		$this->assertFalse( (bool) \get_post_meta( $id, Remote_Actors::CACHE_ONLY_META_KEY, true ) );
+		$this->assertTrue( (bool) \get_post_meta( $id, Remote_Actors::RETAIN_META_KEY, true ) );
 	}
 
 	/**
@@ -1277,12 +1285,26 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		try {
 			$this->assertNull( Scheduler::cleanup_cache_only_remote_actors_batch() );
 			$this->assertNotNull( \get_post( $id ) );
-			$this->assertTrue( (bool) \get_post_meta( $id, Remote_Actors::CACHE_ONLY_META_KEY, true ) );
+			$this->assertFalse( (bool) \get_post_meta( $id, Remote_Actors::RETAIN_META_KEY, true ) );
 		} finally {
 			\remove_filter( 'pre_delete_post', $prevent_delete, 10 );
 			\remove_filter( 'activitypub_actor_cleanup_batch_size', $batch_size );
 		}
 		Scheduler::cleanup_cache_only_remote_actors_batch();
+		$this->assertNull( \get_post( $id ) );
+	}
+	/**
+	 * Cleanup cannot run until the retention migration has finished.
+	 */
+	public function test_cleanup_waits_for_retention_migration() {
+		\delete_option( 'activitypub_actor_retention_migrated' );
+		$id = $this->cached_actor();
+		Remote_Actors::set_cache_only( $id, true );
+		Scheduler::cleanup_cache_only_remote_actors();
+		$this->assertNotNull( \get_post( $id ) );
+		$this->assertFalse( \wp_next_scheduled( 'activitypub_cleanup_actor_candidates', array( 1 ) ) );
+		\update_option( 'activitypub_actor_retention_migrated', true, false );
+		Scheduler::cleanup_cache_only_remote_actors();
 		$this->assertNull( \get_post( $id ) );
 	}
 }

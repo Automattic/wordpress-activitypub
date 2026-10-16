@@ -141,7 +141,7 @@ class Test_Followers extends \WP_UnitTestCase {
 			$this->assertInstanceOf( '\\WP_Post', $remote );
 			Remote_Actors::set_cache_only( $remote, true );
 			Followers::add( 1, $follower );
-			$this->assertFalse( (bool) \get_post_meta( $remote->ID, '_activitypub_cache_only', true ) );
+			$this->assertTrue( (bool) \get_post_meta( $remote->ID, '_activitypub_retain', true ) );
 		}
 
 		$db_followers = Followers::get_many( 1 );

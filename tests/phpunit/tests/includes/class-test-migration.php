@@ -1635,4 +1635,44 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertIsArray( $remaining, 'Legacy option must remain to back exists_local().' );
 		$this->assertEqualsCanonicalizing( $urls, $remaining );
 	}
+	/**
+	 * Legacy references are protected before cleanup is enabled, across batches.
+	 *
+	 * @covers ::migrate_actor_retention
+	 */
+	public function test_migrate_actor_retention() {
+		\delete_option( 'activitypub_actor_retention_migrated' );
+		$ids = self::factory()->post->create_many(
+			2,
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'post_status' => 'publish',
+			)
+		);
+		\add_post_meta( $ids[0], Followers::FOLLOWER_META_KEY, '0' );
+		$this->assertSame( array( 1 ), Migration::migrate_actor_retention( 1 ) );
+		$this->assertTrue( (bool) \get_post_meta( $ids[0], Remote_Actors::RETAIN_META_KEY, true ) );
+		$this->assertFalse( (bool) \get_option( 'activitypub_actor_retention_migrated' ) );
+		$this->assertSame( array( 1 ), Migration::migrate_actor_retention( 1 ) );
+		$this->assertTrue( \metadata_exists( 'post', $ids[1], Remote_Actors::RETAIN_META_KEY ) );
+		$this->assertFalse( (bool) \get_post_meta( $ids[1], Remote_Actors::RETAIN_META_KEY, true ) );
+		$this->assertFalse( (bool) \get_option( 'activitypub_actor_retention_migrated' ) );
+		$this->assertNull( Migration::migrate_actor_retention( 1 ) );
+		$this->assertTrue( (bool) \get_option( 'activitypub_actor_retention_migrated' ) );
+		$this->assertNull( Migration::migrate_actor_retention( 1 ) );
+		$this->assertNotNull( \get_post( $ids[1] ) );
+	}
+
+	/**
+	 * Classifications recorded by consumers are preserved during migration.
+	 *
+	 * @covers ::migrate_actor_retention
+	 */
+	public function test_migrate_actor_retention_preserves_existing_classification() {
+		\delete_option( 'activitypub_actor_retention_migrated' );
+		$id = self::factory()->post->create( array( 'post_type' => Remote_Actors::POST_TYPE ) );
+		Remote_Actors::set_cache_only( $id, false );
+		$this->assertNull( Migration::migrate_actor_retention() );
+		$this->assertTrue( (bool) \get_post_meta( $id, Remote_Actors::RETAIN_META_KEY, true ) );
+	}
 }
