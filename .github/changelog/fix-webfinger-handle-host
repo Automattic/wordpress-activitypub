@@ -1,4 +1,4 @@
 Significance: patch
 Type: fixed
 
-Domain blocks now also apply to handles with a port or a path after the domain, like @user@example.com/x.
+Domain blocks now also apply to handles that have a path after the domain, like @user@example.com/x.

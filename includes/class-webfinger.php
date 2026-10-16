@@ -298,10 +298,9 @@ class Webfinger {
 
 		/*
 		 * Folded here rather than in `get_identifier_and_host()`, whose host is also used to build
-		 * WebFinger and intent URLs: an IPv6 authority needs its brackets to stay a valid URL, and
-		 * a handle's port is kept there. Both are dropped for the comparison.
+		 * WebFinger and intent URLs: an IPv6 authority needs its brackets to stay a valid URL.
 		 */
-		return fold_authority( $identifier_and_host[1] );
+		return fold_host( $identifier_and_host[1] );
 	}
 
 	/**
