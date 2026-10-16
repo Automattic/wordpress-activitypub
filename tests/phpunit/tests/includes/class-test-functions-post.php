@@ -851,6 +851,38 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Text inside a Cover or Details block is part of the summary.
+	 *
+	 * @dataProvider container_block_data
+	 * @covers \Activitypub\generate_post_summary
+	 *
+	 * @param string $content The post content.
+	 */
+	public function test_generate_post_summary_reads_container_blocks( $content ) {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => $content,
+				'post_excerpt' => '',
+			)
+		);
+
+		$this->assertSame( 'Hello', \Activitypub\generate_post_summary( $post_id ) );
+		$this->assertNotContains( 'core/cover', \apply_filters( 'excerpt_allowed_wrapper_blocks', array() ), 'Excerpts on the website stay as they are.' );
+	}
+
+	/**
+	 * Posts whose text is only inside a container block.
+	 *
+	 * @return array[]
+	 */
+	public function container_block_data() {
+		return array(
+			'cover'   => array( '<!-- wp:cover --><div class="wp-block-cover"><div class="wp-block-cover__inner-container"><!-- wp:paragraph --><p>Hello</p><!-- /wp:paragraph --></div></div><!-- /wp:cover -->' ),
+			'details' => array( '<!-- wp:details --><details class="wp-block-details"><summary>Title</summary><!-- wp:paragraph --><p>Hello</p><!-- /wp:paragraph --></details><!-- /wp:details -->' ),
+		);
+	}
+
+	/**
 	 * Data provider for test_generate_post_summary.
 	 *
 	 * @return array[]
