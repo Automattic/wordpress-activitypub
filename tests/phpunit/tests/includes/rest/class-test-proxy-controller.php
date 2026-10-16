@@ -79,6 +79,19 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A handle with a plus keeps it through validation and sanitization.
+	 *
+	 * @covers ::validate_url
+	 * @covers ::sanitize_url
+	 */
+	public function test_plus_handle_keeps_plus() {
+		$controller = new Proxy_Controller();
+
+		$this->assertTrue( $controller->validate_url( 'renée+notes@café.example' ) );
+		$this->assertSame( 'renée+notes@café.example', $controller->sanitize_url( 'renée+notes@café.example' ) );
+	}
+
+	/**
 	 * Test that proxy rejects non-HTTPS URLs.
 	 *
 	 * @covers ::validate_url
