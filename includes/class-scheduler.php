@@ -12,7 +12,8 @@ use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
-use Activitypub\Collection\Remote_Actor_Cleanup;
+use Activitypub\Collection\Followers;
+use Activitypub\Collection\Following;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
 use Activitypub\Scheduler\Actor;
@@ -87,8 +88,8 @@ class Scheduler {
 		// Follower Cleanups.
 		\add_action( 'activitypub_update_remote_actors', array( self::class, 'update_remote_actors' ) );
 		\add_action( 'activitypub_cleanup_remote_actors', array( self::class, 'cleanup_remote_actors' ) );
-		\add_action( 'activitypub_cleanup_remote_actors', array( Remote_Actor_Cleanup::class, 'start_cleanup' ) );
-		self::register_async_batch_callback( 'activitypub_cleanup_actor_candidates', array( Remote_Actor_Cleanup::class, 'cleanup' ) );
+		\add_action( 'activitypub_cleanup_remote_actors', array( self::class, 'cleanup_cache_only_remote_actors' ) );
+		self::register_async_batch_callback( 'activitypub_cleanup_actor_candidates', array( self::class, 'cleanup_cache_only_remote_actors_batch' ) );
 
 		// Event callbacks.
 		\add_action( 'activitypub_async_batch', array( self::class, 'async_batch' ), 10, 99 );
@@ -797,5 +798,186 @@ class Scheduler {
 
 		// Schedule the outbox item for federation.
 		self::schedule_outbox_activity_for_federation( $outbox_activity_id, 120 );
+	}
+	/**
+	 * Start candidate cleanup as an independent listener on the existing cron action.
+	 *
+	 * @return void
+	 */
+	public static function cleanup_cache_only_remote_actors() {
+		$next = self::cleanup_cache_only_remote_actors_batch();
+		if ( $next && ! \wp_next_scheduled( 'activitypub_cleanup_actor_candidates', $next ) ) {
+			\wp_schedule_single_event(
+				\time() + self::get_retry_delay( 'activitypub_cleanup_actor_candidates' ),
+				'activitypub_cleanup_actor_candidates',
+				$next
+			);
+		}
+	}
+
+	/**
+	 * Process one bounded batch using stored posts, without changing classification on reads.
+	 *
+	 * @param int $batch Continuation batch number used by the async scheduler.
+	 * @return int[]|null Next batch arguments when progress was made.
+	 */
+	public static function cleanup_cache_only_remote_actors_batch( $batch = 0 ) {
+		$limit = \max( 1, (int) \apply_filters( 'activitypub_actor_cleanup_batch_size', 20 ) );
+		$query = new \WP_Query(
+			array(
+				'post_type'      => Remote_Actors::POST_TYPE,
+				'post_status'    => 'publish',
+				'posts_per_page' => $limit,
+				'orderby'        => 'ID',
+				'order'          => 'ASC',
+				'no_found_rows'  => true,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'     => array(
+					array(
+						'key'   => Remote_Actors::CACHE_ONLY_META_KEY,
+						'value' => '1',
+					),
+				),
+			)
+		);
+		if ( ! $query->posts ) {
+			return null;
+		}
+
+		// Parse stored outgoing activities once per batch, not once per actor.
+		$outbox_uris = self::get_outbox_uris();
+		$progress    = false;
+		foreach ( $query->posts as $actor ) {
+			$in_use = isset( $outbox_uris[ $actor->guid ] ) || self::remote_actor_is_in_use( $actor );
+			/**
+			 * Allow integrations to preserve references unknown to ActivityPub.
+			 *
+			 * Returning false cannot override a native reference.
+			 *
+			 * @since unreleased
+			 *
+			 * @param bool     $in_use Whether an integration needs the actor.
+			 * @param \WP_Post $actor  Stored actor, without changing its classification.
+			 */
+			$in_use = \apply_filters( 'activitypub_remote_actor_is_in_use', false, $actor ) || $in_use;
+			if ( $in_use ) {
+				Remote_Actors::set_cache_only( $actor, false );
+				$progress = true;
+				continue;
+			}
+			// An integration may have promoted the actor while inspecting it.
+			if ( '1' === \get_post_meta( $actor->ID, Remote_Actors::CACHE_ONLY_META_KEY, true ) ) {
+				$progress = (bool) Remote_Actors::delete( $actor->ID ) || $progress;
+			} else {
+				$progress = true;
+			}
+		}
+		if ( $progress && \count( $query->posts ) === $limit ) {
+			return array( $batch + 1 );
+		}
+		return null;
+	}
+
+	/**
+	 * Check durable native references, including blog ID zero and trashed content.
+	 *
+	 * @param \WP_Post $actor Stored actor.
+	 * @return bool Whether the actor is referenced.
+	 */
+	private static function remote_actor_is_in_use( $actor ) {
+		foreach ( array( Followers::FOLLOWER_META_KEY, Following::FOLLOWING_META_KEY, Following::PENDING_META_KEY, Moderation::BLOCKED_ACTORS_META_KEY ) as $key ) {
+			if ( \metadata_exists( 'post', $actor->ID, $key ) ) {
+				return true;
+			}
+		}
+		// These references belong to specific ActivityPub collections, not arbitrary posts.
+		$references = array(
+			Remote_Posts::POST_TYPE => array(
+				'key'   => '_activitypub_remote_actor_id',
+				'value' => $actor->ID,
+			),
+			Inbox::POST_TYPE        => array(
+				'key'   => '_activitypub_activity_remote_actor',
+				'value' => $actor->guid,
+			),
+		);
+		foreach ( $references as $post_type => $reference ) {
+			$query = new \WP_Query(
+				array(
+					'post_type'      => $post_type,
+					'post_status'    => \array_values( \get_post_stati() ),
+					'posts_per_page' => 1,
+					'fields'         => 'ids',
+					'no_found_rows'  => true,
+					// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					'meta_query'     => array( $reference ),
+				)
+			);
+			if ( $query->posts ) {
+				return true;
+			}
+		}
+		$comments = \get_comments(
+			array(
+				'status'     => 'any',
+				'number'     => 1,
+				'fields'     => 'ids',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query' => array(
+					array(
+						'key'   => '_activitypub_remote_actor_id',
+						'value' => $actor->ID,
+					),
+				),
+			)
+		);
+		return ! empty( $comments ) || ! empty(
+			\get_comments(
+				array(
+					'status'     => 'any',
+					'number'     => 1,
+					'fields'     => 'ids',
+					'author_url' => $actor->guid,
+				)
+			)
+		);
+	}
+
+	/**
+	 * Collect URI references without searching JSON text or touching actor APIs.
+	 *
+	 * @return array<string, true> Referenced strings from stored outgoing activities.
+	 */
+	private static function get_outbox_uris() {
+		$uris = array();
+		$page = 1;
+		do {
+			$query = new \WP_Query(
+				array(
+					'post_type'      => Outbox::POST_TYPE,
+					'post_status'    => \array_values( \get_post_stati() ),
+					'posts_per_page' => 100,
+					'paged'          => $page++,
+					'orderby'        => 'ID',
+					'order'          => 'ASC',
+					'no_found_rows'  => true,
+				)
+			);
+			foreach ( $query->posts as $post ) {
+				$data = \json_decode( $post->post_content, true );
+				if ( \is_array( $data ) ) {
+					\array_walk_recursive(
+						$data,
+						static function ( $value ) use ( &$uris ) {
+							if ( \is_string( $value ) ) {
+								$uris[ $value ] = true;
+							}
+						}
+					);
+				}
+			}
+			$count = \count( $query->posts );
+		} while ( 100 === $count );
+		return $uris;
 	}
 }

@@ -13,7 +13,6 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
-use Activitypub\Collection\Remote_Actor_Cleanup;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
 use Activitypub\OAuth\Client;
@@ -93,7 +92,7 @@ class Post_Types {
 
 		\register_post_meta(
 			Remote_Actors::POST_TYPE,
-			Remote_Actor_Cleanup::CACHE_ONLY_META_KEY,
+			Remote_Actors::CACHE_ONLY_META_KEY,
 			array(
 				'type'              => 'boolean',
 				'single'            => true,

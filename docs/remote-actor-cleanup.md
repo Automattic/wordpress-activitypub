@@ -49,7 +49,7 @@ The daily `activitypub_cleanup_remote_actors` action has two independent callbac
 | Callback | Selection | Purpose |
 | --- | --- | --- |
 | `Scheduler::cleanup_remote_actors()` | Actors with errors or a missing/empty inbox | Existing handling of faulty or deleted remote accounts. |
-| `Collection\Remote_Actor_Cleanup::start_cleanup()` | Actors explicitly classified as cache-only | Proposed removal of disposable local cache records. |
+| `Scheduler::cleanup_cache_only_remote_actors()` | Actors explicitly classified as cache-only | Proposed removal of disposable local cache records. |
 
 Both use the existing recurring action. Cache-only cleanup has no separate
 recurring schedule, and classifying an actor does not create a cron event.
@@ -181,7 +181,6 @@ invoking it. Integrations should use this API rather than a bare
 
 - [Actor collection and access APIs](../includes/collection/class-remote-actors.php)
 - [Schedules, refresh, and faulty-actor cleanup](../includes/class-scheduler.php)
-- [Proposed candidate cleanup](../includes/collection/class-remote-actor-cleanup.php)
 - [Delete handler and associated-content deletion](../includes/handler/class-delete.php)
 - [Tombstone detection](../includes/class-tombstone.php)
 - [Move handler](../includes/handler/class-move.php)

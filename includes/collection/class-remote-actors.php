@@ -22,6 +22,13 @@ use function Activitypub\object_to_uri;
  */
 class Remote_Actors {
 	/**
+	 * Explicit cache classification; absence protects unclassified actors.
+	 *
+	 * @var string
+	 */
+	const CACHE_ONLY_META_KEY = '_activitypub_cache_only';
+
+	/**
 	 * Post type for storing remote actors.
 	 *
 	 * @var string
@@ -91,7 +98,7 @@ class Remote_Actors {
 		if ( ! $post || self::POST_TYPE !== $post->post_type ) {
 			return false;
 		}
-		$key = Remote_Actor_Cleanup::CACHE_ONLY_META_KEY;
+		$key = self::CACHE_ONLY_META_KEY;
 		if ( $cache_only && \metadata_exists( 'post', $post->ID, $key ) && ! \get_post_meta( $post->ID, $key, true ) ) {
 			return false;
 		}
