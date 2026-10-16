@@ -381,12 +381,20 @@ class Remote_Posts {
 	 * Extract media attachments from an activity object.
 	 *
 	 * Extracts attachments with URL, alt text, and media type for appending to content.
+	 * Inspects at most 20 candidates, or the requested limit if higher, including unusable items.
 	 *
-	 * @param array $activity_object The activity object data.
+	 * @param array  $activity_object The activity object data.
+	 * @param int    $limit           Maximum number of attachments. Default 20.
+	 * @param string $attachment_type Optional media type to include, such as 'image'.
 	 *
 	 * @return array Array of attachments with 'url', 'alt', and 'type' keys.
 	 */
-	private static function extract_attachments( $activity_object ) {
+	public static function extract_attachments( $activity_object, $limit = 20, $attachment_type = '' ) {
+		$limit = (int) $limit;
+		if ( $limit <= 0 ) {
+			return array();
+		}
+
 		$items = $activity_object['attachment'] ?? array();
 
 		/*
@@ -395,20 +403,16 @@ class Remote_Posts {
 		 */
 		if ( empty( $items ) && ! empty( $activity_object['image'] ) ) {
 			$items = $activity_object['image'];
+		}
 
-			// AS2 allows a bare URL string for `image`.
-			if ( \is_string( $items ) ) {
-				$items = array( 'url' => $items );
-			}
-
-			if ( \is_object( $items ) ) {
-				$items = \get_object_vars( $items );
-			}
-
-			// A single `Image` object rather than a list of them.
-			if ( \is_array( $items ) && ! \array_is_list( $items ) ) {
-				$items = array( $items );
-			}
+		if ( \is_string( $items ) ) {
+			$items = array( 'url' => $items );
+		}
+		if ( \is_object( $items ) ) {
+			$items = \get_object_vars( $items );
+		}
+		if ( \is_array( $items ) && ! \array_is_list( $items ) ) {
+			$items = array( $items );
 		}
 
 		if ( empty( $items ) || ! \is_array( $items ) ) {
@@ -416,7 +420,7 @@ class Remote_Posts {
 		}
 
 		$attachments = array();
-		foreach ( $items as $attachment ) {
+		foreach ( \array_slice( $items, 0, \max( 20, $limit ) ) as $attachment ) {
 			if ( \is_object( $attachment ) ) {
 				$attachment = \get_object_vars( $attachment );
 			}
@@ -432,23 +436,43 @@ class Remote_Posts {
 			if ( empty( $url ) || ! \is_string( $url ) ) {
 				continue;
 			}
+			$mime_type = \is_string( $attachment['mediaType'] ?? null ) ? \strtolower( $attachment['mediaType'] ) : '';
 
-			$mime_type = $attachment['mediaType'] ?? '';
-
-			if ( \str_starts_with( $mime_type, 'video/' ) ) {
+			if ( '' === $mime_type ) {
+				$type = \array_key_exists( 'type', $attachment ) ? $attachment['type'] : 'Image';
+				$type = \is_string( $type ) ? \strtolower( $type ) : 'document';
+				$type = \in_array( $type, array( 'image', 'audio', 'video' ), true ) ? $type : 'document';
+			} elseif ( \str_starts_with( $mime_type, 'video/' ) ) {
 				$type = 'video';
 			} elseif ( \str_starts_with( $mime_type, 'audio/' ) ) {
 				$type = 'audio';
-			} else {
+			} elseif ( \str_starts_with( $mime_type, 'image/' ) ) {
 				$type = 'image';
+			} else {
+				$type = 'document';
+			}
+
+			if ( $attachment_type && $attachment_type !== $type ) {
+				continue;
+			}
+
+			if (
+				! \wp_http_validate_url( $url ) ||
+				! \in_array( \strtolower( \wp_parse_url( $url, PHP_URL_SCHEME ) ?? '' ), array( 'http', 'https' ), true ) ||
+				! \esc_url_raw( $url, array( 'http', 'https' ) )
+			) {
+				continue;
 			}
 
 			$attachments[] = array(
 				'url'  => $url,
-				// Same treatment the import path gives this field: remote JSON can hand us an array.
-				'alt'  => \is_string( $attachment['name'] ?? null ) ? \wp_strip_all_tags( $attachment['name'] ) : '',
+				// Descriptions are plain text; HTML attribute escaping happens when building the image.
+				'alt'  => \is_string( $attachment['name'] ?? null ) ? \wp_check_invalid_utf8( $attachment['name'] ) : '',
 				'type' => $type,
 			);
+			if ( \count( $attachments ) >= $limit ) {
+				break;
+			}
 		}
 
 		return $attachments;

@@ -320,6 +320,34 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$response = \rest_do_request( $request );
 		$this->assertEquals( 202, $response->get_status() );
 
+		// Image-only replies must pass the same REST validation as text replies.
+		unset( $json['object']['content'] );
+		$json['id']                  .= '/image';
+		$json['object']['id']        .= '/image';
+		$json['object']['attachment'] = array(
+			'type' => 'Image',
+			'url'  => 'https://example.com/photo.jpg',
+		);
+		$request                      = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/1/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $json ) );
+		$this->assertSame( 202, \rest_do_request( $request )->get_status() );
+		foreach ( array(
+			42,
+			true,
+			array(
+				'type' => 'Image',
+				'url'  => 42,
+			),
+			'/photo.jpg',
+			'//remote.example/photo.jpg',
+			'http://127.0.0.1/photo.jpg',
+		) as $url ) {
+			$json['object']['attachment']['url'] = $url;
+			$request->set_body( \wp_json_encode( $json ) );
+			$this->assertSame( 400, \rest_do_request( $request )->get_status() );
+		}
+
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
 	}
 
@@ -470,7 +498,11 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$request->set_body( $args['body'] );
 		$request->set_headers( $args['headers'] );
 
-		$response = \rest_do_request( $request );
+		// Signature verification reads the query string from the actual HTTP request URI.
+		$server                 = $_SERVER;
+		$_SERVER['REQUEST_URI'] = $route;
+		$response               = \rest_do_request( $request );
+		$_SERVER                = $server;
 		$this->assertEquals( 202, $response->get_status() );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );

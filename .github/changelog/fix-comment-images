@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Display up to three images attached to Fediverse comments by default, with local caching and image descriptions.

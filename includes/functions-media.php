@@ -51,9 +51,17 @@ function is_remote_url( $url ) {
  * @return string The wrapped image block.
  */
 function generate_image_block( $url, $img_html ) {
-	return \sprintf(
-		'<!-- wp:activitypub/image %s -->%s<!-- /wp:activitypub/image -->',
-		\wp_json_encode( array( 'url' => $url ) ),
+	$processor = new \WP_HTML_Tag_Processor( $img_html );
+	$processor->next_tag( array( 'tag_name' => 'IMG' ) );
+
+	return \get_comment_delimited_block_content(
+		'activitypub/image',
+		array(
+			// Core runs block attribute strings through KSES when saving comments.
+			'url'        => \htmlspecialchars( $url, ENT_QUOTES, 'UTF-8', true ),
+			'urlEncoded' => true,
+			'alt'        => \htmlspecialchars( $processor->get_attribute( 'alt' ) ?? '', ENT_QUOTES, 'UTF-8', true ),
+		),
 		$img_html
 	);
 }
@@ -134,9 +142,12 @@ function process_remote_images( $content, $attachments = array() ) {
 				// Reconstruct img tag without the marker attribute.
 				$img_html = '<img ' . \trim( $matches[1] . $matches[2] ) . '>';
 
-				// Extract src URL from the img tag.
-				if ( \preg_match( '/src=["\']([^"\']+)["\']/', $img_html, $src_match ) ) {
-					return generate_image_block( $src_match[1], $img_html );
+				$processor = new \WP_HTML_Tag_Processor( $img_html );
+				if ( $processor->next_tag( array( 'tag_name' => 'IMG' ) ) ) {
+					$src = $processor->get_attribute( 'src' );
+					if ( \is_string( $src ) && $src ) {
+						return generate_image_block( $src, $img_html );
+					}
 				}
 
 				return $matches[0];
@@ -148,6 +159,10 @@ function process_remote_images( $content, $attachments = array() ) {
 	// Append attachments not already in content.
 	if ( ! empty( $attachments ) ) {
 		foreach ( $attachments as $attachment ) {
+			if ( 'image' !== ( $attachment['type'] ?? 'image' ) ) {
+				continue;
+			}
+
 			$url = $attachment['url'] ?? '';
 			if ( empty( $url ) || isset( $seen_urls[ $url ] ) ) {
 				continue;
@@ -158,10 +173,10 @@ function process_remote_images( $content, $attachments = array() ) {
 				continue;
 			}
 
-			$alt     = ! empty( $attachment['alt'] ) ? \esc_attr( $attachment['alt'] ) : '';
+			$alt     = ! empty( $attachment['alt'] ) ? \esc_attr( \htmlspecialchars( $attachment['alt'], ENT_QUOTES, 'UTF-8', true ) ) : '';
 			$img_tag = $alt
-				? \sprintf( '<img src="%s" alt="%s" />', \esc_url( $url ), $alt )
-				: \sprintf( '<img src="%s" />', \esc_url( $url ) );
+				? \sprintf( '<img src="%s" alt="%s" />', \esc_url( \htmlspecialchars( $url, ENT_QUOTES, 'UTF-8', true ) ), $alt )
+				: \sprintf( '<img src="%s" />', \esc_url( \htmlspecialchars( $url, ENT_QUOTES, 'UTF-8', true ) ) );
 
 			$content          .= "\n\n" . generate_image_block( $url, $img_tag );
 			$seen_urls[ $url ] = true;

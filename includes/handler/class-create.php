@@ -150,7 +150,15 @@ class Create {
 			return false;
 		}
 
-		if ( ! isset( $activity['object']['id'], $activity['object']['content'] ) ) {
+		if ( ! isset( $activity['object']['id'] ) ) {
+			return false;
+		}
+		if ( ! isset( $activity['object']['content'] ) ) {
+			foreach ( Remote_Posts::extract_attachments( $activity['object'], 1, 'image' ) as $attachment ) {
+				if ( 'image' === $attachment['type'] && \esc_url_raw( $attachment['url'], array( 'http', 'https' ) ) ) {
+					return $valid;
+				}
+			}
 			return false;
 		}
 

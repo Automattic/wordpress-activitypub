@@ -13,6 +13,20 @@ namespace Activitypub\Tests;
  * @coversDefaultClass \Activitypub
  */
 class Test_Functions_Media extends \WP_UnitTestCase {
+	/**
+	 * URLs read from HTML are decoded exactly once before becoming block attributes.
+	 *
+	 * @covers \Activitypub\process_remote_images
+	 */
+	public function test_process_remote_images_decodes_html_urls_once() {
+		foreach ( array( 'https://example.com/image.jpg?a=1&b=2', 'https://example.com/a&amp;b.jpg' ) as $url ) {
+			$html   = '<img src="' . \htmlspecialchars( $url, ENT_QUOTES, 'UTF-8', true ) . '" />';
+			$blocks = \parse_blocks( \Activitypub\process_remote_images( $html ) );
+			$this->assertTrue( $blocks[0]['attrs']['urlEncoded'] );
+			$this->assertSame( $url, \wp_specialchars_decode( $blocks[0]['attrs']['url'], ENT_QUOTES ) );
+		}
+	}
+
 
 	/**
 	 * Test process_remote_images wraps remote images.
@@ -152,7 +166,44 @@ class Test_Functions_Media extends \WP_UnitTestCase {
 		$this->assertStringStartsWith( '<!-- wp:activitypub/image', $result );
 		$this->assertStringEndsWith( '<!-- /wp:activitypub/image -->', $result );
 		$this->assertStringContainsString( $img_html, $result );
-		$this->assertStringContainsString( '"url":"https:\/\/example.com\/image.jpg"', $result );
+		$block = \parse_blocks( $result )[0];
+		$this->assertSame( $url, $block['attrs']['url'] );
+		$this->assertSame( 'Test', $block['attrs']['alt'] );
+	}
+
+	/**
+	 * Image descriptions cannot escape the block attributes.
+	 *
+	 * @group activitypub
+	 */
+	public function test_generate_image_block_escapes_attributes() {
+		$result = \Activitypub\generate_image_block( 'https://example.com/image.jpg', '<img src="https://example.com/image.jpg" alt="--&gt; &quot;cat&quot; &amp; kittens" />' );
+		$blocks = \parse_blocks( $result );
+		$this->assertCount( 1, $blocks );
+		$this->assertSame( '--&gt; &quot;cat&quot; &amp; kittens', $blocks[0]['attrs']['alt'] );
+	}
+
+	/**
+	 * Passing the shared attachment list still processes images only.
+	 *
+	 * @group activitypub
+	 */
+	public function test_process_remote_images_skips_other_media() {
+		$result = \Activitypub\process_remote_images(
+			'',
+			array(
+				array(
+					'url'  => 'https://example.com/video.mp4',
+					'type' => 'video',
+				),
+				array(
+					'url'  => 'https://example.com/image.jpg',
+					'type' => 'image',
+				),
+			)
+		);
+		$this->assertStringNotContainsString( 'video.mp4', $result );
+		$this->assertStringContainsString( 'image.jpg', $result );
 	}
 
 	/**

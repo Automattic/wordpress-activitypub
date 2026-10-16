@@ -10,12 +10,222 @@ namespace Activitypub\Tests;
 use Activitypub\Collection\Remote_Posts;
 use Activitypub\Comment;
 
+use function Activitypub\generate_image_block;
+use function Activitypub\process_remote_images;
+
 /**
  * Test class for Activitypub Comment.
  *
  * @coversDefaultClass \Activitypub\Comment
  */
 class Test_Comment extends \WP_UnitTestCase {
+	/**
+	 * Descriptions survive comment creation and updates with core block-attribute KSES active.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_image_descriptions_survive_comment_save_and_update() {
+		\wp_set_current_user( 0 );
+		\kses_init();
+		$post_id    = self::factory()->post->create();
+		$comment_id = 0;
+		$download   = static function () {
+			return new \WP_Error( 'cache_skipped', 'The image cache is unavailable.' );
+		};
+		\add_filter( 'activitypub_pre_download_url', $download );
+		foreach ( array( 'width < height', 'Updated: width < height, "quotes", & and literal &lt;' ) as $description ) {
+			$content = process_remote_images(
+				'',
+				Remote_Posts::extract_attachments(
+					array(
+						'attachment' => array(
+							'type' => 'Image',
+							'url'  => 'https://example.com/photo.jpg',
+							'name' => $description,
+						),
+					)
+				)
+			);
+			if ( $comment_id ) {
+				$this->assertSame(
+					1,
+					\wp_update_comment(
+						\wp_slash(
+							array(
+								'comment_ID'      => $comment_id,
+								'comment_content' => $content,
+							)
+						)
+					)
+				);
+			} else {
+				$comment_id = \wp_new_comment(
+					\wp_slash(
+						array(
+							'comment_post_ID'      => $post_id,
+							'comment_author'       => 'Remote author',
+							'comment_author_email' => 'remote@example.com',
+							'comment_author_url'   => '',
+							'comment_content'      => $content,
+							'comment_meta'         => array( 'protocol' => 'activitypub' ),
+						)
+					),
+					true
+				);
+				$this->assertIsInt( $comment_id );
+			}
+			$comment  = \get_comment( $comment_id );
+			$rendered = Comment::render_blocks( $comment->comment_content, $comment );
+			$image    = new \WP_HTML_Tag_Processor( $rendered );
+			$this->assertTrue( $image->next_tag( 'IMG' ) );
+			$this->assertSame( $description, $image->get_attribute( 'alt' ) );
+		}
+		\remove_filter( 'activitypub_pre_download_url', $download );
+	}
+
+	/**
+	 * Only leaf image and emoji blocks may invoke render callbacks in comments.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_render_blocks_rejects_other_and_nested_blocks() {
+		$comment  = self::factory()->comment->create_and_get( array( 'comment_meta' => array( 'protocol' => 'activitypub' ) ) );
+		$calls    = 0;
+		$callback = static function () use ( &$calls ) {
+			++$calls;
+			return 'Unexpected callback.';
+		};
+		\register_block_type( 'activitypub/test-probe', array( 'render_callback' => $callback ) );
+		\register_block_type( 'core/test-probe', array( 'render_callback' => $callback ) );
+		Comment::render_blocks( '<!-- wp:activitypub/test-probe /-->', $comment );
+		Comment::render_blocks( '<!-- wp:activitypub/image --><!-- wp:test-probe /--><!-- /wp:activitypub/image -->', $comment );
+		Comment::render_blocks( '<!-- wp:activitypub/emoji --><!-- wp:test-probe /--><!-- /wp:activitypub/emoji -->', $comment );
+		\unregister_block_type( 'activitypub/test-probe' );
+		\unregister_block_type( 'core/test-probe' );
+
+		$this->assertSame( 0, $calls );
+	}
+
+	/**
+	 * Images use the comment's parent post, not the current global post.
+	 *
+	 * @group activitypub
+	 * @covers ::render_blocks
+	 */
+	public function test_render_image_with_parent_post_context() {
+		$parent  = self::factory()->post->create();
+		$comment = self::factory()->comment->create_and_get(
+			array(
+				'comment_post_ID' => $parent,
+				'comment_meta'    => array( 'protocol' => 'activitypub' ),
+			)
+		);
+		$this->go_to( \get_permalink( self::factory()->post->create() ) );
+		$content  = generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' );
+		$seen_id  = null;
+		$filter   = static function ( $url, $context, $entity_id ) use ( &$seen_id ) {
+			$seen_id = $entity_id;
+			return 'https://cdn.example.com/photo.jpg';
+		};
+		$download = static function () {
+			return new \WP_Error( 'cache_skipped', 'Test uses a CDN.' );
+		};
+		\add_filter( 'activitypub_pre_download_url', $download );
+		\add_filter( 'activitypub_remote_media_url', $filter, 1, 3 );
+		$rendered = Comment::render_blocks( $content, $comment );
+		\remove_filter( 'activitypub_remote_media_url', $filter, 1 );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+		$this->assertSame( (int) $comment->comment_post_ID, $seen_id );
+		$this->assertStringContainsString( 'https://cdn.example.com/photo.jpg', $rendered );
+	}
+
+	/**
+	 * Core block filters remain available to extensions when rendering comments.
+	 *
+	 * @group activitypub
+	 * @covers ::render_blocks
+	 */
+	public function test_render_blocks_preserves_core_filters() {
+		$comment = self::factory()->comment->create_and_get( array( 'comment_meta' => array( 'protocol' => 'activitypub' ) ) );
+		$content = generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' );
+		$filters = array( 'pre_render_block', 'render_block_data', 'render_block_context' );
+		$seen    = array();
+		$filter  = static function ( $value ) use ( &$seen ) {
+			$seen[] = \current_filter();
+			return $value;
+		};
+		foreach ( $filters as $hook ) {
+			\add_filter( $hook, $filter );
+		}
+		$pre_render = static function () {
+			return 'Filtered comment image.';
+		};
+		Comment::render_blocks( '<!-- wp:activitypub/image /-->', $comment );
+		\add_filter( 'pre_render_block', $pre_render, 20 );
+		$rendered = Comment::render_blocks( $content, $comment );
+		\remove_filter( 'pre_render_block', $pre_render, 20 );
+		foreach ( $filters as $hook ) {
+			\remove_filter( $hook, $filter );
+		}
+
+		$this->assertSame( 'Filtered comment image.', $rendered );
+		foreach ( $filters as $hook ) {
+			$this->assertContains( $hook, $seen );
+		}
+	}
+
+	/**
+	 * Ordinary comment submission cannot turn block attributes into an image.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_ordinary_comment_cannot_render_image_blocks() {
+		\wp_set_current_user( 0 );
+		\kses_init();
+		$content    = '<!-- wp:activitypub/image {"url":"https://example.com/tracker.jpg","alt":""} /-->';
+		$comment_id = \wp_new_comment(
+			\wp_slash(
+				array(
+					'comment_post_ID'      => self::factory()->post->create(),
+					'comment_author'       => 'Local commenter',
+					'comment_author_email' => 'local@example.com',
+					'comment_author_url'   => '',
+					'comment_content'      => $content,
+				)
+			),
+			true
+		);
+		$this->assertIsInt( $comment_id );
+		$comment = \get_comment( $comment_id );
+		$this->assertFalse( Comment::was_received( $comment ) );
+		$this->assertStringContainsString( '<!-- wp:activitypub/image', $comment->comment_content );
+
+		$download = static function () {
+			return new \WP_Error( 'cache_skipped', 'The image cache is unavailable.' );
+		};
+		\add_filter( 'activitypub_pre_download_url', $download );
+		$rendered = \apply_filters( 'comment_text', $comment->comment_content, $comment );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+
+		$this->assertStringNotContainsString( '<img', $rendered );
+		$this->assertSame( $comment->comment_content, Comment::render_blocks( $comment->comment_content ) );
+	}
+
+	/**
+	 * Emoji rendering still works without a received comment.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_render_emoji_without_a_received_comment() {
+		$url      = \wp_upload_dir()['baseurl'] . '/activitypub/emoji/party.png';
+		$content  = '<!-- wp:activitypub/emoji ' . \wp_json_encode( array( 'url' => $url ) ) . ' -->:party:<!-- /wp:activitypub/emoji -->';
+		$comment  = self::factory()->comment->create_and_get();
+		$rendered = Comment::render_blocks( $content, $comment );
+
+		$this->assertStringContainsString( '<img', $rendered );
+		$this->assertStringContainsString( 'class="emoji"', $rendered );
+		$this->assertSame( $rendered, Comment::render_blocks( $content ) );
+	}
 
 	/**
 	 * Test get source id or url.
