@@ -221,6 +221,33 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a comment created through the outbox is marked as client-authored.
+	 *
+	 * The transformer uses the marker to leave the client's own mentions alone;
+	 * a comment typed into the WordPress form carries no marker.
+	 *
+	 * @covers ::add_comment
+	 */
+	public function test_add_comment_outbox_reply_marks_client_authored() {
+		$comment_id = Interactions::add_comment( $this->create_test_object( 'https://example.com/client_authored' ), self::$user_id );
+
+		$this->assertIsInt( $comment_id );
+		$this->assertEquals( 1, get_comment_meta( $comment_id, '_activitypub_client_authored', true ) );
+	}
+
+	/**
+	 * Test that a comment received from a remote server is not marked as client-authored.
+	 *
+	 * @covers ::add_comment
+	 */
+	public function test_add_comment_remote_reply_not_marked_client_authored() {
+		$comment_id = Interactions::add_comment( $this->create_test_object( 'https://example.com/remote_not_client_authored' ) );
+
+		$this->assertIsInt( $comment_id );
+		$this->assertEmpty( get_comment_meta( $comment_id, '_activitypub_client_authored', true ) );
+	}
+
+	/**
 	 * Test that remote comment content is sanitized independently of the current user.
 	 *
 	 * `wp_new_comment()` only applies kses when the request installed the

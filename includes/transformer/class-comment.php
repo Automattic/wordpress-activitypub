@@ -284,6 +284,11 @@ class Comment extends Base {
 			return $mentions;
 		}
 
+		// A client-authored comment carries the client's own mentions; the server adds none.
+		if ( Comment_Utils::was_client_authored( $this->item ) ) {
+			return $mentions;
+		}
+
 		$ancestors = $this->get_comment_ancestors();
 		if ( ! $ancestors ) {
 			return $mentions;

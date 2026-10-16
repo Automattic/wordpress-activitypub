@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Replies posted through an ActivityPub app now keep exactly the mentions the app wrote, and the server no longer adds a mention of the person being replied to.
