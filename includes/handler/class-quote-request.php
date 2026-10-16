@@ -12,8 +12,10 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Proxy;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 use function Activitypub\user_can_activitypub;
@@ -57,7 +59,8 @@ class Quote_Request {
 		}
 
 		// Use the post author as the responding actor — they own the quoted content.
-		$user_id        = (int) $post->post_author;
+		$user_id = (int) $post->post_author;
+
 		$content_policy = \get_post_meta( $post_id, 'activitypub_interaction_policy_quote', true );
 
 		// Fall back to global default if not set.
@@ -67,26 +70,48 @@ class Quote_Request {
 
 		switch ( $content_policy ) {
 			case ACTIVITYPUB_INTERACTION_POLICY_ME:
-				self::queue_reject( $activity, $user_id );
 				$state = false;
 				break;
 			case ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS:
 				$follower = Remote_Actors::get_by_uri( object_to_uri( $activity['actor'] ) );
-				if ( ! \is_wp_error( $follower ) && Followers::follows( $follower->ID, $user_id ) ) {
-					self::queue_accept( $activity, $user_id, $post_id );
-				} else {
-					self::queue_reject( $activity, $user_id );
-					$state = false;
-				}
+				$state    = ! \is_wp_error( $follower ) && Followers::follows( $follower->ID, $user_id );
 				break;
 			case ACTIVITYPUB_INTERACTION_POLICY_ANYONE:
 			default:
-				self::queue_accept( $activity, $user_id, $post_id );
+				$state = true;
 				break;
 		}
 
+		/*
+		 * The approval is issued for the instrument, so it has to be the requesting actor's own
+		 * post. Sharing the actor's host is not enough, and the copy in the request is no proof.
+		 * A policy that rejects needs no proof, so the post is only fetched for an approval.
+		 */
+		if ( $state ) {
+			$instrument = Proxy::get( object_to_uri( $activity['instrument'] ) );
+
+			/*
+			 * Without the post there is nothing to decide: a Reject would be final, and an Accept would be
+			 * unproven. So the request is dropped, like any inbox activity whose fetch fails.
+			 */
+			if ( \is_wp_error( $instrument ) ) {
+				return;
+			}
+
+			// The fetched post has to be the instrument itself; an alias or redirect could otherwise lend another post's author.
+			$state = is_same_actor( $instrument['id'] ?? null, object_to_uri( $activity['instrument'] ) ) && is_same_actor( $instrument['attributedTo'] ?? null, $activity['actor'] );
+		}
+
+		if ( $state ) {
+			self::queue_accept( $activity, $user_id, $post_id );
+		} else {
+			self::queue_reject( $activity, $user_id );
+		}
+
 		/**
-		 * Fires after an ActivityPub QuoteRequest activity has been handled.
+		 * Fires after an ActivityPub QuoteRequest activity has been answered.
+		 *
+		 * Not fired when the quote post cannot be fetched, since the request is dropped unanswered.
 		 *
 		 * @param array  $activity       The ActivityPub activity data.
 		 * @param int[]  $user_ids       The local user IDs.

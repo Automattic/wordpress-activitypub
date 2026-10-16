@@ -206,6 +206,50 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * On an internationalized domain the `acct:` subject uses the A-label.
+	 *
+	 * @covers ::add_user_discovery
+	 * @covers ::add_pseudo_user_discovery
+	 */
+	public function test_subject_uses_a_label() {
+		$set_home = static function () {
+			return 'https://café.example';
+		};
+		\add_filter( 'pre_option_home', $set_home );
+
+		$user    = get_user_by( 'id', self::$user_ids['author'] );
+		$subject = 'acct:' . $user->user_login . '@xn--caf-dma.example';
+
+		$user_jrd   = Webfinger::add_user_discovery( array(), $subject, $user );
+		$pseudo_jrd = Webfinger::add_pseudo_user_discovery( array(), $subject );
+
+		\remove_filter( 'pre_option_home', $set_home );
+
+		$this->assertSame( $subject, $user_jrd['subject'] );
+		$this->assertSame( $subject, $pseudo_jrd['subject'] );
+	}
+
+	/**
+	 * The blog subject on an internationalized domain resolves back to the blog.
+	 *
+	 * @covers ::add_pseudo_user_discovery
+	 */
+	public function test_blog_subject_resolves_on_idn_domain() {
+		$set_home = static function () {
+			return 'https://café.example';
+		};
+		\add_filter( 'pre_option_home', $set_home );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$jrd = Webfinger::add_pseudo_user_discovery( array(), 'https://café.example' );
+
+		$this->assertSame( Actors::BLOG_USER_ID, Actors::get_id_by_resource( $jrd['subject'] ) );
+
+		\remove_filter( 'pre_option_home', $set_home );
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
 	 * Test add_pseudo_user_discovery with invalid resource.
 	 *
 	 * @covers ::add_pseudo_user_discovery

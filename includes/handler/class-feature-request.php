@@ -11,8 +11,10 @@ use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Proxy;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 use function Activitypub\user_can_activitypub;
@@ -57,7 +59,6 @@ class Feature_Request {
 	 * @return void
 	 */
 	public static function handle_feature_request( $activity, $user_ids ) {
-		$state      = true;
 		$object_uri = object_to_uri( $activity['object'] );
 		$target     = Actors::get_by_resource( $object_uri );
 
@@ -73,28 +74,51 @@ class Feature_Request {
 
 		switch ( $policy ) {
 			case ACTIVITYPUB_INTERACTION_POLICY_ANYONE:
-				self::queue_accept( $activity, $user_id );
+				$state = true;
 				break;
 
 			case ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS:
 				$follower = Remote_Actors::get_by_uri( object_to_uri( $activity['actor'] ) );
-				if ( ! \is_wp_error( $follower ) && Followers::follows( $follower->ID, $user_id ) ) {
-					self::queue_accept( $activity, $user_id );
-				} else {
-					self::queue_reject( $activity, $user_id );
-					$state = false;
-				}
+				$state    = ! \is_wp_error( $follower ) && Followers::follows( $follower->ID, $user_id );
 				break;
 
 			case ACTIVITYPUB_INTERACTION_POLICY_ME:
 			default:
-				self::queue_reject( $activity, $user_id );
 				$state = false;
 				break;
 		}
 
+		/*
+		 * The approval is issued for the instrument, so it has to be the requesting actor's own
+		 * collection. Sharing the actor's host is not enough. A policy that rejects needs no
+		 * proof, so the collection is only fetched for an approval.
+		 */
+		if ( $state ) {
+			$instrument = Proxy::get( object_to_uri( $activity['instrument'] ) );
+
+			/*
+			 * Without the collection there is nothing to decide: a Reject would be final, and an
+			 * Accept would be unproven. So the request is dropped, like any inbox activity whose
+			 * fetch fails.
+			 */
+			if ( \is_wp_error( $instrument ) ) {
+				return;
+			}
+
+			// The fetched collection has to be the instrument itself; an alias or redirect could otherwise lend another collection's owner.
+			$state = is_same_actor( $instrument['id'] ?? null, object_to_uri( $activity['instrument'] ) ) && is_same_actor( $instrument['attributedTo'] ?? null, $activity['actor'] );
+		}
+
+		if ( $state ) {
+			self::queue_accept( $activity, $user_id );
+		} else {
+			self::queue_reject( $activity, $user_id );
+		}
+
 		/**
-		 * Fires after an ActivityPub FeatureRequest activity has been handled.
+		 * Fires after an ActivityPub FeatureRequest activity has been answered.
+		 *
+		 * Not fired when the featured collection cannot be fetched, since the request is dropped unanswered.
 		 *
 		 * @param array  $activity The ActivityPub activity data.
 		 * @param int[]  $user_ids The local user IDs.
