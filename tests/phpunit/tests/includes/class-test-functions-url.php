@@ -122,6 +122,35 @@ class Test_Functions_Url extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A label that UTS #46 maps to plain ASCII is not folded onto that ASCII host.
+	 *
+	 * @requires extension intl
+	 * @covers \Activitypub\to_ascii_host
+	 * @covers \Activitypub\fold_host
+	 * @dataProvider mapped_away_host_provider
+	 *
+	 * @param string $host The host.
+	 */
+	public function test_to_ascii_host_keeps_hosts_mapped_to_ascii( $host ) {
+		$this->assertSame( $host, \Activitypub\to_ascii_host( $host ) );
+		$this->assertNotSame( \Activitypub\fold_host( 'example.com' ), \Activitypub\fold_host( $host ) );
+	}
+
+	/**
+	 * Hosts with labels that UTS #46 maps to plain ASCII.
+	 *
+	 * @return array[]
+	 */
+	public function mapped_away_host_provider() {
+		return array(
+			'soft hyphen'          => array( "exam\u{00AD}ple.com" ),
+			'zero width space'     => array( "exam\u{200B}ple.com" ),
+			'fullwidth latin'      => array( 'ｅｘａｍｐｌｅ.com' ),
+			'next to an idn label' => array( "café.exam\u{00AD}ple.com" ),
+		);
+	}
+
+	/**
 	 * An ideographic full stop at the end is trimmed like an ASCII dot.
 	 *
 	 * @requires extension intl

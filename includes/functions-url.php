@@ -75,7 +75,26 @@ function to_ascii_host( $host ) {
 
 	// UTS #46 maps equivalent spellings (case, width, decomposed accents) to the same A-label.
 	if ( \function_exists( 'idn_to_ascii' ) ) {
-		return \idn_to_ascii( $host, \IDNA_NONTRANSITIONAL_TO_ASCII, \INTL_IDNA_VARIANT_UTS46 ) ?: $host;
+		$ascii = \idn_to_ascii( $host, \IDNA_NONTRANSITIONAL_TO_ASCII, \INTL_IDNA_VARIANT_UTS46 );
+
+		/*
+		 * UTS #46 also maps characters away (soft hyphen, fullwidth Latin), which turns a label
+		 * into a plain ASCII name that WordPress would not connect to. A label with non-ASCII
+		 * characters has to stay an A-label, or the host is returned as it is.
+		 */
+		$labels = \preg_split( '/[.\x{3002}\x{FF0E}\x{FF61}]/u', $host );
+		if ( ! $ascii || ! $labels || \count( $labels ) !== \substr_count( $ascii, '.' ) + 1 ) {
+			return $host;
+		}
+
+		$ascii_labels = \explode( '.', $ascii );
+		foreach ( $labels as $i => $label ) {
+			if ( \preg_match( '/[^\x00-\x7F]/', $label ) && 0 !== \stripos( $ascii_labels[ $i ], 'xn--' ) ) {
+				return $host;
+			}
+		}
+
+		return $ascii;
 	}
 
 	// Without intl only case is folded: decomposed accents, fullwidth letters and dots like `。` give a different A-label.
