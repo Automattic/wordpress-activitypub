@@ -6,8 +6,8 @@ followers, follows, and blocks. Comments and remote posts can reference their
 local post IDs. An actor record therefore has a different lifetime from an
 individual cached post.
 
-This document covers the existing lifecycle and the candidate-cleanup API
-proposed in this draft. Candidate cleanup does not replace the existing handling
+This document covers the existing lifecycle and the cache-only classification API
+proposed in this draft. Cache-only cleanup does not replace the existing handling
 of unavailable or deleted accounts.
 
 ## Creation and access
@@ -49,10 +49,10 @@ The daily `activitypub_cleanup_remote_actors` action has two independent callbac
 | Callback | Selection | Purpose |
 | --- | --- | --- |
 | `Scheduler::cleanup_remote_actors()` | Actors with errors or a missing/empty inbox | Existing handling of faulty or deleted remote accounts. |
-| `Collection\Remote_Actor_Cleanup::start_cleanup()` | Actors explicitly marked as candidates | Proposed removal of disposable local cache records. |
+| `Collection\Remote_Actor_Cleanup::start_cleanup()` | Actors explicitly classified as cache-only | Proposed removal of disposable local cache records. |
 
-Both use the existing recurring action. Candidate cleanup has no separate
-recurring schedule, and marking an actor does not create a cron event.
+Both use the existing recurring action. Cache-only cleanup has no separate
+recurring schedule, and classifying an actor does not create a cron event.
 
 ### Faulty actors: existing behavior
 
@@ -78,52 +78,64 @@ branch currently schedules associated-content deletion with an actor URI,
 whereas those handlers accept a numeric actor ID. This draft does not change
 those paths.
 
-### Disposable candidates: proposed behavior
+### Cache-only actors: proposed behavior
 
-An integration nominates an actor using:
+Local `_activitypub_cache_only` metadata states whether an actor is a disposable
+profile cache or a record that has acquired a lasting use:
+
+| Stored state | Meaning |
+| --- | --- |
+| Missing | Unclassified; protected by default for compatibility. |
+| `true` | Explicitly cache-only; eligible for the cache cleanup callback. |
+| `false` | Non-cache-only; excluded from cache cleanup. |
+
+Classification happens after use without adding arguments to actor fetch APIs:
 
 ```php
-Activitypub\Collection\Remote_Actors::mark_for_cleanup( $post_id );
+$post = Activitypub\Collection\Remote_Actors::fetch_by_uri( $uri );
+if ( ! is_wp_error( $post ) ) {
+    Activitypub\Collection\Remote_Actors::set_cache_only( $post, true );
+}
 ```
 
-Nomination is idempotent and adds the shared `candidate` term in the private
-`ap_actor_cleanup` taxonomy. Existing actors are not nominated automatically.
-Nomination does not mean the remote account has been deleted.
+A caller establishing a lasting reference can use
+`Remote_Actors::set_cache_only( $post, false )`. The setter accepts a stored
+`WP_Post` or post ID. The protocol `Activity\Actor` object is not a persistence
+wrapper; this metadata stays local rather than being federated.
 
-Public lookups by post ID, URI, or account handle, actor conversion,
-account/avatar access, and actor search automatically remove the marker. Callers
-do not need to cancel cleanup manually. Bulk existence probes and maintenance
-selection (`get_outdated()` and `get_faulty()`) do not rescue candidates. Direct
-WordPress `get_post()` calls are outside these access APIs and do not cancel
-cleanup.
+ActivityPub automatically sets false when recording a follower, pending or
+accepted follow, block, remote-post author, or comment interaction reference.
+An explicit false is sticky: later attempts to set true are refused. Removing a
+relationship does not automatically downgrade the actor. This keeps the first
+version binary rather than introducing per-reason reference counts, at the cost
+of keeping formerly used actors until a future reconciliation.
 
-Candidate cleanup reads stored posts without calling those public actor getters.
-It preserves and unmarks actors with followers, accepted or pending follows,
-blocks, comments, remote-post references, stored inbox actor references, or
-outgoing activity references. Blog actor ID zero counts as a relationship, and
-trashed content retains its references. Post-reference checks are scoped to
-`Remote_Posts::POST_TYPE` (`_activitypub_remote_actor_id`, the author's cache ID)
-and `Inbox::POST_TYPE` (`_activitypub_activity_remote_actor`, the sender URI).
-Matching metadata on unrelated post types does not preserve a candidate; other
-integrations use the protection filter. Outgoing JSON is decoded once per batch.
+Ordinary lookups, actor conversion, profile reads, search, and background refresh
+leave the classification unchanged. There is no candidate taxonomy or
+rescue-on-read behavior. A cache-only actor may disappear while an integration
+still displays its posts, so that integration must retain its URI and handle a
+new cache ID on the next fetch. Unclassified actors are not swept automatically.
 
-Integrations can return true from `activitypub_remote_actor_is_in_use` to protect
-references unknown to ActivityPub. The callback receives a stored `WP_Post`;
-using a public actor lookup there also rescues it. Returning false cannot
-override a native reference. This filter only controls candidate cleanup, not
-faulty-actor cleanup or confirmed remote deletion.
+The cache cleanup callback selects published actors whose stored flag is true.
+As a safeguard for existing data, it still checks native relationships, comments,
+remote posts, inbox references, and stored outgoing activities. Post checks are
+scoped to `Remote_Posts::POST_TYPE` and `Inbox::POST_TYPE`. The
+`activitypub_remote_actor_is_in_use` filter can report other integrations' uses.
+A discovered use promotes the record to false, excluding it from subsequent
+cache sweeps. Returning false from the filter cannot override native references.
 
-The default candidate batch is 20, filtered by
-`activitypub_actor_cleanup_batch_size`. A full batch that makes progress schedules
-a continuation through `activitypub_cleanup_actor_candidates` and the existing
-async batch scheduler. Failed deletions retain their marker for a later attempt.
-Protected candidates leave the queue; an integration can nominate them again
-when their protecting reference is removed.
+The default batch size is 20, filtered by `activitypub_actor_cleanup_batch_size`.
+A full batch making progress continues through
+`activitypub_cleanup_actor_candidates` using the existing async scheduler.
+That is only a continuation hook; the recurring trigger remains
+`activitypub_cleanup_remote_actors`. A final flag check avoids deletion if an
+integration promotes the actor while inspecting it. Failed deletions remain
+eligible for another attempt.
 
-Candidate deletion only discards the actor record through
-`Remote_Actors::delete()`. It does not publish a Delete activity, create a local
-tombstone, or schedule removal of comments or remote posts. Fetching the actor
-again remains possible if the remote account is available.
+Cache cleanup invokes `Remote_Actors::delete()` only. It does not publish a Delete
+activity, create a local tombstone, or delete comments or remote posts. The
+classification and protection filter do not change the existing faulty-actor
+policy or confirmed account deletion.
 
 ## Confirmed remote account deletion
 
@@ -149,18 +161,21 @@ references, or delete associated content. Callers choose the policy before
 invoking it. Integrations should use this API rather than a bare
 `wp_delete_post()` so inbox cache invalidation is preserved.
 
-## Candidate-cleanup questions still open in this draft
+## Cache-classification questions still open in this draft
 
-- The final marker check catches access during an integration callback, but does
-  not close the race with concurrent access or a new reference immediately before
-  deletion. Reference writers and cleanup need shared synchronization.
-- Other maintenance callers of public actor APIs may conservatively rescue
-  candidates. Those paths need auditing as integrations adopt nomination.
-- Unknown integrations may retain numeric IDs without using the protection
-  filter. Arbitrary external references cannot be discovered automatically.
-- Native reference queries need profiling. Outbox scanning is paginated, but its
-  total work and URI set are not bounded by the actor batch size.
-- Repeated deletion failures at the front of the queue can delay other candidates.
+- A final flag check does not close the race with a concurrent promotion or new
+  reference immediately before deletion. Writers and cleanup need shared
+  synchronization; the setter's sticky semantics are not a concurrency guarantee.
+- Explicit false is deliberately sticky. Reclaiming formerly used actors later
+  would require a reconciliation policy or finer-grained reasons.
+- Unknown integrations may hold IDs without classifying their actors. Missing
+  metadata protects them until another consumer explicitly opts the record in;
+  ownership of shared, previously unclassified actors still needs agreement.
+- Existing data needs conservative classification. Native reference checks remain
+  necessary until legacy actors and all reference writers have been accounted for.
+- Native queries need profiling. Outbox scanning is paginated, but its total work
+  and URI set are not bounded by the actor batch size.
+- Repeated deletion failures at the front of the queue can delay other records.
 
 ## Code reference
 

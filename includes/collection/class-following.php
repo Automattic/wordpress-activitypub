@@ -109,6 +109,7 @@ class Following {
 			return $actor;
 		}
 
+		Remote_Actors::set_cache_only( $post, false );
 		\add_post_meta( $post->ID, self::PENDING_META_KEY, (string) $user_id );
 
 		$follow = new Activity();
@@ -147,6 +148,7 @@ class Following {
 			return new \WP_Error( 'activitypub_following_not_found', 'Follow request not found' );
 		}
 
+		Remote_Actors::set_cache_only( $post, false );
 		\add_post_meta( $post->ID, self::FOLLOWING_META_KEY, $user_id );
 		\delete_post_meta( $post->ID, self::PENDING_META_KEY, $user_id );
 

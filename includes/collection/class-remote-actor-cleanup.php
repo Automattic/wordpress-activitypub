@@ -17,58 +17,11 @@ use Activitypub\Scheduler;
  */
 class Remote_Actor_Cleanup {
 	/**
-	 * Private taxonomy used as an indexed candidate queue.
+	 * Explicit classification; absence protects existing/unclassified actors.
 	 *
 	 * @var string
 	 */
-	const TAXONOMY = 'ap_actor_cleanup';
-
-	/**
-	 * Shared candidate term.
-	 *
-	 * @var string
-	 */
-	const CANDIDATE = 'candidate';
-
-	/**
-	 * Nominate an actor; no existing actors are nominated automatically.
-	 *
-	 * @param int $id Remote actor post ID.
-	 * @return bool Whether the actor was marked.
-	 */
-	public static function mark( $id ) {
-		if ( $id <= 0 ) {
-			return false;
-		}
-		$post = \get_post( $id );
-		if ( ! $post || Remote_Actors::POST_TYPE !== $post->post_type ) {
-			return false;
-		}
-		$result = \wp_set_object_terms( $post->ID, self::CANDIDATE, self::TAXONOMY, true );
-		if ( \is_wp_error( $result ) ) {
-			return false;
-		}
-		return true;
-	}
-
-	/**
-	 * Rescue an actor on public API access. Unmarked actors only read term cache.
-	 *
-	 * @param int $id Remote actor post ID.
-	 * @return void
-	 */
-	public static function accessed( $id ) {
-		$terms = \get_the_terms( $id, self::TAXONOMY );
-		if ( ! $terms || \is_wp_error( $terms ) ) {
-			return;
-		}
-		foreach ( $terms as $term ) {
-			if ( self::CANDIDATE === $term->slug ) {
-				\wp_remove_object_terms( $id, $term->term_id, self::TAXONOMY );
-				return;
-			}
-		}
-	}
+	const CACHE_ONLY_META_KEY = '_activitypub_cache_only';
 
 	/**
 	 * Start candidate cleanup as an independent listener on the existing cron action.
@@ -87,7 +40,7 @@ class Remote_Actor_Cleanup {
 	}
 
 	/**
-	 * Process one bounded batch using stored posts, without rescuing candidates.
+	 * Process one bounded batch using stored posts, without changing classification on reads.
 	 *
 	 * @param int $batch Continuation batch number used by the async scheduler.
 	 * @return int[]|null Next batch arguments when progress was made.
@@ -102,12 +55,11 @@ class Remote_Actor_Cleanup {
 				'orderby'        => 'ID',
 				'order'          => 'ASC',
 				'no_found_rows'  => true,
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
-				'tax_query'      => array(
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'     => array(
 					array(
-						'taxonomy' => self::TAXONOMY,
-						'field'    => 'slug',
-						'terms'    => self::CANDIDATE,
+						'key'   => self::CACHE_ONLY_META_KEY,
+						'value' => '1',
 					),
 				),
 			)
@@ -129,16 +81,16 @@ class Remote_Actor_Cleanup {
 			 * @since unreleased
 			 *
 			 * @param bool     $in_use Whether an integration needs the actor.
-			 * @param \WP_Post $actor  Stored actor, without triggering access cancellation.
+			 * @param \WP_Post $actor  Stored actor, without changing its classification.
 			 */
 			$in_use = \apply_filters( 'activitypub_remote_actor_is_in_use', false, $actor ) || $in_use;
 			if ( $in_use ) {
-				self::accessed( $actor->ID );
+				Remote_Actors::set_cache_only( $actor, false );
 				$progress = true;
 				continue;
 			}
-			// An integration may have accessed the actor while inspecting it.
-			if ( \has_term( self::CANDIDATE, self::TAXONOMY, $actor ) ) {
+			// An integration may have promoted the actor while inspecting it.
+			if ( '1' === \get_post_meta( $actor->ID, self::CACHE_ONLY_META_KEY, true ) ) {
 				$progress = (bool) Remote_Actors::delete( $actor->ID ) || $progress;
 			} else {
 				$progress = true;

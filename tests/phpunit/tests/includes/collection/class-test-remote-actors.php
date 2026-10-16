@@ -25,12 +25,12 @@ class Test_Remote_Actors extends \WP_UnitTestCase {
 	use Uri_Test_Cases;
 
 	/**
-	 * Every public point lookup automatically cancels a cleanup nomination.
+	 * Ordinary public lookups leave the explicit cache classification unchanged.
 	 *
 	 * @dataProvider cleanup_access_provider
 	 * @param string $method Actor access method.
 	 */
-	public function test_access_cancels_cleanup( $method ) {
+	public function test_access_does_not_change_cache_classification( $method ) {
 		$uri = 'https://example.com/cleanup-access';
 		$id  = self::factory()->post->create(
 			array(
@@ -42,8 +42,8 @@ class Test_Remote_Actors extends \WP_UnitTestCase {
 				'meta_input'   => array( '_activitypub_acct' => 'cleanup-access@example.com' ),
 			)
 		);
-		Remote_Actors::mark_for_cleanup( $id );
-		$this->assertTrue( \has_term( Remote_Actor_Cleanup::CANDIDATE, Remote_Actor_Cleanup::TAXONOMY, $id ) );
+		Remote_Actors::set_cache_only( $id, true );
+		$this->assertTrue( (bool) \get_post_meta( $id, Remote_Actor_Cleanup::CACHE_ONLY_META_KEY, true ) );
 		$argument = $id;
 		if ( \in_array( $method, array( 'get_by_uri', 'fetch_by_uri' ), true ) ) {
 			$argument = $uri;
@@ -53,7 +53,19 @@ class Test_Remote_Actors extends \WP_UnitTestCase {
 			$argument = 'cleanup-access';
 		}
 		Remote_Actors::$method( $argument );
-		$this->assertFalse( \has_term( Remote_Actor_Cleanup::CANDIDATE, Remote_Actor_Cleanup::TAXONOMY, $id ) );
+		$this->assertTrue( (bool) \get_post_meta( $id, Remote_Actor_Cleanup::CACHE_ONLY_META_KEY, true ) );
+	}
+
+	/**
+	 * A durable use cannot be downgraded by a later display-only consumer.
+	 */
+	public function test_explicit_non_cache_classification_is_sticky() {
+		$id = self::factory()->post->create( array( 'post_type' => Remote_Actors::POST_TYPE ) );
+		$this->assertFalse( (bool) \get_post_meta( $id, Remote_Actor_Cleanup::CACHE_ONLY_META_KEY, true ) );
+		$this->assertTrue( Remote_Actors::set_cache_only( $id, true ) );
+		$this->assertTrue( Remote_Actors::set_cache_only( \get_post( $id ), false ) );
+		$this->assertFalse( Remote_Actors::set_cache_only( $id, true ) );
+		$this->assertFalse( (bool) \get_post_meta( $id, Remote_Actor_Cleanup::CACHE_ONLY_META_KEY, true ) );
 	}
 
 	/**

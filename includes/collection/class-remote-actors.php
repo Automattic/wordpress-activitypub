@@ -72,18 +72,32 @@ class Remote_Actors {
 	}
 
 	/**
-	 * Nominate a disposable cached actor for scheduled cleanup.
+	 * Classify a stored actor after use, without changing fetch signatures.
 	 *
-	 * Public actor access automatically cancels this nomination. This does not
-	 * represent deletion of the remote account and does not delete its content.
+	 * Missing metadata protects unclassified actors. An explicit false is sticky:
+	 * a display-only consumer cannot downgrade a record used for lasting references.
 	 *
 	 * @since unreleased
 	 *
-	 * @param int $id Remote actor post ID.
-	 * @return bool Whether the actor was marked.
+	 * @param int|\WP_Post $post       Stored actor or ID.
+	 * @param bool         $cache_only Whether this is only a disposable cache entry.
+	 * @return bool Whether the requested classification is stored.
 	 */
-	public static function mark_for_cleanup( $id ) {
-		return Remote_Actor_Cleanup::mark( $id );
+	public static function set_cache_only( $post, $cache_only ) {
+		if ( ! $post ) {
+			return false;
+		}
+		$post = \get_post( $post );
+		if ( ! $post || self::POST_TYPE !== $post->post_type ) {
+			return false;
+		}
+		$key = Remote_Actor_Cleanup::CACHE_ONLY_META_KEY;
+		if ( $cache_only && \metadata_exists( 'post', $post->ID, $key ) && ! \get_post_meta( $post->ID, $key, true ) ) {
+			return false;
+		}
+		\update_post_meta( $post->ID, $key, (bool) $cache_only );
+		return \metadata_exists( 'post', $post->ID, $key )
+			&& (bool) \get_post_meta( $post->ID, $key, true ) === (bool) $cache_only;
 	}
 
 	/**
@@ -97,7 +111,6 @@ class Remote_Actors {
 		$post = \get_post( $id );
 
 		if ( $post && self::POST_TYPE === $post->post_type ) {
-			Remote_Actor_Cleanup::accessed( $post->ID );
 			return $post;
 		}
 
@@ -303,7 +316,6 @@ class Remote_Actors {
 			);
 		}
 
-		Remote_Actor_Cleanup::accessed( $post->ID );
 		return $post;
 	}
 
@@ -355,9 +367,6 @@ class Remote_Actors {
 		);
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 
-		foreach ( $posts as $post ) {
-			Remote_Actor_Cleanup::accessed( $post->ID );
-		}
 		return \array_map( '\get_post', $posts );
 	}
 
@@ -512,7 +521,6 @@ class Remote_Actors {
 				);
 			}
 
-			Remote_Actor_Cleanup::accessed( $post->ID );
 			return $post;
 		}
 
@@ -670,7 +678,6 @@ class Remote_Actors {
 			);
 		}
 
-		Remote_Actor_Cleanup::accessed( $post->ID );
 		$json = $post->post_content;
 
 		if ( empty( $json ) ) {
@@ -947,7 +954,6 @@ class Remote_Actors {
 	 * @return string The acct of the remote actor or empty string on failure.
 	 */
 	public static function get_acct( $id ) {
-		Remote_Actor_Cleanup::accessed( $id );
 		$acct = \get_post_meta( $id, '_activitypub_acct', true );
 
 		if ( $acct ) {
@@ -990,7 +996,6 @@ class Remote_Actors {
 	 * @return string The avatar URL or a default one if not found.
 	 */
 	public static function get_avatar_url( $id ) {
-		Remote_Actor_Cleanup::accessed( $id );
 		$default_avatar_url = ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg';
 
 		// Extract remote avatar URL from actor data.

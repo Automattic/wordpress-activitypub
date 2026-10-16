@@ -91,13 +91,14 @@ class Post_Types {
 			)
 		);
 
-		\register_taxonomy(
-			Remote_Actor_Cleanup::TAXONOMY,
-			array( Remote_Actors::POST_TYPE ),
+		\register_post_meta(
+			Remote_Actors::POST_TYPE,
+			Remote_Actor_Cleanup::CACHE_ONLY_META_KEY,
 			array(
-				'public'    => false,
-				'rewrite'   => false,
-				'query_var' => false,
+				'type'              => 'boolean',
+				'single'            => true,
+				'default'           => false,
+				'sanitize_callback' => 'rest_sanitize_boolean',
 			)
 		);
 

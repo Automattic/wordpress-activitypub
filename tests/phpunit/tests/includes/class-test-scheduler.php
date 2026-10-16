@@ -60,7 +60,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			)
 		);
 		foreach ( $ids as $id ) {
-			Remote_Actors::mark_for_cleanup( $id );
+			Remote_Actors::set_cache_only( $id, true );
 		}
 		$batch_size = static function () {
 			return 1;

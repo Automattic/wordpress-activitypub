@@ -137,7 +137,11 @@ class Test_Followers extends \WP_UnitTestCase {
 		$followers = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
 
 		foreach ( $followers as $follower ) {
+			$remote = Remote_Actors::fetch_by_uri( $follower );
+			$this->assertInstanceOf( '\\WP_Post', $remote );
+			Remote_Actors::set_cache_only( $remote, true );
 			Followers::add( 1, $follower );
+			$this->assertFalse( (bool) \get_post_meta( $remote->ID, '_activitypub_cache_only', true ) );
 		}
 
 		$db_followers = Followers::get_many( 1 );

@@ -40,8 +40,8 @@ class Test_Remote_Actor_Cleanup extends \WP_UnitTestCase {
 	public function test_cleanup_is_opt_in() {
 		$candidate = $this->actor();
 		$retained  = $this->actor();
-		$this->assertTrue( Remote_Actors::mark_for_cleanup( $candidate ) );
-		$this->assertTrue( Remote_Actors::mark_for_cleanup( $candidate ) );
+		$this->assertTrue( Remote_Actors::set_cache_only( $candidate, true ) );
+		$this->assertTrue( Remote_Actors::set_cache_only( $candidate, true ) );
 		Remote_Actor_Cleanup::cleanup();
 		$this->assertNull( \get_post( $candidate ) );
 		$this->assertNotNull( \get_post( $retained ) );
@@ -52,10 +52,10 @@ class Test_Remote_Actor_Cleanup extends \WP_UnitTestCase {
 	 */
 	public function test_maintenance_does_not_rescue_actor() {
 		$id = $this->actor();
-		Remote_Actors::mark_for_cleanup( $id );
+		Remote_Actors::set_cache_only( $id, true );
 		Remote_Actors::get_outdated();
 		Remote_Actors::get_faulty();
-		$this->assertTrue( \has_term( Remote_Actor_Cleanup::CANDIDATE, Remote_Actor_Cleanup::TAXONOMY, $id ) );
+		$this->assertTrue( (bool) \get_post_meta( $id, Remote_Actor_Cleanup::CACHE_ONLY_META_KEY, true ) );
 	}
 
 	/**
@@ -65,10 +65,10 @@ class Test_Remote_Actor_Cleanup extends \WP_UnitTestCase {
 		foreach ( array( '_activitypub_following', '_activitypub_followed_by', '_activitypub_followed_by_pending', '_activitypub_blocked_by' ) as $key ) {
 			$id = $this->actor();
 			\add_post_meta( $id, $key, '0' );
-			Remote_Actors::mark_for_cleanup( $id );
+			Remote_Actors::set_cache_only( $id, true );
 			Remote_Actor_Cleanup::cleanup();
 			$this->assertNotNull( \get_post( $id ) );
-			$this->assertFalse( \has_term( Remote_Actor_Cleanup::CANDIDATE, Remote_Actor_Cleanup::TAXONOMY, $id ) );
+			$this->assertFalse( (bool) \get_post_meta( $id, Remote_Actor_Cleanup::CACHE_ONLY_META_KEY, true ) );
 		}
 	}
 
@@ -80,7 +80,7 @@ class Test_Remote_Actor_Cleanup extends \WP_UnitTestCase {
 		$comment = self::factory()->comment->create();
 		\add_comment_meta( $comment, '_activitypub_remote_actor_id', $id );
 		\wp_trash_comment( $comment );
-		Remote_Actors::mark_for_cleanup( $id );
+		Remote_Actors::set_cache_only( $id, true );
 		Remote_Actor_Cleanup::cleanup();
 		$this->assertNotNull( \get_post( $id ) );
 	}
@@ -109,7 +109,7 @@ class Test_Remote_Actor_Cleanup extends \WP_UnitTestCase {
 				'meta_input'  => array( $key => $value ),
 			)
 		);
-		Remote_Actors::mark_for_cleanup( $id );
+		Remote_Actors::set_cache_only( $id, true );
 		Remote_Actor_Cleanup::cleanup();
 		$this->assertSame( $preserved, (bool) \get_post( $id ) );
 	}
@@ -140,19 +140,19 @@ class Test_Remote_Actor_Cleanup extends \WP_UnitTestCase {
 		$outbox_id = Outbox::add( $activity, 0 );
 		$this->assertIsInt( $outbox_id );
 		$this->assertSame( \get_post( $id )->guid, Outbox::get_activity( $outbox_id )->get_object() );
-		Remote_Actors::mark_for_cleanup( $id );
+		Remote_Actors::set_cache_only( $id, true );
 		Remote_Actor_Cleanup::cleanup();
 		$this->assertNotNull( \get_post( $id ) );
 	}
 
 	/**
-	 * Integrations can veto deletion or rescue an actor through a lookup.
+	 * Integrations can promote an actor while inspecting it.
 	 */
-	public function test_access_during_integration_check_rescues_actor() {
+	public function test_promotion_during_integration_check_protects_actor() {
 		$id = $this->actor();
-		Remote_Actors::mark_for_cleanup( $id );
+		Remote_Actors::set_cache_only( $id, true );
 		$access = static function ( $in_use, $actor ) {
-			Remote_Actors::get( $actor->ID );
+			Remote_Actors::set_cache_only( $actor, false );
 			return $in_use;
 		};
 		\add_filter( 'activitypub_remote_actor_is_in_use', $access, 10, 2 );
