@@ -101,7 +101,11 @@ Candidate cleanup reads stored posts without calling those public actor getters.
 It preserves and unmarks actors with followers, accepted or pending follows,
 blocks, comments, remote-post references, stored inbox actor references, or
 outgoing activity references. Blog actor ID zero counts as a relationship, and
-trashed content retains its references. Outgoing JSON is decoded once per batch.
+trashed content retains its references. Post-reference checks are scoped to
+`Remote_Posts::POST_TYPE` (`_activitypub_remote_actor_id`, the author's cache ID)
+and `Inbox::POST_TYPE` (`_activitypub_activity_remote_actor`, the sender URI).
+Matching metadata on unrelated post types does not preserve a candidate; other
+integrations use the protection filter. Outgoing JSON is decoded once per batch.
 
 Integrations can return true from `activitypub_remote_actor_is_in_use` to protect
 references unknown to ActivityPub. The callback receives a stored `WP_Post`;

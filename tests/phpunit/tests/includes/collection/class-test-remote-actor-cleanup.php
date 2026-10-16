@@ -9,6 +9,8 @@ namespace Activitypub\Tests\Collection;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Inbox;
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\Collection\Remote_Actor_Cleanup;
 use Activitypub\Collection\Remote_Actors;
 
@@ -81,6 +83,49 @@ class Test_Remote_Actor_Cleanup extends \WP_UnitTestCase {
 		Remote_Actors::mark_for_cleanup( $id );
 		Remote_Actor_Cleanup::cleanup();
 		$this->assertNotNull( \get_post( $id ) );
+	}
+
+	/**
+	 * Only the collection that owns the metadata should protect an actor.
+	 *
+	 * @dataProvider post_reference_provider
+	 * @param string $post_type Referencing post type.
+	 * @param string $key Reference metadata key.
+	 * @param bool   $preserved Whether this reference must preserve the actor.
+	 */
+	public function test_post_references_are_scoped_to_their_collection( $post_type, $key, $preserved ) {
+		$id = $this->actor();
+		\wp_update_post(
+			array(
+				'ID'   => $id,
+				'guid' => 'https://example.com/actor/' . $id,
+			)
+		);
+		$value = '_activitypub_remote_actor_id' === $key ? $id : \get_post( $id )->guid;
+		self::factory()->post->create(
+			array(
+				'post_type'   => $post_type,
+				'post_status' => 'trash',
+				'meta_input'  => array( $key => $value ),
+			)
+		);
+		Remote_Actors::mark_for_cleanup( $id );
+		Remote_Actor_Cleanup::cleanup();
+		$this->assertSame( $preserved, (bool) \get_post( $id ) );
+	}
+
+	/**
+	 * Native references and matching metadata on unrelated post types.
+	 *
+	 * @return array<string, array> Reference cases.
+	 */
+	public function post_reference_provider() {
+		return array(
+			'remote post author' => array( Remote_Posts::POST_TYPE, '_activitypub_remote_actor_id', true ),
+			'inbox sender'       => array( Inbox::POST_TYPE, '_activitypub_activity_remote_actor', true ),
+			'ordinary post'      => array( 'post', '_activitypub_remote_actor_id', false ),
+			'wrong collection'   => array( Inbox::POST_TYPE, '_activitypub_remote_actor_id', false ),
+		);
 	}
 
 	/**

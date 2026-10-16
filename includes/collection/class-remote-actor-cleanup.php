@@ -162,29 +162,32 @@ class Remote_Actor_Cleanup {
 				return true;
 			}
 		}
-		$query = new \WP_Query(
-			array(
-				'post_type'      => \array_values( \get_post_types() ),
-				'post_status'    => \array_values( \get_post_stati() ),
-				'posts_per_page' => 1,
-				'fields'         => 'ids',
-				'no_found_rows'  => true,
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query'     => array(
-					'relation' => 'OR',
-					array(
-						'key'   => '_activitypub_remote_actor_id',
-						'value' => $actor->ID,
-					),
-					array(
-						'key'   => '_activitypub_activity_remote_actor',
-						'value' => $actor->guid,
-					),
-				),
-			)
+		// These references belong to specific ActivityPub collections, not arbitrary posts.
+		$references = array(
+			Remote_Posts::POST_TYPE => array(
+				'key'   => '_activitypub_remote_actor_id',
+				'value' => $actor->ID,
+			),
+			Inbox::POST_TYPE        => array(
+				'key'   => '_activitypub_activity_remote_actor',
+				'value' => $actor->guid,
+			),
 		);
-		if ( $query->posts ) {
-			return true;
+		foreach ( $references as $post_type => $reference ) {
+			$query = new \WP_Query(
+				array(
+					'post_type'      => $post_type,
+					'post_status'    => \array_values( \get_post_stati() ),
+					'posts_per_page' => 1,
+					'fields'         => 'ids',
+					'no_found_rows'  => true,
+					// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					'meta_query'     => array( $reference ),
+				)
+			);
+			if ( $query->posts ) {
+				return true;
+			}
 		}
 		$comments = \get_comments(
 			array(
