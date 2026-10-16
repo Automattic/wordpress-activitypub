@@ -278,6 +278,7 @@ class Inbox {
 				return Followers::remove( $remote_actor, $user_id );
 
 			case 'Like':
+			case 'Dislike':
 			case 'Create':
 			case 'Announce':
 				if ( ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {

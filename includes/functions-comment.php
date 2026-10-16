@@ -149,6 +149,14 @@ function get_comment_ancestors( $comment ) {
 /**
  * Registers a ActivityPub comment type.
  *
+ * Two arguments describe how the type behaves. Both default to false, so a type only gets the
+ * behaviour it asks for:
+ *
+ * - `reaction`: the type is a reaction and not a comment in the thread. It is left out of the
+ *   comment count.
+ * - `public`: single entries are shown to visitors, for example in the Reactions block. A type
+ *   that is not public is never listed one by one on the front end.
+ *
  * @param string $comment_type Key for comment type.
  * @param array  $args         Optional. Array of arguments for registering a comment type. Default empty array.
  *

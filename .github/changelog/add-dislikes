@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Optionally receive downvotes from platforms like Lemmy, PieFed and Mbin. Likes and reposts no longer count as comments, even when receiving them is turned off.

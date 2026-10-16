@@ -620,6 +620,30 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The reactions block never lists dislikes.
+	 */
+	public function test_render_reactions_block_skips_dislikes() {
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+
+		foreach ( array( 'like', 'dislike' ) as $type ) {
+			\wp_insert_comment(
+				array(
+					'comment_post_ID'    => $post_id,
+					'comment_author'     => 'Remote User',
+					'comment_author_url' => 'https://lemmy.example/u/remote',
+					'comment_type'       => $type,
+					'comment_approved'   => 1,
+				)
+			);
+		}
+
+		$output = do_blocks( '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} /-->' );
+
+		$this->assertStringContainsString( '1 like', $output );
+		$this->assertStringNotContainsString( 'dislike', $output );
+	}
+
+	/**
 	 * Test the reactions block with v1 deprecated markup (title attribute, no HTML content).
 	 *
 	 * Block v1 (plugin 1.0.0): Dynamic block with title attribute, self-closing.

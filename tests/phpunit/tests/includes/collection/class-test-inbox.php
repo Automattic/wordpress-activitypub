@@ -153,6 +153,37 @@ class Test_Inbox extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Undoing a Dislike deletes its comment.
+	 *
+	 * @covers ::undo
+	 */
+	public function test_undo_dislike_deletes_comment() {
+		$activity_id = 'https://lemmy.example/activities/dislike/1';
+		$actor       = 'https://lemmy.example/u/remote';
+
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => self::factory()->post->create(),
+				'comment_type'    => 'dislike',
+			)
+		);
+		\add_comment_meta( $comment_id, 'source_id', \esc_url_raw( $activity_id ) );
+
+		$activity = new Activity();
+		$activity->set_id( $activity_id );
+		$activity->set_type( 'Dislike' );
+		$activity->set_actor( $actor );
+		$activity->set_object( 'https://example.org/?p=1' );
+
+		$this->assertIsInt( Inbox::add( $activity, 1 ) );
+
+		$result = Inbox::undo( $activity_id, $actor );
+
+		$this->assertNotWPError( $result );
+		$this->assertNull( \get_comment( $comment_id ) );
+	}
+
+	/**
 	 * Test adding an activity to the inbox and verify post meta is set correctly.
 	 *
 	 * @covers ::add
