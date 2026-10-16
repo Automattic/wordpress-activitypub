@@ -1229,4 +1229,60 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			\remove_filter( 'activitypub_remote_actor_is_in_use', $access, 10 );
 		}
 	}
+	/**
+	 * Explicit non-cache classification survives repeated cleanup runs.
+	 */
+	public function test_cleanup_preserves_non_cache_actors() {
+		$id = $this->cached_actor();
+		Remote_Actors::set_cache_only( $id, false );
+		$this->assertNull( Scheduler::cleanup_cache_only_remote_actors_batch() );
+		$this->assertNull( Scheduler::cleanup_cache_only_remote_actors_batch() );
+		$this->assertNotNull( \get_post( $id ) );
+	}
+
+	/**
+	 * An integration veto promotes its actor so later batches leave it alone.
+	 */
+	public function test_cleanup_honors_integration_reference() {
+		$id = $this->cached_actor();
+		Remote_Actors::set_cache_only( $id, true );
+		$protect = static function ( $in_use, $actor ) use ( $id ) {
+			return $id === $actor->ID || $in_use;
+		};
+		\add_filter( 'activitypub_remote_actor_is_in_use', $protect, 10, 2 );
+		try {
+			Scheduler::cleanup_cache_only_remote_actors_batch();
+		} finally {
+			\remove_filter( 'activitypub_remote_actor_is_in_use', $protect, 10 );
+		}
+		Scheduler::cleanup_cache_only_remote_actors_batch();
+		$this->assertNotNull( \get_post( $id ) );
+		$this->assertFalse( (bool) \get_post_meta( $id, Remote_Actors::CACHE_ONLY_META_KEY, true ) );
+	}
+
+	/**
+	 * Failed deletion leaves the cache eligible for a later run without spinning.
+	 */
+	public function test_cleanup_stops_when_deletion_makes_no_progress() {
+		$id = $this->cached_actor();
+		Remote_Actors::set_cache_only( $id, true );
+		$batch_size     = static function () {
+			return 1;
+		};
+		$prevent_delete = static function ( $delete, $post ) use ( $id ) {
+			return $id === $post->ID ? false : $delete;
+		};
+		\add_filter( 'activitypub_actor_cleanup_batch_size', $batch_size );
+		\add_filter( 'pre_delete_post', $prevent_delete, 10, 2 );
+		try {
+			$this->assertNull( Scheduler::cleanup_cache_only_remote_actors_batch() );
+			$this->assertNotNull( \get_post( $id ) );
+			$this->assertTrue( (bool) \get_post_meta( $id, Remote_Actors::CACHE_ONLY_META_KEY, true ) );
+		} finally {
+			\remove_filter( 'pre_delete_post', $prevent_delete, 10 );
+			\remove_filter( 'activitypub_actor_cleanup_batch_size', $batch_size );
+		}
+		Scheduler::cleanup_cache_only_remote_actors_batch();
+		$this->assertNull( \get_post( $id ) );
+	}
 }
