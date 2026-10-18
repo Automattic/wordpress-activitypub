@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed the plugin answering WebFinger, NodeInfo and OAuth server discovery requests meant for other plugins, such as IndieAuth.
