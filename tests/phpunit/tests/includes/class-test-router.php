@@ -672,11 +672,12 @@ class Test_Router extends \WP_UnitTestCase {
 
 		$rules = get_option( 'rewrite_rules' );
 
-		$this->assertArrayHasKey( '^.well-known/webfinger', $rules );
+		$this->assertArrayHasKey( '^\.well-known/webfinger/?$', $rules );
 		$this->assertSame(
 			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/webfinger',
-			$rules['^.well-known/webfinger']
+			$rules['^\.well-known/webfinger/?$']
 		);
+		$this->assertNotSame( $rules['^\.well-known/webfinger/?$'], $this->resolve_rewrite( $rules, '.well-known/webfinger/suffix' ) );
 	}
 
 	/**
@@ -693,11 +694,49 @@ class Test_Router extends \WP_UnitTestCase {
 
 		$rules = get_option( 'rewrite_rules' );
 
-		$this->assertArrayHasKey( '^.well-known/nodeinfo', $rules );
+		$this->assertArrayHasKey( '^\.well-known/nodeinfo/?$', $rules );
 		$this->assertSame(
 			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo',
-			$rules['^.well-known/nodeinfo']
+			$rules['^\.well-known/nodeinfo/?$']
 		);
+		$this->assertNotSame( $rules['^\.well-known/nodeinfo/?$'], $this->resolve_rewrite( $rules, '.well-known/nodeinfo/suffix' ) );
+	}
+
+	/**
+	 * Test that the OAuth metadata rewrite rule only matches the bare well-known path.
+	 *
+	 * @covers ::add_rewrite_rules
+	 */
+	public function test_oauth_authorization_server_rewrite_rule() {
+		$this->set_permalink_structure( '/%postname%/' );
+
+		Router::add_rewrite_rules();
+		\flush_rewrite_rules();
+
+		$rules    = get_option( 'rewrite_rules' );
+		$metadata = 'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/authorization-server-metadata';
+
+		$this->assertSame( $metadata, $this->resolve_rewrite( $rules, '.well-known/oauth-authorization-server' ) );
+		$this->assertSame( $metadata, $this->resolve_rewrite( $rules, '.well-known/oauth-authorization-server/' ) );
+		$this->assertNotSame( $metadata, $this->resolve_rewrite( $rules, '.well-known/oauth-authorization-server/wp-api/indieauth/1.0' ) );
+	}
+
+	/**
+	 * Return the query of the first rewrite rule matching a request path, the way WP::parse_request() matches.
+	 *
+	 * @param array  $rules   The rewrite rules.
+	 * @param string $request The request path, relative to the home URL.
+	 *
+	 * @return string|null The matched query, or null if no rule matches.
+	 */
+	private function resolve_rewrite( $rules, $request ) {
+		foreach ( $rules as $match => $query ) {
+			if ( preg_match( "#^$match#", $request ) ) {
+				return $query;
+			}
+		}
+
+		return null;
 	}
 
 	/**
