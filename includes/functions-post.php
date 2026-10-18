@@ -364,7 +364,12 @@ function generate_post_summary( $post, $length = 500 ) {
 
 	// Core drops these blocks from excerpts, but the text inside them belongs to the summary.
 	$containers = static function ( $blocks ) {
-		return \array_merge( $blocks, array( 'core/cover', 'core/details' ) );
+		return \array_merge( $blocks, array( 'core/cover' ) );
+	};
+
+	// A Details block is rendered whole, a wrapper would lose its title.
+	$details = static function ( $blocks ) {
+		return \array_merge( $blocks, array( 'core/details' ) );
 	};
 
 	$previous_post   = $GLOBALS['post'] ?? null;
@@ -372,9 +377,11 @@ function generate_post_summary( $post, $length = 500 ) {
 	\setup_postdata( $post );
 	\add_filter( 'excerpt_length', $no_limit, \PHP_INT_MAX );
 	\add_filter( 'excerpt_allowed_wrapper_blocks', $containers );
+	\add_filter( 'excerpt_allowed_blocks', $details );
 
 	$content = \get_the_excerpt( $post );
 
+	\remove_filter( 'excerpt_allowed_blocks', $details );
 	\remove_filter( 'excerpt_allowed_wrapper_blocks', $containers );
 	\remove_filter( 'excerpt_length', $no_limit, \PHP_INT_MAX );
 

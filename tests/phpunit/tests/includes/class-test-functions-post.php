@@ -856,9 +856,10 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 	 * @dataProvider container_block_data
 	 * @covers \Activitypub\generate_post_summary
 	 *
-	 * @param string $content The post content.
+	 * @param string $content  The post content.
+	 * @param string $expected The expected summary.
 	 */
-	public function test_generate_post_summary_reads_container_blocks( $content ) {
+	public function test_generate_post_summary_reads_container_blocks( $content, $expected ) {
 		$post_id = self::factory()->post->create(
 			array(
 				'post_content' => $content,
@@ -866,8 +867,9 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 			)
 		);
 
-		$this->assertSame( 'Hello', \Activitypub\generate_post_summary( $post_id ) );
+		$this->assertSame( $expected, \Activitypub\generate_post_summary( $post_id ) );
 		$this->assertNotContains( 'core/cover', \apply_filters( 'excerpt_allowed_wrapper_blocks', array() ), 'Excerpts on the website stay as they are.' );
+		$this->assertNotContains( 'core/details', \apply_filters( 'excerpt_allowed_blocks', array() ), 'Excerpts on the website stay as they are.' );
 	}
 
 	/**
@@ -877,8 +879,8 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 	 */
 	public function container_block_data() {
 		return array(
-			'cover'   => array( '<!-- wp:cover --><div class="wp-block-cover"><div class="wp-block-cover__inner-container"><!-- wp:paragraph --><p>Hello</p><!-- /wp:paragraph --></div></div><!-- /wp:cover -->' ),
-			'details' => array( '<!-- wp:details --><details class="wp-block-details"><summary>Title</summary><!-- wp:paragraph --><p>Hello</p><!-- /wp:paragraph --></details><!-- /wp:details -->' ),
+			'cover'   => array( '<!-- wp:cover --><div class="wp-block-cover"><div class="wp-block-cover__inner-container"><!-- wp:paragraph --><p>Hello</p><!-- /wp:paragraph --></div></div><!-- /wp:cover -->', 'Hello' ),
+			'details' => array( "<!-- wp:details -->\n<details class=\"wp-block-details\"><summary>Title</summary><!-- wp:paragraph -->\n<p>Hello</p>\n<!-- /wp:paragraph --></details>\n<!-- /wp:details -->", 'Title Hello' ),
 		);
 	}
 
