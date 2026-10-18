@@ -372,6 +372,16 @@ function generate_post_summary( $post, $length = 500 ) {
 		return \array_merge( $blocks, array( 'core/details' ) );
 	};
 
+	/*
+	 * Core ignores the more tag on the post's own permalink, where remote servers fetch the object
+	 * and the preview renders, so the summary would not match the one sent in the Create. Core gets
+	 * a copy cut at the tag instead. `get_post()` reloads a post that is not raw from the database,
+	 * which would drop the cut.
+	 */
+	$teaser               = clone $post;
+	$teaser->post_content = \get_extended( $post->post_content )['main'];
+	$teaser->filter       = 'raw';
+
 	$previous_post   = $GLOBALS['post'] ?? null;
 	$GLOBALS['post'] = $post; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 	\setup_postdata( $post );
@@ -379,7 +389,7 @@ function generate_post_summary( $post, $length = 500 ) {
 	\add_filter( 'excerpt_allowed_wrapper_blocks', $containers );
 	\add_filter( 'excerpt_allowed_blocks', $details );
 
-	$content = \get_the_excerpt( $post );
+	$content = \get_the_excerpt( $teaser );
 
 	\remove_filter( 'excerpt_allowed_blocks', $details );
 	\remove_filter( 'excerpt_allowed_wrapper_blocks', $containers );

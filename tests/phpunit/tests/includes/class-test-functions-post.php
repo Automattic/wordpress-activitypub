@@ -711,6 +711,26 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The summary stops at the more tag also on the post's own permalink, where core ignores the tag.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 */
+	public function test_generate_post_summary_stops_at_more_tag_on_permalink() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => 'Teaser <!--more--> ' . \str_repeat( 'rest ', 300 ),
+				'post_excerpt' => '',
+			)
+		);
+
+		$this->assertSame( 'Teaser', \Activitypub\generate_post_summary( $post_id ) );
+
+		$this->go_to( \get_permalink( $post_id ) );
+
+		$this->assertSame( 'Teaser', \Activitypub\generate_post_summary( $post_id ) );
+	}
+
+	/**
 	 * Building the summary puts the global post back the way it was.
 	 *
 	 * @covers \Activitypub\generate_post_summary
