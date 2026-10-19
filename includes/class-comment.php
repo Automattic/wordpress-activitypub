@@ -29,6 +29,7 @@ class Comment {
 		\add_filter( 'comment_reply_link', array( self::class, 'comment_reply_link' ), 10, 3 );
 		\add_filter( 'comment_class', array( self::class, 'comment_class' ), 10, 3 );
 		\add_filter( 'comment_feed_where', array( static::class, 'comment_feed_where' ) );
+		\add_filter( 'widget_comments_args', array( static::class, 'widget_comments_args' ) );
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 2 );
 		\add_action( 'pre_get_comments', array( static::class, 'comment_query' ) );
 		\add_filter( 'get_page_of_comment_query_args', array( static::class, 'get_page_of_comment_query_args' ) );
@@ -435,7 +436,8 @@ class Comment {
 	/**
 	 * Makes the comment feed filterable by comment type.
 	 *
-	 * Also excludes ActivityPub comment types from the feed when no type is specified.
+	 * Also excludes ActivityPub comment types from the feed when no type is specified,
+	 * and replies to remote posts in any case.
 	 *
 	 * @param string $where The `WHERE` clause for the comment feed query.
 	 *
@@ -443,6 +445,14 @@ class Comment {
 	 */
 	public static function comment_feed_where( $where ) {
 		global $wpdb;
+
+		// Replies to remote posts belong to the reader, not to the site's comments.
+		$hide_for = self::hide_for();
+		if ( $hide_for ) {
+			$placeholders = \implode( ', ', \array_fill( 0, \count( $hide_for ), '%s' ) );
+			// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.NotPrepared
+			$where .= $wpdb->prepare( \sprintf( " AND {$wpdb->comments}.comment_post_ID NOT IN ( SELECT ID FROM {$wpdb->posts} WHERE post_type IN (%s) )", $placeholders ), ...$hide_for );
+		}
 
 		$comment_type = \get_query_var( 'type' );
 
@@ -461,6 +471,23 @@ class Comment {
 		}
 
 		return $where;
+	}
+
+	/**
+	 * Keeps replies to remote posts out of the Recent Comments widget and the Latest Comments block.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $args The comment query arguments.
+	 *
+	 * @return array The filtered arguments.
+	 */
+	public static function widget_comments_args( $args ) {
+		if ( empty( $args['post_type'] ) ) {
+			$args['post_type'] = self::get_allowed_comment_post_types();
+		}
+
+		return $args;
 	}
 
 	/**

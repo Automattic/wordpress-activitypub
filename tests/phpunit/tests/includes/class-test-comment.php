@@ -873,6 +873,40 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Replies to remote posts stay out of the comments feed and the comment widgets.
+	 *
+	 * @covers ::comment_feed_where
+	 * @covers ::widget_comments_args
+	 */
+	public function test_remote_post_replies_stay_out_of_public_lists() {
+		$comment_ids = array();
+		foreach ( array( 'post', Remote_Posts::POST_TYPE ) as $post_type ) {
+			$comment_ids[ $post_type ] = self::factory()->comment->create(
+				array(
+					'comment_approved' => '1',
+					'comment_post_ID'  => self::factory()->post->create( array( 'post_type' => $post_type ) ),
+				)
+			);
+		}
+		$expected = array( (string) $comment_ids['post'] );
+
+		foreach ( array( null, 'all' ) as $type ) {
+			\set_query_var( 'type', $type );
+			$query = new \WP_Query(
+				array(
+					'feed'         => 'comments-rss2',
+					'withcomments' => true,
+				)
+			);
+			$this->assertSame( $expected, \wp_list_pluck( $query->comments, 'comment_ID' ) );
+		}
+		\set_query_var( 'type', null );
+
+		$args = \apply_filters( 'widget_comments_args', array( 'post_status' => 'publish' ), array() );
+		$this->assertSame( $expected, \wp_list_pluck( \get_comments( $args ), 'comment_ID' ) );
+	}
+
+	/**
 	 * Test that comments on ap_post are excluded from admin comment queries.
 	 *
 	 * @covers ::comment_query
