@@ -28,6 +28,46 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 	public function set_up() {
 		parent::set_up();
 		Feature_Request::init();
+
+		// The featured collection of the sample request belongs to the requesting actor.
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( self::class, 'mock_instrument' ), 10, 2 );
+	}
+
+	/**
+	 * Serve the featured collections used in these tests.
+	 *
+	 * @param mixed  $pre The pre-filtered value.
+	 * @param string $id  The requested ID.
+	 *
+	 * @return mixed The collection, or the pre-filtered value for other IDs.
+	 */
+	public static function mock_instrument( $pre, $id ) {
+		// An alias that resolves to the requesting actor's own collection.
+		if ( 'https://remote.example.com/users/curator/featured/alias' === $id ) {
+			return self::mock_instrument( $pre, 'https://remote.example.com/users/curator/featured/42' );
+		}
+
+		$owners = array(
+			'https://remote.example.com/users/curator/featured/42' => 'https://remote.example.com/users/curator',
+			'https://remote.example.com/users/other/featured/1'    => 'https://remote.example.com/users/other',
+			'https://remote.example.com/users/curator/featured/gone' => 410,
+			'https://remote.example.com/users/curator/featured/slow' => 0,
+		);
+
+		if ( ! \array_key_exists( $id, $owners ) ) {
+			return $pre;
+		}
+
+		if ( \is_int( $owners[ $id ] ) ) {
+			// A network error, like a timeout, carries no status.
+			return new \WP_Error( 'activitypub_http_error', 'Error', $owners[ $id ] ? array( 'status' => $owners[ $id ] ) : null );
+		}
+
+		return array(
+			'id'           => $id,
+			'type'         => 'FeaturedCollection',
+			'attributedTo' => $owners[ $id ],
+		);
 	}
 
 	/**
@@ -309,6 +349,106 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 		$this->assertNotEmpty( $outbox, "{$expected_type} activity should be queued." );
 
 		remove_filter( 'pre_get_remote_metadata_by_actor', $pre );
+	}
+
+	/**
+	 * Featured collections of the requesting actor, of someone else, and ones that cannot be fetched.
+	 *
+	 * @return array Test cases.
+	 */
+	public function instrument_owner_data() {
+		return array(
+			'own collection'             => array( 'https://remote.example.com/users/curator/featured/42', 'Accept' ),
+			'collection of someone else' => array( 'https://remote.example.com/users/other/featured/1', 'Reject' ),
+			'alias of own collection'    => array( 'https://remote.example.com/users/curator/featured/alias', 'Reject' ),
+			'collection is gone'         => array( 'https://remote.example.com/users/curator/featured/gone', null ),
+			'timeout'                    => array( 'https://remote.example.com/users/curator/featured/slow', null ),
+		);
+	}
+
+	/**
+	 * A feature is only approved for the requesting actor's own collection.
+	 *
+	 * The instrument only has to share the actor's host to pass validation, so another account on
+	 * that host could otherwise get an approval for a collection that is not theirs.
+	 *
+	 * @dataProvider instrument_owner_data
+	 * @covers ::handle_feature_request
+	 *
+	 * @param string      $instrument The featured collection.
+	 * @param string|null $expected   The expected response type, or null for no answer.
+	 */
+	public function test_handle_feature_request_requires_instrument_owner( $instrument, $expected ) {
+		\update_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
+
+		$activity               = $this->create_feature_request_activity();
+		$activity['instrument'] = $instrument;
+
+		Feature_Request::handle_feature_request( $activity, self::$user_id );
+
+		$outbox = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				'author'      => self::$user_id,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'     => '_activitypub_activity_type',
+						'value'   => array( 'Accept', 'Reject' ),
+						'compare' => 'IN',
+					),
+				),
+			)
+		);
+
+		if ( null === $expected ) {
+			$this->assertEmpty( $outbox, 'A collection that cannot be fetched is not answered.' );
+			return;
+		}
+
+		$this->assertCount( 1, $outbox );
+		$this->assertSame( $expected, \json_decode( $outbox[0]->post_content, true )['type'] );
+
+		$featured_by = \get_user_meta( self::$user_id, '_activitypub_featured_by', false );
+		if ( 'Accept' === $expected ) {
+			$this->assertSame( array( $instrument ), $featured_by );
+		} else {
+			$this->assertEmpty( $featured_by );
+		}
+	}
+
+	/**
+	 * A policy that rejects decides without the collection, so a failed fetch cannot drop it.
+	 *
+	 * @covers ::handle_feature_request
+	 */
+	public function test_handle_feature_request_policy_reject_skips_fetch() {
+		\update_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ME );
+
+		$activity               = $this->create_feature_request_activity();
+		$activity['instrument'] = 'https://remote.example.com/users/curator/featured/slow';
+
+		Feature_Request::handle_feature_request( $activity, self::$user_id );
+
+		$outbox = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				'author'      => self::$user_id,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'     => '_activitypub_activity_type',
+						'value'   => array( 'Accept', 'Reject' ),
+						'compare' => 'IN',
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 1, $outbox );
+		$this->assertSame( 'Reject', \json_decode( $outbox[0]->post_content, true )['type'] );
 	}
 
 	/**

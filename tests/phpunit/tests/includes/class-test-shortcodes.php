@@ -73,6 +73,48 @@ class Test_Shortcodes extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The content filters always run; the removed `apply_filters="no"` is ignored with a notice.
+	 *
+	 * @covers ::content
+	 */
+	public function test_content_always_applies_filters() {
+		global $post;
+
+		$this->setExpectedIncorrectUsage( 'Activitypub\Shortcodes::content' );
+
+		$filter = static function ( $content ) {
+			return $content . ' Filtered';
+		};
+		\add_filter( 'the_content', $filter );
+
+		$post = $this->post; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		setup_postdata( $post );
+		$content = do_shortcode( '[ap_content apply_filters="no"]' );
+		wp_reset_postdata();
+
+		\remove_filter( 'the_content', $filter );
+
+		$this->assertStringContainsString( 'Lorem ipsum', $content );
+		$this->assertStringContainsString( 'Filtered', $content );
+	}
+
+	/**
+	 * `apply_filters="yes"` was the default, so it does not trigger a notice.
+	 *
+	 * @covers ::content
+	 */
+	public function test_content_apply_filters_yes_is_quiet() {
+		global $post;
+
+		$post = $this->post; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		setup_postdata( $post );
+		$content = do_shortcode( '[ap_content apply_filters="yes"]' );
+		wp_reset_postdata();
+
+		$this->assertStringContainsString( 'Lorem ipsum', $content );
+	}
+
+	/**
 	 * Test the content shortcode with password protected content.
 	 */
 	public function test_password_protected_content() {

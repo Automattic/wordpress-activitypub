@@ -89,6 +89,15 @@ abstract class Base {
 		// Save activity in the context of an activitypub request.
 		\add_filter( 'activitypub_is_activitypub_request', '__return_true' );
 
+		/*
+		 * Render as a logged-out visitor. The object is federated and served to everyone, so it
+		 * must not show what plugins only show the current user.
+		 */
+		$current_user_id = \get_current_user_id();
+		// Switching the user re-runs `kses_init()`, so keep what the caller had set up.
+		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
+		\wp_set_current_user( 0 );
+
 		$vars = $activity_object->get_object_var_keys();
 
 		foreach ( $vars as $var ) {
@@ -121,6 +130,9 @@ abstract class Base {
 				}
 			}
 		}
+
+		\wp_set_current_user( $current_user_id );
+		$has_kses ? \kses_init_filters() : \kses_remove_filters();
 
 		// Remove activity in the context of an activitypub request.
 		\remove_filter( 'activitypub_is_activitypub_request', '__return_true' );
