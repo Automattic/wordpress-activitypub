@@ -556,7 +556,22 @@ class Interactions {
 		 */
 		$limit = \max( 0, (int) \apply_filters( 'activitypub_comment_image_limit', 3, $activity_object ) );
 
-		return Remote_Posts::extract_attachments( $activity_object, $limit, 'image' );
+		if ( ! $limit ) {
+			return array();
+		}
+
+		$images = array();
+		foreach ( Remote_Posts::extract_attachments( $activity_object, \max( 20, $limit ), 'image' ) as $attachment ) {
+			// Comments show images to every visitor, so the host must be public.
+			if ( \wp_http_validate_url( $attachment['url'] ) ) {
+				$images[] = $attachment;
+				if ( \count( $images ) >= $limit ) {
+					break;
+				}
+			}
+		}
+
+		return $images;
 	}
 
 	/**

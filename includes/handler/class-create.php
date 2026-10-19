@@ -154,8 +154,9 @@ class Create {
 			return false;
 		}
 		if ( ! isset( $activity['object']['content'] ) ) {
-			foreach ( Remote_Posts::extract_attachments( $activity['object'], 1, 'image' ) as $attachment ) {
-				if ( 'image' === $attachment['type'] && \esc_url_raw( $attachment['url'], array( 'http', 'https' ) ) ) {
+			foreach ( Remote_Posts::extract_attachments( $activity['object'], 20, 'image' ) as $attachment ) {
+				// Comments show images to every visitor, so the host must be public.
+				if ( \wp_http_validate_url( $attachment['url'] ) ) {
 					return $valid;
 				}
 			}

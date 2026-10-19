@@ -195,6 +195,7 @@ class Test_Create extends \WP_UnitTestCase {
 				false,
 			);
 		}
+		// Without a media type, anything but Audio and Video is read as an image.
 		foreach ( array( 42, true, null, array( 'Image' ) ) as $type ) {
 			$cases[] = array(
 				array(
@@ -203,7 +204,7 @@ class Test_Create extends \WP_UnitTestCase {
 						'url'  => 'https://example.com/photo.jpg',
 					),
 				),
-				false,
+				true,
 			);
 		}
 		return $cases;
