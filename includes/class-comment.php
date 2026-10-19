@@ -483,8 +483,11 @@ class Comment {
 	 * @return array The filtered arguments.
 	 */
 	public static function widget_comments_args( $args ) {
-		if ( empty( $args['post_type'] ) ) {
-			$args['post_type'] = self::get_allowed_comment_post_types();
+		$hide_for = self::hide_for();
+
+		// The comment query has no `post_type__not_in`, so list every other post type.
+		if ( $hide_for && empty( $args['post_type'] ) ) {
+			$args['post_type'] = \array_values( \array_diff( \get_post_types(), $hide_for ) );
 		}
 
 		return $args;

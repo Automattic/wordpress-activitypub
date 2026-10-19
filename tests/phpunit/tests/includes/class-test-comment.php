@@ -879,8 +879,11 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * @covers ::widget_comments_args
 	 */
 	public function test_remote_post_replies_stay_out_of_public_lists() {
+		// Comments on post types without comment support stay in the lists.
+		\register_post_type( 'no_comment_support', array( 'supports' => array( 'title' ) ) );
+
 		$comment_ids = array();
-		foreach ( array( 'post', Remote_Posts::POST_TYPE ) as $post_type ) {
+		foreach ( array( 'post', 'no_comment_support', Remote_Posts::POST_TYPE ) as $post_type ) {
 			$comment_ids[ $post_type ] = self::factory()->comment->create(
 				array(
 					'comment_approved' => '1',
@@ -888,7 +891,7 @@ class Test_Comment extends \WP_UnitTestCase {
 				)
 			);
 		}
-		$expected = array( (string) $comment_ids['post'] );
+		$expected = array( (string) $comment_ids['post'], (string) $comment_ids['no_comment_support'] );
 
 		foreach ( array( null, 'all' ) as $type ) {
 			\set_query_var( 'type', $type );
@@ -898,12 +901,14 @@ class Test_Comment extends \WP_UnitTestCase {
 					'withcomments' => true,
 				)
 			);
-			$this->assertSame( $expected, \wp_list_pluck( $query->comments, 'comment_ID' ) );
+			$this->assertEqualSets( $expected, \wp_list_pluck( $query->comments, 'comment_ID' ) );
 		}
 		\set_query_var( 'type', null );
 
 		$args = \apply_filters( 'widget_comments_args', array( 'post_status' => 'publish' ), array() );
-		$this->assertSame( $expected, \wp_list_pluck( \get_comments( $args ), 'comment_ID' ) );
+		$this->assertEqualSets( $expected, \wp_list_pluck( \get_comments( $args ), 'comment_ID' ) );
+
+		\unregister_post_type( 'no_comment_support' );
 	}
 
 	/**
