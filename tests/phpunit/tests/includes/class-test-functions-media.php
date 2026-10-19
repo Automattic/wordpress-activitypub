@@ -186,7 +186,7 @@ class Test_Functions_Media extends \WP_UnitTestCase {
 	/**
 	 * Passing the shared attachment list still processes images only.
 	 *
-	 * @group activitypub
+	 * @covers \Activitypub\process_remote_images
 	 */
 	public function test_process_remote_images_skips_other_media() {
 		$result = \Activitypub\process_remote_images(
@@ -197,12 +197,17 @@ class Test_Functions_Media extends \WP_UnitTestCase {
 					'type' => 'video',
 				),
 				array(
+					'url'  => 'https://example.com/document.pdf',
+					'type' => 'document',
+				),
+				array(
 					'url'  => 'https://example.com/image.jpg',
 					'type' => 'image',
 				),
 			)
 		);
 		$this->assertStringNotContainsString( 'video.mp4', $result );
+		$this->assertStringNotContainsString( 'document.pdf', $result );
 		$this->assertStringContainsString( 'image.jpg', $result );
 	}
 

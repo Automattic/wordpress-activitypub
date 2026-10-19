@@ -68,4 +68,106 @@ class Test_Functions_Url extends \WP_UnitTestCase {
 			array( 'www.example.com', 'example.com' ),
 		);
 	}
+
+	/**
+	 * Internationalized hosts are converted to their A-label, everything else is returned as it is.
+	 *
+	 * @covers \Activitypub\to_ascii_host
+	 * @dataProvider ascii_host_provider
+	 *
+	 * @param string $host     The host.
+	 * @param string $expected The expected host.
+	 */
+	public function test_to_ascii_host( $host, $expected ) {
+		$this->assertSame( $expected, \Activitypub\to_ascii_host( $host ) );
+	}
+
+	/**
+	 * Hosts from the SWICG notes on internationalized handles, and ASCII hosts.
+	 *
+	 * @return array[]
+	 */
+	public function ascii_host_provider() {
+		return array(
+			'thai'    => array( 'ตัวอย่าง.example', 'xn--72c1a1bt4awk9o.example' ),
+			'telugu'  => array( 'ఉదాహరణ.example', 'xn--noc6ci4b4b3a.example' ),
+			'chinese' => array( 'example.中国', 'example.xn--fiqs8s' ),
+			'latin'   => array( 'café.example', 'xn--caf-dma.example' ),
+			'upper'   => array( 'CAFÉ.example', 'xn--caf-dma.example' ),
+			'a-label' => array( 'xn--caf-dma.example', 'xn--caf-dma.example' ),
+			'ascii'   => array( 'Example.org', 'Example.org' ),
+			'ipv6'    => array( '[2001:db8::1]', '[2001:db8::1]' ),
+			'empty'   => array( '', '' ),
+		);
+	}
+
+	/**
+	 * A decomposed accent gives the same A-label as the composed one.
+	 *
+	 * @requires extension intl
+	 * @covers \Activitypub\to_ascii_host
+	 */
+	public function test_to_ascii_host_normalizes_decomposed_hosts() {
+		$this->assertSame( 'xn--caf-dma.example', \Activitypub\to_ascii_host( "cafe\u{0301}.example" ) );
+	}
+
+	/**
+	 * A fullwidth host gives the same A-label as its plain form.
+	 *
+	 * @requires extension intl
+	 * @covers \Activitypub\to_ascii_host
+	 */
+	public function test_to_ascii_host_maps_fullwidth_hosts() {
+		$this->assertSame( 'xn--caf-dma.example', \Activitypub\to_ascii_host( 'ｃａｆé.example' ) );
+	}
+
+	/**
+	 * A label that UTS #46 maps to plain ASCII is not folded onto that ASCII host.
+	 *
+	 * @requires extension intl
+	 * @covers \Activitypub\to_ascii_host
+	 * @covers \Activitypub\fold_host
+	 * @dataProvider mapped_away_host_provider
+	 *
+	 * @param string $host The host.
+	 */
+	public function test_to_ascii_host_keeps_hosts_mapped_to_ascii( $host ) {
+		$this->assertSame( $host, \Activitypub\to_ascii_host( $host ) );
+		$this->assertNotSame( \Activitypub\fold_host( 'example.com' ), \Activitypub\fold_host( $host ) );
+	}
+
+	/**
+	 * Hosts with labels that UTS #46 maps to plain ASCII.
+	 *
+	 * @return array[]
+	 */
+	public function mapped_away_host_provider() {
+		return array(
+			'soft hyphen'          => array( "exam\u{00AD}ple.com" ),
+			'zero width space'     => array( "exam\u{200B}ple.com" ),
+			'fullwidth latin'      => array( 'ｅｘａｍｐｌｅ.com' ),
+			'next to an idn label' => array( "café.exam\u{00AD}ple.com" ),
+		);
+	}
+
+	/**
+	 * An ideographic full stop at the end is trimmed like an ASCII dot.
+	 *
+	 * @requires extension intl
+	 * @covers \Activitypub\fold_host
+	 */
+	public function test_fold_host_trims_ideographic_trailing_dot() {
+		$this->assertSame( 'xn--caf-dma.example', \Activitypub\fold_host( 'café.example。' ) );
+	}
+
+	/**
+	 * The Unicode form and the A-label of a host fold to the same value.
+	 *
+	 * @covers \Activitypub\fold_host
+	 */
+	public function test_fold_host_folds_internationalized_hosts() {
+		$this->assertSame( 'xn--caf-dma.example', \Activitypub\fold_host( 'café.example' ) );
+		$this->assertSame( 'xn--caf-dma.example', \Activitypub\fold_host( 'café.example.' ) );
+		$this->assertSame( 'xn--caf-dma.example', \Activitypub\fold_host( 'XN--CAF-DMA.example' ) );
+	}
 }

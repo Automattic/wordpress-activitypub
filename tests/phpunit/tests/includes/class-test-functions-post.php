@@ -682,6 +682,229 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The summary is built from the filtered content, so it never shows what `the_content` hides.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 */
+	public function test_generate_post_summary_applies_content_filters() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => 'Teaser <!-- cut --> Hidden text',
+				'post_excerpt' => '',
+			)
+		);
+
+		$cut = static function ( $content ) use ( $post_id ) {
+			if ( \get_the_ID() !== $post_id ) {
+				return $content;
+			}
+
+			return \strstr( $content, '<!-- cut -->', true );
+		};
+		\add_filter( 'the_content', $cut, 8 );
+
+		$summary = \Activitypub\generate_post_summary( $post_id );
+
+		\remove_filter( 'the_content', $cut, 8 );
+
+		$this->assertSame( 'Teaser', $summary );
+	}
+
+	/**
+	 * The summary stops at the more tag also on the post's own permalink, where core ignores the tag.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 */
+	public function test_generate_post_summary_stops_at_more_tag_on_permalink() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => 'Teaser <!--more--> ' . \str_repeat( 'rest ', 300 ),
+				'post_excerpt' => '',
+			)
+		);
+
+		$this->assertSame( 'Teaser', \Activitypub\generate_post_summary( $post_id ) );
+
+		$this->go_to( \get_permalink( $post_id ) );
+
+		$this->assertSame( 'Teaser', \Activitypub\generate_post_summary( $post_id ) );
+	}
+
+	/**
+	 * Building the summary puts the global post back the way it was.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 */
+	public function test_generate_post_summary_restores_global_post() {
+		$queried = self::factory()->post->create();
+		$current = self::factory()->post->create_and_get( array( 'post_excerpt' => '' ) );
+
+		$this->go_to( \get_permalink( $queried ) );
+		$GLOBALS['post'] = $current; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		\Activitypub\generate_post_summary( $current );
+
+		$this->assertSame( $current->ID, $GLOBALS['post']->ID );
+	}
+
+	/**
+	 * Line breaks and lines that only hold whitespace collapse into a single space.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 */
+	public function test_generate_post_summary_collapses_whitespace_lines() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => 'First',
+				'post_excerpt' => '',
+			)
+		);
+
+		$spaces = static function ( $content ) {
+			return $content . "\n   \n   \nSecond";
+		};
+		\add_filter( 'the_content', $spaces, 99 );
+
+		$summary = \Activitypub\generate_post_summary( $post_id );
+
+		\remove_filter( 'the_content', $spaces, 99 );
+
+		$this->assertSame( 'First Second', $summary );
+	}
+
+	/**
+	 * Content that plugins only add outside of excerpts, like a subscribe prompt, stays out of the summary.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 */
+	public function test_generate_post_summary_builds_an_excerpt() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => 'Hello',
+				'post_excerpt' => '',
+			)
+		);
+
+		$prompt = static function ( $content ) {
+			return \doing_filter( 'get_the_excerpt' ) ? $content : $content . ' Subscribe to continue reading';
+		};
+		\add_filter( 'the_content', $prompt );
+
+		$summary = \Activitypub\generate_post_summary( $post_id );
+
+		\remove_filter( 'the_content', $prompt );
+
+		$this->assertSame( 'Hello', $summary );
+	}
+
+	/**
+	 * A theme's read-more link is replaced by the plugin's own.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 */
+	public function test_generate_post_summary_replaces_read_more() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => \str_repeat( 'word ', 200 ),
+				'post_excerpt' => '',
+			)
+		);
+
+		$read_more = static function () {
+			return ' <a href="#">Continue reading</a>';
+		};
+		\add_filter( 'excerpt_more', $read_more );
+
+		$summary = \Activitypub\generate_post_summary( $post_id );
+
+		\remove_filter( 'excerpt_more', $read_more );
+
+		$this->assertStringEndsWith( 'word […]', $summary );
+	}
+
+	/**
+	 * The summary length is ours, not core's excerpt length.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 */
+	public function test_generate_post_summary_uses_its_own_length() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => \str_repeat( 'word ', 150 ),
+				'post_excerpt' => '',
+			)
+		);
+
+		$this->assertSame( \trim( \str_repeat( 'word ', 150 ) ), \Activitypub\generate_post_summary( $post_id, 1000 ) );
+	}
+
+	/**
+	 * An excerpt that only holds whitespace counts as empty, so the length still applies.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 */
+	public function test_generate_post_summary_treats_blank_excerpt_as_empty() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => \str_repeat( 'word ', 200 ),
+				'post_excerpt' => '  ',
+			)
+		);
+
+		$this->assertStringEndsWith( 'word […]', \Activitypub\generate_post_summary( $post_id ) );
+	}
+
+	/**
+	 * Blocks that are not text, like a search form, stay out of the summary.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 */
+	public function test_generate_post_summary_skips_non_text_blocks() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:paragraph --><p>Hello</p><!-- /wp:paragraph --><!-- wp:search {"label":"Search","buttonText":"Search"} /-->',
+				'post_excerpt' => '',
+			)
+		);
+
+		$this->assertSame( 'Hello', \Activitypub\generate_post_summary( $post_id ) );
+	}
+
+	/**
+	 * Text inside a Cover or Details block is part of the summary.
+	 *
+	 * @dataProvider container_block_data
+	 * @covers \Activitypub\generate_post_summary
+	 *
+	 * @param string $content  The post content.
+	 * @param string $expected The expected summary.
+	 */
+	public function test_generate_post_summary_reads_container_blocks( $content, $expected ) {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => $content,
+				'post_excerpt' => '',
+			)
+		);
+
+		$this->assertSame( $expected, \Activitypub\generate_post_summary( $post_id ) );
+		$this->assertNotContains( 'core/cover', \apply_filters( 'excerpt_allowed_wrapper_blocks', array() ), 'Excerpts on the website stay as they are.' );
+		$this->assertNotContains( 'core/details', \apply_filters( 'excerpt_allowed_blocks', array() ), 'Excerpts on the website stay as they are.' );
+	}
+
+	/**
+	 * Posts whose text is only inside a container block.
+	 *
+	 * @return array[]
+	 */
+	public function container_block_data() {
+		return array(
+			'cover'   => array( '<!-- wp:cover --><div class="wp-block-cover"><div class="wp-block-cover__inner-container"><!-- wp:paragraph --><p>Hello</p><!-- /wp:paragraph --></div></div><!-- /wp:cover -->', 'Hello' ),
+			'details' => array( "<!-- wp:details -->\n<details class=\"wp-block-details\"><summary>Title</summary><!-- wp:paragraph -->\n<p>Hello</p>\n<!-- /wp:paragraph --></details>\n<!-- /wp:details -->", 'Title Hello' ),
+		);
+	}
+
+	/**
 	 * Data provider for test_generate_post_summary.
 	 *
 	 * @return array[]
@@ -714,7 +937,7 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 				array(
 					'post_content' => 'Hello World <!--more--> More',
 				),
-				'Hello World […]',
+				'Hello World',
 			),
 			array(
 				'Excerpt with shortcode',
@@ -751,7 +974,7 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 				array(
 					'post_content' => 'Hello World Hello <!--more--> World Hello World Hello World Hello World',
 				),
-				'Hello World Hello […]',
+				'Hello […]',
 				1,
 			),
 			array(

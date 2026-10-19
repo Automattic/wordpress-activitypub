@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Support handles with non-Latin characters and domains with special characters, like @renée@café.example, in mentions, search and profile lookups.

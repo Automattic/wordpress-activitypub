@@ -40,43 +40,31 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 			foreach ( array( $url, array( $url ) ) as $value ) {
 				$this->assertSame( $expected, Remote_Posts::extract_attachments( array( $field => $value ) ) );
 			}
-			$this->assertSame( array(), Remote_Posts::extract_attachments( array( $field => 'http://127.0.0.1/photo.jpg' ) ) );
+			$this->assertSame( array(), Remote_Posts::extract_attachments( array( $field => '/photo.jpg' ) ) );
 		}
 	}
 
 	/**
-	 * Extraction bounds validation attempts, including lists with no usable images.
+	 * Extraction respects the result limit and the requested type.
 	 *
 	 * @dataProvider bounded_attachment_provider
 	 * @covers ::extract_attachments
 	 *
-	 * @param int    $limit       Requested result limit.
-	 * @param string $type        Requested attachment type.
-	 * @param string $item_type   Type of each supplied attachment.
-	 * @param int    $port        Attachment URL port.
-	 * @param int    $expected    Expected attachment count.
-	 * @param int    $validations Expected URL validation count.
+	 * @param int    $limit     Requested result limit.
+	 * @param string $type      Requested attachment type.
+	 * @param string $item_type Type of each supplied attachment.
+	 * @param int    $expected  Expected attachment count.
 	 */
-	public function test_extract_attachments_bounds_validation( $limit, $type, $item_type, $port, $expected, $validations ) {
+	public function test_extract_attachments_bounds_results( $limit, $type, $item_type, $expected ) {
 		$items = array();
 		for ( $i = 1; $i <= 50; ++$i ) {
 			$items[] = array(
 				'type' => $item_type,
-				'url'  => 'https://8.8.4.' . $i . ':' . $port . '/bounded.jpg',
+				'url'  => 'https://example.com/' . $i . '.jpg',
 			);
 		}
-		$count = 0;
-		$track = static function ( $ports ) use ( &$count ) {
-			++$count;
-			return $ports;
-		};
 		foreach ( array( 'attachment', 'image' ) as $field ) {
-			\add_filter( 'http_allowed_safe_ports', $track );
-			$count  = 0;
-			$result = Remote_Posts::extract_attachments( array( $field => $items ), $limit, $type );
-			\remove_filter( 'http_allowed_safe_ports', $track );
-			$this->assertCount( $expected, $result );
-			$this->assertSame( $validations, $count );
+			$this->assertCount( $expected, Remote_Posts::extract_attachments( array( $field => $items ), $limit, $type ) );
 		}
 	}
 
@@ -87,15 +75,48 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	 */
 	public function bounded_attachment_provider() {
 		return array(
-			'first image'       => array( 1, 'image', 'Image', 443, 1, 1 ),
-			'three images'      => array( 3, 'image', 'Image', 443, 3, 3 ),
-			'no images'         => array( 0, 'image', 'Image', 443, 0, 0 ),
-			'negative limit'    => array( -1, 'image', 'Image', 443, 0, 0 ),
-			'invalid images'    => array( 3, 'image', 'Image', 22, 0, 20 ),
-			'other media'       => array( 3, 'image', 'Video', 443, 0, 0 ),
-			'default media'     => array( 20, '', 'Video', 443, 20, 20 ),
-			'larger site limit' => array( 25, 'image', 'Image', 443, 25, 25 ),
+			'first image'       => array( 1, 'image', 'Image', 1 ),
+			'three images'      => array( 3, 'image', 'Image', 3 ),
+			'no images'         => array( 0, 'image', 'Image', 0 ),
+			'negative limit'    => array( -1, 'image', 'Image', 0 ),
+			'other media'       => array( 3, 'image', 'Video', 0 ),
+			'default media'     => array( 20, '', 'Video', 20 ),
+			'larger site limit' => array( 25, 'image', 'Image', 25 ),
 		);
+	}
+
+	/**
+	 * Only the first 20 candidates are inspected, even when none of them is usable.
+	 *
+	 * @covers ::extract_attachments
+	 */
+	public function test_extract_attachments_bounds_candidates() {
+		$items   = \array_fill(
+			0,
+			20,
+			array(
+				'type' => 'Image',
+				'url'  => '/relative.jpg',
+			)
+		);
+		$items[] = array(
+			'type' => 'Image',
+			'url'  => 'https://example.com/photo.jpg',
+		);
+
+		$this->assertSame( array(), Remote_Posts::extract_attachments( array( 'attachment' => $items ), 3, 'image' ) );
+		$this->assertCount( 1, Remote_Posts::extract_attachments( array( 'attachment' => \array_slice( $items, 1 ) ), 3, 'image' ) );
+	}
+
+	/**
+	 * Host checks are left to the media cache, which runs them before downloading.
+	 *
+	 * @covers ::extract_attachments
+	 */
+	public function test_extract_attachments_keeps_hosts_for_the_cache() {
+		foreach ( array( 'http://127.0.0.1/photo.jpg', 'https://example.com:8443/photo.jpg' ) as $url ) {
+			$this->assertCount( 1, Remote_Posts::extract_attachments( array( 'attachment' => array( 'url' => $url ) ) ) );
+		}
 	}
 
 	/**
@@ -122,13 +143,6 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 			'https://',
 			'https:photo.jpg',
 			'javascript:alert(1)',
-			'http://127.0.0.1/photo.jpg',
-			'http://10.0.0.1/photo.jpg',
-			'http://172.16.0.1/photo.jpg',
-			'http://192.168.1.1/photo.jpg',
-			'http://[::1]/photo.jpg',
-			'https://user:pass@example.com/photo.jpg',
-			'https://example.com:22/photo.jpg',
 		) as $url ) {
 			$invalid = array(
 				'type' => 'Image',
@@ -187,12 +201,14 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 			array( array( 'type' => 'Audio' ), 'audio' ),
 			array( array( 'type' => 'Video' ), 'video' ),
 			array( array( 'type' => 'Image' ), 'image' ),
-			array( array( 'type' => 'Document' ), 'document' ),
-			array( array( 'type' => 42 ), 'document' ),
-			array( array( 'type' => null ), 'document' ),
-			array( array( 'type' => true ), 'document' ),
-			array( array( 'type' => array( 'Image' ) ), 'document' ),
+			array( array( 'type' => 'Document' ), 'image' ),
+			array( array( 'type' => 'Link' ), 'image' ),
+			array( array( 'type' => 42 ), 'image' ),
+			array( array( 'type' => null ), 'image' ),
+			array( array( 'type' => true ), 'image' ),
+			array( array( 'type' => array( 'Image' ) ), 'image' ),
 			array( array(), 'image' ),
+			array( array( 'mediaType' => 'application/pdf' ), 'document' ),
 			array( array( 'mediaType' => 'IMAGE/JPEG' ), 'image' ),
 			array( array( 'mediaType' => 'AUDIO/MPEG' ), 'audio' ),
 			array( array( 'mediaType' => 'VIDEO/MP4' ), 'video' ),

@@ -439,9 +439,9 @@ class Remote_Posts {
 			$mime_type = \is_string( $attachment['mediaType'] ?? null ) ? \strtolower( $attachment['mediaType'] ) : '';
 
 			if ( '' === $mime_type ) {
-				$type = \array_key_exists( 'type', $attachment ) ? $attachment['type'] : 'Image';
-				$type = \is_string( $type ) ? \strtolower( $type ) : 'document';
-				$type = \in_array( $type, array( 'image', 'audio', 'video' ), true ) ? $type : 'document';
+				// Without a media type, only the object type can mark audio or video.
+				$type = \is_string( $attachment['type'] ?? null ) ? \strtolower( $attachment['type'] ) : 'image';
+				$type = \in_array( $type, array( 'audio', 'video' ), true ) ? $type : 'image';
 			} elseif ( \str_starts_with( $mime_type, 'video/' ) ) {
 				$type = 'video';
 			} elseif ( \str_starts_with( $mime_type, 'audio/' ) ) {
@@ -456,8 +456,9 @@ class Remote_Posts {
 				continue;
 			}
 
+			// Only absolute HTTP(S) URLs; the media cache checks the host before downloading.
 			if (
-				! \wp_http_validate_url( $url ) ||
+				! \wp_parse_url( $url, PHP_URL_HOST ) ||
 				! \in_array( \strtolower( \wp_parse_url( $url, PHP_URL_SCHEME ) ?? '' ), array( 'http', 'https' ), true ) ||
 				! \esc_url_raw( $url, array( 'http', 'https' ) )
 			) {

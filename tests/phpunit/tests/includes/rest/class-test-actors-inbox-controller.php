@@ -153,6 +153,20 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 			'instrument' => 'https://remote.example/users/curator/featured',
 		);
 
+		// The featured collection belongs to the curator, so the request can be approved.
+		$collection = static function ( $pre, $id ) use ( $json, $actor_uri ) {
+			if ( $json['instrument'] !== $id ) {
+				return $pre;
+			}
+
+			return array(
+				'id'           => $id,
+				'type'         => 'FeaturedCollection',
+				'attributedTo' => $actor_uri,
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $collection, 10, 2 );
+
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/' . self::$user_id . '/inbox' );
 		$request->set_header( 'Content-Type', 'application/activity+json' );
 		$request->set_header( 'Signature', \sprintf( 'keyId="%s#main-key",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="abc"', $actor_uri ) );
@@ -188,6 +202,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$this->assertContains( $actor_uri, (array) $payload['to'], 'The Accept must be addressed to the requesting curator.' );
 
 		\delete_option( 'activitypub_default_feature_policy' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $collection, 10 );
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
 		\remove_action( 'activitypub_inbox_feature_request', array( Feature_Request::class, 'handle_feature_request' ) );
 		\remove_action( 'activitypub_rest_inbox_disallowed', array( Feature_Request::class, 'handle_blocked_request' ) );

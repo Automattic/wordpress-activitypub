@@ -510,6 +510,81 @@ class Test_Delete extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A Delete removes no comment whose object still resolves.
+	 *
+	 * Signature verification is deferred for Deletes, so the body is untrusted. An `id` that is not
+	 * a string must not be used as a lookup value, and an inline Tombstone is no proof.
+	 *
+	 * @dataProvider unproven_comment_delete_provider
+	 * @covers ::handle_delete
+	 * @covers ::maybe_delete_interaction
+	 *
+	 * @param array|string $delete_object The Delete object.
+	 */
+	public function test_unproven_delete_keeps_comments( $delete_object ) {
+		$post_id  = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$comments = array();
+
+		$this->stub_remote_requests();
+
+		foreach ( array( 'https://example.com/notes/1', 'https://example.com/notes/2' ) as $uri ) {
+			$this->responses[ $uri ] = array(
+				'id'   => $uri,
+				'type' => 'Note',
+			);
+
+			$comments[] = self::factory()->comment->create(
+				array(
+					'comment_post_ID' => $post_id,
+					'comment_meta'    => array(
+						'protocol'  => 'activitypub',
+						'source_id' => $uri,
+					),
+				)
+			);
+		}
+
+		$comments[] = self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) );
+
+		Delete::handle_delete(
+			array(
+				'id'     => 'https://example.org/activities/1',
+				'type'   => 'Delete',
+				'actor'  => 'https://example.org/users/mallory',
+				'object' => $delete_object,
+			),
+			array( self::$user_id )
+		);
+
+		$this->unstub_remote_requests();
+
+		foreach ( $comments as $comment_id ) {
+			$this->assertInstanceOf( 'WP_Comment', \get_comment( $comment_id ) );
+		}
+	}
+
+	/**
+	 * Delete objects that do not prove a deletion.
+	 *
+	 * @return array Test cases.
+	 */
+	public function unproven_comment_delete_provider() {
+		return array(
+			'id is an inline tombstone' => array(
+				array(
+					'type' => 'Note',
+					'id'   => array(
+						'type'   => 'Tombstone',
+						'target' => 'https://example.com/notes/1',
+						'origin' => 'https://example.com/notes/2',
+					),
+				),
+			),
+			'object still resolves'     => array( 'https://example.com/notes/1' ),
+		);
+	}
+
+	/**
 	 * Get remote metadata by actor.
 	 *
 	 * @param string $value Value.

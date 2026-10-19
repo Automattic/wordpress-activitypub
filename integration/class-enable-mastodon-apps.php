@@ -358,13 +358,17 @@ class Enable_Mastodon_Apps {
 
 		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
 		$query_args = array(
-			'post_type'      => $post_types,
-			'posts_per_page' => 1,
+			'post_type'        => $post_types,
+			'posts_per_page'   => 1,
+			'post_status'      => 'publish',
+			'suppress_filters' => true,
 		);
 		if ( $user_id > 0 ) {
 			$query_args['author'] = $user_id;
 		}
-		$posts                   = \get_posts( $query_args );
+		$query                   = new \WP_Query( $query_args );
+		$posts                   = $query->posts;
+		$account->statuses_count = (int) $query->found_posts;
 		$account->last_status_at = ! empty( $posts ) ? new \DateTime( $posts[0]->post_date_gmt ) : $account->created_at;
 
 		$account->fields = self::get_extra_fields( $user_id_to_use );

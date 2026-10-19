@@ -265,7 +265,7 @@ class Application {
 		$application_id = self::get_id();
 
 		return array(
-			'subject' => sprintf( 'acct:%s', self::get_webfinger() ),
+			'subject' => Webfinger::get_acct( self::get_webfinger() ),
 			'aliases' => array( $application_id ),
 			'links'   => array(
 				array(

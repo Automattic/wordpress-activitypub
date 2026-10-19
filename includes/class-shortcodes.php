@@ -151,21 +151,19 @@ class Shortcodes {
 	 *
 	 * @return string The post content.
 	 */
-	public static function content( $attributes, $content, $tag ) {
+	public static function content( $attributes, $content, $tag ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 		$item = self::get_item();
 
 		if ( ! $item ) {
 			return '';
 		}
 
+		if ( isset( $attributes['apply_filters'] ) && 'no' === $attributes['apply_filters'] ) {
+			\_doing_it_wrong( __METHOD__, \esc_html__( 'The apply_filters attribute was removed. To keep a filter out of federated content, remove it in the activitypub_before_get_content action instead.', 'activitypub' ), 'unreleased' );
+		}
+
 		// Prevent inception.
 		\remove_shortcode( 'ap_content' );
-
-		$attributes = \shortcode_atts(
-			array( 'apply_filters' => 'yes' ),
-			$attributes,
-			$tag
-		);
 
 		$content = '';
 
@@ -181,16 +179,8 @@ class Shortcodes {
 			$content = \get_post_field( 'post_content', $item );
 		}
 
-		if ( 'yes' === $attributes['apply_filters'] ) {
-			/** This filter is documented in wp-includes/post-template.php */
-			$content = \apply_filters( 'the_content', $content );
-		} else {
-			if ( site_supports_blocks() ) {
-				$content = \do_blocks( $content );
-			}
-			$content = \wptexturize( $content );
-			$content = \wp_filter_content_tags( $content );
-		}
+		/** This filter is documented in wp-includes/post-template.php */
+		$content = \apply_filters( 'the_content', $content );
 
 		$content = \strip_shortcodes( $content );
 		$content = Sanitize::clean_html( $content );
