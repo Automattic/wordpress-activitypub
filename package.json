@@ -78,7 +78,7 @@
 		"@wordpress/route": "^0.23.0",
 		"@wordpress/scripts": "^36.1.0",
 		"@wordpress/url": "^4.57.0",
-		"@wordpress/viewport": "^6.56.0",
+		"@wordpress/viewport": "^6.57.0",
 		"@wordpress/views": "^1.23.0",
 		"babel-jest": "^30.5.2",
 		"classnames": "^2.5.1",
