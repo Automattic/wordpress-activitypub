@@ -27,6 +27,7 @@ $attributes = wp_parse_args(
 		'align'        => null,
 		'displayStyle' => $default_display_style,
 		'showActions'  => false,
+		'showLabels'   => true,
 	)
 );
 
@@ -54,6 +55,68 @@ $_post_id = $attributes['postId'] ?? get_the_ID();
 
 // Don't leak reaction metadata for posts that are not currently publicly queryable.
 if ( ! is_post_publicly_queryable( $_post_id ) ) {
+	return;
+}
+
+// The counts style is a line of plain links, for example in place of the comments link in a query loop.
+if ( str_contains( $attributes['className'] ?? '', 'is-style-counts' ) ) {
+	$links = array();
+
+	foreach ( Blocks::get_reaction_types() as $_type => $type_object ) {
+		if ( 'comment' === $_type ) {
+			// Like the comments link, the comment count shows as long as comments are open.
+			$count = (int) get_comments_number( $_post_id );
+			if ( ! $count && ! comments_open( $_post_id ) ) {
+				continue;
+			}
+
+			$links[] = array(
+				'url'   => get_comments_link( $_post_id ),
+				'icon'  => $type_object['icon'],
+				'count' => $count,
+				'label' => get_comments_number_text( false, false, false, $_post_id ),
+			);
+			continue;
+		}
+
+		$count = (int) get_comments(
+			array(
+				'post_id' => $_post_id,
+				'type'    => $_type,
+				'status'  => 'approve',
+				'parent'  => 0,
+				'count'   => true,
+			)
+		);
+
+		if ( ! $count ) {
+			continue;
+		}
+
+		// There is no page that lists reactions, so they link to the post with the full reactions block.
+		$links[] = array(
+			'url'   => get_permalink( $_post_id ),
+			'icon'  => $type_object['icon'],
+			'count' => $count,
+			// phpcs:ignore WordPress.WP.I18n
+			'label' => sprintf( _n( $type_object['count_single'], $type_object['count_plural'], $count, 'activitypub' ), $count ),
+		);
+	}
+
+	if ( empty( $links ) ) {
+		echo '<!-- Reactions block: No reactions found. -->';
+		return;
+	}
+	?>
+<div <?php echo get_block_wrapper_attributes( array( 'class' => $attributes['className'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput ?>>
+	<?php foreach ( $links as $_link ) : ?>
+	<a class="reaction-count" href="<?php echo esc_url( $_link['url'] ); ?>" aria-label="<?php echo esc_attr( $_link['label'] ); ?>" title="<?php echo esc_attr( $_link['label'] ); ?>">
+		<?php echo $_link['icon']; // phpcs:ignore WordPress.Security.EscapeOutput ?>
+		<span class="reaction-count__text"><?php echo esc_html( $attributes['showLabels'] || ! $_link['icon'] ? $_link['label'] : number_format_i18n( $_link['count'] ) ); ?></span>
+	</a>
+	<?php endforeach; ?>
+</div>
+	<?php
 	return;
 }
 

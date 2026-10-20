@@ -767,6 +767,53 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test the reactions block with counts style shows plain links with counts.
+	 */
+	public function test_render_reactions_block_counts_style() {
+		$post_id = $this->get_post_id_with_reactions();
+		self::factory()->comment->create_post_comments( $post_id, 2 );
+
+		// Numbers instead of labels.
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . ',"className":"is-style-counts","showLabels":false} /-->';
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'href="' . \esc_url( \get_comments_link( $post_id ) ) . '" aria-label="2 Comments"', $output );
+		$this->assertStringContainsString( 'href="' . \esc_url( \get_permalink( $post_id ) ) . '" aria-label="1 like"', $output );
+		$this->assertStringContainsString( '<span class="reaction-count__text">2</span>', $output );
+		$this->assertSame( 2, \substr_count( $output, '<svg ' ) );
+		$this->assertStringNotContainsString( 'repost', $output );
+		$this->assertStringNotContainsString( 'data-wp-interactive', $output );
+		$this->assertStringNotContainsString( 'wp-block-heading', $output );
+
+		// Labels by default.
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . ',"className":"is-style-counts"} /-->';
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( '<span class="reaction-count__text">2 Comments</span>', $output );
+		$this->assertStringContainsString( '<span class="reaction-count__text">1 like</span>', $output );
+	}
+
+	/**
+	 * Test the reactions block with counts style shows the comment count only while comments are open.
+	 */
+	public function test_render_reactions_block_counts_style_without_reactions() {
+		$post_id      = self::factory()->post->create( array( 'comment_status' => 'open' ) );
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . ',"className":"is-style-counts"} /-->';
+
+		$output = do_blocks( $block_markup );
+		$this->assertStringContainsString( 'aria-label="No Comments"', $output );
+		$this->assertSame( 1, \substr_count( $output, 'class="reaction-count"' ) );
+
+		\wp_update_post(
+			array(
+				'ID'             => $post_id,
+				'comment_status' => 'closed',
+			)
+		);
+		$this->assertStringContainsString( '<!-- Reactions block: No reactions found. -->', do_blocks( $block_markup ) );
+	}
+
+	/**
 	 * Get a post ID with reactions.
 	 *
 	 * @return int Post ID.

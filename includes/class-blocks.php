@@ -112,6 +112,7 @@ class Blocks {
 			'objectType'            => \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ),
 			'noteLength'            => ACTIVITYPUB_NOTE_LENGTH,
 			'statsImageUrlEndpoint' => Stats_Image::is_available() ? \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image-url/{user_id}/{year}' ) : '',
+			'reactionTypes'         => self::get_reaction_types(),
 		);
 		\wp_localize_script( 'wp-editor', '_activityPubOptions', $data );
 
@@ -194,7 +195,13 @@ class Blocks {
 		// Register reactions block, conditionally removing facepile style if avatars are disabled.
 		$reactions_args = array();
 		if ( ! \get_option( 'show_avatars', true ) ) {
-			$reactions_args['styles'] = array();
+			// Compact is the default then, so only Counts is left to pick.
+			$reactions_args['styles'] = array(
+				array(
+					'name'  => 'counts',
+					'label' => \__( 'Counts', 'activitypub' ),
+				),
+			);
 		}
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/reactions', $reactions_args );
 
@@ -889,6 +896,39 @@ class Blocks {
 		$inner = $embed ? $embed : $link;
 
 		return \sprintf( '<div %1$s>%2$s</div>', $wrapper_attrs, $inner );
+	}
+
+	/**
+	 * Get the comment and reaction types the reactions block counts.
+	 *
+	 * Comments come first, with the labels core uses. The reaction types bring their icons and
+	 * labels from the comment type registry.
+	 *
+	 * @since unreleased
+	 *
+	 * @return array[] Types keyed by comment type, each with `icon`, `count_single` and `count_plural`.
+	 */
+	public static function get_reaction_types() {
+		$types = array(
+			'comment' => array(
+				// Core's comment icon when it has one (WordPress 7.1+), else the bundled SVG.
+				'icon'         => \function_exists( 'wp_get_icon' ) && \wp_get_icon( 'core/comment' ) ? \wp_get_icon( 'core/comment' ) : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path d="M18 4H6c-1.1 0-2 .9-2 2v12.9c0 .6.5 1.1 1.1 1.1.3 0 .5-.1.8-.3L8.5 17H18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm.5 11c0 .3-.2.5-.5.5H7.9l-2.4 2.4V6c0-.3.2-.5.5-.5h12c.3 0 .5.2.5.5v9z"/></svg>',
+				/* translators: %s: Number of comments. */
+				'count_single' => \_n( '%s Comment', '%s Comments', 1, 'default' ),
+				/* translators: %s: Number of comments. */
+				'count_plural' => \_n( '%s Comment', '%s Comments', 2, 'default' ),
+			),
+		);
+
+		foreach ( Comment::get_comment_types() as $slug => $type ) {
+			$types[ $slug ] = array(
+				'icon'         => $type['icon'] ?? '',
+				'count_single' => $type['count_single'] ?? '',
+				'count_plural' => $type['count_plural'] ?? '',
+			);
+		}
+
+		return $types;
 	}
 
 	/**

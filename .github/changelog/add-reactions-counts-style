@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Add a Counts style to the Fediverse Reactions block that shows comments and reactions as a line of simple links, for example in a query loop.
