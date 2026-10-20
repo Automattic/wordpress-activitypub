@@ -1,0 +1,36 @@
+/**
+ * Feed Header
+ *
+ * Sits at the top of the stage in boot's full-page mode and carries what our
+ * own sidebar used to: the feed description.
+ * Navigation itself is boot's sidebar now.
+ */
+
+/**
+ * External dependencies
+ */
+import type { ReactNode } from 'react';
+
+/**
+ * WordPress dependencies
+ */
+import { __experimentalHStack as HStack, Slot } from '@wordpress/components';
+
+/**
+ * Internal dependencies
+ */
+import AccountMenu from '../account-menu';
+import FeedDescription from './feed-description';
+import './style.scss';
+
+export default function FeedHeader(): ReactNode {
+	return (
+		<HStack className="feed-header" justify="space-between" alignment="center">
+			<Slot name="SidebarToggle" />
+			<p className="feed-header__description">
+				<FeedDescription />
+			</p>
+			<AccountMenu />
+		</HStack>
+	);
+}

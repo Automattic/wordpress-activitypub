@@ -4,10 +4,8 @@
 
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { metadataField } from '../index';
-import { SettingsProvider } from '../../../../contexts/settings-context';
-import type { AppSettings, FeedPost } from '../../../../types';
+import type { FeedPost } from '../../../../types';
 
 // Mock WordPress dependencies
 jest.mock( '@wordpress/i18n', () => ( {
@@ -17,10 +15,6 @@ jest.mock( '@wordpress/i18n', () => ( {
 jest.mock( '@wordpress/html-entities', () => ( {
 	decodeEntities: ( text: string ) => text,
 } ) );
-
-const mockSettings: AppSettings = {
-	namespace: 'activitypub/v1',
-};
 
 const createMockFeedPost = ( overrides?: Partial< FeedPost > ): FeedPost => ( {
 	id: 1,
@@ -78,16 +72,12 @@ describe( 'metadataField', () => {
 
 	describe( 'render', () => {
 		const renderMetadataField = ( post: FeedPost ) => {
-			const Wrapper = ( { children }: { children: ReactNode } ) => (
-				<SettingsProvider settings={ mockSettings }>{ children }</SettingsProvider>
-			);
-
 			const RenderComponent = metadataField.render;
 			if ( ! RenderComponent ) {
 				throw new Error( 'render function not defined' );
 			}
 
-			return render( <RenderComponent item={ post } field={ metadataField as never } />, { wrapper: Wrapper } );
+			return render( <RenderComponent item={ post } field={ metadataField as never } /> );
 		};
 
 		it( 'should render avatar with actor icon when available', () => {

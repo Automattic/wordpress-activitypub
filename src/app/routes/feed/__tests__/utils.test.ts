@@ -1,4 +1,48 @@
-import { DEFAULT_VIEW, getFeedViewUpdate, normalizeFieldOrder, viewToQuery } from '../utils';
+import { DEFAULT_VIEW, getFeedView, getFeedViewUpdate, normalizeFieldOrder, viewToQuery } from '../utils';
+
+describe( 'getFeedView', () => {
+	it( 'keeps the main feed configurable', () => {
+		expect( getFeedView( DEFAULT_VIEW, {}, 0 ) ).toBe( DEFAULT_VIEW );
+	} );
+	it.each( [
+		[ 'type', 'ap_object_type', 'is', 7 ],
+		[ 'tag', 'ap_tag', 'isAny', [ 7 ] ],
+	] )( 'uses an editable filter for %s shortcuts', ( taxonomy, field, operator, value ) => {
+		expect( getFeedView( DEFAULT_VIEW, { taxonomy: taxonomy as string, termId: '7' }, 0 ) ).toEqual( {
+			...DEFAULT_VIEW,
+			filters: [ { field, operator, value } ],
+		} );
+	} );
+	it( 'replaces a saved tag filter but preserves other filters', () => {
+		const view = {
+			...DEFAULT_VIEW,
+			filters: [
+				{ field: 'ap_tag', operator: 'isAny' as const, value: [ 3 ] },
+				{ field: 'ap_object_type', operator: 'is' as const, value: 8 },
+			],
+		};
+		expect( getFeedView( view, { taxonomy: 'tag', termId: '7' }, 0 ).filters ).toEqual( [
+			view.filters[ 1 ],
+			{ field: 'ap_tag', operator: 'isAny', value: [ 7 ] },
+		] );
+		expect( view.filters[ 0 ].value ).toEqual( [ 3 ] );
+	} );
+
+	it( 'resets a different account to defaults while preserving field visibility', () => {
+		const view = {
+			...DEFAULT_VIEW,
+			fields: [ 'title.rendered' ],
+			filters: [ { field: 'ap_tag', operator: 'isAny' as const, value: [ 7 ] } ],
+			perPage: 50,
+			page: 3,
+			startPosition: 101,
+			search: 'previous account',
+		};
+		expect( getFeedView( view, { actorId: '7' }, 0 ) ).toEqual( { ...DEFAULT_VIEW, fields: view.fields } );
+		expect( getFeedView( view, { actorId: '7' }, 7 ) ).toBe( view );
+		expect( view.filters ).toHaveLength( 1 );
+	} );
+} );
 
 const FIELDS = [ { id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' } ];
 
