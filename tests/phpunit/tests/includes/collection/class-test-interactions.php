@@ -174,6 +174,29 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Image attachments are ignored while comment images are disabled.
+	 *
+	 * @group activitypub
+	 * @covers ::add_comment
+	 */
+	public function test_comment_images_disabled_by_default() {
+		\delete_option( 'activitypub_allow_comment_images' );
+
+		$activity                         = $this->create_test_object( 'https://example.com/images-disabled' );
+		$activity['object']['attachment'] = array(
+			array(
+				'type' => 'Image',
+				'url'  => 'https://example.com/photo.jpg',
+			),
+		);
+
+		$comment = \get_comment( Interactions::add_comment( $activity ) );
+
+		$this->assertStringNotContainsString( 'activitypub/image', $comment->comment_content );
+		$this->assertStringNotContainsString( 'photo.jpg', $comment->comment_content );
+	}
+
+	/**
 	 * Image-only comments reuse the post's lazy image cache and retain alt text.
 	 *
 	 * @group activitypub
@@ -503,6 +526,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		\add_filter( 'pre_get_remote_metadata_by_actor', array( __CLASS__, 'get_remote_metadata_by_actor' ), 0, 2 );
 		\add_filter( 'activitypub_pre_import_emoji', array( $this, 'mock_emoji_import' ), 10, 2 );
+		\update_option( 'activitypub_allow_comment_images', '1' );
 	}
 
 	/**
@@ -510,6 +534,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		\remove_filter( 'activitypub_pre_import_emoji', array( $this, 'mock_emoji_import' ) );
+		\delete_option( 'activitypub_allow_comment_images' );
 
 		parent::tear_down();
 	}

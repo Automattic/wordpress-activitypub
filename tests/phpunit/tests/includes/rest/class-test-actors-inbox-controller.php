@@ -336,6 +336,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$this->assertEquals( 202, $response->get_status() );
 
 		// Image-only replies must pass the same REST validation as text replies.
+		\update_option( 'activitypub_allow_comment_images', '1' );
 		unset( $json['object']['content'] );
 		$json['id']                  .= '/image';
 		$json['object']['id']        .= '/image';
@@ -362,6 +363,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 			$request->set_body( \wp_json_encode( $json ) );
 			$this->assertSame( 400, \rest_do_request( $request )->get_status() );
 		}
+		\delete_option( 'activitypub_allow_comment_images' );
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
 	}

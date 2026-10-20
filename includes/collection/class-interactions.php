@@ -546,6 +546,11 @@ class Interactions {
 	 * @return array Image attachments.
 	 */
 	private static function get_image_attachments( $activity_object ) {
+		// WordPress does not show images in comments, so this is opt-in.
+		if ( ! \get_option( 'activitypub_allow_comment_images' ) ) {
+			return array();
+		}
+
 		/**
 		 * Filters the maximum number of image attachments displayed in a Fediverse comment.
 		 *

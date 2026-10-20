@@ -154,6 +154,11 @@ class Create {
 			return false;
 		}
 		if ( ! isset( $activity['object']['content'] ) ) {
+			// Image-only replies have something to show only when comment images are enabled.
+			if ( ! \get_option( 'activitypub_allow_comment_images' ) ) {
+				return false;
+			}
+
 			foreach ( Remote_Posts::extract_attachments( $activity['object'], 20, 'image' ) as $attachment ) {
 				// Comments show images to every visitor, so the host must be public.
 				if ( \wp_http_validate_url( $attachment['url'] ) ) {

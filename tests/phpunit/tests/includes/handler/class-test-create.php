@@ -99,6 +99,32 @@ class Test_Create extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Image-only replies are rejected while comment images are disabled.
+	 *
+	 * @covers ::validate_object
+	 */
+	public function test_image_only_object_rejected_without_comment_images() {
+		\delete_option( 'activitypub_allow_comment_images' );
+
+		$object  = array(
+			'id'    => 'https://example.com/note',
+			'image' => 'https://example.com/photo.jpg',
+		);
+		$request = new \WP_REST_Request( 'POST' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'   => 'Create',
+					'object' => $object,
+				)
+			)
+		);
+
+		$this->assertFalse( Create::validate_object( true, $object, $request ) );
+	}
+
+	/**
 	 * Text, supported images, and unsupported or malformed media.
 	 *
 	 * @return array The object fields and validation result.
@@ -262,6 +288,7 @@ class Test_Create extends \WP_UnitTestCase {
 		$this->post_permalink = \get_permalink( $this->post_id );
 
 		\add_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'get_remote_metadata_by_actor' ), 0, 2 );
+		\update_option( 'activitypub_allow_comment_images', '1' );
 	}
 
 	/**
@@ -269,6 +296,7 @@ class Test_Create extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		\remove_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'get_remote_metadata_by_actor' ) );
+		\delete_option( 'activitypub_allow_comment_images' );
 		parent::tear_down();
 	}
 
