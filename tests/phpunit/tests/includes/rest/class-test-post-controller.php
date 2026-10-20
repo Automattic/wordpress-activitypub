@@ -493,4 +493,70 @@ class Test_Post_Controller extends WP_UnitTestCase {
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertEmpty( $response->get_data() );
 	}
+
+	/**
+	 * Dislikes never show up as reactions.
+	 *
+	 * @covers ::get_reactions
+	 */
+	public function test_get_reactions_skips_dislikes() {
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+
+		foreach ( array( 'like', 'dislike' ) as $type ) {
+			\wp_insert_comment(
+				array(
+					'comment_post_ID'    => $post_id,
+					'comment_author'     => 'Remote User',
+					'comment_author_url' => 'https://lemmy.example/u/remote',
+					'comment_type'       => $type,
+					'comment_approved'   => 1,
+				)
+			);
+		}
+
+		$request  = new WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/' . $post_id . '/reactions' );
+		$response = $this->server->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertArrayHasKey( 'likes', $data );
+		$this->assertArrayNotHasKey( 'dislikes', $data );
+	}
+
+	/**
+	 * A type that does not declare itself a public reaction is not listed.
+	 *
+	 * @covers ::get_reactions
+	 */
+	public function test_get_reactions_requires_explicit_flags() {
+		global $activitypub_comment_types;
+		$registered = $activitypub_comment_types;
+
+		\Activitypub\register_comment_type(
+			'unflagged',
+			array(
+				'type'         => 'unflagged',
+				'collection'   => 'unflagged',
+				'count_single' => '%d unflagged',
+				'count_plural' => '%d unflagged',
+			)
+		);
+
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		\wp_insert_comment(
+			array(
+				'comment_post_ID'    => $post_id,
+				'comment_author'     => 'Remote User',
+				'comment_author_url' => 'https://remote.example/u/remote',
+				'comment_type'       => 'unflagged',
+				'comment_approved'   => 1,
+			)
+		);
+
+		$request  = new WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/' . $post_id . '/reactions' );
+		$response = $this->server->dispatch( $request );
+
+		$activitypub_comment_types = $registered;
+
+		$this->assertArrayNotHasKey( 'unflagged', $response->get_data() );
+	}
 }

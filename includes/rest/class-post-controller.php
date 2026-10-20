@@ -134,6 +134,11 @@ class Post_Controller extends \WP_REST_Controller {
 		$reactions = array();
 
 		foreach ( Comment::get_comment_types() as $type_object ) {
+			// Only public reactions are listed; a dislike, for example, is never shown one by one.
+			if ( empty( $type_object['reaction'] ) || empty( $type_object['public'] ) ) {
+				continue;
+			}
+
 			$comments = \get_comments(
 				array(
 					'post_id' => $post_id,

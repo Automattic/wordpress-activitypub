@@ -852,10 +852,15 @@ class Test_Comment extends \WP_UnitTestCase {
 		// Restore the filter.
 		\add_filter( 'comment_feed_where', array( Comment::class, 'comment_feed_where' ) );
 
-		// Test filtering by comment type.
+		// Test filtering by comment type. Types that are not public are never listed, not even when asked for.
 		foreach ( $activitypub_comment_types as $comment_type ) {
 			\set_query_var( 'type', $comment_type );
 			$query->get_posts();
+
+			if ( empty( Comment::get_comment_types()[ $comment_type ]['public'] ) ) {
+				$this->assertEqualSets( $core_comment_types, \wp_list_pluck( $query->comments, 'comment_type' ) );
+				continue;
+			}
 
 			$this->assertSame( 1, $query->comment_count );
 			$this->assertSame( $comment_type, $query->comments[0]->comment_type );
@@ -1115,9 +1120,10 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		\Activitypub\Comment::comment_query( $query );
 
-		$this->assertTrue(
-			empty( $query->query_vars['type__not_in'] ),
-			'Caller is explicitly asking for AP likes; we must not add likes to type__not_in.'
+		$this->assertSame(
+			array( 'dislike' ),
+			$query->query_vars['type__not_in'],
+			'Caller is explicitly asking for AP likes; only the non-public dislikes are added to type__not_in.'
 		);
 	}
 
@@ -1141,9 +1147,10 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		\Activitypub\Comment::comment_query( $query );
 
-		$this->assertTrue(
-			empty( $query->query_vars['type__not_in'] ),
-			"Caller passed `type => 'all'`; AP slugs must not be appended to type__not_in."
+		$this->assertSame(
+			array( 'dislike' ),
+			$query->query_vars['type__not_in'],
+			"Caller passed `type => 'all'`; only the non-public dislikes are appended to type__not_in."
 		);
 
 		// Same again via `type__in`.
@@ -1152,9 +1159,10 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		\Activitypub\Comment::comment_query( $query );
 
-		$this->assertTrue(
-			empty( $query->query_vars['type__not_in'] ),
-			"Caller passed `type__in => array('all')`; AP slugs must not be appended to type__not_in."
+		$this->assertSame(
+			array( 'dislike' ),
+			$query->query_vars['type__not_in'],
+			"Caller passed `type__in => array('all')`; only the non-public dislikes are appended to type__not_in."
 		);
 	}
 
@@ -2156,5 +2164,133 @@ class Test_Comment extends \WP_UnitTestCase {
 		);
 
 		return array( $src, $img );
+	}
+
+	/**
+	 * The dislike type is registered for Dislike activities.
+	 *
+	 * @covers ::register_comment_types
+	 */
+	public function test_dislike_comment_type_is_registered() {
+		$type = Comment::get_comment_type_by_activity_type( 'Dislike' );
+
+		$this->assertSame( 'dislike', $type['type'] );
+		$this->assertFalse( $type['public'], 'Dislikes are not shown to visitors one by one.' );
+	}
+
+	/**
+	 * Every plugin type is a reaction, not a comment in the thread.
+	 *
+	 * @covers ::register_comment_types
+	 */
+	public function test_comment_types_are_reactions() {
+		foreach ( array( 'like', 'repost', 'quote', 'dislike' ) as $slug ) {
+			$this->assertTrue( Comment::get_comment_types()[ $slug ]['reaction'], $slug . ' must be a reaction.' );
+		}
+
+		foreach ( array( 'like', 'repost', 'quote' ) as $slug ) {
+			$this->assertTrue( Comment::get_comment_types()[ $slug ]['public'], $slug . ' must be public.' );
+		}
+	}
+
+	/**
+	 * Reactions never count as comments, whether the site accepts them or not.
+	 *
+	 * @covers ::pre_wp_update_comment_count_now
+	 */
+	public function test_reactions_are_not_counted_as_comments() {
+		$post_id = self::factory()->post->create();
+
+		foreach ( array( 'comment', 'like', 'dislike' ) as $type ) {
+			\wp_insert_comment(
+				array(
+					'comment_post_ID'  => $post_id,
+					'comment_type'     => $type,
+					'comment_approved' => 1,
+				)
+			);
+		}
+
+		foreach ( array( '0', '1' ) as $allowed ) {
+			\update_option( 'activitypub_allow_likes', $allowed );
+			\update_option( 'activitypub_allow_dislikes', $allowed );
+
+			$this->assertSame( 1, Comment::pre_wp_update_comment_count_now( null, 0, $post_id ), 'Only the real comment counts, reactions do not.' );
+		}
+
+		\delete_option( 'activitypub_allow_likes' );
+		\delete_option( 'activitypub_allow_dislikes' );
+	}
+
+	/**
+	 * Add an approved like and dislike to a new post.
+	 *
+	 * @return int The post ID.
+	 */
+	private function create_post_with_votes() {
+		$post_id = self::factory()->post->create();
+
+		foreach ( array( 'like', 'dislike' ) as $type ) {
+			\wp_insert_comment(
+				array(
+					'comment_post_ID'  => $post_id,
+					'comment_type'     => $type,
+					'comment_approved' => 1,
+				)
+			);
+		}
+
+		return $post_id;
+	}
+
+	/**
+	 * Comment feeds never list a type that is not public, even when asked for it.
+	 *
+	 * @covers ::comment_feed_where
+	 */
+	public function test_comment_feed_hides_non_public_types() {
+		foreach ( array( 'dislike', 'all' ) as $requested ) {
+			\set_query_var( 'type', $requested );
+			$where = Comment::comment_feed_where( '' );
+
+			$this->assertStringNotContainsString( "comment_type = 'dislike'", $where );
+			$this->assertMatchesRegularExpression( "/comment_type NOT IN \\([^)]*'dislike'/", $where, 'Requested: ' . $requested );
+		}
+
+		\set_query_var( 'type', '' );
+	}
+
+	/**
+	 * Archive pages (latest comments block, widgets) never list a type that is not public.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_comment_query_hides_non_public_types_on_archives() {
+		$post_id = $this->create_post_with_votes();
+		$this->go_to( \home_url( '/' ) );
+
+		$types = \wp_list_pluck( \get_comments( array( 'post_id' => $post_id ) ), 'comment_type' );
+
+		$this->assertContains( 'like', $types, 'Likes stay visible on archives, as before.' );
+		$this->assertNotContains( 'dislike', $types );
+	}
+
+	/**
+	 * Asking for a non-public type explicitly on the front end returns nothing.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_comment_query_hides_non_public_types_when_requested() {
+		$post_id = $this->create_post_with_votes();
+		$this->go_to( \get_permalink( $post_id ) );
+
+		$this->assertEmpty(
+			\get_comments(
+				array(
+					'post_id' => $post_id,
+					'type'    => 'dislike',
+				)
+			)
+		);
 	}
 }

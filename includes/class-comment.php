@@ -444,15 +444,30 @@ class Comment {
 	public static function comment_feed_where( $where ) {
 		global $wpdb;
 
-		$comment_type = \get_query_var( 'type' );
+		$comment_type  = \get_query_var( 'type' );
+		$comment_types = self::get_comment_type_slugs();
+
+		// Types that are not public are never listed one by one, not even when asked for.
+		$hidden_types = \array_keys(
+			\array_filter(
+				self::get_comment_types(),
+				static function ( $type ) {
+					return empty( $type['public'] );
+				}
+			)
+		);
 
 		if ( 'all' === $comment_type ) {
+			if ( $hidden_types ) {
+				$placeholders = \implode( ', ', \array_fill( 0, \count( $hidden_types ), '%s' ) );
+				// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.NotPrepared
+				$where .= $wpdb->prepare( \sprintf( ' AND comment_type NOT IN (%s)', $placeholders ), ...$hidden_types );
+			}
+
 			return $where;
 		}
 
-		$comment_types = self::get_comment_type_slugs();
-
-		if ( \in_array( $comment_type, $comment_types, true ) ) {
+		if ( \in_array( $comment_type, $comment_types, true ) && ! \in_array( $comment_type, $hidden_types, true ) ) {
 			$where .= $wpdb->prepare( ' AND comment_type = %s', $comment_type );
 		} else {
 			$placeholders = \implode( ', ', \array_fill( 0, \count( $comment_types ), '%s' ) );
@@ -719,6 +734,8 @@ class Comment {
 				'count_single'   => \_x( '%d repost', 'number of reposts', 'activitypub' ),
 				/* translators: %d: Number of reposts */
 				'count_plural'   => \_x( '%d reposts', 'number of reposts', 'activitypub' ),
+				'reaction'       => true,
+				'public'         => true,
 			)
 		);
 
@@ -738,6 +755,8 @@ class Comment {
 				'count_single'   => \_x( '%d like', 'number of likes', 'activitypub' ),
 				/* translators: %d: Number of likes */
 				'count_plural'   => \_x( '%d likes', 'number of likes', 'activitypub' ),
+				'reaction'       => true,
+				'public'         => true,
 			)
 		);
 
@@ -757,6 +776,29 @@ class Comment {
 				'count_single'   => \_x( '%d quote', 'number of quotes', 'activitypub' ),
 				/* translators: %d: Number of quotes */
 				'count_plural'   => \_x( '%d quotes', 'number of quotes', 'activitypub' ),
+				'reaction'       => true,
+				'public'         => true,
+			)
+		);
+
+		register_comment_type(
+			'dislike',
+			array(
+				'label'          => \__( 'Dislikes', 'activitypub' ),
+				'singular'       => \__( 'Dislike', 'activitypub' ),
+				'description'    => 'A dislike is a small negative vote, sent by platforms like Lemmy, PieFed or Mbin.',
+				'icon'           => '👎',
+				'class'          => 'p-dislike',
+				'type'           => 'dislike',
+				'collection'     => 'dislikes',
+				'activity_types' => array( 'dislike' ),
+				'excerpt'        => \html_entity_decode( \__( '&hellip; disliked this!', 'activitypub' ) ),
+				/* translators: %d: Number of dislikes */
+				'count_single'   => \_x( '%d dislike', 'number of dislikes', 'activitypub' ),
+				/* translators: %d: Number of dislikes */
+				'count_plural'   => \_x( '%d dislikes', 'number of dislikes', 'activitypub' ),
+				'reaction'       => true,
+				'public'         => false,
 			)
 		);
 	}
@@ -805,6 +847,21 @@ class Comment {
 		if ( \is_admin() ) {
 			$query->query_vars['post_type'] = self::get_allowed_comment_post_types();
 			return;
+		}
+
+		// Types that are not public are never listed one by one on the front end, not even when asked for.
+		$hidden_types = \array_keys(
+			\array_filter(
+				self::get_comment_types(),
+				static function ( $type ) {
+					return empty( $type['public'] );
+				}
+			)
+		);
+
+		if ( $hidden_types ) {
+			$existing                          = (array) ( $query->query_vars['type__not_in'] ?? array() );
+			$query->query_vars['type__not_in'] = \array_values( \array_unique( \array_merge( $existing, $hidden_types ) ) );
 		}
 
 		// Do not exclude likes and reposts on non-singular pages.
@@ -1007,7 +1064,15 @@ class Comment {
 	 */
 	public static function pre_wp_update_comment_count_now( $new_count, $old_count, $post_id ) {
 		if ( null === $new_count ) {
-			$excluded_types = \array_filter( self::get_comment_type_slugs(), array( self::class, 'is_comment_type_enabled' ) );
+			// Reactions are never comments in the thread, whether the site still accepts them or not.
+			$excluded_types = \array_keys(
+				\array_filter(
+					self::get_comment_types(),
+					static function ( $comment_type ) {
+						return ! empty( $comment_type['reaction'] );
+					}
+				)
+			);
 
 			if ( ! empty( $excluded_types ) ) {
 				/*
