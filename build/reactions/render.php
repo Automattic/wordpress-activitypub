@@ -6,6 +6,7 @@
  */
 
 use Activitypub\Blocks;
+use Activitypub\Collection\Interactions;
 use Activitypub\Comment;
 
 use function Activitypub\get_post_id;
@@ -79,15 +80,7 @@ if ( str_contains( $attributes['className'] ?? '', 'is-style-counts' ) ) {
 			continue;
 		}
 
-		$count = (int) get_comments(
-			array(
-				'post_id' => $_post_id,
-				'type'    => $_type,
-				'status'  => 'approve',
-				'parent'  => 0,
-				'count'   => true,
-			)
-		);
+		$count = Interactions::count_by_type( $_post_id, $_type );
 
 		if ( ! $count ) {
 			continue;
@@ -99,7 +92,7 @@ if ( str_contains( $attributes['className'] ?? '', 'is-style-counts' ) ) {
 			'icon'  => $type_object['icon'],
 			'count' => $count,
 			// phpcs:ignore WordPress.WP.I18n
-			'label' => sprintf( _n( $type_object['count_single'], $type_object['count_plural'], $count, 'activitypub' ), $count ),
+			'label' => sprintf( _n( $type_object['count_single'], $type_object['count_plural'], $count, 'activitypub' ), number_format_i18n( $count ) ),
 		);
 	}
 

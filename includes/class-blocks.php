@@ -909,10 +909,11 @@ class Blocks {
 	 * @return array[] Types keyed by comment type, each with `icon`, `count_single` and `count_plural`.
 	 */
 	public static function get_reaction_types() {
+		// Core's comment icon when it has one (WordPress 7.1+), else the bundled SVG.
+		$icon  = \function_exists( 'wp_get_icon' ) ? \wp_get_icon( 'core/comment' ) : '';
 		$types = array(
 			'comment' => array(
-				// Core's comment icon when it has one (WordPress 7.1+), else the bundled SVG.
-				'icon'         => \function_exists( 'wp_get_icon' ) && \wp_get_icon( 'core/comment' ) ? \wp_get_icon( 'core/comment' ) : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path d="M18 4H6c-1.1 0-2 .9-2 2v12.9c0 .6.5 1.1 1.1 1.1.3 0 .5-.1.8-.3L8.5 17H18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm.5 11c0 .3-.2.5-.5.5H7.9l-2.4 2.4V6c0-.3.2-.5.5-.5h12c.3 0 .5.2.5.5v9z"/></svg>',
+				'icon'         => $icon ? $icon : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path d="M18 4H6c-1.1 0-2 .9-2 2v12.9c0 .6.5 1.1 1.1 1.1.3 0 .5-.1.8-.3L8.5 17H18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm.5 11c0 .3-.2.5-.5.5H7.9l-2.4 2.4V6c0-.3.2-.5.5-.5h12c.3 0 .5.2.5.5v9z"/></svg>',
 				/* translators: %s: Number of comments. */
 				'count_single' => \_n( '%s Comment', '%s Comments', 1, 'default' ),
 				/* translators: %s: Number of comments. */
