@@ -68,6 +68,10 @@
     "html": false,
     "interactivity": true,
     "shadow": true,
+    "spacing": {
+      "margin": true,
+      "padding": true
+    },
     "typography": {
       "fontSize": true,
       "__experimentalDefaultControls": {
