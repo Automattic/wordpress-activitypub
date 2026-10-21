@@ -161,7 +161,12 @@ export default function Edit( { attributes, setAttributes } ) {
 						const label = 1 === count ? reactionType.count_single : reactionType.count_plural;
 
 						return (
-							<span key={ type } className="reaction-count">
+							<a
+								key={ type }
+								className="reaction-count"
+								href="#reaction-count-pseudo-link"
+								onClick={ ( event ) => event.preventDefault() }
+							>
 								<span
 									className="reaction-count__icon"
 									dangerouslySetInnerHTML={ { __html: reactionType.icon } }
@@ -169,7 +174,7 @@ export default function Edit( { attributes, setAttributes } ) {
 								<span className="reaction-count__text">
 									{ showLabels ? sprintf( label, count ) : count }
 								</span>
-							</span>
+							</a>
 						);
 					} )
 				) : (

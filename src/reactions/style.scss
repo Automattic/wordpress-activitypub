@@ -267,8 +267,11 @@
 		display: inline-flex;
 		gap: 0.25em;
 		align-items: center;
-		color: inherit;
 		text-decoration: none;
+
+		&:hover {
+			text-decoration: underline;
+		}
 	}
 
 	// The editor wraps the icon in a span, the SVG stays a flex item.
