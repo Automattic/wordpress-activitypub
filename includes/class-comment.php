@@ -71,7 +71,7 @@ class Comment {
 		\add_filter( 'render_block_context', $context_filter );
 
 		$allowed_blocks = array( 'activitypub/emoji' );
-		if ( $comment instanceof \WP_Comment && self::was_received( $comment ) ) {
+		if ( $comment instanceof \WP_Comment && self::was_received( $comment ) && \get_option( 'activitypub_allow_comment_images' ) ) {
 			$allowed_blocks[] = 'activitypub/image';
 		}
 

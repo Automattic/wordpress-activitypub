@@ -20,6 +20,24 @@ use function Activitypub\process_remote_images;
  */
 class Test_Comment extends \WP_UnitTestCase {
 	/**
+	 * Set up the test.
+	 */
+	public function set_up() {
+		parent::set_up();
+
+		\update_option( 'activitypub_allow_comment_images', '1' );
+	}
+
+	/**
+	 * Tear down the test.
+	 */
+	public function tear_down() {
+		\delete_option( 'activitypub_allow_comment_images' );
+
+		parent::tear_down();
+	}
+
+	/**
 	 * Descriptions survive comment creation and updates with core block-attribute KSES active.
 	 *
 	 * @covers ::render_blocks
@@ -209,6 +227,45 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		$this->assertStringNotContainsString( '<img', $rendered );
 		$this->assertSame( $comment->comment_content, Comment::render_blocks( $comment->comment_content ) );
+	}
+
+	/**
+	 * Stored images are not shown or fetched while comment images are disabled.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_stored_images_hidden_when_comment_images_disabled() {
+		\wp_set_current_user( 0 );
+		\kses_init();
+		$comment_id = \wp_new_comment(
+			\wp_slash(
+				array(
+					'comment_post_ID'      => self::factory()->post->create(),
+					'comment_author'       => 'Remote author',
+					'comment_author_email' => 'remote@example.com',
+					'comment_author_url'   => '',
+					'comment_content'      => generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' ),
+					'comment_meta'         => array( 'protocol' => 'activitypub' ),
+				)
+			),
+			true
+		);
+		$this->assertIsInt( $comment_id );
+		\delete_option( 'activitypub_allow_comment_images' );
+
+		$comment = \get_comment( $comment_id );
+		$content = $comment->comment_content;
+		$calls   = 0;
+		$filter  = static function ( $url ) use ( &$calls ) {
+			++$calls;
+			return $url;
+		};
+		\add_filter( 'activitypub_remote_media_url', $filter, 1 );
+		$rendered = Comment::render_blocks( $content, $comment );
+		\remove_filter( 'activitypub_remote_media_url', $filter, 1 );
+
+		$this->assertStringNotContainsString( '<img', $rendered );
+		$this->assertSame( 0, $calls );
 	}
 
 	/**
