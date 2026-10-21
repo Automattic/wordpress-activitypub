@@ -654,7 +654,8 @@ class Blocks {
 	 * @return string The rendered content with cached URL.
 	 */
 	public static function render_image_block( $attrs, $content, $block = null ) {
-		if ( empty( $attrs['url'] ) ) {
+		// Only blocks that carry their alt text can rebuild a missing img.
+		if ( empty( $attrs['url'] ) || ( empty( $content ) && ! isset( $attrs['alt'] ) ) ) {
 			return $content;
 		}
 

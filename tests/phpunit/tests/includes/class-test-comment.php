@@ -226,7 +226,7 @@ class Test_Comment extends \WP_UnitTestCase {
 		\remove_filter( 'activitypub_pre_download_url', $download );
 
 		$this->assertStringNotContainsString( '<img', $rendered );
-		$this->assertSame( $comment->comment_content, Comment::render_blocks( $comment->comment_content ) );
+		$this->assertStringNotContainsString( 'activitypub/image', Comment::render_blocks( $comment->comment_content ) );
 	}
 
 	/**
@@ -255,6 +255,36 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		$comment = \get_comment( $comment_id );
 		$content = $comment->comment_content;
+		$calls   = 0;
+		$filter  = static function ( $url ) use ( &$calls ) {
+			++$calls;
+			return $url;
+		};
+		\add_filter( 'activitypub_remote_media_url', $filter, 1 );
+		$rendered = Comment::render_blocks( $content, $comment );
+		\remove_filter( 'activitypub_remote_media_url', $filter, 1 );
+
+		$this->assertStringNotContainsString( '<img', $rendered );
+		$this->assertSame( 0, $calls );
+
+		// Comments saved without kses keep the inner img; it is not shown either.
+		$unfiltered = generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' );
+		$this->assertStringNotContainsString( '<img', Comment::render_blocks( $unfiltered, $comment ) );
+	}
+
+	/**
+	 * Spam comments do not show or fetch their images.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_spam_comment_images_hidden() {
+		$comment = self::factory()->comment->create_and_get(
+			array(
+				'comment_approved' => 'spam',
+				'comment_meta'     => array( 'protocol' => 'activitypub' ),
+			)
+		);
+		$content = generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' );
 		$calls   = 0;
 		$filter  = static function ( $url ) use ( &$calls ) {
 			++$calls;

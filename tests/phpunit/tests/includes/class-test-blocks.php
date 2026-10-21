@@ -42,6 +42,25 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Image blocks without content or alt text render nothing and fetch nothing.
+	 *
+	 * @covers ::render_image_block
+	 */
+	public function test_render_image_block_without_content_skips_cache() {
+		$calls  = 0;
+		$filter = static function ( $value ) use ( &$calls ) {
+			++$calls;
+			return $value;
+		};
+		\add_filter( 'activitypub_remote_media_url', $filter, 1 );
+		$rendered = Blocks::render_image_block( array( 'url' => 'https://example.com/photo.jpg' ), '' );
+		\remove_filter( 'activitypub_remote_media_url', $filter, 1 );
+
+		$this->assertSame( '', $rendered );
+		$this->assertSame( 0, $calls );
+	}
+
+	/**
 	 * Generated image URLs survive comment KSES without changing the resource.
 	 *
 	 * @covers ::render_image_block

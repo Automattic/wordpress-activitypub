@@ -64,7 +64,7 @@ class Comment {
 		$output         = '';
 		$allowed_blocks = array( 'activitypub/emoji' );
 		$context_filter = null;
-		if ( \get_option( 'activitypub_allow_comment_images' ) && $comment instanceof \WP_Comment && self::was_received( $comment ) ) {
+		if ( \get_option( 'activitypub_allow_comment_images' ) && $comment instanceof \WP_Comment && 'spam' !== \wp_get_comment_status( $comment ) && self::was_received( $comment ) ) {
 			$allowed_blocks[] = 'activitypub/image';
 
 			// Images are cached with the comment's post.
@@ -79,7 +79,8 @@ class Comment {
 			// Rendering a parent also invokes its children's callbacks, so reject nested blocks.
 			if ( \in_array( $block['blockName'], $allowed_blocks, true ) && empty( $block['innerBlocks'] ) ) {
 				$output .= \render_block( $block );
-			} else {
+			} elseif ( 'activitypub/image' !== $block['blockName'] ) {
+				// A hidden image block is dropped, so a stored img cannot show the remote image.
 				$output .= \serialize_block( $block );
 			}
 		}
