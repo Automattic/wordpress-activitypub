@@ -193,6 +193,22 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * The shared inbox passes every recipient; the author does not have to be the first.
+	 *
+	 * @covers ::handle_quote_request
+	 */
+	public function test_handle_quote_request_accepts_author_among_recipients() {
+		$recipient = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		Quote_Request::handle_quote_request( $this->create_quote_request_activity(), array( $recipient, self::$user_id ) );
+
+		$outbox = $this->get_quote_responses();
+		$this->assertCount( 1, $outbox );
+		$this->assertSame( 'Accept', \json_decode( $outbox[0]->post_content, true )['type'] );
+		$this->assertSame( self::$user_id, (int) $outbox[0]->post_author );
+	}
+
+	/**
 	 * In blog mode the blog answers for the author's post, so a request in its inbox is accepted.
 	 *
 	 * @covers ::handle_quote_request

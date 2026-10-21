@@ -380,8 +380,46 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 		$this->assertCount( 1, $outbox );
 		$this->assertSame( 'Reject', \json_decode( $outbox[0]->post_content, true )['type'] );
 		$this->assertSame( $recipient, (int) $outbox[0]->post_author );
+		$this->assertEmpty( \get_user_meta( self::$user_id, '_activitypub_featured_by', false ), 'No stamp is stored for the featured actor.' );
 
 		\delete_option( 'activitypub_default_feature_policy' );
+	}
+
+	/**
+	 * A request for the blog in the blog's inbox is answered by the blog.
+	 *
+	 * @covers ::handle_feature_request
+	 */
+	public function test_handle_feature_request_accepts_request_to_blog() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
+
+		$activity           = $this->create_feature_request_activity();
+		$activity['object'] = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
+
+		Feature_Request::handle_feature_request( $activity, Actors::BLOG_USER_ID );
+
+		$outbox = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'     => '_activitypub_activity_type',
+						'value'   => array( 'Accept', 'Reject' ),
+						'compare' => 'IN',
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 1, $outbox );
+		$this->assertSame( 'Accept', \json_decode( $outbox[0]->post_content, true )['type'] );
+		$this->assertSame( Actors::BLOG_USER_ID, (int) $outbox[0]->post_author );
+
+		\delete_option( 'activitypub_default_feature_policy' );
+		\delete_option( 'activitypub_actor_mode' );
 	}
 
 	/**
