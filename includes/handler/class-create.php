@@ -155,17 +155,9 @@ class Create {
 		}
 		if ( ! isset( $activity['object']['content'] ) ) {
 			// Image-only replies have something to show only when comment images are enabled; other posts still need text.
-			if ( ! \get_option( 'activitypub_allow_comment_images' ) || ! is_activity_reply( $activity ) ) {
+			if ( ! is_activity_reply( $activity ) || ! Interactions::get_image_attachments( $activity['object'] ) ) {
 				return false;
 			}
-
-			foreach ( Remote_Posts::extract_attachments( $activity['object'], 20, 'image' ) as $attachment ) {
-				// Comments show images to every visitor, so the host must be public.
-				if ( \wp_http_validate_url( $attachment['url'] ) ) {
-					return $valid;
-				}
-			}
-			return false;
 		}
 
 		return $valid;

@@ -71,7 +71,6 @@ class Test_Blocks extends \WP_UnitTestCase {
 		}
 	}
 
-
 	/**
 	 * User ID for Extra Fields block tests.
 	 *

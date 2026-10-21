@@ -62,17 +62,17 @@ class Comment {
 
 		$blocks         = \parse_blocks( $content );
 		$output         = '';
-		$context_filter = static function ( $context ) use ( $comment ) {
-			if ( $comment instanceof \WP_Comment ) {
-				$context['postId'] = (int) $comment->comment_post_ID;
-			}
-			return $context;
-		};
-		\add_filter( 'render_block_context', $context_filter );
-
 		$allowed_blocks = array( 'activitypub/emoji' );
-		if ( $comment instanceof \WP_Comment && self::was_received( $comment ) && \get_option( 'activitypub_allow_comment_images' ) ) {
+		$context_filter = null;
+		if ( \get_option( 'activitypub_allow_comment_images' ) && $comment instanceof \WP_Comment && self::was_received( $comment ) ) {
 			$allowed_blocks[] = 'activitypub/image';
+
+			// Images are cached with the comment's post.
+			$context_filter = static function ( $context ) use ( $comment ) {
+				$context['postId'] = (int) $comment->comment_post_ID;
+				return $context;
+			};
+			\add_filter( 'render_block_context', $context_filter );
 		}
 
 		foreach ( $blocks as $block ) {
@@ -83,7 +83,9 @@ class Comment {
 				$output .= \serialize_block( $block );
 			}
 		}
-		\remove_filter( 'render_block_context', $context_filter );
+		if ( $context_filter ) {
+			\remove_filter( 'render_block_context', $context_filter );
+		}
 
 		return $output;
 	}

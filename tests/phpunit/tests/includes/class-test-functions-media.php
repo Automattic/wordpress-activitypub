@@ -27,7 +27,6 @@ class Test_Functions_Media extends \WP_UnitTestCase {
 		}
 	}
 
-
 	/**
 	 * Test process_remote_images wraps remote images.
 	 *

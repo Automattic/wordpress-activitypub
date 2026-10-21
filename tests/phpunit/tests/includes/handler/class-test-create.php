@@ -21,13 +21,13 @@ use Activitypub\Tombstone;
  */
 class Test_Create extends \WP_UnitTestCase {
 	/**
-	 * Image-only validation stops at the first usable image and bounds rejected candidates.
+	 * Image-only validation stops at the comment image limit and bounds rejected candidates.
 	 *
 	 * @covers ::validate_object
 	 */
 	public function test_image_only_validation_is_bounded() {
 		foreach ( array(
-			443 => 1,
+			443 => 3,
 			22  => 20,
 		) as $port => $expected ) {
 			$object = array(

@@ -545,7 +545,7 @@ class Interactions {
 	 * @param array $activity_object The ActivityPub object.
 	 * @return array Image attachments.
 	 */
-	private static function get_image_attachments( $activity_object ) {
+	public static function get_image_attachments( $activity_object ) {
 		// WordPress does not show images in comments, so this is opt-in.
 		if ( ! \get_option( 'activitypub_allow_comment_images' ) ) {
 			return array();
