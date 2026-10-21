@@ -64,7 +64,7 @@
 		"@wordpress/env": "^11.16.0",
 		"@wordpress/html-entities": "^4.55.0",
 		"@wordpress/i18n": "^6.21.0",
-		"@wordpress/icons": "^17.0.0",
+		"@wordpress/icons": "^18.0.0",
 		"@wordpress/interactivity": "^7.0.0",
 		"@wordpress/interface": "^10.2.0",
 		"@wordpress/jest-preset-default": "^14.2.0",
