@@ -60,10 +60,10 @@ const DUMMY_REACTIONS = {
  * @return {JSX.Element} Component to render.
  */
 export default function Edit( { attributes, setAttributes } ) {
-	const { className = '', displayStyle = 'facepile', showActions = false } = attributes;
+	const { className = '', displayStyle = 'facepile', showActions = false, showLabels = true } = attributes;
 	const blockProps = useBlockProps();
 	const { getCurrentPostId } = select( 'core/editor' );
-	const { showAvatars = true } = useOptions();
+	const { showAvatars = true, reactionTypes = {} } = useOptions();
 	const hasInitialized = useRef( false );
 
 	/*
@@ -95,7 +95,12 @@ export default function Edit( { attributes, setAttributes } ) {
 	}, [ className, showAvatars, setAttributes ] );
 
 	// Sync displayStyle attribute with className when style changes.
-	const classNameStyle = className?.includes( 'is-style-compact' ) ? 'compact' : 'facepile';
+	let classNameStyle = 'facepile';
+	if ( className?.includes( 'is-style-compact' ) ) {
+		classNameStyle = 'compact';
+	} else if ( className?.includes( 'is-style-counts' ) ) {
+		classNameStyle = 'counts';
+	}
 	useEffect( () => {
 		if ( classNameStyle !== displayStyle ) {
 			setAttributes( { displayStyle: classNameStyle } );
@@ -114,36 +119,76 @@ export default function Edit( { attributes, setAttributes } ) {
 		],
 	];
 
+	// Render from the class, the attribute only follows it after the next render.
+	const isCounts = 'counts' === classNameStyle;
+
 	return (
 		<>
 			<InspectorControls>
-				<PanelBody title={ __( 'Action Buttons', 'activitypub' ) }>
-					<ToggleControl
-						__nextHasNoMarginBottom
-						label={ __( 'Show action buttons', 'activitypub' ) }
-						help={ __(
-							'Display Like and Boost buttons so visitors can interact from their Fediverse server.',
-							'activitypub'
-						) }
-						checked={ showActions }
-						onChange={ ( value ) => setAttributes( { showActions: value } ) }
-					/>
-				</PanelBody>
+				{ isCounts ? (
+					<PanelBody title={ __( 'Labels', 'activitypub' ) }>
+						<ToggleControl
+							__nextHasNoMarginBottom
+							label={ __( 'Show labels', 'activitypub' ) }
+							help={ __(
+								'Show "3 Comments" next to the icon instead of only the number.',
+								'activitypub'
+							) }
+							checked={ showLabels }
+							onChange={ ( value ) => setAttributes( { showLabels: value } ) }
+						/>
+					</PanelBody>
+				) : (
+					<PanelBody title={ __( 'Action Buttons', 'activitypub' ) }>
+						<ToggleControl
+							__nextHasNoMarginBottom
+							label={ __( 'Show action buttons', 'activitypub' ) }
+							help={ __(
+								'Display Like and Boost buttons so visitors can interact from their Fediverse server.',
+								'activitypub'
+							) }
+							checked={ showActions }
+							onChange={ ( value ) => setAttributes( { showActions: value } ) }
+						/>
+					</PanelBody>
+				) }
 			</InspectorControls>
 			<div { ...blockProps }>
-				<InnerBlocks
-					template={ TEMPLATE }
-					allowedBlocks={ [ 'core/heading' ] }
-					templateLock={ 'all' }
-					renderAppender={ false }
-				/>
-				<Reactions
-					postId={ getCurrentPostId() }
-					reactions={ isPubliclyQueryable ? null : DUMMY_REACTIONS }
-					fallbackReactions={ DUMMY_REACTIONS }
-					displayStyle={ displayStyle }
-					showActions={ showActions }
-				/>
+				{ isCounts ? (
+					Object.entries( reactionTypes ).map( ( [ type, reactionType ], index ) => {
+						// Example counts for the preview.
+						const count = ( index + 1 ) * 3;
+						const label = 1 === count ? reactionType.count_single : reactionType.count_plural;
+
+						return (
+							<span key={ type } className="reaction-count">
+								<span
+									className="reaction-count__icon"
+									dangerouslySetInnerHTML={ { __html: reactionType.icon } }
+								/>
+								<span className="reaction-count__text">
+									{ showLabels ? sprintf( label, count ) : count }
+								</span>
+							</span>
+						);
+					} )
+				) : (
+					<>
+						<InnerBlocks
+							template={ TEMPLATE }
+							allowedBlocks={ [ 'core/heading' ] }
+							templateLock={ 'all' }
+							renderAppender={ false }
+						/>
+						<Reactions
+							postId={ getCurrentPostId() }
+							reactions={ isPubliclyQueryable ? null : DUMMY_REACTIONS }
+							fallbackReactions={ DUMMY_REACTIONS }
+							displayStyle={ 'facepile' === classNameStyle && ! showAvatars ? 'compact' : classNameStyle }
+							showActions={ showActions }
+						/>
+					</>
+				) }
 			</div>
 		</>
 	);

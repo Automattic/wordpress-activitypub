@@ -15,7 +15,8 @@
 	},
 	"styles": [
 		{ "name": "facepile", "label": "Facepile", "isDefault": true },
-		{ "name": "compact", "label": "Compact" }
+		{ "name": "compact", "label": "Compact" },
+		{ "name": "counts", "label": "Counts" }
 	],
 	"attributes": {
 		"displayStyle": {
@@ -25,12 +26,20 @@
 		"showActions": {
 			"type": "boolean",
 			"default": false
+		},
+		"showLabels": {
+			"type": "boolean",
+			"default": true
 		}
 	},
 	"supports": {
 		"align": [ "wide", "full" ],
 		"color": {
-			"gradients": true
+			"gradients": true,
+			"__experimentalDefaultControls": {
+				"background": true,
+				"text": true
+			}
 		},
 		"__experimentalBorder": {
 			"radius": true,
