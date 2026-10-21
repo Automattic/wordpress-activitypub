@@ -32,6 +32,7 @@ class Test_Create extends \WP_UnitTestCase {
 		) as $port => $expected ) {
 			$object = array(
 				'id'         => 'https://example.com/bounded-images',
+				'inReplyTo'  => 'https://example.org/post',
 				'attachment' => array(),
 			);
 			for ( $i = 1; $i <= 50; ++$i ) {
@@ -73,7 +74,13 @@ class Test_Create extends \WP_UnitTestCase {
 	 * @param bool  $expected Whether the object is valid.
 	 */
 	public function test_validate_image_only_objects( $fields, $expected ) {
-		$object  = \array_merge( array( 'id' => 'https://example.com/note' ), $fields );
+		$object  = \array_merge(
+			array(
+				'id'        => 'https://example.com/note',
+				'inReplyTo' => 'https://example.org/post',
+			),
+			$fields
+		);
 		$request = new \WP_REST_Request( 'POST' );
 		$request->set_header( 'Content-Type', 'application/activity+json' );
 		$request->set_body(
@@ -106,6 +113,31 @@ class Test_Create extends \WP_UnitTestCase {
 	public function test_image_only_object_rejected_without_comment_images() {
 		\delete_option( 'activitypub_allow_comment_images' );
 
+		$object  = array(
+			'id'        => 'https://example.com/note',
+			'inReplyTo' => 'https://example.org/post',
+			'image'     => 'https://example.com/photo.jpg',
+		);
+		$request = new \WP_REST_Request( 'POST' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'   => 'Create',
+					'object' => $object,
+				)
+			)
+		);
+
+		$this->assertFalse( Create::validate_object( true, $object, $request ) );
+	}
+
+	/**
+	 * Image-only posts that are not replies still need text, even with comment images enabled.
+	 *
+	 * @covers ::validate_object
+	 */
+	public function test_image_only_object_rejected_when_not_a_reply() {
 		$object  = array(
 			'id'    => 'https://example.com/note',
 			'image' => 'https://example.com/photo.jpg',

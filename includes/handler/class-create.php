@@ -154,8 +154,8 @@ class Create {
 			return false;
 		}
 		if ( ! isset( $activity['object']['content'] ) ) {
-			// Image-only replies have something to show only when comment images are enabled.
-			if ( ! \get_option( 'activitypub_allow_comment_images' ) ) {
+			// Image-only replies have something to show only when comment images are enabled; other posts still need text.
+			if ( ! \get_option( 'activitypub_allow_comment_images' ) || ! is_activity_reply( $activity ) ) {
 				return false;
 			}
 
