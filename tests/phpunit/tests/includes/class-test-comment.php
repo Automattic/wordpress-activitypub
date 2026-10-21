@@ -97,6 +97,7 @@ class Test_Comment extends \WP_UnitTestCase {
 			$image    = new \WP_HTML_Tag_Processor( $rendered );
 			$this->assertTrue( $image->next_tag( 'IMG' ) );
 			$this->assertSame( $description, $image->get_attribute( 'alt' ) );
+			$this->assertSame( 'lazy', $image->get_attribute( 'loading' ) );
 		}
 		\remove_filter( 'activitypub_pre_download_url', $download );
 	}
