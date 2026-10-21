@@ -134,7 +134,8 @@ if ( ! $has_style_class ) {
 	$attributes['displayStyle'] = $default_display_style;
 }
 
-$show_avatars = 'facepile' === $attributes['displayStyle'];
+// The Discussion setting "Show Avatars" also applies to an explicitly chosen facepile.
+$show_avatars = 'facepile' === $attributes['displayStyle'] && get_option( 'show_avatars', true );
 
 // Fetch reactions.
 $reactions = array();

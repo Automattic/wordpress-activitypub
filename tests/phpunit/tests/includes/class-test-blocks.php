@@ -755,6 +755,24 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test the reactions block hides avatars of an explicit facepile when avatars are disabled.
+	 */
+	public function test_render_reactions_block_facepile_hides_avatars_when_disabled() {
+		\update_option( 'show_avatars', false );
+
+		$post_id = $this->get_post_id_with_reactions();
+
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . ',"className":"is-style-facepile","displayStyle":"facepile"} /-->';
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'is-style-facepile', $output );
+		$this->assertStringNotContainsString( 'reaction-avatars', $output );
+
+		// Restore default.
+		\update_option( 'show_avatars', true );
+	}
+
+	/**
 	 * Test the reactions block with no reactions returns empty comment.
 	 */
 	public function test_render_reactions_block_with_no_reactions() {

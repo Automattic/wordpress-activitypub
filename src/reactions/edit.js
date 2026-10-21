@@ -95,7 +95,7 @@ export default function Edit( { attributes, setAttributes } ) {
 	}, [ className, showAvatars, setAttributes ] );
 
 	// Sync displayStyle attribute with className when style changes.
-	let classNameStyle = 'facepile';
+	let classNameStyle = showAvatars ? 'facepile' : 'compact';
 	if ( className?.includes( 'is-style-compact' ) ) {
 		classNameStyle = 'compact';
 	} else if ( className?.includes( 'is-style-counts' ) ) {
@@ -184,7 +184,7 @@ export default function Edit( { attributes, setAttributes } ) {
 							postId={ getCurrentPostId() }
 							reactions={ isPubliclyQueryable ? null : DUMMY_REACTIONS }
 							fallbackReactions={ DUMMY_REACTIONS }
-							displayStyle={ classNameStyle }
+							displayStyle={ 'facepile' === classNameStyle && ! showAvatars ? 'compact' : classNameStyle }
 							showActions={ showActions }
 						/>
 					</>
