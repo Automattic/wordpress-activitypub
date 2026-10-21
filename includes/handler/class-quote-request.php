@@ -61,6 +61,17 @@ class Quote_Request {
 		// Use the post author as the responding actor — they own the quoted content.
 		$user_id = (int) $post->post_author;
 
+		/*
+		 * Only the actor of the post can approve a quote of it, and queue_accept() answers as the
+		 * blog when the author cannot. A request in another actor's inbox did not ask them, so
+		 * that actor declines it.
+		 */
+		$owner = user_can_activitypub( $user_id ) ? $user_id : Actors::BLOG_USER_ID;
+		if ( ! \in_array( $owner, \array_map( 'intval', (array) $user_ids ), true ) ) {
+			self::queue_reject( $activity, \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids );
+			return;
+		}
+
 		$content_policy = \get_post_meta( $post_id, 'activitypub_interaction_policy_quote', true );
 
 		// Fall back to global default if not set.

@@ -70,6 +70,12 @@ class Feature_Request {
 
 		$user_id = $target->get__id();
 
+		// Only the featured actor can approve; a request in another actor's inbox did not ask them, so that actor declines it.
+		if ( ! \in_array( (int) $user_id, \array_map( 'intval', (array) $user_ids ), true ) ) {
+			self::queue_reject( $activity, \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids );
+			return;
+		}
+
 		$policy = \get_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ME );
 
 		switch ( $policy ) {

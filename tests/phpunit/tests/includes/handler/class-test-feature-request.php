@@ -352,6 +352,39 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * A request in another actor's inbox did not ask the featured actor, so that actor declines it.
+	 *
+	 * @covers ::handle_feature_request
+	 */
+	public function test_handle_feature_request_rejects_request_not_sent_to_target() {
+		\update_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
+		$recipient = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		Feature_Request::handle_feature_request( $this->create_feature_request_activity(), $recipient );
+
+		$outbox = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'     => '_activitypub_activity_type',
+						'value'   => array( 'Accept', 'Reject' ),
+						'compare' => 'IN',
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 1, $outbox );
+		$this->assertSame( 'Reject', \json_decode( $outbox[0]->post_content, true )['type'] );
+		$this->assertSame( $recipient, (int) $outbox[0]->post_author );
+
+		\delete_option( 'activitypub_default_feature_policy' );
+	}
+
+	/**
 	 * Featured collections of the requesting actor, of someone else, and ones that cannot be fetched.
 	 *
 	 * @return array Test cases.
