@@ -24,6 +24,63 @@ class Test_Remote_Actors extends \WP_UnitTestCase {
 	use Uri_Test_Cases;
 
 	/**
+	 * Ordinary public lookups leave the explicit cache classification unchanged.
+	 *
+	 * @dataProvider cleanup_access_provider
+	 * @param string $method Actor access method.
+	 */
+	public function test_access_does_not_change_cache_classification( $method ) {
+		$uri = 'https://example.com/cleanup-access';
+		$id  = self::factory()->post->create(
+			array(
+				'post_type'    => Remote_Actors::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_title'   => 'cleanup-access',
+				'guid'         => $uri,
+				'post_content' => \wp_slash( \wp_json_encode( $this->actor_for_uri( $uri ) ) ),
+				'meta_input'   => array( '_activitypub_acct' => 'cleanup-access@example.com' ),
+			)
+		);
+		Remote_Actors::set_cache_only( $id, true );
+		$this->assertFalse( (bool) \get_post_meta( $id, Remote_Actors::RETAIN_META_KEY, true ) );
+		$argument = $id;
+		if ( \in_array( $method, array( 'get_by_uri', 'fetch_by_uri' ), true ) ) {
+			$argument = $uri;
+		} elseif ( 'fetch_by_acct' === $method ) {
+			$argument = 'cleanup-access@example.com';
+		} elseif ( 'search' === $method ) {
+			$argument = 'cleanup-access';
+		}
+		Remote_Actors::$method( $argument );
+		$this->assertFalse( (bool) \get_post_meta( $id, Remote_Actors::RETAIN_META_KEY, true ) );
+	}
+
+	/**
+	 * A durable use cannot be downgraded by a later display-only consumer.
+	 */
+	public function test_explicit_non_cache_classification_is_sticky() {
+		$id = self::factory()->post->create( array( 'post_type' => Remote_Actors::POST_TYPE ) );
+		$this->assertTrue( (bool) \get_post_meta( $id, Remote_Actors::RETAIN_META_KEY, true ) );
+		$this->assertTrue( Remote_Actors::set_cache_only( $id, true ) );
+		$this->assertTrue( Remote_Actors::set_cache_only( \get_post( $id ), false ) );
+		$this->assertFalse( Remote_Actors::set_cache_only( $id, true ) );
+		$this->assertTrue( (bool) \get_post_meta( $id, Remote_Actors::RETAIN_META_KEY, true ) );
+	}
+
+	/**
+	 * Public actor access paths.
+	 *
+	 * @return array<string, string[]> Methods to exercise.
+	 */
+	public function cleanup_access_provider() {
+		$cases = array();
+		foreach ( array( 'get', 'get_by_uri', 'fetch_by_uri', 'fetch_by_acct', 'get_actor', 'get_acct', 'get_avatar_url', 'search' ) as $method ) {
+			$cases[ $method ] = array( $method );
+		}
+		return $cases;
+	}
+
+	/**
 	 * Saving an actor must allow lookup by the original ID.
 	 *
 	 * @covers ::create

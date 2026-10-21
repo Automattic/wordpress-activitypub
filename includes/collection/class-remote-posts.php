@@ -109,6 +109,7 @@ class Remote_Posts {
 			return $post_id;
 		}
 
+		Remote_Actors::set_cache_only( $actor, false );
 		\add_post_meta( $post_id, '_activitypub_remote_actor_id', $actor->ID );
 
 		// Add recipients as separate meta entries after post is created.

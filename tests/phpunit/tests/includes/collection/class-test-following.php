@@ -46,8 +46,10 @@ class Test_Following extends \WP_UnitTestCase {
 		$pending_followers = \get_post_meta( $post_id, Following::PENDING_META_KEY, false );
 		$this->assertContains( (string) $user_id, $pending_followers );
 
+		Remote_Actors::set_cache_only( $post_id, true );
 		// Accept the follow request.
 		$result = Following::accept( $post_id, $user_id );
+		$this->assertTrue( (bool) \get_post_meta( $post_id, '_activitypub_retain', true ) );
 
 		// Verify the result is a WP_Post object.
 		$this->assertInstanceOf( '\WP_Post', $result );
@@ -276,9 +278,13 @@ class Test_Following extends \WP_UnitTestCase {
 		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
 		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
 
+		$remote = Remote_Actors::fetch_by_uri( 'https://example.com/actor/1' );
+		$this->assertInstanceOf( '\\WP_Post', $remote );
+		Remote_Actors::set_cache_only( $remote, true );
 		// First follow creates the relationship and outbox activity.
 		$first_result = follow( 'https://example.com/actor/1', $user_id );
 		$this->assertIsInt( $first_result, 'First follow should return an outbox activity ID' );
+		$this->assertTrue( (bool) \get_post_meta( $remote->ID, '_activitypub_retain', true ) );
 
 		// Second follow should return the same outbox activity ID.
 		$second_result = follow( 'https://example.com/actor/1', $user_id );

@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Allow integrations to identify disposable cached accounts for cleanup while preserving accounts used for follows and other lasting references.
