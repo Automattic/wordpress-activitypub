@@ -183,7 +183,7 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 	public function test_handle_quote_request_rejects_request_not_sent_to_author() {
 		$recipient = self::factory()->user->create( array( 'role' => 'author' ) );
 
-		Quote_Request::handle_quote_request( $this->create_quote_request_activity(), $recipient );
+		Quote_Request::handle_quote_request( $this->create_quote_request_activity(), $recipient, null, Inbox::CONTEXT_INBOX );
 
 		$outbox = $this->get_quote_responses();
 		$this->assertCount( 1, $outbox );
@@ -193,14 +193,16 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
-	 * The shared inbox passes every recipient; the author does not have to be the first.
+	 * The shared inbox runs the handler once per recipient; only the author answers.
 	 *
 	 * @covers ::handle_quote_request
 	 */
-	public function test_handle_quote_request_accepts_author_among_recipients() {
+	public function test_handle_quote_request_shared_inbox_answers_once() {
 		$recipient = self::factory()->user->create( array( 'role' => 'author' ) );
+		$activity  = $this->create_quote_request_activity();
 
-		Quote_Request::handle_quote_request( $this->create_quote_request_activity(), array( $recipient, self::$user_id ) );
+		\do_action( 'activitypub_inbox_quote_request', $activity, $recipient, null, Inbox::CONTEXT_SHARED_INBOX );
+		\do_action( 'activitypub_inbox_quote_request', $activity, self::$user_id, null, Inbox::CONTEXT_SHARED_INBOX );
 
 		$outbox = $this->get_quote_responses();
 		$this->assertCount( 1, $outbox );

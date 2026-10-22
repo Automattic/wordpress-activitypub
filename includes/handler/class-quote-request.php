@@ -32,7 +32,7 @@ class Quote_Request {
 	 * @return void
 	 */
 	public static function init() {
-		\add_action( 'activitypub_inbox_quote_request', array( self::class, 'handle_quote_request' ), 10, 2 );
+		\add_action( 'activitypub_inbox_quote_request', array( self::class, 'handle_quote_request' ), 10, 4 );
 		\add_action( 'activitypub_rest_inbox_disallowed', array( self::class, 'handle_blocked_request' ), 10, 3 );
 		\add_action( 'delete_comment', array( self::class, 'handle_quote_delete' ), 10, 2 );
 
@@ -42,12 +42,14 @@ class Quote_Request {
 	/**
 	 * Handle QuoteRequest activities.
 	 *
-	 * @param array     $activity The activity object.
-	 * @param int|int[] $user_ids The user ID(s).
+	 * @param array         $activity        The activity object.
+	 * @param int|int[]     $user_ids        The user ID(s).
+	 * @param Activity|null $activity_object Optional. The activity object. Default null.
+	 * @param string|null   $context         Optional. The inbox context. Default null.
 	 *
 	 * @return void
 	 */
-	public static function handle_quote_request( $activity, $user_ids ) {
+	public static function handle_quote_request( $activity, $user_ids, $activity_object = null, $context = null ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$state   = true;
 		$post_id = \url_to_postid( object_to_uri( $activity['object'] ) );
 		$post    = $post_id ? \get_post( $post_id ) : null;
@@ -64,10 +66,15 @@ class Quote_Request {
 		/*
 		 * Only the actor of the post can approve a quote of it, and queue_accept() answers as the
 		 * blog when the author cannot. A request in another actor's inbox did not ask them, so
-		 * that actor declines it.
+		 * that actor declines it. The shared inbox runs this once per recipient, and the owner's
+		 * run answers, so the other recipients stay silent.
 		 */
 		$owner = user_can_activitypub( $user_id ) ? $user_id : Actors::BLOG_USER_ID;
 		if ( ! \in_array( $owner, \array_map( 'intval', (array) $user_ids ), true ) ) {
+			if ( Inbox::CONTEXT_SHARED_INBOX === $context ) {
+				return;
+			}
+
 			self::queue_reject( $activity, \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids );
 			return;
 		}

@@ -10,6 +10,7 @@ namespace Activitypub\Tests\Handler;
 use Activitypub\Application;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Handler\Feature_Request;
 use Activitypub\Tests\ActivityPub_Outbox_TestCase;
@@ -360,7 +361,7 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 		\update_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
 		$recipient = self::factory()->user->create( array( 'role' => 'author' ) );
 
-		Feature_Request::handle_feature_request( $this->create_feature_request_activity(), $recipient );
+		Feature_Request::handle_feature_request( $this->create_feature_request_activity(), $recipient, null, Inbox::CONTEXT_INBOX );
 
 		$outbox = \get_posts(
 			array(
@@ -381,6 +382,41 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 		$this->assertSame( 'Reject', \json_decode( $outbox[0]->post_content, true )['type'] );
 		$this->assertSame( $recipient, (int) $outbox[0]->post_author );
 		$this->assertEmpty( \get_user_meta( self::$user_id, '_activitypub_featured_by', false ), 'No stamp is stored for the featured actor.' );
+
+		\delete_option( 'activitypub_default_feature_policy' );
+	}
+
+	/**
+	 * The shared inbox runs the handler once per recipient; only the featured actor answers.
+	 *
+	 * @covers ::handle_feature_request
+	 */
+	public function test_handle_feature_request_shared_inbox_answers_once() {
+		\update_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
+		$recipient = self::factory()->user->create( array( 'role' => 'author' ) );
+		$activity  = $this->create_feature_request_activity();
+
+		\do_action( 'activitypub_inbox_feature_request', $activity, $recipient, null, Inbox::CONTEXT_SHARED_INBOX );
+		\do_action( 'activitypub_inbox_feature_request', $activity, self::$user_id, null, Inbox::CONTEXT_SHARED_INBOX );
+
+		$outbox = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'     => '_activitypub_activity_type',
+						'value'   => array( 'Accept', 'Reject' ),
+						'compare' => 'IN',
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 1, $outbox );
+		$this->assertSame( 'Accept', \json_decode( $outbox[0]->post_content, true )['type'] );
+		$this->assertSame( self::$user_id, (int) $outbox[0]->post_author );
 
 		\delete_option( 'activitypub_default_feature_policy' );
 	}
