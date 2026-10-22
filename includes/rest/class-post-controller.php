@@ -162,7 +162,7 @@ class Post_Controller extends \WP_REST_Controller {
 
 			$reactions[ $type_object['collection'] ] = array(
 				'label'    => $label,
-				'singular' => $type_object['singular'] ?? '',
+				'singular' => Comment::get_comment_type_attr( $type_object['type'], 'singular' ),
 				'items'    => \array_map(
 					static function ( $comment ) {
 						/*

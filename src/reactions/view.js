@@ -207,11 +207,12 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 		 */
 		initReactions() {
 			// Set up resize observer to recalculate on window resize.
+			// The summary also shrinks when the shared action column grows, so watch it too.
 			const resizeObserver = new ResizeObserver( withScope( callbacks.calculateVisibleAvatars ) );
 			getElement()
-				.ref.querySelectorAll( '.reaction-group' )
-				.forEach( ( group ) => {
-					resizeObserver.observe( group );
+				.ref.querySelectorAll( '.reaction-group, .reaction-summary' )
+				.forEach( ( element ) => {
+					resizeObserver.observe( element );
 				} );
 
 			// Return a cleanup function to disconnect the observer when the block is unmounted.
@@ -246,11 +247,15 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 					.ref.querySelectorAll( `.reaction-group[data-reaction-type="${ reactionType }"]` )
 					.forEach( ( container ) => {
 						// The avatars share the summary column with the label, whatever sits in the action column.
-						// Cached markup from before the summary wrapper falls back to the whole row.
-						const summary = container.querySelector( '.reaction-summary' ) || container;
+						// Cached markup from before the summary wrapper has the action button in the same row.
+						const summary = container.querySelector( '.reaction-summary' );
+						const actionButton = summary ? null : container.querySelector( '.reaction-action-button' );
+						const rowWidth = summary
+							? summary.offsetWidth
+							: container.offsetWidth - ( actionButton ? actionButton.offsetWidth + BUTTON_GAP : 0 );
 						const label = container.querySelector( '.reaction-label' );
 						const labelWidth = label.offsetWidth || 0;
-						const availableWidth = summary.offsetWidth - labelWidth - BUTTON_GAP;
+						const availableWidth = rowWidth - labelWidth - BUTTON_GAP;
 
 						// Calculate how many avatars can fit.
 						// The first avatar takes full width, the rest take effective width.

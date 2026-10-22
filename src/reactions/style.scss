@@ -275,6 +275,11 @@
 	.reaction-group {
 		margin: 0;
 		display: inline-flex;
+
+		// Not in the action column, so the label stays on one line.
+		> .reaction-action-button {
+			white-space: nowrap;
+		}
 	}
 
 	.reaction-actions-only {

@@ -262,7 +262,7 @@ ob_start();
 		/* translators: %s: reaction type. */
 		$aria_label = sprintf( __( 'View all %s', 'activitypub' ), Comment::get_comment_type_attr( $_type, 'label' ) );
 		$intent     = isset( $intent_map[ $_type ] ) ? $intent_map[ $_type ] : '';
-		$singular   = Comment::get_comment_type_attr( $_type, 'singular' );
+		$singular   = $attributes['showActions'] ? Comment::get_comment_type_attr( $_type, 'singular' ) : '';
 		?>
 	<div class="reaction-group" data-reaction-type="<?php echo esc_attr( $_type ); ?>">
 		<?php if ( $attributes['showActions'] && $intent ) : ?>
