@@ -382,6 +382,52 @@ class Sanitize {
 	}
 
 	/**
+	 * Sanitize HTML that may contain a form, for example content other plugins add to a block.
+	 *
+	 * The post allowlist plus form fields, without data attributes. Data attributes
+	 * include the Interactivity API directives, and the content is rendered inside
+	 * interactive blocks.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $content The HTML content.
+	 *
+	 * @return string The sanitized content.
+	 */
+	public static function form_html( $content ) {
+		if ( ! \is_string( $content ) || '' === $content ) {
+			return '';
+		}
+
+		$allowed_html = \wp_kses_allowed_html( 'post' );
+
+		$allowed_html['form'] = array(
+			'action' => true,
+			'class'  => true,
+			'id'     => true,
+			'method' => true,
+		);
+
+		$allowed_html['input'] = array(
+			'aria-describedby' => true,
+			'class'            => true,
+			'id'               => true,
+			'name'             => true,
+			'placeholder'      => true,
+			'readonly'         => true,
+			'required'         => true,
+			'type'             => true,
+			'value'            => true,
+		);
+
+		foreach ( \array_keys( $allowed_html ) as $tag ) {
+			unset( $allowed_html[ $tag ]['data-*'] );
+		}
+
+		return \wp_kses( $content, $allowed_html, \wp_allowed_protocols() );
+	}
+
+	/**
 	 * Returns the allowed HTML for remote comment content.
 	 *
 	 * The `pre_comment_content` allowlist plus `p`, `br` and the strict emoji `img`.

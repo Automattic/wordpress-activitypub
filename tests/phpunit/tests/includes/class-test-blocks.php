@@ -863,6 +863,57 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test the reactions block renders actions added by other plugins.
+	 */
+	public function test_render_reactions_block_external_actions() {
+		global $activitypub_comment_types;
+		$registered = $activitypub_comment_types;
+
+		$post_id = $this->get_post_id_with_reactions();
+		$this->add_mention( $post_id );
+
+		$add_actions = static function ( $actions ) {
+			$actions['mention']  = array(
+				'title'   => 'Send a Webmention',
+				'content' => '<form action="https://example.org/webmention" method="post"><input type="url" name="source" required /><button type="submit">Send</button></form><script>alert(1)</script>',
+			);
+			$actions['bookmark'] = array(
+				'title'   => 'Bookmark this post',
+				'label'   => 'Bookmark',
+				'content' => '<p>Bookmark it.</p>',
+			);
+			$actions['like']     = array(
+				'title'   => 'Replaced',
+				'content' => '<p>Replaced like.</p>',
+			);
+
+			return $actions;
+		};
+		\add_filter( 'activitypub_reactions_actions', $add_actions );
+
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . ',"showActions":true} /-->';
+		$output       = do_blocks( $block_markup );
+
+		\remove_filter( 'activitypub_reactions_actions', $add_actions );
+		$activitypub_comment_types = $registered;
+
+		// A type with items gets the button in its row, a type without items in the actions row.
+		$this->assertStringContainsString( 'data-action="mention"', $output );
+		$this->assertStringContainsString( 'data-title="Send a Webmention"', $output );
+		$this->assertStringContainsString( 'data-action="bookmark"', $output );
+		$this->assertStringNotContainsString( 'reaction-action-placeholder', $output );
+
+		// The content is rendered in the modal, with form fields but without scripts.
+		$this->assertStringContainsString( '<form action="https://example.org/webmention" method="post"><input type="url" name="source" required />', $output );
+		$this->assertStringNotContainsString( '<script>', $output );
+		$this->assertStringContainsString( 'data-wp-bind--hidden="state.isActionHidden"', $output );
+
+		// The types ActivityPub handles itself can't be replaced.
+		$this->assertStringNotContainsString( 'Replaced like.', $output );
+		$this->assertStringNotContainsString( 'data-action="like"', $output );
+	}
+
+	/**
 	 * Register a mention comment type and add a mention to a post.
 	 *
 	 * @param int $post_id Post ID.
