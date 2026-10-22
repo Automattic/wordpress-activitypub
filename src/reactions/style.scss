@@ -254,3 +254,35 @@
 		margin: 0;
 	}
 }
+
+/* Counts display style - a line of plain links, for example in a query loop */
+.wp-block-activitypub-reactions.is-style-counts {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75em;
+	margin-top: 0;
+	margin-bottom: 0;
+
+	.reaction-count {
+		display: inline-flex;
+		gap: 0.25em;
+		align-items: center;
+		text-decoration: none;
+
+		&:hover {
+			text-decoration: underline;
+		}
+	}
+
+	// The editor wraps the icon in a span, the SVG stays a flex item.
+	.reaction-count__icon {
+		display: contents;
+	}
+
+	.reaction-count svg {
+		fill: currentcolor;
+		width: 1.25em;
+		height: 1.25em;
+		flex-shrink: 0;
+	}
+}
