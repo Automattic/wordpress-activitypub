@@ -20,6 +20,7 @@ use function Activitypub\extract_recipients_from_activity;
 use function Activitypub\is_activity_public;
 use function Activitypub\is_collection;
 use function Activitypub\is_same_domain;
+use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 use function Activitypub\user_can_activitypub;
 
@@ -399,8 +400,14 @@ class Inbox_Controller extends \WP_REST_Controller {
 		$actor_uri           = ! empty( $activity['actor'] ) ? object_to_uri( $activity['actor'] ) : null;
 		$actor_followers_url = $this->get_cached_followers_url( $actor_uri );
 
+		$groups = $this->get_attributed_groups( $activity, $actor_uri );
+
 		if ( is_activity_public( $activity ) ) {
 			$user_ids = Following::get_follower_ids( $actor_uri );
+
+			foreach ( \array_keys( $groups ) as $group_uri ) {
+				$user_ids = \array_merge( $user_ids, Following::get_follower_ids( $group_uri ) );
+			}
 		}
 
 		$recipients = extract_recipients_from_activity( $activity );
@@ -419,6 +426,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				|| \in_array( $recipient, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS, true )
 				|| is_same_domain( $recipient )
 				|| $recipient === $actor_followers_url
+				|| \in_array( $recipient, $groups, true )
 			) {
 				continue;
 			}
@@ -436,6 +444,13 @@ class Inbox_Controller extends \WP_REST_Controller {
 				// Known followers collection: resolve from local DB, no fetch needed.
 				if ( $recipient === $actor_followers_url ) {
 					$user_ids = \array_merge( $user_ids, Following::get_follower_ids( $actor_uri ) );
+					continue;
+				}
+
+				// Followers collection of a Group the object is attributed to.
+				$group_uri = \array_search( $recipient, $groups, true );
+				if ( false !== $group_uri ) {
+					$user_ids = \array_merge( $user_ids, Following::get_follower_ids( $group_uri ) );
 					continue;
 				}
 
@@ -503,6 +518,56 @@ class Inbox_Controller extends \WP_REST_Controller {
 		}
 
 		return \array_unique( \array_map( 'intval', $user_ids ) );
+	}
+
+	/**
+	 * Get the Groups an incoming object is attributed to.
+	 *
+	 * Some Group implementations (like Mobilizon) let a member send the activity
+	 * for an object that is attributed to the Group. Like Mastodon, an actor is
+	 * trusted for an `attributedTo` on its own host. Only cached Groups count, so
+	 * an actor can not reach the followers of another person on its host.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array       $activity  The activity data.
+	 * @param string|null $actor_uri Normalized actor URI.
+	 *
+	 * @return array Followers collection URL (or null) keyed by Group URI.
+	 */
+	private function get_attributed_groups( $activity, $actor_uri ) {
+		if ( ! \is_array( $activity['object'] ?? null ) || empty( $activity['object']['attributedTo'] ) ) {
+			return array();
+		}
+
+		$owners = $activity['object']['attributedTo'];
+		if ( ! \is_array( $owners ) || ! \array_is_list( $owners ) ) {
+			$owners = array( $owners );
+		}
+
+		$groups = array();
+
+		// An object names one or two owners, the cap keeps a long list from costing a query each.
+		foreach ( \array_slice( $owners, 0, 5 ) as $owner ) {
+			$owner_uri = object_to_uri( $owner );
+			if ( ! $owner_uri || $owner_uri === $actor_uri || ! is_same_host( $actor_uri, $owner_uri ) ) {
+				continue;
+			}
+
+			$owner_post = Remote_Actors::get_by_uri( $owner_uri );
+			if ( \is_wp_error( $owner_post ) ) {
+				continue;
+			}
+
+			$group = Remote_Actors::get_actor( $owner_post );
+			if ( \is_wp_error( $group ) || 'Group' !== $group->get_type() ) {
+				continue;
+			}
+
+			$groups[ $owner_uri ] = object_to_uri( $group->get_followers() );
+		}
+
+		return $groups;
 	}
 
 	/**
