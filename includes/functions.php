@@ -256,8 +256,8 @@ function custom_large_numbers( $formatted, $number ) {
  */
 function esc_hashtag( $input ) {
 	$hashtag = \wp_specialchars_decode( $input, ENT_QUOTES );
-	// Remove all characters that are not letters, numbers, or hyphens.
-	$hashtag = \preg_replace( '/[^\p{L}\p{Nd}-]+/u', '-', $hashtag );
+	// Remove all characters that are not letters, numbers, underscores, or hyphens.
+	$hashtag = \preg_replace( '/[^\p{L}\p{Nd}_-]+/u', '-', $hashtag );
 
 	// Capitalize every letter that is preceded by a hyphen.
 	$hashtag = \preg_replace_callback(
