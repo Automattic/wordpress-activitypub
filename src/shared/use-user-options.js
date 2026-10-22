@@ -24,9 +24,9 @@ export function useUserOptions( { withInherit = false } ) {
 			const { getUsers, getIsResolving } = select( 'core' );
 
 			return {
-				fetchedUsers: enabled?.users ? getUsers( { capabilities: 'activitypub' } ) : null,
+				fetchedUsers: enabled?.users ? getUsers( { capabilities: 'activitypub', context: 'view' } ) : null,
 				isLoadingUsers: enabled?.users
-					? getIsResolving( 'getUsers', [ { capabilities: 'activitypub' } ] )
+					? getIsResolving( 'getUsers', [ { capabilities: 'activitypub', context: 'view' } ] )
 					: false,
 			};
 		},
