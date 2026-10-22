@@ -6,6 +6,7 @@
  */
 
 use Activitypub\Blocks;
+use Activitypub\Collection\Interactions;
 use Activitypub\Comment;
 
 use function Activitypub\get_post_id;
@@ -27,6 +28,7 @@ $attributes = wp_parse_args(
 		'align'        => null,
 		'displayStyle' => $default_display_style,
 		'showActions'  => false,
+		'showLabels'   => true,
 	)
 );
 
@@ -57,6 +59,60 @@ if ( ! is_post_publicly_queryable( $_post_id ) ) {
 	return;
 }
 
+// The counts style is a line of plain links, for example in place of the comments link in a query loop.
+if ( str_contains( $attributes['className'] ?? '', 'is-style-counts' ) ) {
+	$links = array();
+
+	foreach ( Blocks::get_reaction_types() as $_type => $type_object ) {
+		if ( 'comment' === $_type ) {
+			// Like the comments link, the comment count shows as long as comments are open.
+			$count = (int) get_comments_number( $_post_id );
+			if ( ! $count && ! comments_open( $_post_id ) ) {
+				continue;
+			}
+
+			$links[] = array(
+				'url'   => get_comments_link( $_post_id ),
+				'icon'  => $type_object['icon'],
+				'count' => $count,
+				'label' => get_comments_number_text( false, false, false, $_post_id ),
+			);
+			continue;
+		}
+
+		$count = Interactions::count_by_type( $_post_id, $_type );
+
+		if ( ! $count ) {
+			continue;
+		}
+
+		// There is no page that lists reactions, so they link to the post with the full reactions block.
+		$links[] = array(
+			'url'   => get_permalink( $_post_id ),
+			'icon'  => $type_object['icon'],
+			'count' => $count,
+			// phpcs:ignore WordPress.WP.I18n
+			'label' => sprintf( _n( $type_object['count_single'], $type_object['count_plural'], $count, 'activitypub' ), number_format_i18n( $count ) ),
+		);
+	}
+
+	if ( empty( $links ) ) {
+		echo '<!-- Reactions block: No reactions found. -->';
+		return;
+	}
+	?>
+<div <?php echo get_block_wrapper_attributes( array( 'class' => $attributes['className'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput ?>>
+	<?php foreach ( $links as $_link ) : ?>
+	<a class="reaction-count" href="<?php echo esc_url( $_link['url'] ); ?>" aria-label="<?php echo esc_attr( $_link['label'] ); ?>" title="<?php echo esc_attr( $_link['label'] ); ?>">
+		<?php echo $_link['icon']; // phpcs:ignore WordPress.Security.EscapeOutput ?>
+		<span class="reaction-count__text"><?php echo esc_html( $attributes['showLabels'] || ! $_link['icon'] ? $_link['label'] : number_format_i18n( $_link['count'] ) ); ?></span>
+	</a>
+	<?php endforeach; ?>
+</div>
+	<?php
+	return;
+}
+
 // Generate a unique ID for the block.
 $block_id = 'activitypub-reactions-block-' . wp_unique_id();
 $error_id = $block_id . '-remote-profile-error';
@@ -71,7 +127,8 @@ if ( ! $has_style_class ) {
 	$attributes['displayStyle'] = $default_display_style;
 }
 
-$show_avatars = 'facepile' === $attributes['displayStyle'];
+// The Discussion setting "Show Avatars" also applies to an explicitly chosen facepile.
+$show_avatars = 'facepile' === $attributes['displayStyle'] && get_option( 'show_avatars', true );
 
 // Fetch reactions.
 $reactions = array();

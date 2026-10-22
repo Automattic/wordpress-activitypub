@@ -148,6 +148,10 @@ function process_remote_images( $content, $attachments = array() ) {
 	// Append attachments not already in content.
 	if ( ! empty( $attachments ) ) {
 		foreach ( $attachments as $attachment ) {
+			if ( 'image' !== ( $attachment['type'] ?? 'image' ) ) {
+				continue;
+			}
+
 			$url = $attachment['url'] ?? '';
 			if ( empty( $url ) || isset( $seen_urls[ $url ] ) ) {
 				continue;

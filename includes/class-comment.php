@@ -29,6 +29,7 @@ class Comment {
 		\add_filter( 'comment_reply_link', array( self::class, 'comment_reply_link' ), 10, 3 );
 		\add_filter( 'comment_class', array( self::class, 'comment_class' ), 10, 3 );
 		\add_filter( 'comment_feed_where', array( static::class, 'comment_feed_where' ) );
+		\add_filter( 'widget_comments_args', array( static::class, 'widget_comments_args' ) );
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 2 );
 		\add_action( 'pre_get_comments', array( static::class, 'comment_query' ) );
 		\add_filter( 'get_page_of_comment_query_args', array( static::class, 'get_page_of_comment_query_args' ) );
@@ -435,7 +436,8 @@ class Comment {
 	/**
 	 * Makes the comment feed filterable by comment type.
 	 *
-	 * Also excludes ActivityPub comment types from the feed when no type is specified.
+	 * Also excludes ActivityPub comment types from the feed when no type is specified,
+	 * and replies to remote posts in any case.
 	 *
 	 * @param string $where The `WHERE` clause for the comment feed query.
 	 *
@@ -443,6 +445,14 @@ class Comment {
 	 */
 	public static function comment_feed_where( $where ) {
 		global $wpdb;
+
+		// Replies to remote posts belong to the reader, not to the site's comments.
+		$hide_for = self::hide_for();
+		if ( $hide_for ) {
+			$placeholders = \implode( ', ', \array_fill( 0, \count( $hide_for ), '%s' ) );
+			// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.NotPrepared
+			$where .= $wpdb->prepare( \sprintf( " AND {$wpdb->comments}.comment_post_ID NOT IN ( SELECT ID FROM {$wpdb->posts} WHERE post_type IN (%s) )", $placeholders ), ...$hide_for );
+		}
 
 		$comment_type = \get_query_var( 'type' );
 
@@ -461,6 +471,26 @@ class Comment {
 		}
 
 		return $where;
+	}
+
+	/**
+	 * Keeps replies to remote posts out of the Recent Comments widget and the Latest Comments block.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $args The comment query arguments.
+	 *
+	 * @return array The filtered arguments.
+	 */
+	public static function widget_comments_args( $args ) {
+		$hide_for = self::hide_for();
+
+		// The comment query has no `post_type__not_in`, so list every other post type.
+		if ( $hide_for && empty( $args['post_type'] ) ) {
+			$args['post_type'] = \array_values( \array_diff( \get_post_types(), $hide_for ) );
+		}
+
+		return $args;
 	}
 
 	/**
@@ -703,13 +733,20 @@ class Comment {
 	 * @return void
 	 */
 	public static function register_comment_types() {
+		// Core's icon for the type when it has one (WordPress 7.1+), else the bundled SVG.
+		$icon = static function ( $slug, $svg ) {
+			$core_icon = \function_exists( 'wp_get_icon' ) ? \wp_get_icon( 'core/' . $slug ) : '';
+
+			return $core_icon ? $core_icon : $svg;
+		};
+
 		register_comment_type(
 			'repost',
 			array(
 				'label'          => \__( 'Reposts', 'activitypub' ),
 				'singular'       => \__( 'Repost', 'activitypub' ),
 				'description'    => 'A repost (or Announce) is when a post appears in the timeline because someone else shared it, while still showing the original author as the source.',
-				'icon'           => '♻️',
+				'icon'           => $icon( 'repost', '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path d="m11.3 17.2-5-5c-.1-.1-.1-.3 0-.4l2.3-2.3-1.1-1-2.3 2.3c-.7.7-.7 1.8 0 2.5l5 5H7.5v1.5h5.3v-5.2h-1.5v2.6zm7.5-6.4-5-5h2.7V4.2h-5.2v5.2h1.5V6.8l5 5c.1.1.1.3 0 .4l-2.3 2.3 1.1 1.1 2.3-2.3c.6-.7.6-1.9-.1-2.5z"/></svg>' ),
 				'class'          => 'p-repost',
 				'type'           => 'repost',
 				'collection'     => 'reposts',
@@ -728,7 +765,7 @@ class Comment {
 				'label'          => \__( 'Likes', 'activitypub' ),
 				'singular'       => \__( 'Like', 'activitypub' ),
 				'description'    => 'A like is a small positive reaction that shows appreciation for a post without sharing it further.',
-				'icon'           => '👍',
+				'icon'           => $icon( 'like', '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path d="m3 12 1 8h1.5l-1-8H3Zm15.8-2h-4.4l.8-3.6c.3-1.3-.7-2.4-1.9-2.4h-.2c-.6 0-1.2.3-1.6.8l-5 6.6c-.3.4-.4.8-.4 1.2v.2l.7 5.4v.2c.2.9 1 1.5 1.9 1.5h8.2c.9 0 1.7-.6 1.9-1.4l1.8-6c.4-1.3-.6-2.6-1.9-2.6Zm.5 2.1-1.8 6c0 .2-.3.4-.5.4H8.8c-.3 0-.5-.2-.5-.4l-.7-5.4v-.4l5-6.6c0-.1.2-.2.4-.2h.2c.3 0 .6.3.5.6l-.8 3.6c-.1.4 0 .9.3 1.3s.7.6 1.2.6h4.4c.3 0 .6.3.5.6Z"/></svg>' ),
 				'class'          => 'p-like',
 				'type'           => 'like',
 				'collection'     => 'likes',
@@ -747,7 +784,7 @@ class Comment {
 				'label'          => \__( 'Quotes', 'activitypub' ),
 				'singular'       => \__( 'Quote', 'activitypub' ),
 				'description'    => 'A quote is when a post is shared along with an added comment, so the original post appears together with the sharer&#8217;s own words.',
-				'icon'           => '❞',
+				'icon'           => $icon( 'quote', '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path d="M13 6v6h5.2v4c0 .8-.2 1.4-.5 1.7-.6.6-1.6.6-2.5.5h-.3v1.5h.5c1 0 2.3-.1 3.3-1 .6-.6 1-1.6 1-2.8V6H13zm-9 6h5.2v4c0 .8-.2 1.4-.5 1.7-.6.6-1.6.6-2.5.5h-.3v1.5h.5c1 0 2.3-.1 3.3-1 .6-.6 1-1.6 1-2.8V6H4v6z"/></svg>' ),
 				'class'          => 'p-quote',
 				'type'           => 'quote',
 				'collection'     => 'quotes',

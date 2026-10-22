@@ -316,6 +316,47 @@ ENDPRE;
 	}
 
 	/**
+	 * The content links mentions, an excerpt keeps the full handle, since its tags are stripped.
+	 *
+	 * @covers ::the_content
+	 */
+	public function test_the_content_keeps_full_handle_in_excerpts() {
+		$post = \get_post(
+			self::factory()->post->create(
+				array(
+					'post_excerpt' => '',
+					'post_content' => 'hallo @username@example.org test',
+				)
+			)
+		);
+
+		$this->assertStringContainsString( '<a rel="mention" class="u-url mention" href="https://example.org/users/username">@username</a>', \apply_filters( 'the_content', $post->post_content ) );
+		$this->assertSame( 'hallo @username@example.org test', \get_the_excerpt( $post ) );
+	}
+
+	/**
+	 * A mention in a post summary built from the content is still linked.
+	 *
+	 * @covers ::the_content
+	 * @covers ::filter_activity_object
+	 */
+	public function test_post_summary_links_mentions() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author'  => self::factory()->user->create( array( 'role' => 'author' ) ),
+				'post_title'   => 'Title',
+				'post_excerpt' => '',
+				'post_content' => '<!-- wp:paragraph --><p>Hello @username@example.org how are you</p><!-- /wp:paragraph -->',
+			)
+		);
+
+		$object = \Activitypub\Transformer\Factory::get_transformer( \get_post( $post_id ) )->to_object()->to_array();
+
+		$this->assertSame( 'Article', $object['type'] );
+		$this->assertSame( 'Hello <a rel="mention" class="u-url mention" href="https://example.org/users/username">@username</a> how are you', $object['summary'] );
+	}
+
+	/**
 	 * A link marked with `rel="mention"` counts like one with the `mention` class.
 	 *
 	 * @covers ::extract_mention_links

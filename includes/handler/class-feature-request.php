@@ -10,6 +10,7 @@ namespace Activitypub\Handler;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Proxy;
 
@@ -45,7 +46,7 @@ class Feature_Request {
 	 * @return void
 	 */
 	public static function init() {
-		\add_action( 'activitypub_inbox_feature_request', array( self::class, 'handle_feature_request' ), 10, 2 );
+		\add_action( 'activitypub_inbox_feature_request', array( self::class, 'handle_feature_request' ), 10, 4 );
 		\add_action( 'activitypub_rest_inbox_disallowed', array( self::class, 'handle_blocked_request' ), 10, 3 );
 
 		\add_filter( 'activitypub_validate_object', array( self::class, 'validate_object' ), 10, 3 );
@@ -54,12 +55,14 @@ class Feature_Request {
 	/**
 	 * Handle FeatureRequest activities.
 	 *
-	 * @param array     $activity The activity object.
-	 * @param int|int[] $user_ids The user ID(s) targeted by the inbox dispatch.
+	 * @param array         $activity        The activity object.
+	 * @param int|int[]     $user_ids        The user ID(s) targeted by the inbox dispatch.
+	 * @param Activity|null $activity_object Optional. The activity object. Default null.
+	 * @param string|null   $context         Optional. The inbox context. Default null.
 	 *
 	 * @return void
 	 */
-	public static function handle_feature_request( $activity, $user_ids ) {
+	public static function handle_feature_request( $activity, $user_ids, $activity_object = null, $context = null ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$object_uri = object_to_uri( $activity['object'] );
 		$target     = Actors::get_by_resource( $object_uri );
 
@@ -70,6 +73,17 @@ class Feature_Request {
 		}
 
 		$user_id = $target->get__id();
+
+		// Only the featured actor can approve; a request in another actor's inbox did not ask them, so that actor declines it.
+		if ( ! \in_array( (int) $user_id, \array_map( 'intval', (array) $user_ids ), true ) ) {
+			// The shared inbox runs this once per recipient; the featured actor's run answers, the others stay silent.
+			if ( Inbox::CONTEXT_SHARED_INBOX === $context ) {
+				return;
+			}
+
+			self::queue_reject( $activity, \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids );
+			return;
+		}
 
 		$policy = \get_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ME );
 

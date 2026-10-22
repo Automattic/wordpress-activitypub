@@ -57,6 +57,14 @@ class Mention {
 	 * @return string The filtered post-content.
 	 */
 	public static function the_content( $the_content ) {
+		/*
+		 * An excerpt is stripped of its tags, which would leave only the `@user` of the link. Without
+		 * the link it keeps `@user@host`, so the summary can still be linked by `filter_activity_object()`.
+		 */
+		if ( \doing_filter( 'get_the_excerpt' ) ) {
+			return $the_content;
+		}
+
 		return enrich_content_data( $the_content, self::get_pattern( $the_content ), array( self::class, 'replace_with_links' ) );
 	}
 

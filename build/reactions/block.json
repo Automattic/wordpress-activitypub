@@ -27,6 +27,10 @@
     {
       "name": "compact",
       "label": "Compact"
+    },
+    {
+      "name": "counts",
+      "label": "Counts"
     }
   ],
   "attributes": {
@@ -37,6 +41,10 @@
     "showActions": {
       "type": "boolean",
       "default": false
+    },
+    "showLabels": {
+      "type": "boolean",
+      "default": true
     }
   },
   "supports": {
@@ -45,7 +53,12 @@
       "full"
     ],
     "color": {
-      "gradients": true
+      "gradients": true,
+      "link": true,
+      "__experimentalDefaultControls": {
+        "background": true,
+        "text": true
+      }
     },
     "__experimentalBorder": {
       "radius": true,
@@ -56,6 +69,10 @@
     "html": false,
     "interactivity": true,
     "shadow": true,
+    "spacing": {
+      "margin": true,
+      "padding": true
+    },
     "typography": {
       "fontSize": true,
       "__experimentalDefaultControls": {
