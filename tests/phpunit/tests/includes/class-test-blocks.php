@@ -13,6 +13,7 @@ use Activitypub\Collection\Interactions;
 use Activitypub\Transformer\Post;
 
 use function Activitypub\object_to_uri;
+use function Activitypub\register_comment_type;
 
 /**
  * Test class for Blocks.
@@ -829,6 +830,56 @@ class Test_Blocks extends \WP_UnitTestCase {
 			)
 		);
 		$this->assertStringContainsString( '<!-- Reactions block: No reactions found. -->', do_blocks( $block_markup ) );
+	}
+
+	/**
+	 * Test the reactions block shows a placeholder for reaction types without an action.
+	 */
+	public function test_render_reactions_block_placeholder_for_types_without_action() {
+		global $activitypub_comment_types;
+		$registered = $activitypub_comment_types;
+
+		$post_id = $this->get_post_id_with_reactions();
+		$this->add_mention( $post_id );
+
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . ',"showActions":true} /-->';
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( '<span class="reaction-action-placeholder">Mention</span>', $output );
+		$this->assertStringContainsString( 'data-intent="like"', $output );
+
+		// Without actions there is no placeholder.
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} /-->';
+		$this->assertStringNotContainsString( 'reaction-action-placeholder', do_blocks( $block_markup ) );
+
+		$activitypub_comment_types = $registered;
+	}
+
+	/**
+	 * Register a mention comment type and add a mention to a post.
+	 *
+	 * @param int $post_id Post ID.
+	 */
+	private function add_mention( $post_id ) {
+		register_comment_type(
+			'mention',
+			array(
+				'label'        => 'Mentions',
+				'singular'     => 'Mention',
+				'count_single' => '%d mention',
+				'count_plural' => '%d mentions',
+			)
+		);
+
+		self::factory()->comment->create(
+			array(
+				'comment_post_ID'    => $post_id,
+				'comment_type'       => 'mention',
+				'comment_approved'   => 1,
+				'comment_author'     => 'Jane',
+				'comment_author_url' => 'https://example.org/jane',
+			)
+		);
 	}
 
 	/**

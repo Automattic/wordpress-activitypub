@@ -274,7 +274,10 @@ ob_start();
 		>
 			<?php echo esc_html( Comment::get_comment_type_attr( $_type, 'singular' ) ); ?>
 		</button>
+		<?php elseif ( $attributes['showActions'] ) : ?>
+		<span class="reaction-action-placeholder"><?php echo esc_html( Comment::get_comment_type_attr( $_type, 'singular' ) ); ?></span>
 		<?php endif; ?>
+		<div class="reaction-summary">
 		<?php if ( $show_avatars ) : ?>
 		<ul class="reaction-avatars">
 			<template data-wp-each="context.reactions.<?php echo esc_attr( $_type ); ?>.items">
@@ -309,6 +312,7 @@ ob_start();
 		>
 			<?php echo esc_html( $reaction['label'] ); ?>
 		</button>
+		</div>
 	</div>
 	<?php endforeach; ?>
 	<?php

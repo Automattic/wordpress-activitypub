@@ -121,15 +121,17 @@ const ReactionGroup = ( { items, label, displayStyle, showActions, actionLabel }
 					{ actionLabel }
 				</button>
 			) }
-			<FacepileRow reactions={ visibleItems } displayStyle={ displayStyle } />
-			<Button
-				ref={ setButtonRef }
-				className="reaction-label is-link"
-				onClick={ () => setIsOpen( ! isOpen ) }
-				aria-expanded={ isOpen }
-			>
-				{ label }
-			</Button>
+			<div className="reaction-summary">
+				<FacepileRow reactions={ visibleItems } displayStyle={ displayStyle } />
+				<Button
+					ref={ setButtonRef }
+					className="reaction-label is-link"
+					onClick={ () => setIsOpen( ! isOpen ) }
+					aria-expanded={ isOpen }
+				>
+					{ label }
+				</Button>
+			</div>
 			{ isOpen && buttonRef && (
 				<Popover anchor={ buttonRef } onClose={ () => setIsOpen( false ) } className="activitypub-popover">
 					<ReactionList reactions={ items } displayStyle={ displayStyle } />
