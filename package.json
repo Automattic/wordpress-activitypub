@@ -68,7 +68,7 @@
 		"@wordpress/interactivity": "^7.0.0",
 		"@wordpress/interface": "^10.2.0",
 		"@wordpress/jest-preset-default": "^14.2.0",
-		"@wordpress/keyboard-shortcuts": "^5.50.0",
+		"@wordpress/keyboard-shortcuts": "^5.57.0",
 		"@wordpress/keycodes": "^4.55.0",
 		"@wordpress/notices": "^5.54.0",
 		"@wordpress/plugins": "^7.56.0",
