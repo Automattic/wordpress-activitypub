@@ -199,6 +199,7 @@ class Test_Post_Controller extends WP_UnitTestCase {
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertArrayHasKey( 'likes', $data );
 		$this->assertEquals( '1 like', $data['likes']['label'] );
+		$this->assertEquals( 'Like', $data['likes']['singular'] );
 		$this->assertCount( 1, $data['likes']['items'] );
 
 		$item = $data['likes']['items'][0];
