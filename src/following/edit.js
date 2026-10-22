@@ -59,7 +59,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 		return {
 			blogSocialGraphHidden: !! siteSettings?.activitypub_hide_social_graph,
 			currentUser: getCurrentUser(),
-			usersWithMeta: getUsers( { capabilities: 'activitypub', context: 'edit' } ),
+			usersWithMeta: getUsers( { capabilities: 'activitypub', context: 'view' } ),
 			siteUrl: siteData?.home,
 			canManageOptions: canUser( 'update', { kind: 'root', name: 'site' } ),
 		};
