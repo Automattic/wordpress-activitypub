@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Other plugins can now store incoming posts of certain types, like events or polls, in their own post types.

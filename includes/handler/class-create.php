@@ -110,6 +110,12 @@ class Create {
 	 * @return \WP_Post|\WP_Error|false The post on success, WP_Error on failure, false if already exists.
 	 */
 	public static function create_post( $activity, $user_ids, $activity_object = null ) {
+		$pre = self::pre_handle_remote_object( $activity, $user_ids );
+
+		if ( null !== $pre ) {
+			return $pre;
+		}
+
 		if ( ! \get_option( 'activitypub_create_posts', false ) ) {
 			return false;
 		}
@@ -124,6 +130,44 @@ class Create {
 		}
 
 		return Remote_Posts::add( $activity, $user_ids );
+	}
+
+	/**
+	 * Let other plugins store a remote object themselves.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array     $activity The activity-object.
+	 * @param int|int[] $user_ids The id(s) of the local blog-user(s).
+	 *
+	 * @return \WP_Post|\WP_Error|false|null The result of the plugin, or null to let the remote posts collection handle it.
+	 */
+	public static function pre_handle_remote_object( $activity, $user_ids ) {
+		// Private and direct messages are never handed to other plugins.
+		if ( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === get_activity_visibility( $activity ) ) {
+			return null;
+		}
+
+		/**
+		 * Filters whether a remote object is stored in the remote posts collection.
+		 *
+		 * Return a non-null value to store the object yourself, for example in a custom
+		 * post type for events or polls. The object is then not stored as an `ap_post`.
+		 * Runs for public Create activities that are not replies or quotes, and for public
+		 * Update activities that are not replies, even when the "create posts" option is off.
+		 *
+		 * The activity actor is verified by its signature, but `attributedTo` and the
+		 * object id are not checked yet. Check that the actor owns the object before you
+		 * store or overwrite anything.
+		 *
+		 * @since unreleased
+		 *
+		 * @param \WP_Post|\WP_Error|false|null $pre      Null to let the ActivityPub plugin handle the object, the stored
+		 *                                                post or a WP_Error if you handled it, or false to skip it. Default null.
+		 * @param array                         $activity The activity data. The `type` is `Create` or `Update`.
+		 * @param int[]                         $user_ids The local recipient user IDs.
+		 */
+		return \apply_filters( 'activitypub_pre_handle_remote_object', null, $activity, (array) $user_ids );
 	}
 
 	/**

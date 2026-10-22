@@ -67,6 +67,92 @@ class Test_Update extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a plugin can update a remote object itself, without the Create fallback.
+	 *
+	 * @covers ::update_object
+	 */
+	public function test_update_object_pre_handle_remote_object() {
+		\update_option( 'activitypub_create_posts', true );
+
+		$own_post_id = self::factory()->post->create();
+		$activity    = array(
+			'id'     => 'https://example.com/activities/update_event',
+			'type'   => 'Update',
+			'actor'  => 'https://example.com/users/testuser',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'id'           => 'https://example.com/objects/event',
+				'type'         => 'Event',
+				'content'      => 'An updated event',
+				'attributedTo' => 'https://example.com/users/testuser',
+			),
+		);
+
+		$pre = function ( $pre, $activity ) use ( $own_post_id ) {
+			return 'Update' === $activity['type'] ? \get_post( $own_post_id ) : $pre;
+		};
+		\add_filter( 'activitypub_pre_handle_remote_object', $pre, 10, 2 );
+
+		$handled = null;
+		$update  = function ( $activity, $user_ids, $success, $result ) use ( &$handled ) {
+			$handled = array( $success, $result );
+		};
+		\add_action( 'activitypub_handled_update', $update, 10, 4 );
+
+		$create_called = false;
+		$create        = function () use ( &$create_called ) {
+			$create_called = true;
+		};
+		\add_action( 'activitypub_handled_create', $create );
+
+		Update::update_object( $activity, array( $this->user_id ), null );
+
+		\remove_filter( 'activitypub_pre_handle_remote_object', $pre );
+		\remove_action( 'activitypub_handled_update', $update );
+		\remove_action( 'activitypub_handled_create', $create );
+		\delete_option( 'activitypub_create_posts' );
+
+		$this->assertTrue( $handled[0] );
+		$this->assertSame( $own_post_id, $handled[1]->ID );
+		$this->assertFalse( $create_called, 'A handled Update must not fall back to Create.' );
+	}
+
+	/**
+	 * Test that private Updates are not handed to other plugins.
+	 *
+	 * @covers ::update_object
+	 */
+	public function test_update_object_pre_handle_remote_object_skips_private() {
+		$activity = array(
+			'id'     => 'https://example.com/activities/update_dm',
+			'type'   => 'Update',
+			'actor'  => 'https://example.com/users/testuser',
+			'to'     => array( 'https://example.com/users/someone' ),
+			'object' => array(
+				'id'           => 'https://example.com/objects/dm',
+				'type'         => 'Note',
+				'content'      => 'A direct message',
+				'attributedTo' => 'https://example.com/users/testuser',
+				'to'           => array( 'https://example.com/users/someone' ),
+			),
+		);
+
+		$called = false;
+		$pre    = function ( $pre ) use ( &$called ) {
+			$called = true;
+
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_handle_remote_object', $pre );
+
+		Update::update_object( $activity, array( $this->user_id ), null );
+
+		\remove_filter( 'activitypub_pre_handle_remote_object', $pre );
+
+		$this->assertFalse( $called );
+	}
+
+	/**
 	 * User ID.
 	 *
 	 * @var int

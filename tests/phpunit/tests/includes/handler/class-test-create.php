@@ -548,6 +548,54 @@ class Test_Create extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a plugin can store a remote object itself, even with the option off.
+	 *
+	 * @covers ::create_post
+	 * @covers ::pre_handle_remote_object
+	 */
+	public function test_create_post_pre_handle_remote_object() {
+		\delete_option( 'activitypub_create_posts' );
+
+		$own_post_id = self::factory()->post->create();
+		$activity    = array(
+			'id'     => 'https://example.com/activities/create_event',
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/users/testuser',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'id'           => 'https://example.com/objects/event',
+				'type'         => 'Event',
+				'content'      => '<p>An event</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+			),
+		);
+
+		$received = array();
+		$pre      = function ( $pre, $activity, $user_ids ) use ( &$received, $own_post_id ) {
+			$received = array( $pre, $activity['object']['type'], $user_ids );
+
+			return \get_post( $own_post_id );
+		};
+		\add_filter( 'activitypub_pre_handle_remote_object', $pre, 10, 3 );
+
+		$handled = null;
+		$action  = function ( $activity, $user_ids, $success, $result ) use ( &$handled ) {
+			$handled = array( $success, $result );
+		};
+		\add_action( 'activitypub_handled_create', $action, 10, 4 );
+
+		Create::handle_create( $activity, $this->user_id );
+
+		\remove_filter( 'activitypub_pre_handle_remote_object', $pre );
+		\remove_action( 'activitypub_handled_create', $action );
+
+		$this->assertSame( array( null, 'Event', array( $this->user_id ) ), $received );
+		$this->assertTrue( $handled[0] );
+		$this->assertSame( $own_post_id, $handled[1]->ID );
+		$this->assertWPError( Remote_Posts::get_by_guid( 'https://example.com/objects/event' ) );
+	}
+
+	/**
 	 * Test that replies to non-existent posts return false.
 	 *
 	 * @covers \Activitypub\Collection\Interactions::add_comment

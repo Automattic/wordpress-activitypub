@@ -108,11 +108,17 @@ class Update {
 			} elseif ( ! empty( $comment_data['comment_ID'] ) ) {
 				$result = \get_comment( $comment_data['comment_ID'] );
 			}
-		} elseif ( \get_option( 'activitypub_create_posts', false ) ) {
-			$result = Remote_Posts::update( $activity, $user_ids );
+		} else {
+			$pre = Create::pre_handle_remote_object( $activity, $user_ids );
 
-			if ( \is_wp_error( $result ) && 'activitypub_post_not_found' === $result->get_error_code() ) {
-				$updated = false;
+			if ( null !== $pre ) {
+				$result = $pre;
+			} elseif ( \get_option( 'activitypub_create_posts', false ) ) {
+				$result = Remote_Posts::update( $activity, $user_ids );
+
+				if ( \is_wp_error( $result ) && 'activitypub_post_not_found' === $result->get_error_code() ) {
+					$updated = false;
+				}
 			}
 		}
 
