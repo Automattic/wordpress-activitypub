@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+The Counts style of the Fediverse Reactions block now uses your theme's link color, adds a link color setting, and underlines links on hover.
