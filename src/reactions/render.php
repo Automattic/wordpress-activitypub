@@ -275,7 +275,7 @@ ob_start();
 			<?php echo esc_html( Comment::get_comment_type_attr( $_type, 'singular' ) ); ?>
 		</button>
 		<?php elseif ( $attributes['showActions'] ) : ?>
-		<span class="reaction-action-placeholder"><?php echo esc_html( Comment::get_comment_type_attr( $_type, 'singular' ) ); ?></span>
+		<span class="reaction-action-placeholder" aria-hidden="true"><?php echo esc_html( Comment::get_comment_type_attr( $_type, 'singular' ) ); ?></span>
 		<?php endif; ?>
 		<div class="reaction-summary">
 		<?php if ( $show_avatars ) : ?>

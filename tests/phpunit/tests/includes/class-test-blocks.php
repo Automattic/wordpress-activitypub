@@ -842,17 +842,16 @@ class Test_Blocks extends \WP_UnitTestCase {
 		$post_id = $this->get_post_id_with_reactions();
 		$this->add_mention( $post_id );
 
-		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . ',"showActions":true} /-->';
-		$output       = do_blocks( $block_markup );
-
-		$this->assertStringContainsString( '<span class="reaction-action-placeholder">Mention</span>', $output );
-		$this->assertStringContainsString( 'data-intent="like"', $output );
-
-		// Without actions there is no placeholder.
-		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} /-->';
-		$this->assertStringNotContainsString( 'reaction-action-placeholder', do_blocks( $block_markup ) );
+		$with_actions    = do_blocks( '<!-- wp:activitypub/reactions {"postId":' . $post_id . ',"showActions":true} /-->' );
+		$without_actions = do_blocks( '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} /-->' );
 
 		$activitypub_comment_types = $registered;
+
+		$this->assertStringContainsString( '<span class="reaction-action-placeholder" aria-hidden="true">Mention</span>', $with_actions );
+		$this->assertStringContainsString( 'data-intent="like"', $with_actions );
+
+		// Without actions there is no placeholder.
+		$this->assertStringNotContainsString( 'reaction-action-placeholder', $without_actions );
 	}
 
 	/**
