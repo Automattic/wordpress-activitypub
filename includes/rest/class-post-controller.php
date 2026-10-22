@@ -161,8 +161,9 @@ class Post_Controller extends \WP_REST_Controller {
 			// phpcs:enable WordPress.WP.I18n
 
 			$reactions[ $type_object['collection'] ] = array(
-				'label' => $label,
-				'items' => \array_map(
+				'label'    => $label,
+				'singular' => $type_object['singular'] ?? '',
+				'items'    => \array_map(
 					static function ( $comment ) {
 						/*
 						 * `esc_url_raw()` rejects `javascript:` and other unsafe

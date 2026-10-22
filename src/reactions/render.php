@@ -275,7 +275,7 @@ ob_start();
 		>
 			<?php echo esc_html( $singular ); ?>
 		</button>
-		<?php elseif ( $attributes['showActions'] ) : ?>
+		<?php elseif ( $attributes['showActions'] && $singular ) : ?>
 		<span class="reaction-action-placeholder" aria-hidden="true"><?php echo esc_html( $singular ); ?></span>
 		<?php endif; ?>
 		<div class="reaction-summary">
@@ -324,15 +324,18 @@ ob_start();
 		if ( ! empty( $empty_types ) ) :
 			?>
 	<div class="reaction-actions-only" role="group" aria-label="<?php esc_attr_e( 'Reaction actions', 'activitypub' ); ?>">
-			<?php foreach ( $empty_types as $_type => $intent ) : ?>
+			<?php
+			foreach ( $empty_types as $_type => $intent ) :
+				$singular = Comment::get_comment_type_attr( $_type, 'singular' );
+				?>
 		<button
 			class="reaction-action-button has-text-color has-background"
 			data-intent="<?php echo esc_attr( $intent ); ?>"
 			data-wp-on--click="actions.openIntentModal"
 			type="button"
-			aria-label="<?php echo esc_attr( Comment::get_comment_type_attr( $_type, 'singular' ) ); ?>"
+			aria-label="<?php echo esc_attr( $singular ); ?>"
 		>
-				<?php echo esc_html( Comment::get_comment_type_attr( $_type, 'singular' ) ); ?>
+				<?php echo esc_html( $singular ); ?>
 		</button>
 			<?php endforeach; ?>
 	</div>

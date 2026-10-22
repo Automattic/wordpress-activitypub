@@ -246,7 +246,8 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 					.ref.querySelectorAll( `.reaction-group[data-reaction-type="${ reactionType }"]` )
 					.forEach( ( container ) => {
 						// The avatars share the summary column with the label, whatever sits in the action column.
-						const summary = container.querySelector( '.reaction-summary' );
+						// Cached markup from before the summary wrapper falls back to the whole row.
+						const summary = container.querySelector( '.reaction-summary' ) || container;
 						const label = container.querySelector( '.reaction-label' );
 						const labelWidth = label.offsetWidth || 0;
 						const availableWidth = summary.offsetWidth - labelWidth - BUTTON_GAP;

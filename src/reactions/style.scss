@@ -24,24 +24,28 @@
 
 	// Main container for reactions.
 	// The first column holds the action buttons.
-	// They all get the width of the widest one.
+	// They all get the width of the widest one, up to 40% of the block.
 	.activitypub-reactions {
 		display: grid;
-		grid-template-columns: max-content 1fr;
+		grid-template-columns: fit-content(40%) 1fr;
 	}
 
 	// Reaction group for each type (likes, reposts).
 	.reaction-group {
 		display: grid;
 		grid-column: 1 / -1;
+		// Without subgrid support, each row sizes its own button column.
+		grid-template-columns: fit-content(40%) 1fr;
 		grid-template-columns: subgrid;
 		align-items: center;
 		margin: 0.5em 0;
 		position: relative;
 
+		// Long labels wrap instead of taking the room of the avatars.
 		> .reaction-action-button,
 		> .reaction-action-placeholder {
 			margin-inline-end: 0.75rem;
+			white-space: normal;
 		}
 
 		// Avatars and count label.
@@ -168,6 +172,7 @@
 
 	.reaction-action-button {
 		background: none;
+		// For the flex rows: the Compact style and the actions-only row.
 		flex: 0 0 auto;
 		color: currentcolor;
 		cursor: pointer;
@@ -275,6 +280,11 @@
 	.reaction-actions-only {
 		display: inline-flex;
 		margin: 0;
+	}
+
+	// The inline buttons don't share a column, so there is nothing to line up.
+	.reaction-action-placeholder {
+		display: none;
 	}
 }
 

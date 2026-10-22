@@ -839,16 +839,24 @@ class Test_Blocks extends \WP_UnitTestCase {
 		global $activitypub_comment_types;
 		$registered = $activitypub_comment_types;
 
-		$post_id = $this->get_post_id_with_reactions();
-		$this->add_mention( $post_id );
+		try {
+			$post_id = $this->get_post_id_with_reactions();
+			$this->add_mention( $post_id );
 
-		$with_actions    = do_blocks( '<!-- wp:activitypub/reactions {"postId":' . $post_id . ',"showActions":true} /-->' );
-		$without_actions = do_blocks( '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} /-->' );
+			$with_actions    = do_blocks( '<!-- wp:activitypub/reactions {"postId":' . $post_id . ',"showActions":true} /-->' );
+			$without_actions = do_blocks( '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} /-->' );
 
-		$activitypub_comment_types = $registered;
+			// A type without a singular label gets no empty placeholder.
+			$activitypub_comment_types['mention']['singular'] = '';
+
+			$without_label = do_blocks( '<!-- wp:activitypub/reactions {"postId":' . $post_id . ',"showActions":true} /-->' );
+		} finally {
+			$activitypub_comment_types = $registered;
+		}
 
 		$this->assertStringContainsString( '<span class="reaction-action-placeholder" aria-hidden="true">Mention</span>', $with_actions );
 		$this->assertStringContainsString( 'data-intent="like"', $with_actions );
+		$this->assertStringNotContainsString( 'reaction-action-placeholder', $without_label );
 
 		// Without actions there is no placeholder.
 		$this->assertStringNotContainsString( 'reaction-action-placeholder', $without_actions );
