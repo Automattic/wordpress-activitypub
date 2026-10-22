@@ -395,7 +395,7 @@ class Sanitize {
 	 * @return string The sanitized content.
 	 */
 	public static function form_html( $content ) {
-		if ( ! \is_string( $content ) || '' === $content ) {
+		if ( ! \is_string( $content ) ) {
 			return '';
 		}
 

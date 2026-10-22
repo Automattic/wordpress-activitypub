@@ -237,7 +237,7 @@ $context = array(
 
 if ( $attributes['showActions'] ) {
 	$context['modal']['intent']   = '';
-	$context['modal']['action']   = '';
+	$context['modal']['action']   = false;
 	$context['copyButtonText']    = __( 'Copy', 'activitypub' );
 	$context['errorMessage']      = '';
 	$context['isError']           = false;
@@ -272,9 +272,33 @@ if ( $attributes['showActions'] ) {
 	 *     @type string $content The modal content (HTML, forms are allowed).
 	 *     @type string $label   Optional. The button label. Defaults to the singular label of the comment type.
 	 * }
-	 * @param int   $post_id The post ID.
+	 * @param int    $post_id  The post ID.
+	 * @param string $block_id The block ID, to prefix IDs in the content.
 	 */
-	$external_actions = array_diff_key( (array) apply_filters( 'activitypub_reactions_actions', array(), $_post_id ), $intent_map );
+	$_actions = array_diff_key( (array) apply_filters( 'activitypub_reactions_actions', array(), $_post_id, $block_id ), $intent_map );
+
+	foreach ( $_actions as $_type => $_action ) {
+		// Numeric keys are no comment types.
+		if ( ! is_string( $_type ) || ! is_array( $_action ) ) {
+			continue;
+		}
+
+		$label = ! empty( $_action['label'] ) ? $_action['label'] : Comment::get_comment_type_attr( $_type, 'singular' );
+		if ( ! $label ) {
+			continue;
+		}
+
+		$external_actions[ $_type ] = array(
+			'content' => $_action['content'] ?? '',
+			'button'  => sprintf(
+				'<button class="reaction-action-button has-text-color has-background" data-action="%1$s" data-title="%2$s" data-wp-on--click="actions.openActionModal" type="button" aria-label="%3$s">%4$s</button>',
+				esc_attr( $_type ),
+				esc_attr( ! empty( $_action['title'] ) ? $_action['title'] : $label ),
+				esc_attr( $label ),
+				esc_html( $label )
+			),
+		);
+	}
 }
 
 // Build reactions content.
@@ -300,16 +324,8 @@ ob_start();
 		>
 			<?php echo esc_html( $singular ); ?>
 		</button>
-		<?php elseif ( $attributes['showActions'] && isset( $external_actions[ $_type ] ) ) : ?>
-		<button
-			class="reaction-action-button has-text-color has-background"
-			data-action="<?php echo esc_attr( $_type ); ?>"
-			data-title="<?php echo esc_attr( $external_actions[ $_type ]['title'] ?? '' ); ?>"
-			data-wp-on--click="actions.openActionModal"
-			type="button"
-		>
-			<?php echo esc_html( $external_actions[ $_type ]['label'] ?? $singular ); ?>
-		</button>
+		<?php elseif ( isset( $external_actions[ $_type ] ) ) : ?>
+			<?php echo $external_actions[ $_type ]['button']; // phpcs:ignore WordPress.Security.EscapeOutput ?>
 		<?php elseif ( $attributes['showActions'] && $singular ) : ?>
 		<span class="reaction-action-placeholder" aria-hidden="true"><?php echo esc_html( $singular ); ?></span>
 		<?php endif; ?>
@@ -374,16 +390,8 @@ ob_start();
 				<?php echo esc_html( $singular ); ?>
 		</button>
 			<?php endforeach; ?>
-			<?php foreach ( $empty_actions as $_type => $_action ) : ?>
-		<button
-			class="reaction-action-button has-text-color has-background"
-			data-action="<?php echo esc_attr( $_type ); ?>"
-			data-title="<?php echo esc_attr( $_action['title'] ?? '' ); ?>"
-			data-wp-on--click="actions.openActionModal"
-			type="button"
-		>
-				<?php echo esc_html( $_action['label'] ?? Comment::get_comment_type_attr( $_type, 'singular' ) ); ?>
-		</button>
+			<?php foreach ( $empty_actions as $_action ) : ?>
+				<?php echo $_action['button']; // phpcs:ignore WordPress.Security.EscapeOutput ?>
 			<?php endforeach; ?>
 	</div>
 			<?php
@@ -418,7 +426,8 @@ ob_start();
 	</ul>
 </div>
 <?php if ( $attributes['showActions'] ) : ?>
-<div class="activitypub-intent-dialog" data-wp-bind--hidden="state.isIntentDialogHidden">
+<div data-wp-bind--hidden="context.modal.isCompact">
+<div class="activitypub-intent-dialog" data-wp-bind--hidden="context.modal.action">
 	<div class="activitypub-dialog__section">
 		<h4><?php esc_html_e( 'Post URL', 'activitypub' ); ?></h4>
 		<div class="activitypub-dialog__description">
@@ -503,9 +512,10 @@ ob_start();
 	data-wp-bind--hidden="state.isActionHidden"
 		<?php echo wp_interactivity_data_wp_context( array( 'action' => $_type ) ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
 >
-		<?php echo Sanitize::form_html( $_action['content'] ?? '' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
+		<?php echo Sanitize::form_html( $_action['content'] ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
 </div>
 	<?php endforeach; ?>
+</div>
 <?php endif; ?>
 <?php
 $modal_content = ob_get_clean();

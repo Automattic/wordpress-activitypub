@@ -12,16 +12,16 @@ createModalStore( 'activitypub/reactions' );
 
 /**
  * @typedef {Object} context
- * @property {string}  blockId         The block ID.
- * @property {Object}  modal           The modal state.
- * @property {boolean} modal.isCompact Whether the modal is compact.
- * @property {boolean} modal.isOpen    Whether the modal is open.
- * @property {Object}  modal.items     The items to display in the modal.
- * @property {string}  modal.title     The modal title (used in full-size mode).
- * @property {string}  modal.intent    The intent type (like, announce).
- * @property {string}  modal.action    The reaction type of an action added by another plugin.
- * @property {string}  postId          The post ID.
- * @property {Object}  reactions       Reactions data, keyed by reaction type.
+ * @property {string}       blockId         The block ID.
+ * @property {Object}       modal           The modal state.
+ * @property {boolean}      modal.isCompact Whether the modal is compact.
+ * @property {boolean}      modal.isOpen    Whether the modal is open.
+ * @property {Object}       modal.items     The items to display in the modal.
+ * @property {string}       modal.title     The modal title (used in full-size mode).
+ * @property {string}       modal.intent    The intent type (like, announce).
+ * @property {string|false} modal.action    The reaction type of an open action added by another plugin.
+ * @property {string}       postId          The post ID.
+ * @property {Object}       reactions       Reactions data, keyed by reaction type.
  */
 
 /**
@@ -39,16 +39,6 @@ const STORAGE_KEY = 'fediverse-remote-user';
 
 const { actions, callbacks, state } = store( 'activitypub/reactions', {
 	state: {
-		/**
-		 * Whether the ActivityPub intent dialog is hidden.
-		 *
-		 * @return {boolean} True in compact mode or while another plugin's action is open.
-		 */
-		get isIntentDialogHidden() {
-			const { modal } = getContext();
-			return modal.isCompact || !! modal.action;
-		},
-
 		/**
 		 * Whether the dialog of another plugin's action is hidden.
 		 *
@@ -354,7 +344,7 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 			// Reset to compact mode for next use.
 			context.modal.isCompact = true;
 			context.modal.intent = '';
-			context.modal.action = '';
+			context.modal.action = false;
 			context.modal.title = '';
 			context.isError = false;
 			context.errorMessage = '';
