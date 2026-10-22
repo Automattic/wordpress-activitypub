@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Handler;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
@@ -172,6 +173,81 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 		} else {
 			$this->assertEmpty( $quoted_by );
 		}
+	}
+
+	/**
+	 * A request in another actor's inbox did not ask the post author, so that actor declines it.
+	 *
+	 * @covers ::handle_quote_request
+	 */
+	public function test_handle_quote_request_rejects_request_not_sent_to_author() {
+		$recipient = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		Quote_Request::handle_quote_request( $this->create_quote_request_activity(), $recipient, null, Inbox::CONTEXT_INBOX );
+
+		$outbox = $this->get_quote_responses();
+		$this->assertCount( 1, $outbox );
+		$this->assertSame( 'Reject', \json_decode( $outbox[0]->post_content, true )['type'] );
+		$this->assertSame( $recipient, (int) $outbox[0]->post_author );
+		$this->assertEmpty( \get_post_meta( self::$post_id, '_activitypub_quoted_by', false ) );
+	}
+
+	/**
+	 * The shared inbox runs the handler once per recipient; only the author answers.
+	 *
+	 * @covers ::handle_quote_request
+	 */
+	public function test_handle_quote_request_shared_inbox_answers_once() {
+		$recipient = self::factory()->user->create( array( 'role' => 'author' ) );
+		$activity  = $this->create_quote_request_activity();
+
+		\do_action( 'activitypub_inbox_quote_request', $activity, $recipient, null, Inbox::CONTEXT_SHARED_INBOX );
+		\do_action( 'activitypub_inbox_quote_request', $activity, self::$user_id, null, Inbox::CONTEXT_SHARED_INBOX );
+
+		$outbox = $this->get_quote_responses();
+		$this->assertCount( 1, $outbox );
+		$this->assertSame( 'Accept', \json_decode( $outbox[0]->post_content, true )['type'] );
+		$this->assertSame( self::$user_id, (int) $outbox[0]->post_author );
+	}
+
+	/**
+	 * In blog mode the blog answers for the author's post, so a request in its inbox is accepted.
+	 *
+	 * @covers ::handle_quote_request
+	 */
+	public function test_handle_quote_request_accepts_request_to_blog_for_author() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+
+		Quote_Request::handle_quote_request( $this->create_quote_request_activity(), Actors::BLOG_USER_ID );
+
+		$outbox = $this->get_quote_responses();
+		$this->assertCount( 1, $outbox );
+		$this->assertSame( 'Accept', \json_decode( $outbox[0]->post_content, true )['type'] );
+		$this->assertSame( Actors::BLOG_USER_ID, (int) $outbox[0]->post_author );
+
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * Get the queued Accept and Reject responses.
+	 *
+	 * @return \WP_Post[] The outbox items.
+	 */
+	private function get_quote_responses() {
+		return \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'     => '_activitypub_activity_type',
+						'value'   => array( 'Accept', 'Reject' ),
+						'compare' => 'IN',
+					),
+				),
+			)
+		);
 	}
 
 	/**
