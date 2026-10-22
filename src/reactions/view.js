@@ -245,11 +245,11 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 				getElement()
 					.ref.querySelectorAll( `.reaction-group[data-reaction-type="${ reactionType }"]` )
 					.forEach( ( container ) => {
+						// The avatars share the summary column with the label, whatever sits in the action column.
+						const summary = container.querySelector( '.reaction-summary' );
 						const label = container.querySelector( '.reaction-label' );
 						const labelWidth = label.offsetWidth || 0;
-						const actionButton = container.querySelector( '.reaction-action-button' );
-						const actionButtonWidth = actionButton ? actionButton.offsetWidth + BUTTON_GAP : 0;
-						const availableWidth = container.offsetWidth - labelWidth - actionButtonWidth - BUTTON_GAP;
+						const availableWidth = summary.offsetWidth - labelWidth - BUTTON_GAP;
 
 						// Calculate how many avatars can fit.
 						// The first avatar takes full width, the rest take effective width.

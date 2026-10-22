@@ -262,6 +262,7 @@ ob_start();
 		/* translators: %s: reaction type. */
 		$aria_label = sprintf( __( 'View all %s', 'activitypub' ), Comment::get_comment_type_attr( $_type, 'label' ) );
 		$intent     = isset( $intent_map[ $_type ] ) ? $intent_map[ $_type ] : '';
+		$singular   = Comment::get_comment_type_attr( $_type, 'singular' );
 		?>
 	<div class="reaction-group" data-reaction-type="<?php echo esc_attr( $_type ); ?>">
 		<?php if ( $attributes['showActions'] && $intent ) : ?>
@@ -270,12 +271,12 @@ ob_start();
 			data-intent="<?php echo esc_attr( $intent ); ?>"
 			data-wp-on--click="actions.openIntentModal"
 			type="button"
-			aria-label="<?php echo esc_attr( Comment::get_comment_type_attr( $_type, 'singular' ) ); ?>"
+			aria-label="<?php echo esc_attr( $singular ); ?>"
 		>
-			<?php echo esc_html( Comment::get_comment_type_attr( $_type, 'singular' ) ); ?>
+			<?php echo esc_html( $singular ); ?>
 		</button>
 		<?php elseif ( $attributes['showActions'] ) : ?>
-		<span class="reaction-action-placeholder" aria-hidden="true"><?php echo esc_html( Comment::get_comment_type_attr( $_type, 'singular' ) ); ?></span>
+		<span class="reaction-action-placeholder" aria-hidden="true"><?php echo esc_html( $singular ); ?></span>
 		<?php endif; ?>
 		<div class="reaction-summary">
 		<?php if ( $show_avatars ) : ?>

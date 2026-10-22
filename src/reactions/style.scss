@@ -41,7 +41,6 @@
 
 		> .reaction-action-button,
 		> .reaction-action-placeholder {
-			grid-column: 1;
 			margin-inline-end: 0.75rem;
 		}
 
@@ -159,6 +158,7 @@
 	.reaction-action-placeholder {
 		border: 1px solid currentcolor;
 		border-radius: 4px;
+		box-sizing: border-box;
 		min-width: 5.5em;
 		padding: 0.25rem 0.75rem;
 		font-size: var(--wp--preset--font-size--small, 0.875rem);
@@ -188,7 +188,6 @@
 
 	// Takes the place of the action button for reaction types without an action.
 	.reaction-action-placeholder {
-		box-sizing: border-box;
 		opacity: 0.7;
 	}
 
@@ -262,7 +261,6 @@
 	}
 
 	.activitypub-reactions {
-		flex-direction: row;
 		flex-wrap: wrap;
 		gap: 0.5em;
 		display: inline-flex;
@@ -270,7 +268,6 @@
 
 	/* stylelint-disable-next-line no-descending-specificity */
 	.reaction-group {
-		width: auto;
 		margin: 0;
 		display: inline-flex;
 	}
