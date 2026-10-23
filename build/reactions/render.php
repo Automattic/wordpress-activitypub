@@ -262,6 +262,7 @@ ob_start();
 		/* translators: %s: reaction type. */
 		$aria_label = sprintf( __( 'View all %s', 'activitypub' ), Comment::get_comment_type_attr( $_type, 'label' ) );
 		$intent     = isset( $intent_map[ $_type ] ) ? $intent_map[ $_type ] : '';
+		$singular   = $attributes['showActions'] ? Comment::get_comment_type_attr( $_type, 'singular' ) : '';
 		?>
 	<div class="reaction-group" data-reaction-type="<?php echo esc_attr( $_type ); ?>">
 		<?php if ( $attributes['showActions'] && $intent ) : ?>
@@ -270,11 +271,14 @@ ob_start();
 			data-intent="<?php echo esc_attr( $intent ); ?>"
 			data-wp-on--click="actions.openIntentModal"
 			type="button"
-			aria-label="<?php echo esc_attr( Comment::get_comment_type_attr( $_type, 'singular' ) ); ?>"
+			aria-label="<?php echo esc_attr( $singular ); ?>"
 		>
-			<?php echo esc_html( Comment::get_comment_type_attr( $_type, 'singular' ) ); ?>
+			<?php echo esc_html( $singular ); ?>
 		</button>
+		<?php elseif ( $attributes['showActions'] && $singular ) : ?>
+		<span class="reaction-action-placeholder" aria-hidden="true"><?php echo esc_html( $singular ); ?></span>
 		<?php endif; ?>
+		<div class="reaction-summary">
 		<?php if ( $show_avatars ) : ?>
 		<ul class="reaction-avatars">
 			<template data-wp-each="context.reactions.<?php echo esc_attr( $_type ); ?>.items">
@@ -309,6 +313,7 @@ ob_start();
 		>
 			<?php echo esc_html( $reaction['label'] ); ?>
 		</button>
+		</div>
 	</div>
 	<?php endforeach; ?>
 	<?php
@@ -319,15 +324,18 @@ ob_start();
 		if ( ! empty( $empty_types ) ) :
 			?>
 	<div class="reaction-actions-only" role="group" aria-label="<?php esc_attr_e( 'Reaction actions', 'activitypub' ); ?>">
-			<?php foreach ( $empty_types as $_type => $intent ) : ?>
+			<?php
+			foreach ( $empty_types as $_type => $intent ) :
+				$singular = Comment::get_comment_type_attr( $_type, 'singular' );
+				?>
 		<button
 			class="reaction-action-button has-text-color has-background"
 			data-intent="<?php echo esc_attr( $intent ); ?>"
 			data-wp-on--click="actions.openIntentModal"
 			type="button"
-			aria-label="<?php echo esc_attr( Comment::get_comment_type_attr( $_type, 'singular' ) ); ?>"
+			aria-label="<?php echo esc_attr( $singular ); ?>"
 		>
-				<?php echo esc_html( Comment::get_comment_type_attr( $_type, 'singular' ) ); ?>
+				<?php echo esc_html( $singular ); ?>
 		</button>
 			<?php endforeach; ?>
 	</div>

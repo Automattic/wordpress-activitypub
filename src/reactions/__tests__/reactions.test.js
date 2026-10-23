@@ -165,6 +165,24 @@ describe( 'Reactions', () => {
 		await waitFor( () => expect( screen.getByText( 'Fallback' ) ).toBeInTheDocument() );
 	} );
 
+	test( 'shows a placeholder for reaction types without an action', () => {
+		const withMentions = {
+			...reactions,
+			mentions: {
+				label: '1 mention',
+				singular: 'Mention',
+				items: [ { avatar: 'user2.jpg', url: 'https://example.com/user2', name: 'User Two' } ],
+			},
+		};
+
+		const { container } = render( <Reactions postId={ 42 } reactions={ withMentions } showActions /> );
+
+		const placeholders = container.querySelectorAll( '.reaction-action-placeholder' );
+		expect( placeholders ).toHaveLength( 1 );
+		expect( placeholders[ 0 ] ).toHaveTextContent( 'Mention' );
+		expect( container.querySelectorAll( '.reaction-action-button' ) ).toHaveLength( 1 );
+	} );
+
 	test( 'uses the fallback when the request fails', async () => {
 		apiFetch.mockRejectedValue( new Error( 'rest_invalid_param' ) );
 

@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed the user selection in the Follow Me and other ActivityPub blocks disappearing when the site has a user you are not allowed to edit.

@@ -105,9 +105,10 @@ const ReactionList = ( { reactions, displayStyle } ) => {
  * @param {string}  props.displayStyle The display style ('facepile' or 'compact').
  * @param {boolean} props.showActions  Whether to show the action button.
  * @param {string}  props.actionLabel  Label for the action button.
+ * @param {string}  props.singular     Singular label of the reaction type, shown in place of a missing action button.
  * @return {JSX.Element}              The rendered component.
  */
-const ReactionGroup = ( { items, label, displayStyle, showActions, actionLabel } ) => {
+const ReactionGroup = ( { items, label, displayStyle, showActions, actionLabel, singular } ) => {
 	const [ isOpen, setIsOpen ] = useState( false );
 	const [ buttonRef, setButtonRef ] = useState( null );
 	const containerRef = useRef( null );
@@ -121,15 +122,22 @@ const ReactionGroup = ( { items, label, displayStyle, showActions, actionLabel }
 					{ actionLabel }
 				</button>
 			) }
-			<FacepileRow reactions={ visibleItems } displayStyle={ displayStyle } />
-			<Button
-				ref={ setButtonRef }
-				className="reaction-label is-link"
-				onClick={ () => setIsOpen( ! isOpen ) }
-				aria-expanded={ isOpen }
-			>
-				{ label }
-			</Button>
+			{ showActions && ! actionLabel && singular && (
+				<span className="reaction-action-placeholder" aria-hidden="true">
+					{ singular }
+				</span>
+			) }
+			<div className="reaction-summary">
+				<FacepileRow reactions={ visibleItems } displayStyle={ displayStyle } />
+				<Button
+					ref={ setButtonRef }
+					className="reaction-label is-link"
+					onClick={ () => setIsOpen( ! isOpen ) }
+					aria-expanded={ isOpen }
+				>
+					{ label }
+				</Button>
+			</div>
 			{ isOpen && buttonRef && (
 				<Popover anchor={ buttonRef } onClose={ () => setIsOpen( false ) } className="activitypub-popover">
 					<ReactionList reactions={ items } displayStyle={ displayStyle } />
@@ -225,6 +233,7 @@ export function Reactions( {
 						displayStyle={ displayStyle }
 						showActions={ showActions }
 						actionLabel={ ACTION_LABELS[ key ] }
+						singular={ group.singular }
 					/>
 				);
 			} ) }
