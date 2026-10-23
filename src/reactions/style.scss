@@ -176,6 +176,9 @@
 		flex: 0 0 auto;
 		color: currentcolor;
 		cursor: pointer;
+		// Buttons don't inherit the font, so they would not match the placeholder.
+		font-family: inherit;
+		line-height: inherit;
 		transition: background-color 0.2s ease;
 		text-decoration: none;
 
