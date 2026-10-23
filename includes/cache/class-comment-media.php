@@ -88,6 +88,23 @@ class Comment_Media extends Media {
 		\add_action( 'edit_comment', array( self::class, 'clear_cached_images' ) );
 		// Deleting a comment also transitions it, to 'delete'.
 		\add_action( 'transition_comment_status', array( self::class, 'maybe_cleanup_comment' ), 10, 3 );
+		\add_action( 'update_option_activitypub_allow_comment_images', array( self::class, 'maybe_clear_all_images' ), 10, 2 );
+	}
+
+	/**
+	 * Remove all cached comment images when comment images are turned off.
+	 *
+	 * Files are cached lazily, so turning the option on again downloads them again.
+	 *
+	 * @param mixed $old_value The old option value.
+	 * @param mixed $value     The new option value.
+	 *
+	 * @return void
+	 */
+	public static function maybe_clear_all_images( $old_value, $value ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Required for action signature.
+		if ( ! $value ) {
+			self::delete_directory( \wp_upload_dir()['basedir'] . self::BASE_DIR );
+		}
 	}
 
 	/**

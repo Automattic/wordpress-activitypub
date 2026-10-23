@@ -409,7 +409,7 @@ class Settings_Fields {
 					<?php \esc_html_e( 'Show images attached to replies', 'activitypub' ); ?>
 				</label>
 			</p>
-			<p class="description"><?php \esc_html_e( 'WordPress does not show images in comments. With this option, images that people attach to their Fediverse replies are shown below the comment text.', 'activitypub' ); ?></p>
+			<p class="description"><?php \esc_html_e( 'WordPress does not show images in comments. With this option, images that people attach to their Fediverse replies are shown below the comment text. Images are only shown from the local cache. With remote caching turned off, only their description is shown.', 'activitypub' ); ?></p>
 		</fieldset>
 		<?php
 	}

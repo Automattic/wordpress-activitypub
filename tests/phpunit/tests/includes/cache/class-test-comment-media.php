@@ -229,6 +229,23 @@ class Test_Comment_Media extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Turning comment images off removes all cached comment images, turning them on keeps them.
+	 *
+	 * @covers ::maybe_clear_all_images
+	 */
+	public function test_turning_option_off_removes_all_images() {
+		\update_option( 'activitypub_allow_comment_images', '1' );
+		list( , $file ) = $this->create_cached_comment();
+
+		// A change that keeps the option on keeps the images.
+		\update_option( 'activitypub_allow_comment_images', 'on' );
+		$this->assertFileExists( $file );
+
+		\update_option( 'activitypub_allow_comment_images', '0' );
+		$this->assertDirectoryDoesNotExist( \wp_upload_dir()['basedir'] . Comment_Media::BASE_DIR );
+	}
+
+	/**
 	 * Approving a comment keeps its images.
 	 *
 	 * @covers ::maybe_cleanup_comment
