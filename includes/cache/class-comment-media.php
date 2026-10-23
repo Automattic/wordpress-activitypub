@@ -56,7 +56,7 @@ class Comment_Media extends Media {
 	 * @return void
 	 */
 	public static function register_cleanup() {
-		\add_action( 'edit_comment', array( Media::class, 'invalidate_comment' ) );
+		\add_action( 'edit_comment', array( self::class, 'clear_cached_images' ) );
 		// Deleting a comment also transitions it, to 'delete'.
 		\add_action( 'transition_comment_status', array( self::class, 'maybe_cleanup_comment' ), 10, 3 );
 	}
@@ -72,7 +72,20 @@ class Comment_Media extends Media {
 	 */
 	public static function maybe_cleanup_comment( $new_status, $old_status, $comment ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Required for action signature.
 		if ( 'approved' !== $new_status ) {
-			Media::invalidate_comment( $comment->comment_ID );
+			self::clear_cached_images( (int) $comment->comment_ID );
 		}
+	}
+
+	/**
+	 * Remove the cached images of a comment.
+	 *
+	 * Files are cached lazily, so the next render downloads them again.
+	 *
+	 * @param int $comment_id The comment ID.
+	 *
+	 * @return void
+	 */
+	public static function clear_cached_images( $comment_id ) {
+		Media::invalidate_comment( $comment_id );
 	}
 }
