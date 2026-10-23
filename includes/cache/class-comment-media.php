@@ -48,9 +48,8 @@ class Comment_Media extends Media {
 		/*
 		 * Removing a comment has to remove its images from the server, also when caching was
 		 * disabled after they were cached. Files are cached lazily, so a restored comment
-		 * downloads them again.
+		 * downloads them again. Deleting a comment transitions it to 'delete'.
 		 */
-		\add_action( 'delete_comment', array( Media::class, 'invalidate_comment' ) );
 		\add_action( 'edit_comment', array( Media::class, 'invalidate_comment' ) );
 		\add_action( 'transition_comment_status', array( self::class, 'maybe_cleanup_comment' ), 10, 3 );
 	}

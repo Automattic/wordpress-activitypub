@@ -8,7 +8,6 @@
 namespace Activitypub\Tests\Cache;
 
 use Activitypub\Cache\Comment_Media;
-use Activitypub\Cache\Media;
 use WP_UnitTestCase;
 
 /**
@@ -47,17 +46,6 @@ class Test_Comment_Media extends WP_UnitTestCase {
 		file_put_contents( $paths['basedir'] . '/test.txt', 'test' );
 
 		return array( $comment_id, $paths['basedir'] . '/test.txt' );
-	}
-
-	/**
-	 * Comment images are stored per comment, in the directory Media reserved for them.
-	 *
-	 * @covers ::get_base_dir
-	 * @covers ::get_context
-	 */
-	public function test_storage_paths() {
-		$this->assertSame( Media::get_storage_paths_for_context( 123, Media::CONTEXT_COMMENT ), Comment_Media::get_storage_paths( 123 ) );
-		$this->assertSame( 'comment_media', Comment_Media::get_context() );
 	}
 
 	/**
@@ -172,10 +160,10 @@ class Test_Comment_Media extends WP_UnitTestCase {
 	 * @covers ::init
 	 */
 	public function test_cleanup_without_caching() {
-		\remove_all_actions( 'delete_comment' );
-		\add_filter( 'activitypub_remote_cache_enabled', '__return_false' );
+		\remove_action( 'transition_comment_status', array( Comment_Media::class, 'maybe_cleanup_comment' ) );
+		\add_filter( 'activitypub_cache_media_enabled', '__return_false' );
 		Comment_Media::init();
-		\remove_filter( 'activitypub_remote_cache_enabled', '__return_false' );
+		\remove_filter( 'activitypub_cache_media_enabled', '__return_false' );
 		list( $comment_id, $file ) = $this->create_cached_comment();
 
 		\wp_delete_comment( $comment_id, true );

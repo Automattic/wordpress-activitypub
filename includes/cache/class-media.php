@@ -19,7 +19,7 @@ use Activitypub\Collection\Remote_Posts;
  * - Posts: /wp-content/uploads/activitypub/posts/{post_id}/
  * - Comments: /wp-content/uploads/activitypub/comments/{comment_id}/
  *
- * Files are cleaned up automatically when the parent post is deleted.
+ * Post files are cleaned up when the post is deleted, comment files by Comment_Media.
  *
  * @since 5.6.0
  */
@@ -116,13 +116,17 @@ class Media extends File {
 	 * }
 	 */
 	public static function get_storage_paths_for_context( $entity_id, $context = self::CONTEXT ) {
+		// One source for the comment directory: the one Comment_Media caches into.
+		if ( self::CONTEXT_COMMENT === $context ) {
+			return Comment_Media::get_storage_paths( $entity_id );
+		}
+
 		$upload_dir = \wp_upload_dir();
 		$entity_id  = \sanitize_file_name( (string) $entity_id );
-		$base_dir   = self::CONTEXT_COMMENT === $context ? self::BASE_DIR_COMMENTS : self::BASE_DIR_POSTS;
 
 		return array(
-			'basedir' => $upload_dir['basedir'] . $base_dir . $entity_id,
-			'baseurl' => $upload_dir['baseurl'] . $base_dir . $entity_id,
+			'basedir' => $upload_dir['basedir'] . self::BASE_DIR_POSTS . $entity_id,
+			'baseurl' => $upload_dir['baseurl'] . self::BASE_DIR_POSTS . $entity_id,
 		);
 	}
 

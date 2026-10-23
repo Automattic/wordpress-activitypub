@@ -675,16 +675,12 @@ class Blocks {
 		}
 
 		// Get entity ID from context, comment images are cached per comment.
-		$cache_context = Media::CONTEXT;
-		$entity_id     = $block->context['commentId'] ?? null;
-		if ( $entity_id ) {
-			$cache_context = Media::CONTEXT_COMMENT;
-		} else {
-			$entity_id = $block->context['postId'] ?? null;
-			$post      = \get_post();
-			if ( ! $entity_id && $post ) {
-				$entity_id = $post->ID;
-			}
+		$comment_id    = $block->context['commentId'] ?? null;
+		$cache_context = $comment_id ? Media::CONTEXT_COMMENT : Media::CONTEXT;
+		$entity_id     = $comment_id ?: ( $block->context['postId'] ?? null );
+		$post          = \get_post();
+		if ( ! $entity_id && $post ) {
+			$entity_id = $post->ID;
 		}
 
 		/**

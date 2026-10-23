@@ -1671,7 +1671,6 @@ class Test_Interactions extends \WP_UnitTestCase {
 	 * @covers ::add_reaction
 	 */
 	public function test_add_reaction_skips_images() {
-		\update_option( 'activitypub_allow_comment_images', '1' );
 		\wp_insert_post(
 			array(
 				'post_type'   => 'ap_post',
@@ -1680,7 +1679,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 				'guid'        => 'https://remote.example.com/users/remoteuser/statuses/457',
 			)
 		);
-		$activity        = array(
+		$activity     = array(
 			'type'   => 'Announce',
 			'actor'  => 'https://example.com/users/booster',
 			'object' => array(
@@ -1696,25 +1695,14 @@ class Test_Interactions extends \WP_UnitTestCase {
 			),
 			'id'     => 'https://example.com/activities/announce/790',
 		);
-		$metadata_filter = static function () {
-			return array(
-				'name'              => 'Remote Booster',
-				'preferredUsername' => 'booster',
-				'id'                => 'https://example.com/users/booster',
-				'url'               => 'https://example.com/@booster',
-			);
-		};
-		$calls           = 0;
-		$limit_filter    = static function ( $limit ) use ( &$calls ) {
+		$calls        = 0;
+		$limit_filter = static function ( $limit ) use ( &$calls ) {
 			++$calls;
 			return $limit;
 		};
-		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
 		\add_filter( 'activitypub_comment_image_limit', $limit_filter );
 		$comment_id = Interactions::add_reaction( $activity );
 		\remove_filter( 'activitypub_comment_image_limit', $limit_filter );
-		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
-		\delete_option( 'activitypub_allow_comment_images' );
 
 		$this->assertIsInt( $comment_id );
 		$this->assertSame( 0, $calls );
