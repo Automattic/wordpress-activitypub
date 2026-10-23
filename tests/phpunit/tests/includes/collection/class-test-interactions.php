@@ -57,6 +57,8 @@ class Test_Interactions extends \WP_UnitTestCase {
 			} else {
 				$comment_id = Interactions::add_comment( $object );
 				$this->assertIsInt( $comment_id );
+				// New authors are held for moderation, images only render for approved comments.
+				\wp_set_comment_status( $comment_id, 'approve' );
 			}
 			$comment = \get_comment( $comment_id );
 			$this->assertSame( 1, \substr_count( $comment->comment_content, '<!-- wp:activitypub/image' ) );
@@ -100,6 +102,8 @@ class Test_Interactions extends \WP_UnitTestCase {
 			} else {
 				$comment_id = Interactions::add_comment( $activity );
 				$this->assertIsInt( $comment_id );
+				// New authors are held for moderation, images only render for approved comments.
+				\wp_set_comment_status( $comment_id, 'approve' );
 			}
 			$comment = \get_comment( $comment_id );
 			\add_filter( 'activitypub_should_cache_url', '__return_false' );
@@ -227,10 +231,11 @@ class Test_Interactions extends \WP_UnitTestCase {
 		Comment_Media::init();
 		\add_filter( 'activitypub_pre_download_url', $download );
 		$comment_id = Interactions::add_comment( $activity );
-		$comment    = \get_comment( $comment_id );
-		$before     = $downloads;
-		$rendered   = \apply_filters( 'comment_text', $comment->comment_content, $comment );
-		$again      = \apply_filters( 'comment_text', $comment->comment_content, $comment );
+		\wp_set_comment_status( $comment_id, 'approve' );
+		$comment  = \get_comment( $comment_id );
+		$before   = $downloads;
+		$rendered = \apply_filters( 'comment_text', $comment->comment_content, $comment );
+		$again    = \apply_filters( 'comment_text', $comment->comment_content, $comment );
 		\remove_filter( 'activitypub_pre_download_url', $download );
 		$cached = Comment_Media::get( $url, $comment_id );
 		\wp_delete_comment( $comment_id, true );
@@ -1658,6 +1663,62 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		// Clean up.
 		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+	}
+
+	/**
+	 * Reactions with an embedded object do not build image blocks.
+	 *
+	 * @covers ::add_reaction
+	 */
+	public function test_add_reaction_skips_images() {
+		\update_option( 'activitypub_allow_comment_images', '1' );
+		\wp_insert_post(
+			array(
+				'post_type'   => 'ap_post',
+				'post_title'  => 'Test AP Post for Reaction',
+				'post_status' => 'publish',
+				'guid'        => 'https://remote.example.com/users/remoteuser/statuses/457',
+			)
+		);
+		$activity        = array(
+			'type'   => 'Announce',
+			'actor'  => 'https://example.com/users/booster',
+			'object' => array(
+				'id'         => 'https://remote.example.com/users/remoteuser/statuses/457',
+				'type'       => 'Note',
+				'attachment' => array(
+					array(
+						'type'      => 'Document',
+						'mediaType' => 'image/jpeg',
+						'url'       => 'https://example.com/photo.jpg',
+					),
+				),
+			),
+			'id'     => 'https://example.com/activities/announce/790',
+		);
+		$metadata_filter = static function () {
+			return array(
+				'name'              => 'Remote Booster',
+				'preferredUsername' => 'booster',
+				'id'                => 'https://example.com/users/booster',
+				'url'               => 'https://example.com/@booster',
+			);
+		};
+		$calls           = 0;
+		$limit_filter    = static function ( $limit ) use ( &$calls ) {
+			++$calls;
+			return $limit;
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+		\add_filter( 'activitypub_comment_image_limit', $limit_filter );
+		$comment_id = Interactions::add_reaction( $activity );
+		\remove_filter( 'activitypub_comment_image_limit', $limit_filter );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+		\delete_option( 'activitypub_allow_comment_images' );
+
+		$this->assertIsInt( $comment_id );
+		$this->assertSame( 0, $calls );
+		$this->assertStringNotContainsString( 'activitypub/image', \get_comment( $comment_id )->comment_content );
 	}
 
 	/**

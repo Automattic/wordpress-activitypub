@@ -50,8 +50,8 @@ class Comment_Media extends Media {
 		 * disabled after they were cached. Files are cached lazily, so a restored comment
 		 * downloads them again.
 		 */
-		\add_action( 'delete_comment', array( self::class, 'invalidate_entity' ) );
-		\add_action( 'edit_comment', array( self::class, 'invalidate_entity' ) );
+		\add_action( 'delete_comment', array( Media::class, 'invalidate_comment' ) );
+		\add_action( 'edit_comment', array( Media::class, 'invalidate_comment' ) );
 		\add_action( 'transition_comment_status', array( self::class, 'maybe_cleanup_comment' ), 10, 3 );
 	}
 
@@ -66,7 +66,7 @@ class Comment_Media extends Media {
 	 */
 	public static function maybe_cleanup_comment( $new_status, $old_status, $comment ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Required for action signature.
 		if ( 'approved' !== $new_status ) {
-			self::invalidate_entity( $comment->comment_ID );
+			Media::invalidate_comment( $comment->comment_ID );
 		}
 	}
 }

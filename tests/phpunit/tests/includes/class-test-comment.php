@@ -91,6 +91,7 @@ class Test_Comment extends \WP_UnitTestCase {
 					true
 				);
 				$this->assertIsInt( $comment_id );
+				\wp_set_comment_status( $comment_id, 'approve' );
 			}
 			$comment  = \get_comment( $comment_id );
 			$rendered = Comment::render_blocks( $comment->comment_content, $comment );
@@ -277,14 +278,17 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Spam comments do not show or fetch their images.
+	 * Comments that are not approved do not show or fetch their images, also not in the admin.
 	 *
+	 * @dataProvider data_unapproved_status
 	 * @covers ::render_blocks
+	 *
+	 * @param string $status The comment_approved value.
 	 */
-	public function test_spam_comment_images_hidden() {
+	public function test_unapproved_comment_images_hidden( $status ) {
 		$comment = self::factory()->comment->create_and_get(
 			array(
-				'comment_approved' => 'spam',
+				'comment_approved' => $status,
 				'comment_meta'     => array( 'protocol' => 'activitypub' ),
 			)
 		);
@@ -300,6 +304,19 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		$this->assertStringNotContainsString( '<img', $rendered );
 		$this->assertSame( 0, $calls );
+	}
+
+	/**
+	 * Comment statuses that are not approved.
+	 *
+	 * @return array Test data.
+	 */
+	public function data_unapproved_status() {
+		return array(
+			'spam'    => array( 'spam' ),
+			'pending' => array( '0' ),
+			'trash'   => array( 'trash' ),
+		);
 	}
 
 	/**

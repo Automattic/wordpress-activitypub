@@ -64,7 +64,7 @@ class Comment {
 		$output         = '';
 		$allowed_blocks = array( 'activitypub/emoji' );
 		$context_filter = null;
-		if ( \get_option( 'activitypub_allow_comment_images' ) && $comment instanceof \WP_Comment && 'spam' !== \wp_get_comment_status( $comment ) && self::was_received( $comment ) ) {
+		if ( \get_option( 'activitypub_allow_comment_images' ) && $comment instanceof \WP_Comment && 'approved' === \wp_get_comment_status( $comment ) && self::was_received( $comment ) ) {
 			$allowed_blocks[] = 'activitypub/image';
 
 			// Images are cached per comment, so removing the comment removes them.

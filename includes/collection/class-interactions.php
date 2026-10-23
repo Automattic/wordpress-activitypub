@@ -97,6 +97,11 @@ class Interactions {
 			return false;
 		}
 
+		// Reactions share activity_to_comment(), only remote replies and quotes get image blocks.
+		if ( null === $user_id ) {
+			$comment_data['comment_content'] .= \addslashes( process_remote_images( '', self::get_image_attachments( $activity['object'] ) ) );
+		}
+
 		if ( $comment_type ) {
 			$comment_data['comment_type'] = $comment_type;
 		}
@@ -525,7 +530,6 @@ class Interactions {
 		// Sanitize remote HTML before adding our own emoji and image blocks.
 		$content         = Sanitize::comment_content( $activity['object']['content'] ?? '' );
 		$content         = Emoji::wrap_in_content( $content, $activity['object'] );
-		$content        .= process_remote_images( '', self::get_image_attachments( $activity['object'] ) );
 		$comment_content = \addslashes( $content );
 
 		return array(
