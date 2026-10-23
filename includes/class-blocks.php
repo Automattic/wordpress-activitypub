@@ -671,7 +671,7 @@ class Blocks {
 			return $comment_id ? self::render_image_description( $attrs ) : $content;
 		}
 
-		$url       = ! empty( $attrs['urlEncoded'] ) ? \wp_specialchars_decode( $attrs['url'], ENT_QUOTES ) : $attrs['url'];
+		$url       = self::get_image_url( $attrs );
 		$processor = new \WP_HTML_Tag_Processor( $content );
 		if ( isset( $attrs['alt'] ) && ( ! $processor->next_tag( array( 'tag_name' => 'IMG' ) ) || ! $processor->get_attribute( 'src' ) ) ) {
 			// Comment sanitization removes img attributes; retain them in the block instead.
@@ -712,6 +712,24 @@ class Blocks {
 		}
 
 		return $content;
+	}
+
+	/**
+	 * Get the remote URL of an image block.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $attrs The image block attributes.
+	 *
+	 * @return string The remote URL, empty if the block has none.
+	 */
+	public static function get_image_url( $attrs ) {
+		if ( empty( $attrs['url'] ) || ! \is_string( $attrs['url'] ) ) {
+			return '';
+		}
+
+		// Comment sanitization would mangle a raw URL, so generated blocks store it encoded.
+		return ! empty( $attrs['urlEncoded'] ) ? \wp_specialchars_decode( $attrs['url'], ENT_QUOTES ) : $attrs['url'];
 	}
 
 	/**

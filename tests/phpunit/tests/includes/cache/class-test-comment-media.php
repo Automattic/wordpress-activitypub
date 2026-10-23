@@ -10,6 +10,8 @@ namespace Activitypub\Tests\Cache;
 use Activitypub\Cache\Comment_Media;
 use WP_UnitTestCase;
 
+use function Activitypub\generate_image_block;
+
 /**
  * Test class for Comment Media cache.
  *
@@ -58,13 +60,14 @@ class Test_Comment_Media extends WP_UnitTestCase {
 	}
 
 	/**
-	 * An image downloaded while its comment was removed is not kept on the server.
+	 * Download an image for a comment, with the download stubbed.
 	 *
-	 * @covers ::cache
+	 * @param int $comment_id The comment ID.
+	 *
+	 * @return string The URL the cache returns.
 	 */
-	public function test_maybe_cache_removes_images_of_removed_comment() {
-		$comment_id = self::factory()->comment->create( array( 'comment_approved' => 'trash' ) );
-		$download   = static function () {
+	private function cache_image( $comment_id ) {
+		$download = static function () {
 			$file = \wp_tempnam( 'comment-image.jpg' );
 			\copy( AP_TESTS_DIR . '/data/assets/test.jpg', $file );
 			return array(
@@ -73,11 +76,63 @@ class Test_Comment_Media extends WP_UnitTestCase {
 			);
 		};
 
+		// Comment IDs repeat across tests, start without a cached file.
+		Comment_Media::invalidate_entity( $comment_id );
 		\add_filter( 'activitypub_pre_download_url', $download );
 		$url = Comment_Media::maybe_cache( 'https://example.com/photo.jpg', 'comment_media', $comment_id );
 		\remove_filter( 'activitypub_pre_download_url', $download );
 
-		$this->assertSame( 'https://example.com/photo.jpg', $url );
+		return $url;
+	}
+
+	/**
+	 * An image downloaded while its comment was removed is not kept on the server.
+	 *
+	 * @covers ::cache
+	 */
+	public function test_maybe_cache_removes_images_of_removed_comment() {
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_approved' => 'trash',
+				'comment_content'  => generate_image_block( 'https://example.com/photo.jpg', '' ),
+			)
+		);
+
+		$this->assertSame( 'https://example.com/photo.jpg', $this->cache_image( $comment_id ) );
+		$this->assertDirectoryDoesNotExist( Comment_Media::get_storage_paths( $comment_id )['basedir'] );
+	}
+
+	/**
+	 * An approved comment keeps the image it shows.
+	 *
+	 * @covers ::cache
+	 */
+	public function test_maybe_cache_keeps_image_of_approved_comment() {
+		$comment_id = self::factory()->comment->create(
+			array( 'comment_content' => generate_image_block( 'https://example.com/photo.jpg', '' ) )
+		);
+
+		$this->assertNotSame( 'https://example.com/photo.jpg', $this->cache_image( $comment_id ) );
+		$this->assertDirectoryExists( Comment_Media::get_storage_paths( $comment_id )['basedir'] );
+		Comment_Media::invalidate_entity( $comment_id );
+	}
+
+	/**
+	 * An image an edit removed while it downloaded is not kept, also when the request holds the old comment.
+	 *
+	 * @covers ::cache
+	 */
+	public function test_maybe_cache_removes_image_dropped_by_edit() {
+		global $wpdb;
+
+		$comment_id = self::factory()->comment->create(
+			array( 'comment_content' => generate_image_block( 'https://example.com/photo.jpg', '' ) )
+		);
+		\get_comment( $comment_id );
+		// Another request edits the comment, this request still has the old one cached.
+		$wpdb->update( $wpdb->comments, array( 'comment_content' => 'Edited' ), array( 'comment_ID' => $comment_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+
+		$this->assertSame( 'https://example.com/photo.jpg', $this->cache_image( $comment_id ) );
 		$this->assertDirectoryDoesNotExist( Comment_Media::get_storage_paths( $comment_id )['basedir'] );
 	}
 

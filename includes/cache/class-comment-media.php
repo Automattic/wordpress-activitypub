@@ -7,6 +7,8 @@
 
 namespace Activitypub\Cache;
 
+use Activitypub\Blocks;
+
 /**
  * Comment media cache class.
  *
@@ -101,16 +103,43 @@ class Comment_Media extends Media {
 		$local_url = parent::cache( $url, $entity_id, $options );
 
 		/*
-		 * A comment removed while its image downloads loses its directory, and File::cache()
-		 * re-creates it to store the file. Remove it again, nothing would clean it up later.
+		 * A comment removed or edited while its image downloads loses its directory, and
+		 * File::cache() re-creates it to store the file. Remove it again unless the comment is
+		 * still approved and still has the image, nothing would clean it up later.
 		 */
-		if ( $local_url && 'approved' !== \wp_get_comment_status( $entity_id ) ) {
+		if ( $local_url && ! self::shows_image( $entity_id, $url ) ) {
 			self::clear_cached_images( (int) $entity_id );
 
 			return false;
 		}
 
 		return $local_url;
+	}
+
+	/**
+	 * Whether a comment is approved and still has an image.
+	 *
+	 * @param string|int $comment_id The comment ID.
+	 * @param string     $url        The remote image URL.
+	 *
+	 * @return bool True if the comment shows the image.
+	 */
+	private static function shows_image( $comment_id, $url ) {
+		// The comment may have changed in another request while the image downloaded.
+		\wp_cache_delete( (int) $comment_id, 'comment' );
+		$comment = \get_comment( $comment_id );
+
+		if ( ! $comment || 'approved' !== \wp_get_comment_status( $comment ) ) {
+			return false;
+		}
+
+		foreach ( \parse_blocks( $comment->comment_content ) as $block ) {
+			if ( 'activitypub/image' === $block['blockName'] && Blocks::get_image_url( $block['attrs'] ) === $url ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
