@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Cache\Comment_Media;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Remote_Posts;
 
@@ -64,7 +65,8 @@ class Comment {
 		$output         = '';
 		$allowed_blocks = array( 'activitypub/emoji' );
 		$context_filter = null;
-		if ( \get_option( 'activitypub_allow_comment_images' ) && $comment instanceof \WP_Comment && 'approved' === \wp_get_comment_status( $comment ) && self::was_received( $comment ) ) {
+		// Without the local cache, visitors would load the images from the remote host.
+		if ( \get_option( 'activitypub_allow_comment_images' ) && Cache::is_enabled() && Comment_Media::is_enabled() && $comment instanceof \WP_Comment && 'approved' === \wp_get_comment_status( $comment ) && self::was_received( $comment ) ) {
 			$allowed_blocks[] = 'activitypub/image';
 
 			// Images are cached per comment, so removing the comment removes them.
@@ -79,8 +81,14 @@ class Comment {
 			// Rendering a parent also invokes its children's callbacks, so reject nested blocks.
 			if ( \in_array( $block['blockName'], $allowed_blocks, true ) && empty( $block['innerBlocks'] ) ) {
 				$output .= \render_block( $block );
-			} elseif ( 'activitypub/image' !== $block['blockName'] ) {
-				// A hidden image block is dropped, so a stored img cannot show the remote image.
+			} elseif ( 'activitypub/image' === $block['blockName'] ) {
+				// A hidden image is replaced by its description, so a stored img cannot show the remote image.
+				$alt     = $block['attrs']['alt'] ?? '';
+				$output .= '<p>' . \esc_html(
+					/* translators: %s: Image description. */
+					$alt ? \sprintf( \__( 'Image: %s', 'activitypub' ), $alt ) : \__( 'Image', 'activitypub' )
+				) . '</p>';
+			} else {
 				$output .= \serialize_block( $block );
 			}
 		}

@@ -201,6 +201,25 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An image-only reply is not stored when none of its images is on a public host.
+	 *
+	 * @group activitypub
+	 * @covers ::add_comment
+	 */
+	public function test_image_only_comment_rejected_without_public_image() {
+		$activity                         = $this->create_test_object( 'https://example.com/private-image-reply' );
+		$activity['object']['attachment'] = array(
+			array(
+				'type' => 'Image',
+				'url'  => 'http://127.0.0.1/photo.jpg',
+			),
+		);
+		unset( $activity['object']['content'] );
+
+		$this->assertFalse( Interactions::add_comment( $activity ) );
+	}
+
+	/**
 	 * Image-only comments use the lazy comment image cache and retain alt text.
 	 *
 	 * @group activitypub

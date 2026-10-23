@@ -21,47 +21,43 @@ use Activitypub\Tombstone;
  */
 class Test_Create extends \WP_UnitTestCase {
 	/**
-	 * Image-only validation stops at the comment image limit and bounds rejected candidates.
+	 * Image-only validation runs before the signature check, so it does not check any host.
 	 *
 	 * @covers ::validate_object
 	 */
-	public function test_image_only_validation_is_bounded() {
-		foreach ( array(
-			443 => 3,
-			22  => 20,
-		) as $port => $expected ) {
-			$object = array(
-				'id'         => 'https://example.com/bounded-images',
-				'inReplyTo'  => 'https://example.org/post',
-				'attachment' => array(),
+	public function test_image_only_validation_checks_no_hosts() {
+		$object = array(
+			'id'         => 'https://example.com/bounded-images',
+			'inReplyTo'  => 'https://example.org/post',
+			'attachment' => array(),
+		);
+		for ( $i = 1; $i <= 50; ++$i ) {
+			$object['attachment'][] = array(
+				'type' => 'Image',
+				'url'  => 'https://8.8.4.' . $i . ':22/photo.jpg',
 			);
-			for ( $i = 1; $i <= 50; ++$i ) {
-				$object['attachment'][] = array(
-					'type' => 'Image',
-					'url'  => 'https://8.8.4.' . $i . ':' . $port . '/photo.jpg',
-				);
-			}
-			$request = new \WP_REST_Request( 'POST' );
-			$request->set_header( 'Content-Type', 'application/activity+json' );
-			$request->set_body(
-				\wp_json_encode(
-					array(
-						'type'   => 'Create',
-						'object' => $object,
-					)
-				)
-			);
-			$count = 0;
-			$track = static function ( $ports ) use ( &$count ) {
-				++$count;
-				return $ports;
-			};
-			\add_filter( 'http_allowed_safe_ports', $track );
-			$valid = Create::validate_object( true, $object, $request );
-			\remove_filter( 'http_allowed_safe_ports', $track );
-			$this->assertSame( 443 === $port, $valid );
-			$this->assertSame( $expected, $count );
 		}
+		$request = new \WP_REST_Request( 'POST' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'   => 'Create',
+					'object' => $object,
+				)
+			)
+		);
+		$count = 0;
+		$track = static function ( $ports ) use ( &$count ) {
+			++$count;
+			return $ports;
+		};
+		\add_filter( 'http_allowed_safe_ports', $track );
+		$valid = Create::validate_object( true, $object, $request );
+		\remove_filter( 'http_allowed_safe_ports', $track );
+
+		$this->assertTrue( $valid );
+		$this->assertSame( 0, $count );
 	}
 
 	/**
@@ -188,7 +184,8 @@ class Test_Create extends \WP_UnitTestCase {
 			),
 			'image fallback'         => array( array( 'image' => 'https://example.com/photo.jpg' ), true ),
 			'single attachment URL'  => array( array( 'attachment' => 'https://example.com/photo.jpg' ), true ),
-			'unsafe attachment URL'  => array( array( 'attachment' => 'http://127.0.0.1/photo.jpg' ), false ),
+			// The host is checked when the comment is stored.
+			'unsafe attachment URL'  => array( array( 'attachment' => 'http://127.0.0.1/photo.jpg' ), true ),
 			'Unicode image URL'      => array(
 				array(
 					'attachment' => array(
@@ -239,6 +236,19 @@ class Test_Create extends \WP_UnitTestCase {
 			'//remote.example/photo.jpg',
 			'ftp://remote.example/photo.jpg',
 			'https://',
+		) as $url ) {
+			$cases[] = array(
+				array(
+					'attachment' => array(
+						'type' => 'Image',
+						'url'  => $url,
+					),
+				),
+				false,
+			);
+		}
+		// Hosts are checked when the comment is stored, not before the signature check.
+		foreach ( array(
 			'http://127.0.0.1/photo.jpg',
 			'http://192.168.1.1/photo.jpg',
 			'https://user:pass@example.com/photo.jpg',
@@ -250,7 +260,7 @@ class Test_Create extends \WP_UnitTestCase {
 						'url'  => $url,
 					),
 				),
-				false,
+				true,
 			);
 		}
 		// Without a media type, anything but Audio and Video is read as an image.

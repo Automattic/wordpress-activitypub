@@ -357,7 +357,6 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 			),
 			'/photo.jpg',
 			'//remote.example/photo.jpg',
-			'http://127.0.0.1/photo.jpg',
 		) as $url ) {
 			$json['object']['attachment']['url'] = $url;
 			$request->set_body( \wp_json_encode( $json ) );

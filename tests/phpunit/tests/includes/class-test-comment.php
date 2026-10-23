@@ -320,6 +320,49 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A hidden image shows its description instead, so an image-only reply is not empty.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_hidden_image_shows_description() {
+		$comment = self::factory()->comment->create_and_get(
+			array(
+				'comment_approved' => '0',
+				'comment_meta'     => array( 'protocol' => 'activitypub' ),
+			)
+		);
+		$content = generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="A &quot;cat&quot;" />' )
+			. generate_image_block( 'https://example.com/other.jpg', '<img src="https://example.com/other.jpg" />' );
+
+		$rendered = Comment::render_blocks( $content, $comment );
+
+		$this->assertStringNotContainsString( 'example.com', $rendered );
+		$this->assertStringContainsString( '<p>Image: A &quot;cat&quot;</p>', $rendered );
+		$this->assertStringContainsString( '<p>Image</p>', $rendered );
+	}
+
+	/**
+	 * Without the local cache, images are not shown, so visitors never load them from the remote host.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_images_hidden_without_cache() {
+		\update_option( 'activitypub_allow_comment_images', '1' );
+		$comment = self::factory()->comment->create_and_get(
+			array( 'comment_meta' => array( 'protocol' => 'activitypub' ) )
+		);
+		$content = generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' );
+
+		\add_filter( 'activitypub_remote_cache_enabled', '__return_false' );
+		$rendered = Comment::render_blocks( $content, $comment );
+		\remove_filter( 'activitypub_remote_cache_enabled', '__return_false' );
+		\delete_option( 'activitypub_allow_comment_images' );
+
+		$this->assertStringNotContainsString( '<img', $rendered );
+		$this->assertStringContainsString( '<p>Image: Cat</p>', $rendered );
+	}
+
+	/**
 	 * Emoji rendering still works without a received comment.
 	 *
 	 * @covers ::render_blocks
