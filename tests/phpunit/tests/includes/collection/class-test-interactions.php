@@ -7,7 +7,7 @@
 
 namespace Activitypub\Tests\Collection;
 
-use Activitypub\Cache\Media;
+use Activitypub\Cache\Comment_Media;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Tests\Equal_Html;
@@ -197,12 +197,12 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Image-only comments reuse the post's lazy image cache and retain alt text.
+	 * Image-only comments use the lazy comment image cache and retain alt text.
 	 *
 	 * @group activitypub
 	 * @covers ::add_comment
 	 */
-	public function test_image_only_comment_uses_post_cache() {
+	public function test_image_only_comment_uses_comment_cache() {
 		$url                              = 'https://example.com/photo.jpg?a=1&b=2';
 		$activity                         = $this->create_test_object( 'https://example.com/image-reply' );
 		$activity['object']['attachment'] = array(
@@ -224,7 +224,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 				'mime_type' => 'image/jpeg',
 			);
 		};
-		Media::init();
+		Comment_Media::init();
 		\add_filter( 'activitypub_pre_download_url', $download );
 		$comment_id = Interactions::add_comment( $activity );
 		$comment    = \get_comment( $comment_id );
@@ -232,20 +232,19 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$rendered   = \apply_filters( 'comment_text', $comment->comment_content, $comment );
 		$again      = \apply_filters( 'comment_text', $comment->comment_content, $comment );
 		\remove_filter( 'activitypub_pre_download_url', $download );
-		$cached = Media::get( $url, self::$post_id );
+		$cached = Comment_Media::get( $url, $comment_id );
 		\wp_delete_comment( $comment_id, true );
-		$after_delete = Media::get( $url, self::$post_id );
-		Media::invalidate_entity( self::$post_id );
+		$after_delete = Comment_Media::get( $url, $comment_id );
 
 		$this->assertIsInt( $comment_id );
 		$this->assertStringContainsString( '<!-- wp:activitypub/image', $comment->comment_content );
 		$this->assertSame( 0, $before );
 		$this->assertSame( 1, $downloads );
-		$this->assertStringContainsString( '/activitypub/posts/' . self::$post_id . '/', $rendered );
+		$this->assertStringContainsString( '/activitypub/comments/' . $comment_id . '/', $rendered );
 		$this->assertStringContainsString( 'alt="A &quot;cat&quot; &amp; her kittens"', $rendered );
 		$this->assertSame( $rendered, $again );
 		$this->assertNotFalse( $cached );
-		$this->assertSame( $cached, $after_delete );
+		$this->assertFalse( $after_delete );
 	}
 
 	/**

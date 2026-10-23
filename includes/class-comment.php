@@ -67,9 +67,9 @@ class Comment {
 		if ( \get_option( 'activitypub_allow_comment_images' ) && $comment instanceof \WP_Comment && 'spam' !== \wp_get_comment_status( $comment ) && self::was_received( $comment ) ) {
 			$allowed_blocks[] = 'activitypub/image';
 
-			// Images are cached with the comment's post.
+			// Images are cached per comment, so removing the comment removes them.
 			$context_filter = static function ( $context ) use ( $comment ) {
-				$context['postId'] = (int) $comment->comment_post_ID;
+				$context['commentId'] = (int) $comment->comment_ID;
 				return $context;
 			};
 			\add_filter( 'render_block_context', $context_filter );

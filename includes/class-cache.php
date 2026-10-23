@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Cache\Avatar;
+use Activitypub\Cache\Comment_Media;
 use Activitypub\Cache\Emoji;
 use Activitypub\Cache\Media;
 
@@ -81,6 +82,7 @@ class Cache {
 	public static function register_caches() {
 		Avatar::init();
 		Media::init();
+		Comment_Media::init();
 		Emoji::init();
 
 		/**

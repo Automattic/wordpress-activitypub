@@ -126,12 +126,12 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Images use the comment's parent post, not the current global post.
+	 * Images are cached per comment, not with the current global post.
 	 *
 	 * @group activitypub
 	 * @covers ::render_blocks
 	 */
-	public function test_render_image_with_parent_post_context() {
+	public function test_render_image_with_comment_context() {
 		$parent  = self::factory()->post->create();
 		$comment = self::factory()->comment->create_and_get(
 			array(
@@ -142,8 +142,10 @@ class Test_Comment extends \WP_UnitTestCase {
 		$this->go_to( \get_permalink( self::factory()->post->create() ) );
 		$content  = generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' );
 		$seen_id  = null;
-		$filter   = static function ( $url, $context, $entity_id ) use ( &$seen_id ) {
-			$seen_id = $entity_id;
+		$seen_ctx = null;
+		$filter   = static function ( $url, $context, $entity_id ) use ( &$seen_id, &$seen_ctx ) {
+			$seen_id  = $entity_id;
+			$seen_ctx = $context;
 			return 'https://cdn.example.com/photo.jpg';
 		};
 		$download = static function () {
@@ -154,7 +156,8 @@ class Test_Comment extends \WP_UnitTestCase {
 		$rendered = Comment::render_blocks( $content, $comment );
 		\remove_filter( 'activitypub_remote_media_url', $filter, 1 );
 		\remove_filter( 'activitypub_pre_download_url', $download );
-		$this->assertSame( (int) $comment->comment_post_ID, $seen_id );
+		$this->assertSame( (int) $comment->comment_ID, $seen_id );
+		$this->assertSame( 'comment_media', $seen_ctx );
 		$this->assertStringContainsString( 'https://cdn.example.com/photo.jpg', $rendered );
 	}
 

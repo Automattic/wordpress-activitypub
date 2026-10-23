@@ -7,13 +7,17 @@
 
 namespace Activitypub\Cache;
 
+use Activitypub\Collection\Remote_Posts;
+
 /**
  * Media cache class.
  *
  * Handles lazy caching of remote post and comment media locally.
  * Media is cached on-demand when URLs pass through the `activitypub_remote_media_url` filter.
  *
- * Post and comment images share /wp-content/uploads/activitypub/posts/{post_id}/.
+ * Storage locations:
+ * - Posts: /wp-content/uploads/activitypub/posts/{post_id}/
+ * - Comments: /wp-content/uploads/activitypub/comments/{comment_id}/
  *
  * Files are cleaned up automatically when the parent post is deleted.
  *
@@ -37,8 +41,7 @@ class Media extends File {
 	/**
 	 * Context identifier for comment media.
 	 *
-	 * Reserved for future use when comment media caching is implemented.
-	 * Currently, only post media caching is active via maybe_cache().
+	 * Used by the Comment_Media cache.
 	 *
 	 * @var string
 	 */
@@ -54,7 +57,7 @@ class Media extends File {
 	/**
 	 * Base directory for comment media.
 	 *
-	 * Reserved for future use when comment media caching is implemented.
+	 * Used by the Comment_Media cache.
 	 *
 	 * @var string
 	 */
@@ -152,11 +155,11 @@ class Media extends File {
 	 * @return string The local URL if cached successfully, otherwise the original URL.
 	 */
 	public static function maybe_cache( $url, $context, $entity_id = null, $options = array() ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Required for filter signature.
-		if ( self::CONTEXT !== $context || empty( $url ) || empty( $entity_id ) ) {
+		if ( static::get_context() !== $context || empty( $url ) || empty( $entity_id ) ) {
 			return $url;
 		}
 
-		$cached_url = self::get_or_cache( $url, $entity_id );
+		$cached_url = static::get_or_cache( $url, $entity_id );
 
 		return $cached_url ?: $url;
 	}
@@ -169,6 +172,10 @@ class Media extends File {
 	 * @return void
 	 */
 	public static function maybe_cleanup( $post_id ) {
+		if ( Remote_Posts::POST_TYPE !== \get_post_type( $post_id ) ) {
+			return;
+		}
+
 		self::invalidate_entity( $post_id );
 	}
 

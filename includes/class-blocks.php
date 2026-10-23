@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Cache\Media;
 use Activitypub\Cache\Stats_Image;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
@@ -239,7 +240,7 @@ class Blocks {
 					'urlEncoded' => array( 'type' => 'boolean' ),
 					'alt'        => array( 'type' => 'string' ),
 				),
-				'uses_context'    => array( 'postId' ),
+				'uses_context'    => array( 'postId', 'commentId' ),
 				'render_callback' => array( self::class, 'render_image_block' ),
 			)
 		);
@@ -673,22 +674,28 @@ class Blocks {
 			$content = \sprintf( '<img src="%s" alt="%s" loading="lazy" />', \esc_url( \htmlspecialchars( $url, ENT_QUOTES, 'UTF-8', true ) ), \esc_attr( $attrs['alt'] ) );
 		}
 
-		// Get entity ID from context.
-		$entity_id = $block->context['postId'] ?? null;
-		$post      = \get_post();
-		if ( ! $entity_id && $post ) {
-			$entity_id = $post->ID;
+		// Get entity ID from context, comment images are cached per comment.
+		$cache_context = Media::CONTEXT;
+		$entity_id     = $block->context['commentId'] ?? null;
+		if ( $entity_id ) {
+			$cache_context = Media::CONTEXT_COMMENT;
+		} else {
+			$entity_id = $block->context['postId'] ?? null;
+			$post      = \get_post();
+			if ( ! $entity_id && $post ) {
+				$entity_id = $post->ID;
+			}
 		}
 
 		/**
 		 * Filters a remote image URL for caching.
 		 *
 		 * @param string      $url       The remote image URL.
-		 * @param string      $context   The context ('media').
-		 * @param int|null    $entity_id The entity ID.
+		 * @param string      $context   The context ('media' or 'comment_media').
+		 * @param int|null    $entity_id The entity ID, a comment ID for 'comment_media'.
 		 * @param array       $options   Additional options.
 		 */
-		$cached_url = \apply_filters( 'activitypub_remote_media_url', $url, 'media', $entity_id, array() );
+		$cached_url = \apply_filters( 'activitypub_remote_media_url', $url, $cache_context, $entity_id, array() );
 
 		if ( $cached_url && $cached_url !== $url ) {
 			$processor = new \WP_HTML_Tag_Processor( $content );
