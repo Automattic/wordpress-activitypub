@@ -65,12 +65,15 @@ class Test_Interactions extends \WP_UnitTestCase {
 			foreach ( $activity['object']['attachment'] as $attachment ) {
 				$this->assertStringNotContainsString( $attachment['url'], $comment->comment_content );
 			}
+			// No download, the stand-in plays the local cache.
 			\add_filter( 'activitypub_should_cache_url', '__return_false' );
+			\add_filter( 'activitypub_remote_media_url', array( __CLASS__, 'cached_comment_media' ), 20, 2 );
 			$rendered = \apply_filters( 'comment_text', $comment->comment_content, $comment );
+			\remove_filter( 'activitypub_remote_media_url', array( __CLASS__, 'cached_comment_media' ), 20 );
 			\remove_filter( 'activitypub_should_cache_url', '__return_false' );
 			$image = new \WP_HTML_Tag_Processor( $rendered );
 			$this->assertTrue( $image->next_tag( 'IMG' ) );
-			$this->assertSame( $url, $image->get_attribute( 'src' ) );
+			$this->assertSame( $url . '#cached', $image->get_attribute( 'src' ) );
 			$this->assertFalse( $image->next_tag( 'IMG' ) );
 		}
 	}
@@ -106,8 +109,11 @@ class Test_Interactions extends \WP_UnitTestCase {
 				\wp_set_comment_status( $comment_id, 'approve' );
 			}
 			$comment = \get_comment( $comment_id );
+			// No download, the stand-in plays the local cache.
 			\add_filter( 'activitypub_should_cache_url', '__return_false' );
+			\add_filter( 'activitypub_remote_media_url', array( __CLASS__, 'cached_comment_media' ), 20, 2 );
 			$rendered = \apply_filters( 'comment_text', $comment->comment_content, $comment );
+			\remove_filter( 'activitypub_remote_media_url', array( __CLASS__, 'cached_comment_media' ), 20 );
 			\remove_filter( 'activitypub_should_cache_url', '__return_false' );
 			$image = new \WP_HTML_Tag_Processor( $rendered );
 			$this->assertTrue( $image->next_tag( 'IMG' ) );
@@ -578,6 +584,17 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$upload_dir = \wp_upload_dir();
 
 		return $upload_dir['baseurl'] . '/activitypub/emoji/example.com/' . \basename( $emoji_url );
+	}
+
+	/**
+	 * Stand in for the local comment image cache.
+	 *
+	 * @param string $url     The remote URL.
+	 * @param string $context The cache context.
+	 * @return string The "cached" URL for comment images.
+	 */
+	public static function cached_comment_media( $url, $context ) {
+		return 'comment_media' === $context ? $url . '#cached' : $url;
 	}
 
 	/**

@@ -654,18 +654,21 @@ class Blocks {
 	/**
 	 * Render the image block.
 	 *
-	 * Replaces remote image URL with cached URL at runtime.
+	 * Replaces remote image URL with cached URL at runtime. Comment images are only shown
+	 * from the local cache, otherwise their description is shown instead.
 	 *
 	 * @param array          $attrs   The block attributes.
 	 * @param string         $content The block inner content (img tag).
 	 * @param \WP_Block|null $block   Optional. The block instance.
 	 *
-	 * @return string The rendered content with cached URL.
+	 * @return string The rendered content with cached URL, or the image description.
 	 */
 	public static function render_image_block( $attrs, $content, $block = null ) {
+		$comment_id = $block->context['commentId'] ?? null;
+
 		// Only blocks that carry their alt text can rebuild a missing img.
 		if ( empty( $attrs['url'] ) || ( empty( $content ) && ! isset( $attrs['alt'] ) ) ) {
-			return $content;
+			return $comment_id ? self::render_image_description( $attrs ) : $content;
 		}
 
 		$url       = ! empty( $attrs['urlEncoded'] ) ? \wp_specialchars_decode( $attrs['url'], ENT_QUOTES ) : $attrs['url'];
@@ -676,7 +679,6 @@ class Blocks {
 		}
 
 		// Get entity ID from context, comment images are cached per comment.
-		$comment_id    = $block->context['commentId'] ?? null;
 		$cache_context = $comment_id ? Comment_Media::CONTEXT : Media::CONTEXT;
 		$entity_id     = $comment_id ?: ( $block->context['postId'] ?? null );
 		$post          = \get_post();
@@ -702,7 +704,30 @@ class Blocks {
 			}
 		}
 
+		// Visitors never load comment images from the remote host.
+		if ( $comment_id ) {
+			return self::render_image_description( $attrs );
+		}
+
 		return $content;
+	}
+
+	/**
+	 * Render the description of an image that is not shown.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $attrs The image block attributes.
+	 *
+	 * @return string The description as a paragraph.
+	 */
+	public static function render_image_description( $attrs ) {
+		$alt = $attrs['alt'] ?? '';
+
+		return '<p>' . \esc_html(
+			/* translators: %s: Image description. */
+			$alt ? \sprintf( \__( 'Image: %s', 'activitypub' ), $alt ) : \__( 'Image', 'activitypub' )
+		) . '</p>';
 	}
 
 	/**

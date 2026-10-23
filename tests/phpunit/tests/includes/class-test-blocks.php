@@ -12,6 +12,7 @@ use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Interactions;
 use Activitypub\Transformer\Post;
 
+use function Activitypub\generate_image_block;
 use function Activitypub\object_to_uri;
 use function Activitypub\process_remote_images;
 use function Activitypub\register_comment_type;
@@ -59,6 +60,33 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		$this->assertSame( '', $rendered );
 		$this->assertSame( 0, $calls );
+	}
+
+	/**
+	 * Comment images are only shown from the local cache, otherwise their description is shown.
+	 *
+	 * @covers ::render_image_block
+	 * @covers ::render_image_description
+	 */
+	public function test_render_image_block_comment_context() {
+		$parsed  = \parse_blocks( generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' ) )[0];
+		$context = array();
+		$cached  = static function ( $url, $cache_context, $entity_id ) use ( &$context ) {
+			$context = array( $cache_context, $entity_id );
+			return 'https://local.example/cached.jpg';
+		};
+
+		\add_filter( 'activitypub_remote_media_url', $cached, 20, 3 );
+		$with_cache = ( new \WP_Block( $parsed, array( 'commentId' => 7 ) ) )->render();
+		\remove_filter( 'activitypub_remote_media_url', $cached, 20 );
+		$uncached = ( new \WP_Block( $parsed, array( 'commentId' => 7 ) ) )->render();
+		$no_url   = Blocks::render_image_block( array( 'alt' => 'Cat' ), '<img src="https://example.com/photo.jpg" alt="Cat" />', new \WP_Block( $parsed, array( 'commentId' => 7 ) ) );
+
+		$this->assertSame( array( 'comment_media', 7 ), $context );
+		$this->assertStringContainsString( 'src="https://local.example/cached.jpg"', $with_cache );
+		$this->assertSame( '<p>Image: Cat</p>', $uncached );
+		$this->assertSame( '<p>Image: Cat</p>', $no_url );
+		$this->assertSame( '<p>Image</p>', Blocks::render_image_description( array() ) );
 	}
 
 	/**

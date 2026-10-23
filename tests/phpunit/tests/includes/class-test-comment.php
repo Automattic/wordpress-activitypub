@@ -50,7 +50,12 @@ class Test_Comment extends \WP_UnitTestCase {
 		$download   = static function () {
 			return new \WP_Error( 'cache_skipped', 'The image cache is unavailable.' );
 		};
+		$cached     = static function ( $url, $context ) {
+			// Stand in for the local cache, comment images are only shown from it.
+			return 'comment_media' === $context ? $url . '#cached' : $url;
+		};
 		\add_filter( 'activitypub_pre_download_url', $download );
+		\add_filter( 'activitypub_remote_media_url', $cached, 20, 2 );
 		foreach ( array( 'width < height', 'Updated: width < height, "quotes", & and literal &lt;' ) as $description ) {
 			$content = process_remote_images(
 				'',
@@ -100,6 +105,7 @@ class Test_Comment extends \WP_UnitTestCase {
 			$this->assertSame( $description, $image->get_attribute( 'alt' ) );
 			$this->assertSame( 'lazy', $image->get_attribute( 'loading' ) );
 		}
+		\remove_filter( 'activitypub_remote_media_url', $cached, 20 );
 		\remove_filter( 'activitypub_pre_download_url', $download );
 	}
 
@@ -339,6 +345,33 @@ class Test_Comment extends \WP_UnitTestCase {
 		$this->assertStringNotContainsString( 'example.com', $rendered );
 		$this->assertStringContainsString( '<p>Image: A &quot;cat&quot;</p>', $rendered );
 		$this->assertStringContainsString( '<p>Image</p>', $rendered );
+	}
+
+	/**
+	 * An image that cannot be cached shows its description, so visitors never load it from the remote host.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_uncached_image_shows_description() {
+		\update_option( 'activitypub_allow_comment_images', '1' );
+		$comment   = self::factory()->comment->create_and_get(
+			array( 'comment_meta' => array( 'protocol' => 'activitypub' ) )
+		);
+		$content   = generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' );
+		$downloads = 0;
+		$download  = static function () use ( &$downloads ) {
+			++$downloads;
+			return new \WP_Error( 'http_request_failed', 'The remote host timed out.' );
+		};
+
+		\add_filter( 'activitypub_pre_download_url', $download );
+		$rendered = Comment::render_blocks( $content, $comment );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+		\delete_option( 'activitypub_allow_comment_images' );
+
+		$this->assertSame( 1, $downloads, 'The image was shown and its download attempted.' );
+		$this->assertStringNotContainsString( 'example.com', $rendered );
+		$this->assertSame( '<p>Image: Cat</p>', $rendered );
 	}
 
 	/**

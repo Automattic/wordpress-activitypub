@@ -83,11 +83,7 @@ class Comment {
 				$output .= \render_block( $block );
 			} elseif ( 'activitypub/image' === $block['blockName'] ) {
 				// A hidden image is replaced by its description, so a stored img cannot show the remote image.
-				$alt     = $block['attrs']['alt'] ?? '';
-				$output .= '<p>' . \esc_html(
-					/* translators: %s: Image description. */
-					$alt ? \sprintf( \__( 'Image: %s', 'activitypub' ), $alt ) : \__( 'Image', 'activitypub' )
-				) . '</p>';
+				$output .= Blocks::render_image_description( $block['attrs'] );
 			} else {
 				$output .= \serialize_block( $block );
 			}
