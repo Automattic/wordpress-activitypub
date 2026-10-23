@@ -221,8 +221,17 @@ class Test_Interactions extends \WP_UnitTestCase {
 			),
 		);
 		unset( $activity['object']['content'] );
+		$lookups = 0;
+		$lookup  = static function ( $value ) use ( &$lookups ) {
+			++$lookups;
+			return $value;
+		};
 
+		\add_filter( 'pre_get_remote_metadata_by_actor', $lookup, 10 );
 		$this->assertFalse( Interactions::add_comment( $activity ) );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $lookup, 10 );
+
+		$this->assertSame( 0, $lookups, 'The reply is rejected before the remote actor is fetched.' );
 	}
 
 	/**

@@ -700,6 +700,8 @@ class Blocks {
 			$processor = new \WP_HTML_Tag_Processor( $content );
 			if ( $processor->next_tag( array( 'tag_name' => 'IMG' ) ) ) {
 				$processor->set_attribute( 'src', $cached_url );
+				// Browsers prefer srcset candidates, which still point to the remote host.
+				$processor->remove_attribute( 'srcset' );
 				return $processor->get_updated_html();
 			}
 		}

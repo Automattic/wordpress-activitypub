@@ -88,6 +88,20 @@ class Interactions {
 		}
 
 		/*
+		 * Image blocks are only for remote replies and quotes. They are built here, not in
+		 * activity_to_comment(), which reactions share.
+		 */
+		$images = '';
+		if ( null === $user_id ) {
+			$images = process_remote_images( '', self::get_image_attachments( $activity['object'] ) );
+
+			// Validation lets image-only replies in without checking the hosts, at least one image has to pass.
+			if ( '' === $images && ! isset( $activity['object']['content'] ) ) {
+				return false;
+			}
+		}
+
+		/*
 		 * Built only once the target is known: resolving the author fetches the remote actor and
 		 * its WebFinger, which is wasted on a reply to something that is not here.
 		 */
@@ -97,20 +111,7 @@ class Interactions {
 			return false;
 		}
 
-		/*
-		 * Image blocks are only for remote replies and quotes. They are built here, not in
-		 * activity_to_comment(), which reactions share.
-		 */
-		if ( null === $user_id ) {
-			$images = process_remote_images( '', self::get_image_attachments( $activity['object'] ) );
-
-			// Validation lets image-only replies in without checking the hosts, at least one image has to pass.
-			if ( '' === $images && ! isset( $activity['object']['content'] ) ) {
-				return false;
-			}
-
-			$comment_data['comment_content'] .= \addslashes( $images );
-		}
+		$comment_data['comment_content'] .= \addslashes( $images );
 
 		if ( $comment_type ) {
 			$comment_data['comment_type'] = $comment_type;

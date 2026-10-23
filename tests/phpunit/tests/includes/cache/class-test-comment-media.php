@@ -49,6 +49,39 @@ class Test_Comment_Media extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Comment images have their own cache type, so hooks can tell them from post media.
+	 *
+	 * @covers ::get_type
+	 */
+	public function test_get_type() {
+		$this->assertSame( 'comment_media', Comment_Media::get_type() );
+	}
+
+	/**
+	 * An image downloaded while its comment was removed is not kept on the server.
+	 *
+	 * @covers ::maybe_cache
+	 */
+	public function test_maybe_cache_removes_images_of_removed_comment() {
+		$comment_id = self::factory()->comment->create( array( 'comment_approved' => 'trash' ) );
+		$download   = static function () {
+			$file = \wp_tempnam( 'comment-image.jpg' );
+			\copy( AP_TESTS_DIR . '/data/assets/test.jpg', $file );
+			return array(
+				'file'      => $file,
+				'mime_type' => 'image/jpeg',
+			);
+		};
+
+		\add_filter( 'activitypub_pre_download_url', $download );
+		$url = Comment_Media::maybe_cache( 'https://example.com/photo.jpg', 'comment_media', $comment_id );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+
+		$this->assertSame( 'https://example.com/photo.jpg', $url );
+		$this->assertDirectoryDoesNotExist( Comment_Media::get_storage_paths( $comment_id )['basedir'] );
+	}
+
+	/**
 	 * Only comment image URLs are cached, post media stays with Media.
 	 *
 	 * @covers ::maybe_cache

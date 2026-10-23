@@ -32,6 +32,15 @@ class Comment_Media extends Media {
 	const BASE_DIR = '/activitypub/comments/';
 
 	/**
+	 * Get the cache type identifier.
+	 *
+	 * @return string Cache type.
+	 */
+	public static function get_type() {
+		return 'comment_media';
+	}
+
+	/**
 	 * Get the base directory path relative to uploads.
 	 *
 	 * @return string Base directory path.
@@ -77,6 +86,34 @@ class Comment_Media extends Media {
 		\add_action( 'edit_comment', array( self::class, 'clear_cached_images' ) );
 		// Deleting a comment also transitions it, to 'delete'.
 		\add_action( 'transition_comment_status', array( self::class, 'maybe_cleanup_comment' ), 10, 3 );
+	}
+
+	/**
+	 * Maybe cache a comment image URL.
+	 *
+	 * Hooked to the activitypub_remote_media_url filter.
+	 *
+	 * @param string     $url       The remote URL.
+	 * @param string     $context   The context ('avatar', 'media', 'comment_media', etc.).
+	 * @param string|int $entity_id The entity identifier (comment ID).
+	 * @param array      $options   Optional. Additional options.
+	 *
+	 * @return string The local URL if cached successfully, otherwise the original URL.
+	 */
+	public static function maybe_cache( $url, $context, $entity_id = null, $options = array() ) {
+		$cached_url = parent::maybe_cache( $url, $context, $entity_id, $options );
+
+		/*
+		 * A comment removed while its image downloads loses its directory, and File::cache()
+		 * re-creates it to store the file. Remove it again, nothing would clean it up later.
+		 */
+		if ( $cached_url !== $url && 'approved' !== \wp_get_comment_status( $entity_id ) ) {
+			self::clear_cached_images( (int) $entity_id );
+
+			return $url;
+		}
+
+		return $cached_url;
 	}
 
 	/**

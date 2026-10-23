@@ -63,6 +63,27 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The cached URL replaces srcset too, so browsers do not pick a remote candidate.
+	 *
+	 * @covers ::render_image_block
+	 */
+	public function test_render_image_block_drops_remote_srcset() {
+		$cached = static function () {
+			return 'https://local.example/cached.jpg';
+		};
+
+		\add_filter( 'activitypub_remote_media_url', $cached, 20 );
+		$rendered = Blocks::render_image_block(
+			array( 'url' => 'https://example.com/photo.jpg' ),
+			'<img src="https://example.com/photo.jpg" srcset="https://example.com/photo.jpg 1x, https://example.com/photo-2x.jpg 2x" />'
+		);
+		\remove_filter( 'activitypub_remote_media_url', $cached, 20 );
+
+		$this->assertStringContainsString( 'src="https://local.example/cached.jpg"', $rendered );
+		$this->assertStringNotContainsString( 'example.com', $rendered );
+	}
+
+	/**
 	 * Comment images are only shown from the local cache, otherwise their description is shown.
 	 *
 	 * @covers ::render_image_block
