@@ -44,13 +44,20 @@ class Comment_Media extends Media {
 		if ( self::is_enabled() ) {
 			\add_filter( 'activitypub_remote_media_url', array( self::class, 'maybe_cache' ), 10, 4 );
 		}
+	}
 
-		/*
-		 * Removing a comment has to remove its images from the server, also when caching was
-		 * disabled after they were cached. Files are cached lazily, so a restored comment
-		 * downloads them again. Deleting a comment transitions it to 'delete'.
-		 */
+	/**
+	 * Register the hooks that remove cached images with their comment.
+	 *
+	 * Removing a comment has to remove its images from the server, also when caching was
+	 * disabled after they were cached, so this runs whether caching is enabled or not.
+	 * Files are cached lazily, so a restored comment downloads them again.
+	 *
+	 * @return void
+	 */
+	public static function register_cleanup() {
 		\add_action( 'edit_comment', array( Media::class, 'invalidate_comment' ) );
+		// Deleting a comment also transitions it, to 'delete'.
 		\add_action( 'transition_comment_status', array( self::class, 'maybe_cleanup_comment' ), 10, 3 );
 	}
 

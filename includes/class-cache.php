@@ -31,6 +31,9 @@ class Cache {
 	 * @return void
 	 */
 	public static function init() {
+		// Cached comment images go with their comment, also after caching was turned off.
+		Comment_Media::register_cleanup();
+
 		if ( ! self::is_enabled() ) {
 			return;
 		}

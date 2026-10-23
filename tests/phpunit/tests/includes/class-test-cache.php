@@ -9,6 +9,7 @@ namespace Activitypub\Tests;
 
 use Activitypub\Cache;
 use Activitypub\Cache\Avatar;
+use Activitypub\Cache\Comment_Media;
 use Activitypub\Cache\Emoji;
 use Activitypub\Cache\Media;
 use WP_UnitTestCase;
@@ -64,6 +65,29 @@ class Test_Cache extends WP_UnitTestCase {
 		);
 
 		remove_filter( 'activitypub_remote_cache_enabled', '__return_false' );
+	}
+
+	/**
+	 * Comment images are removed with their comment, also when caching is disabled.
+	 */
+	public function test_init_disabled_removes_comment_images() {
+		// The plugin registered both at bootstrap, with caching enabled.
+		\remove_filter( 'activitypub_remote_media_url', array( Comment_Media::class, 'maybe_cache' ) );
+		\remove_action( 'transition_comment_status', array( Comment_Media::class, 'maybe_cleanup_comment' ) );
+		\add_filter( 'activitypub_remote_cache_enabled', '__return_false' );
+		Cache::init();
+		\remove_filter( 'activitypub_remote_cache_enabled', '__return_false' );
+
+		$comment_id = self::factory()->comment->create();
+		$paths      = Comment_Media::get_storage_paths( $comment_id );
+		\wp_mkdir_p( $paths['basedir'] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $paths['basedir'] . '/test.txt', 'test' );
+
+		\wp_delete_comment( $comment_id, true );
+
+		$this->assertFalse( has_filter( 'activitypub_remote_media_url', array( Comment_Media::class, 'maybe_cache' ) ) );
+		$this->assertFileDoesNotExist( $paths['basedir'] . '/test.txt' );
 	}
 
 	/**

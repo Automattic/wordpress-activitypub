@@ -97,7 +97,7 @@ class Interactions {
 			return false;
 		}
 
-		// Reactions share activity_to_comment(), only remote replies and quotes get image blocks.
+		// Only remote replies and quotes get image blocks; activity_to_comment() also builds reactions.
 		if ( null === $user_id ) {
 			$comment_data['comment_content'] .= \addslashes( process_remote_images( '', self::get_image_attachments( $activity['object'] ) ) );
 		}

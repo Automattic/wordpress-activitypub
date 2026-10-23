@@ -23,7 +23,7 @@ class Test_Comment_Media extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
-		Comment_Media::init();
+		Comment_Media::register_cleanup();
 	}
 
 	/**
@@ -70,7 +70,7 @@ class Test_Comment_Media extends WP_UnitTestCase {
 	/**
 	 * Deleting a comment removes its images.
 	 *
-	 * @covers ::init
+	 * @covers ::register_cleanup
 	 */
 	public function test_delete_comment_removes_images() {
 		list( $comment_id, $file ) = $this->create_cached_comment();
@@ -83,7 +83,7 @@ class Test_Comment_Media extends WP_UnitTestCase {
 	/**
 	 * Deleting the post removes the images of its comments.
 	 *
-	 * @covers ::init
+	 * @covers ::register_cleanup
 	 */
 	public function test_delete_post_removes_comment_images() {
 		list( $comment_id, $file ) = $this->create_cached_comment();
@@ -96,7 +96,7 @@ class Test_Comment_Media extends WP_UnitTestCase {
 	/**
 	 * Editing a comment removes its images, they are cached again on the next render.
 	 *
-	 * @covers ::init
+	 * @covers ::register_cleanup
 	 */
 	public function test_edit_comment_removes_images() {
 		list( $comment_id, $file ) = $this->create_cached_comment();
@@ -152,22 +152,5 @@ class Test_Comment_Media extends WP_UnitTestCase {
 
 		$this->assertFileExists( $file );
 		Comment_Media::invalidate_entity( $comment_id );
-	}
-
-	/**
-	 * Cleanup also runs when caching is disabled, files cached before must still go.
-	 *
-	 * @covers ::init
-	 */
-	public function test_cleanup_without_caching() {
-		\remove_action( 'transition_comment_status', array( Comment_Media::class, 'maybe_cleanup_comment' ) );
-		\add_filter( 'activitypub_cache_media_enabled', '__return_false' );
-		Comment_Media::init();
-		\remove_filter( 'activitypub_cache_media_enabled', '__return_false' );
-		list( $comment_id, $file ) = $this->create_cached_comment();
-
-		\wp_delete_comment( $comment_id, true );
-
-		$this->assertFileDoesNotExist( $file );
 	}
 }
