@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Tags with underscores, like veranda_vestli, now keep their underscores when shared to the fediverse instead of being changed to camelCase.
