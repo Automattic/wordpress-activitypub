@@ -18,12 +18,26 @@ namespace Activitypub\Cache;
  */
 class Comment_Media extends Media {
 	/**
+	 * Context identifier for the filter.
+	 *
+	 * @var string
+	 */
+	const CONTEXT = 'comment_media';
+
+	/**
+	 * Base directory for comment images.
+	 *
+	 * @var string
+	 */
+	const BASE_DIR = '/activitypub/comments/';
+
+	/**
 	 * Get the base directory path relative to uploads.
 	 *
 	 * @return string Base directory path.
 	 */
 	public static function get_base_dir() {
-		return self::BASE_DIR_COMMENTS;
+		return self::BASE_DIR;
 	}
 
 	/**
@@ -32,18 +46,22 @@ class Comment_Media extends Media {
 	 * @return string Context identifier.
 	 */
 	public static function get_context() {
-		return self::CONTEXT_COMMENT;
+		return self::CONTEXT;
 	}
 
 	/**
 	 * Initialize the cache handler.
 	 *
+	 * The cleanup is registered separately by register_cleanup().
+	 *
 	 * @return void
 	 */
 	public static function init() {
-		if ( self::is_enabled() ) {
-			\add_filter( 'activitypub_remote_media_url', array( self::class, 'maybe_cache' ), 10, 4 );
+		if ( ! self::is_enabled() ) {
+			return;
 		}
+
+		\add_filter( 'activitypub_remote_media_url', array( self::class, 'maybe_cache' ), 10, 4 );
 	}
 
 	/**
@@ -62,7 +80,7 @@ class Comment_Media extends Media {
 	}
 
 	/**
-	 * Remove cached images when a comment is no longer approved.
+	 * Maybe clean up cached images when a comment is no longer approved.
 	 *
 	 * @param string      $new_status The new comment status.
 	 * @param string      $old_status The old comment status.
@@ -86,6 +104,6 @@ class Comment_Media extends Media {
 	 * @return void
 	 */
 	public static function clear_cached_images( $comment_id ) {
-		Media::invalidate_comment( $comment_id );
+		self::invalidate_entity( $comment_id );
 	}
 }

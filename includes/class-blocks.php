@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Cache\Comment_Media;
 use Activitypub\Cache\Media;
 use Activitypub\Cache\Stats_Image;
 use Activitypub\Collection\Actors;
@@ -676,7 +677,7 @@ class Blocks {
 
 		// Get entity ID from context, comment images are cached per comment.
 		$comment_id    = $block->context['commentId'] ?? null;
-		$cache_context = $comment_id ? Media::CONTEXT_COMMENT : Media::CONTEXT;
+		$cache_context = $comment_id ? Comment_Media::CONTEXT : Media::CONTEXT;
 		$entity_id     = $comment_id ?: ( $block->context['postId'] ?? null );
 		$post          = \get_post();
 		if ( ! $entity_id && $post ) {
