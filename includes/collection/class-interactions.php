@@ -558,9 +558,11 @@ class Interactions {
 	 * @since unreleased
 	 *
 	 * @param array $activity_object The ActivityPub object.
+	 * @param bool  $check_hosts     Optional. Whether the hosts must be public. Default true.
+	 *                               Validation before the signature check skips the DNS lookups.
 	 * @return array Image attachments.
 	 */
-	public static function get_image_attachments( $activity_object ) {
+	public static function get_image_attachments( $activity_object, $check_hosts = true ) {
 		// WordPress does not show images in comments, so this is opt-in.
 		if ( ! \get_option( 'activitypub_allow_comment_images' ) ) {
 			return array();
@@ -583,7 +585,7 @@ class Interactions {
 		$images = array();
 		foreach ( Remote_Posts::extract_attachments( $activity_object, \max( 20, $limit ), 'image' ) as $attachment ) {
 			// Comments show images to every visitor, so the host must be public.
-			if ( \wp_http_validate_url( $attachment['url'] ) ) {
+			if ( ! $check_hosts || \wp_http_validate_url( $attachment['url'] ) ) {
 				$images[] = $attachment;
 				if ( \count( $images ) >= $limit ) {
 					break;

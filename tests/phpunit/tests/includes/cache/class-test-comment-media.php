@@ -60,7 +60,7 @@ class Test_Comment_Media extends WP_UnitTestCase {
 	/**
 	 * An image downloaded while its comment was removed is not kept on the server.
 	 *
-	 * @covers ::maybe_cache
+	 * @covers ::cache
 	 */
 	public function test_maybe_cache_removes_images_of_removed_comment() {
 		$comment_id = self::factory()->comment->create( array( 'comment_approved' => 'trash' ) );

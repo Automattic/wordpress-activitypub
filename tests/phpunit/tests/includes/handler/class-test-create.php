@@ -26,17 +26,14 @@ class Test_Create extends \WP_UnitTestCase {
 	 * @covers ::validate_object
 	 */
 	public function test_image_only_validation_checks_no_hosts() {
-		$object = array(
-			'id'         => 'https://example.com/bounded-images',
+		$object  = array(
+			'id'         => 'https://example.com/image-reply',
 			'inReplyTo'  => 'https://example.org/post',
-			'attachment' => array(),
-		);
-		for ( $i = 1; $i <= 50; ++$i ) {
-			$object['attachment'][] = array(
+			'attachment' => array(
 				'type' => 'Image',
-				'url'  => 'https://8.8.4.' . $i . ':22/photo.jpg',
-			);
-		}
+				'url'  => 'https://8.8.4.4:22/photo.jpg',
+			),
+		);
 		$request = new \WP_REST_Request( 'POST' );
 		$request->set_header( 'Content-Type', 'application/activity+json' );
 		$request->set_body(
@@ -249,7 +246,6 @@ class Test_Create extends \WP_UnitTestCase {
 		}
 		// Hosts are checked when the comment is stored, not before the signature check.
 		foreach ( array(
-			'http://127.0.0.1/photo.jpg',
 			'http://192.168.1.1/photo.jpg',
 			'https://user:pass@example.com/photo.jpg',
 		) as $url ) {

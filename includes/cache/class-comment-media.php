@@ -89,31 +89,28 @@ class Comment_Media extends Media {
 	}
 
 	/**
-	 * Maybe cache a comment image URL.
-	 *
-	 * Hooked to the activitypub_remote_media_url filter.
+	 * Cache a remote comment image locally.
 	 *
 	 * @param string     $url       The remote URL.
-	 * @param string     $context   The context ('avatar', 'media', 'comment_media', etc.).
 	 * @param string|int $entity_id The entity identifier (comment ID).
 	 * @param array      $options   Optional. Additional options.
 	 *
-	 * @return string The local URL if cached successfully, otherwise the original URL.
+	 * @return string|false The local URL on success, false on failure.
 	 */
-	public static function maybe_cache( $url, $context, $entity_id = null, $options = array() ) {
-		$cached_url = parent::maybe_cache( $url, $context, $entity_id, $options );
+	public static function cache( $url, $entity_id, $options = array() ) {
+		$local_url = parent::cache( $url, $entity_id, $options );
 
 		/*
 		 * A comment removed while its image downloads loses its directory, and File::cache()
 		 * re-creates it to store the file. Remove it again, nothing would clean it up later.
 		 */
-		if ( $cached_url !== $url && 'approved' !== \wp_get_comment_status( $entity_id ) ) {
+		if ( $local_url && 'approved' !== \wp_get_comment_status( $entity_id ) ) {
 			self::clear_cached_images( (int) $entity_id );
 
-			return $url;
+			return false;
 		}
 
-		return $cached_url;
+		return $local_url;
 	}
 
 	/**
