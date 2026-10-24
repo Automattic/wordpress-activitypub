@@ -62,28 +62,6 @@ class Test_Media extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test get_storage_paths_for_context returns correct paths for media.
-	 */
-	public function test_get_storage_paths_for_context_media() {
-		$paths = Media::get_storage_paths_for_context( 123, 'media' );
-
-		$this->assertIsArray( $paths );
-		$this->assertStringContainsString( '/activitypub/posts/', $paths['basedir'] );
-		$this->assertStringContainsString( '/activitypub/posts/', $paths['baseurl'] );
-	}
-
-	/**
-	 * Test get_storage_paths_for_context returns correct paths for comment_media.
-	 */
-	public function test_get_storage_paths_for_context_comment() {
-		$paths = Media::get_storage_paths_for_context( 123, 'comment_media' );
-
-		$this->assertIsArray( $paths );
-		$this->assertStringContainsString( '/activitypub/comments/', $paths['basedir'] );
-		$this->assertStringContainsString( '/activitypub/comments/', $paths['baseurl'] );
-	}
-
-	/**
 	 * Test maybe_cleanup only runs for ap_post post type.
 	 */
 	public function test_maybe_cleanup_wrong_post_type() {
@@ -105,27 +83,6 @@ class Test_Media extends WP_UnitTestCase {
 		// Clean up.
 		Media::invalidate_entity( $post_id );
 	}
-
-	/**
-	 * Test invalidate_comment removes comment directory.
-	 */
-	public function test_invalidate_comment() {
-		$paths = Media::get_storage_paths_for_context( 'test-comment', 'comment_media' );
-
-		// Create directory with a file.
-		wp_mkdir_p( $paths['basedir'] );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-		file_put_contents( $paths['basedir'] . '/test.txt', 'test content' );
-
-		$this->assertTrue( is_dir( $paths['basedir'] ) );
-
-		// Invalidate.
-		$result = Media::invalidate_comment( 'test-comment' );
-
-		$this->assertTrue( $result );
-		$this->assertFalse( is_dir( $paths['basedir'] ) );
-	}
-
 
 	/**
 	 * Test maybe_cache filter is registered when caching is enabled.

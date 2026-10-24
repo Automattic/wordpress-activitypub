@@ -9,6 +9,7 @@ namespace Activitypub\Tests;
 
 use Activitypub\Cache;
 use Activitypub\Cache\Avatar;
+use Activitypub\Cache\Comment_Media;
 use Activitypub\Cache\Emoji;
 use Activitypub\Cache\Media;
 use WP_UnitTestCase;
@@ -48,11 +49,12 @@ class Test_Cache extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test init does not run when disabled.
+	 * Test init does not run when disabled, except for the comment image cleanup.
 	 */
 	public function test_init_disabled() {
 		// Remove existing filters first.
 		remove_all_filters( 'activitypub_remote_media_url' );
+		remove_action( 'transition_comment_status', array( Comment_Media::class, 'maybe_cleanup_comment' ) );
 
 		add_filter( 'activitypub_remote_cache_enabled', '__return_false' );
 
@@ -61,6 +63,14 @@ class Test_Cache extends WP_UnitTestCase {
 		// Cache handlers should not be registered.
 		$this->assertFalse(
 			has_filter( 'activitypub_remote_media_url', array( Avatar::class, 'maybe_cache' ) )
+		);
+		$this->assertFalse(
+			has_filter( 'activitypub_remote_media_url', array( Comment_Media::class, 'maybe_cache' ) )
+		);
+
+		// Comment images are still removed with their comment.
+		$this->assertNotFalse(
+			has_action( 'transition_comment_status', array( Comment_Media::class, 'maybe_cleanup_comment' ) )
 		);
 
 		remove_filter( 'activitypub_remote_cache_enabled', '__return_false' );

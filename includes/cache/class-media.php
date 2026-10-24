@@ -12,14 +12,11 @@ use Activitypub\Collection\Remote_Posts;
 /**
  * Media cache class.
  *
- * Handles lazy caching of remote post and comment media locally.
+ * Handles lazy caching of remote post media locally.
  * Media is cached on-demand when URLs pass through the `activitypub_remote_media_url` filter.
  *
- * Storage locations:
- * - Posts: /wp-content/uploads/activitypub/posts/{post_id}/
- * - Comments: /wp-content/uploads/activitypub/comments/{comment_id}/
- *
- * Files are cleaned up automatically when the parent post is deleted.
+ * Media is stored in /wp-content/uploads/activitypub/posts/{post_id}/
+ * and cleaned up automatically when the post is deleted.
  *
  * @since 5.6.0
  */
@@ -39,30 +36,11 @@ class Media extends File {
 	const CONTEXT = 'media';
 
 	/**
-	 * Context identifier for comment media.
-	 *
-	 * Reserved for future use when comment media caching is implemented.
-	 * Currently, only post media caching is active via maybe_cache().
-	 *
-	 * @var string
-	 */
-	const CONTEXT_COMMENT = 'comment_media';
-
-	/**
 	 * Base directory for post media.
 	 *
 	 * @var string
 	 */
 	const BASE_DIR_POSTS = '/activitypub/posts/';
-
-	/**
-	 * Base directory for comment media.
-	 *
-	 * Reserved for future use when comment media caching is implemented.
-	 *
-	 * @var string
-	 */
-	const BASE_DIR_COMMENTS = '/activitypub/comments/';
 
 	/**
 	 * Get the cache type identifier.
@@ -75,9 +53,6 @@ class Media extends File {
 
 	/**
 	 * Get the base directory path relative to uploads.
-	 *
-	 * Default to post media directory. Use get_storage_paths_for_context()
-	 * for context-aware path resolution.
 	 *
 	 * @return string Base directory path.
 	 */
@@ -101,30 +76,6 @@ class Media extends File {
 	 */
 	public static function get_max_dimension() {
 		return self::MAX_DIMENSION;
-	}
-
-	/**
-	 * Get storage paths based on context.
-	 *
-	 * @param string|int $entity_id The entity identifier.
-	 * @param string     $context   The context ('media' or 'comment_media').
-	 *
-	 * @return array {
-	 *     Storage paths for the entity.
-	 *
-	 *     @type string $basedir Base directory path.
-	 *     @type string $baseurl Base URL.
-	 * }
-	 */
-	public static function get_storage_paths_for_context( $entity_id, $context = self::CONTEXT ) {
-		$upload_dir = \wp_upload_dir();
-		$entity_id  = \sanitize_file_name( (string) $entity_id );
-		$base_dir   = self::CONTEXT_COMMENT === $context ? self::BASE_DIR_COMMENTS : self::BASE_DIR_POSTS;
-
-		return array(
-			'basedir' => $upload_dir['basedir'] . $base_dir . $entity_id,
-			'baseurl' => $upload_dir['baseurl'] . $base_dir . $entity_id,
-		);
 	}
 
 	/**
@@ -156,11 +107,11 @@ class Media extends File {
 	 * @return string The local URL if cached successfully, otherwise the original URL.
 	 */
 	public static function maybe_cache( $url, $context, $entity_id = null, $options = array() ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Required for filter signature.
-		if ( self::CONTEXT !== $context || empty( $url ) || empty( $entity_id ) ) {
+		if ( static::get_context() !== $context || empty( $url ) || empty( $entity_id ) ) {
 			return $url;
 		}
 
-		$cached_url = self::get_or_cache( $url, $entity_id );
+		$cached_url = static::get_or_cache( $url, $entity_id );
 
 		return $cached_url ?: $url;
 	}
@@ -178,18 +129,5 @@ class Media extends File {
 		}
 
 		self::invalidate_entity( $post_id );
-	}
-
-	/**
-	 * Invalidate cached media for a comment.
-	 *
-	 * @param int $comment_id The comment ID.
-	 *
-	 * @return bool True on success, false on failure.
-	 */
-	public static function invalidate_comment( $comment_id ) {
-		$paths = self::get_storage_paths_for_context( $comment_id, self::CONTEXT_COMMENT );
-
-		return static::delete_directory( $paths['basedir'] );
 	}
 }
