@@ -276,10 +276,7 @@ class Actors {
 				// Check for http(s)://blog.example.com/.
 				$normalized_uri = normalize_url( $uri );
 
-				if (
-					normalize_url( \site_url() ) === $normalized_uri ||
-					normalize_url( \home_url() ) === $normalized_uri
-				) {
+				if ( normalize_url( \home_url() ) === $normalized_uri ) {
 					return self::BLOG_USER_ID;
 				}
 

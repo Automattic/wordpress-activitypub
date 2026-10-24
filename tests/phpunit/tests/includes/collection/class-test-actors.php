@@ -232,6 +232,24 @@ class Test_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The WordPress address does not resolve to the blog actor.
+	 *
+	 * @covers ::get_id_by_resource
+	 */
+	public function test_get_id_by_resource_ignores_site_url() {
+		$site_url = function () {
+			return 'https://shared.example/site';
+		};
+		\add_filter( 'site_url', $site_url );
+
+		$result = Actors::get_id_by_resource( 'https://shared.example/site' );
+
+		\remove_filter( 'site_url', $site_url );
+
+		$this->assertWPError( $result );
+	}
+
+	/**
 	 * Test get_type_by_id()
 	 *
 	 * @covers ::get_type_by_id
