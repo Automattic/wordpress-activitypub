@@ -121,8 +121,9 @@ class Comment_Media extends Media {
 
 		/*
 		 * A comment removed or edited while its image downloads loses its directory, and
-		 * File::cache() re-creates it to store the file. Remove it again unless the comment is
-		 * still approved and still has the image, nothing would clean it up later.
+		 * File::cache() re-creates it to store the file. Remove it again unless comment images
+		 * are still on and the comment is still approved and has the image, nothing would clean
+		 * it up later.
 		 */
 		if ( $local_url && ! self::shows_image( $entity_id, $url ) ) {
 			self::clear_cached_images( (int) $entity_id );
@@ -134,7 +135,7 @@ class Comment_Media extends Media {
 	}
 
 	/**
-	 * Whether a comment is approved and still has an image.
+	 * Whether comment images are on and an approved comment still has an image.
 	 *
 	 * @param string|int $comment_id The comment ID.
 	 * @param string     $url        The remote image URL.
@@ -142,6 +143,11 @@ class Comment_Media extends Media {
 	 * @return bool True if the comment shows the image.
 	 */
 	private static function shows_image( $comment_id, $url ) {
+		// The option may have been turned off while the image downloaded.
+		if ( ! \get_option( 'activitypub_allow_comment_images' ) ) {
+			return false;
+		}
+
 		// The comment may have changed in another request while the image downloaded.
 		\wp_cache_delete( (int) $comment_id, 'comment' );
 		$comment = \get_comment( $comment_id );

@@ -108,6 +108,7 @@ class Test_Comment_Media extends WP_UnitTestCase {
 	 * @covers ::cache
 	 */
 	public function test_maybe_cache_keeps_image_of_approved_comment() {
+		\update_option( 'activitypub_allow_comment_images', '1' );
 		$comment_id = self::factory()->comment->create(
 			array( 'comment_content' => generate_image_block( 'https://example.com/photo.jpg', '' ) )
 		);
@@ -115,6 +116,23 @@ class Test_Comment_Media extends WP_UnitTestCase {
 		$this->assertNotSame( 'https://example.com/photo.jpg', $this->cache_image( $comment_id ) );
 		$this->assertDirectoryExists( Comment_Media::get_storage_paths( $comment_id )['basedir'] );
 		Comment_Media::invalidate_entity( $comment_id );
+		\delete_option( 'activitypub_allow_comment_images' );
+	}
+
+	/**
+	 * An image downloaded while comment images were turned off is not kept on the server.
+	 *
+	 * @covers ::cache
+	 */
+	public function test_maybe_cache_removes_image_when_option_is_off() {
+		\update_option( 'activitypub_allow_comment_images', '0' );
+		$comment_id = self::factory()->comment->create(
+			array( 'comment_content' => generate_image_block( 'https://example.com/photo.jpg', '' ) )
+		);
+
+		$this->assertSame( 'https://example.com/photo.jpg', $this->cache_image( $comment_id ) );
+		$this->assertDirectoryDoesNotExist( Comment_Media::get_storage_paths( $comment_id )['basedir'] );
+		\delete_option( 'activitypub_allow_comment_images' );
 	}
 
 	/**
