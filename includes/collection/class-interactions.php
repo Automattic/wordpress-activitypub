@@ -18,6 +18,7 @@ use function Activitypub\is_post_disabled;
 use function Activitypub\is_same_host;
 use function Activitypub\object_id_to_comment;
 use function Activitypub\object_to_uri;
+use function Activitypub\process_remote_images;
 use function Activitypub\url_to_commentid;
 
 /**
@@ -87,6 +88,20 @@ class Interactions {
 		}
 
 		/*
+		 * Image blocks are only for remote replies and quotes. They are built here, not in
+		 * activity_to_comment(), which reactions share.
+		 */
+		$images = '';
+		if ( null === $user_id ) {
+			$images = process_remote_images( '', self::get_image_attachments( $activity['object'] ) );
+
+			// Validation lets image-only replies in without checking the hosts, at least one image has to pass.
+			if ( '' === $images && ! isset( $activity['object']['content'] ) ) {
+				return false;
+			}
+		}
+
+		/*
 		 * Built only once the target is known: resolving the author fetches the remote actor and
 		 * its WebFinger, which is wasted on a reply to something that is not here.
 		 */
@@ -95,6 +110,8 @@ class Interactions {
 		if ( ! $comment_data ) {
 			return false;
 		}
+
+		$comment_data['comment_content'] .= \addslashes( $images );
 
 		if ( $comment_type ) {
 			$comment_data['comment_type'] = $comment_type;
@@ -160,6 +177,7 @@ class Interactions {
 		 */
 		$content                         = Sanitize::comment_content( $activity['object']['content'] ?? '' );
 		$content                         = Emoji::wrap_in_content( $content, $activity['object'] );
+		$content                        .= process_remote_images( '', self::get_image_attachments( $activity['object'] ) );
 		$comment_data['comment_content'] = \addslashes( $content );
 
 		$result = self::persist( $comment_data, self::UPDATE );
@@ -512,7 +530,6 @@ class Interactions {
 		// the slashing is ours: wp_new_comment() unslashes the whole array.
 		$comment_author     = \wp_slash( $comment_author ?? \__( 'Anonymous', 'activitypub' ) );
 		$comment_author_url = \esc_url_raw( object_to_uri( $actor['url'] ?? $actor['id'] ) );
-		$comment_content    = null;
 		$webfinger          = Webfinger::uri_to_acct( $comment_author_url );
 
 		if ( \is_wp_error( $webfinger ) ) {
@@ -521,15 +538,10 @@ class Interactions {
 			$comment_author_email = Sanitize::webfinger( $webfinger );
 		}
 
-		if ( isset( $activity['object']['content'] ) ) {
-			/*
-			 * Sanitize before wrapping: emoji blocks are our own markup, and kses would
-			 * mangle the block comments they are made of.
-			 */
-			$content         = Sanitize::comment_content( $activity['object']['content'] );
-			$content         = Emoji::wrap_in_content( $content, $activity['object'] );
-			$comment_content = \addslashes( $content );
-		}
+		// Sanitize remote HTML before adding our own emoji and image blocks.
+		$content         = Sanitize::comment_content( $activity['object']['content'] ?? '' );
+		$content         = Emoji::wrap_in_content( $content, $activity['object'] );
+		$comment_content = \addslashes( $content );
 
 		return array(
 			'comment_author'       => $comment_author,
@@ -538,6 +550,50 @@ class Interactions {
 			'comment_author_email' => $comment_author_email,
 			'comment_meta'         => self::prepare_remote_comment_meta( $activity ),
 		);
+	}
+
+	/**
+	 * Get the image attachments displayed in a remote comment.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $activity_object The ActivityPub object.
+	 * @param bool  $check_hosts     Optional. Whether the hosts must be public. Default true.
+	 *                               Validation before the signature check skips the DNS lookups.
+	 * @return array Image attachments.
+	 */
+	public static function get_image_attachments( $activity_object, $check_hosts = true ) {
+		// WordPress does not show images in comments, so this is opt-in.
+		if ( ! \get_option( 'activitypub_allow_comment_images' ) ) {
+			return array();
+		}
+
+		/**
+		 * Filters the maximum number of image attachments displayed in a Fediverse comment.
+		 *
+		 * @since unreleased
+		 *
+		 * @param int   $limit           Maximum number of images. Default 3. Zero disables image attachments.
+		 * @param array $activity_object The ActivityPub object.
+		 */
+		$limit = \max( 0, (int) \apply_filters( 'activitypub_comment_image_limit', 3, $activity_object ) );
+
+		if ( ! $limit ) {
+			return array();
+		}
+
+		$images = array();
+		foreach ( Remote_Posts::extract_attachments( $activity_object, \max( 20, $limit ), 'image' ) as $attachment ) {
+			// Comments show images to every visitor, so the host must be public.
+			if ( ! $check_hosts || \wp_http_validate_url( $attachment['url'] ) ) {
+				$images[] = $attachment;
+				if ( \count( $images ) >= $limit ) {
+					break;
+				}
+			}
+		}
+
+		return $images;
 	}
 
 	/**

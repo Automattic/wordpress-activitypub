@@ -193,6 +193,17 @@ class Options {
 
 		\register_setting(
 			'activitypub',
+			'activitypub_allow_comment_images',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Show images attached to replies.',
+				'default'           => '0',
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		\register_setting(
+			'activitypub',
 			'activitypub_default_quote_policy',
 			array(
 				'type'              => 'string',
