@@ -334,6 +334,15 @@ class Dispatcher {
 		$path       = \wp_parse_url( $inbox_url, PHP_URL_PATH ) ?? '';
 		$rest_route = \preg_replace( '#^/' . \preg_quote( \rest_get_url_prefix(), '#' ) . '#', '', $path );
 
+		/*
+		 * The inbox URL comes from a remote actor document, and signature verification is deferred below,
+		 * so only the shared inbox and an actor inbox may be reached this way.
+		 */
+		$inbox_route = \sprintf( '#^/%s/(?:(?:users|actors)/-?\d+/)?inbox$#', \preg_quote( ACTIVITYPUB_REST_NAMESPACE, '#' ) );
+		if ( ! \preg_match( $inbox_route, $rest_route ) ) {
+			return new \WP_Error( 'activitypub_invalid_inbox', 'The local inbox is not an ActivityPub inbox.', array( 'status' => 400 ) );
+		}
+
 		// Create a REST request.
 		$request = new \WP_REST_Request( 'POST', $rest_route );
 		$request->set_header( 'Content-Type', 'application/activity+json' );

@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Activities delivered to accounts on the same site now only reach ActivityPub inboxes.
