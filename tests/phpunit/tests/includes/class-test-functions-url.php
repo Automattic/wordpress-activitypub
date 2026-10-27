@@ -210,6 +210,14 @@ class Test_Functions_Url extends \WP_UnitTestCase {
 			'home host as a subdomain'  => array( 'evil.%s', false ),
 			'empty'                     => array( '', false ),
 			'a port without a host'     => array( ':8080', false ),
+			'home host, trailing dot'   => array( '%s.', true ),
+			'userinfo before home host' => array( 'evil.example@%s', false ),
+			'home host with a path'     => array( '%s/inbox', false ),
+			'home host with a query'    => array( '%s?x=1', false ),
+			'home host with a fragment' => array( '%s#x', false ),
+			'leading whitespace'        => array( ' %s', false ),
+			'empty port'                => array( '%s:', false ),
+			'port with a leading zero'  => array( '%s:08080', false ),
 		);
 	}
 

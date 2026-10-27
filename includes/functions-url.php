@@ -167,9 +167,14 @@ function fold_authority( $authority ) {
  * @return bool True if the authority names one of this site's hosts, false otherwise.
  */
 function is_signature_host( $authority ) {
+	// The raw value enters the signature base, so it has to be a bare host and port, written exactly so.
+	if ( get_authority( \sprintf( '//%s', $authority ) ) !== (string) $authority ) {
+		return false;
+	}
+
 	$authority = fold_authority( $authority );
 
-	// An unparseable value folds to nothing and must not match an unparseable entry.
+	// A host of only dots or brackets folds to nothing and must not match an unparseable entry.
 	if ( '' === $authority ) {
 		return false;
 	}

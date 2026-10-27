@@ -108,14 +108,15 @@ class Http_Signature_Draft implements Http_Signature {
 			return new \WP_Error( 'activitypub_signature', 'No Key ID present.' );
 		}
 
-		$public_key = Remote_Actors::get_public_key( $parsed['keyId'] );
-		if ( \is_wp_error( $public_key ) ) {
-			return $public_key;
-		}
-
+		// Read before the key is fetched, so a request made out to another host or out of its time window fails without a lookup.
 		$signed_data = $this->get_signed_data( $parsed['headers'], $parsed, $headers );
 		if ( ! $signed_data ) {
 			return new \WP_Error( 'invalid_signed_data', 'Signed data is invalid or expired.' );
+		}
+
+		$public_key = Remote_Actors::get_public_key( $parsed['keyId'] );
+		if ( \is_wp_error( $public_key ) ) {
+			return $public_key;
 		}
 
 		$algorithm = $this->get_signature_algorithm( $parsed, $public_key );

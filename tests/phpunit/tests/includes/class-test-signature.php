@@ -2040,14 +2040,24 @@ class Test_Signature extends \WP_UnitTestCase {
 		\update_option( 'activitypub_rfc9421_signature', '0' );
 		$mock = $this->mock_remote_key();
 
+		$lookups = 0;
+		$count   = function ( $pre ) use ( &$lookups ) {
+			++$lookups;
+
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $count, 5 );
+
 		$request = $this->build_replayed_request( 'evil.example', 'evil.example' );
 		$result  = Signature::verify_http_signature( $request );
 
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $count, 5 );
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
 		\delete_option( 'activitypub_rfc9421_signature' );
 
 		$this->assertWPError( $result, 'A signature made out to another host must not verify, whatever Host claims.' );
 		$this->assertSame( 'invalid_signed_data', $result->get_error_code() );
+		$this->assertSame( 0, $lookups, 'The key must not be looked up for a request made out to another host.' );
 	}
 
 	/**
