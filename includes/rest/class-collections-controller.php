@@ -168,6 +168,7 @@ class Collections_Controller extends Actors_Controller {
 				$args = array(
 					'post__in'            => $sticky_posts,
 					'ignore_sticky_posts' => 1,
+					'has_password'        => false,
 					'orderby'             => 'date',
 					'order'               => 'DESC',
 					// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
@@ -183,7 +184,7 @@ class Collections_Controller extends Actors_Controller {
 					$args['author'] = $user_id;
 				}
 
-				// The query cannot see everything that keeps a post private (a password, post type support), so check each one.
+				// The query leaves out password-protected posts; the rest of what keeps a post private (post type support, filters) is checked per post.
 				$posts = \array_values( \array_filter( \get_posts( $args ), 'Activitypub\is_post_publicly_queryable' ) );
 			}
 		}
