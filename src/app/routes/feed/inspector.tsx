@@ -13,7 +13,16 @@ import type { UseNavigateResult } from '@wordpress/route';
 /**
  * WordPress dependencies
  */
-import { Button, Spinner, Card, CardBody, CardHeader } from '@wordpress/components';
+import {
+	Button,
+	Spinner,
+	Card,
+	CardBody,
+	CardHeader,
+	FlexBlock,
+	__experimentalHStack as HStack,
+	__experimentalVStack as VStack,
+} from '@wordpress/components';
 import { useEntityRecord, useEntityRecords } from '@wordpress/core-data';
 import type { Term } from '@wordpress/core-data';
 import { sprintf, __ } from '@wordpress/i18n';
@@ -26,8 +35,7 @@ import { close } from '@wordpress/icons';
  */
 import Avatar from '../../components/avatar';
 import { getRelativeTime, safeUrl } from '../../utils';
-import { useTagFilter } from '../../hooks/use-tag-filter';
-import { useSearch, useNavigate } from '@wordpress/route';
+import { useSearch, useNavigate, useParams } from '@wordpress/route';
 import type { ActorInfo, Comment, FeedPost } from '../../types';
 
 interface RenderHTMLProps {
@@ -56,15 +64,16 @@ interface SearchParams {
 export default function FeedInspector(): ReactNode {
 	const search: SearchParams = useSearch( { strict: false } ) as SearchParams;
 	const navigate: UseNavigateResult< string > = useNavigate();
+	const params = useParams( { strict: false } ) as Record< string, string >;
 	const id: number | undefined = search.postIds?.[ 0 ] ? Number( search.postIds[ 0 ] ) : undefined;
 
-	// Close inspector by removing postIds from search params
+	// Keep an explicit empty selection so the desktop default does not reopen it.
 	const onClose: () => void = (): void => {
 		void navigate( {
-			search: ( ( prev: Record< string, unknown > ): Record< string, unknown > => {
-				const { postIds: _, ...rest } = prev as SearchParams;
-				return rest;
-			} ) as never,
+			search: ( ( prev: Record< string, unknown > ): Record< string, unknown > => ( {
+				...prev,
+				postIds: [],
+			} ) ) as never,
 			viewTransition: false,
 		} );
 	};
@@ -82,8 +91,7 @@ export default function FeedInspector(): ReactNode {
 		include: tagIds,
 	} );
 
-	// Use the shared tag filter hook - must be called before early return
-	const { selectedTagId, updateTagFilter } = useTagFilter();
+	const selectedTagId = params.taxonomy === 'tag' ? Number( params.termId ) : null;
 
 	// Early return if no id (shouldn't happen due to route config, but handle gracefully)
 	if ( ! id ) {
@@ -91,8 +99,7 @@ export default function FeedInspector(): ReactNode {
 	}
 
 	const handleTagClick: ( tagId: number ) => void = ( tagId: number ): void => {
-		// Apply filter and close inspector
-		updateTagFilter( tagId, { onComplete: onClose } );
+		void navigate( { to: selectedTagId === tagId ? '/' : `/feed/tag/${ tagId }`, search: {} as never } );
 	};
 
 	if ( isLoading ) {
@@ -116,11 +123,11 @@ export default function FeedInspector(): ReactNode {
 
 	return (
 		<div className="activitypub-inspector">
-			<Card className="activitypub-inspector-card">
-				<CardHeader>
-					<div className="activitypub-inspector-header">
-						<Avatar item={ post } />
-						<div className="activitypub-inspector-author">
+			<Card className="activitypub-inspector-card" isBorderless isRounded={ false }>
+				<CardHeader isBorderless={ false } gap={ 3 }>
+					<Avatar item={ post } />
+					<FlexBlock>
+						<VStack spacing={ 1 }>
 							<a
 								href={ profileUrl }
 								target="_blank"
@@ -129,7 +136,7 @@ export default function FeedInspector(): ReactNode {
 							>
 								{ author }
 							</a>
-							<div className="activitypub-inspector-meta">
+							<HStack justify="flex-start" spacing={ 1.5 }>
 								{ webfinger && <span className="activitypub-inspector-webfinger">{ webfinger }</span> }
 								{ relativeTime && postLink && (
 									<>
@@ -144,17 +151,12 @@ export default function FeedInspector(): ReactNode {
 										</a>
 									</>
 								) }
-							</div>
-						</div>
-						<Button
-							icon={ close }
-							label={ __( 'Close', 'activitypub' ) }
-							onClick={ onClose }
-							className="activitypub-inspector-close"
-						/>
-					</div>
+							</HStack>
+						</VStack>
+					</FlexBlock>
+					<Button icon={ close } label={ __( 'Close', 'activitypub' ) } onClick={ onClose } />
 				</CardHeader>
-				<CardBody>
+				<CardBody className="activitypub-inspector-body">
 					{ post.title?.rendered && (
 						<h2>
 							{ /*
@@ -170,7 +172,7 @@ export default function FeedInspector(): ReactNode {
 						<RenderHTML html={ post.content?.rendered || post.excerpt?.rendered || '' } />
 					) }
 					{ terms && terms.length > 0 && (
-						<div className="activitypub-inspector-tags">
+						<HStack className="activitypub-inspector-tags" justify="flex-start" wrap spacing={ 2 }>
 							{ terms.map( ( term: Term ): ReactNode => (
 								<Button
 									key={ term.id }
@@ -186,18 +188,24 @@ export default function FeedInspector(): ReactNode {
 									#{ term.name }
 								</Button>
 							) ) }
-						</div>
+						</HStack>
 					) }
 				</CardBody>
 			</Card>
 
 			{ ( isLoadingComments || ( comments && comments.length > 0 ) ) && (
-				<Card className="activitypub-inspector-card activitypub-inspector-comments-card">
+				<Card
+					className="activitypub-inspector-card activitypub-inspector-comments-card"
+					isBorderless
+					isRounded={ false }
+				>
 					<CardHeader>
-						{ __( 'Comments', 'activitypub' ) }
-						{ comments && comments.length > 0 && ` (${ comments.length })` }
+						<strong>
+							{ __( 'Comments', 'activitypub' ) }
+							{ comments && comments.length > 0 && ` (${ comments.length })` }
+						</strong>
 					</CardHeader>
-					<CardBody>
+					<CardBody className="activitypub-inspector-body">
 						{ isLoadingComments && <Spinner /> }
 						{ ! isLoadingComments && comments && comments.length > 0 && (
 							<div>

@@ -14,6 +14,7 @@ class App {
 
 	const MOUNT_ID            = 'activitypub-app-root';
 	const LOADER_MODULE       = '@activitypub/app';
+	const INIT_MODULE         = '@activitypub/app/init';
 	const FEED_CONTENT_MODULE = '@activitypub/app/routes/feed/content';
 	const FEED_ROUTE_MODULE   = '@activitypub/app/routes/feed/route';
 
@@ -195,8 +196,11 @@ class App {
 		\add_filter(
 			'script_module_data_' . self::LOADER_MODULE,
 			static function ( $data ) use ( $mount_id, $routes ) {
-				$data['mountId'] = $mount_id;
-				$data['routes']  = $routes;
+				$data['mountId']       = $mount_id;
+				$data['routes']        = $routes;
+				$data['menuItems']     = self::get_menu_items();
+				$data['dashboardLink'] = \admin_url( '/' );
+				$data['initModules']   = array( self::INIT_MODULE );
 
 				return $data;
 			}
@@ -229,6 +233,30 @@ class App {
 	}
 
 	/**
+	 * The entries of boot's sidebar navigation.
+	 *
+	 * @return array[] Menu items with `id`, `label` and `to`.
+	 */
+	private static function get_menu_items() {
+		$menu_items = array(
+			array(
+				'id'          => 'feed',
+				'label'       => \__( 'Feed', 'activitypub' ),
+				'to'          => '/feed',
+				'parent_type' => 'drilldown',
+			),
+			array(
+				'id'     => 'feed-all',
+				'label'  => \__( 'All posts', 'activitypub' ),
+				'to'     => '/',
+				'parent' => 'feed',
+			),
+		);
+
+		return \apply_filters( 'activitypub_app_menu_items', $menu_items );
+	}
+
+	/**
 	 * Get the app route registry.
 	 *
 	 * @return array Route definitions.
@@ -237,6 +265,16 @@ class App {
 		$routes = array(
 			array(
 				'path'           => '/',
+				'content_module' => self::FEED_CONTENT_MODULE,
+				'route_module'   => self::FEED_ROUTE_MODULE,
+			),
+			array(
+				'path'           => '/feed/$taxonomy/$termId',
+				'content_module' => self::FEED_CONTENT_MODULE,
+				'route_module'   => self::FEED_ROUTE_MODULE,
+			),
+			array(
+				'path'           => '/account/$actorId',
 				'content_module' => self::FEED_CONTENT_MODULE,
 				'route_module'   => self::FEED_ROUTE_MODULE,
 			),
@@ -280,6 +318,8 @@ class App {
 				$module_assets[ $module_id ]['asset']
 			);
 		}
+
+		self::register_script_module( self::INIT_MODULE, 'build/app/init.js', 'build/app/init.asset.php' );
 
 		$loader_asset = self::get_asset( 'build/app/loader.asset.php' );
 
@@ -343,6 +383,11 @@ class App {
 		$dependencies = array(
 			array(
 				'id'     => '@wordpress/boot',
+				'import' => 'static',
+			),
+			// Init modules run before the app renders, so boot must be able to import them.
+			array(
+				'id'     => self::INIT_MODULE,
 				'import' => 'static',
 			),
 		);

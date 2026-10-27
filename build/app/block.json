@@ -9,6 +9,7 @@
   "textdomain": "activitypub",
   "viewScriptModule": [
     "file:./loader.js",
+    "file:./init.js",
     "file:./routes/feed/content.js",
     "file:./routes/feed/route.js"
   ]
