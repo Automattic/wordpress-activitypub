@@ -266,21 +266,11 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 
 		$response = \rest_do_request( $request );
 
-		$this->assertEquals( 202, $response->get_status() );
-		$this->assertCount( 0, Followers::get_many( self::$user_id ), 'A Follow of another actor should not add a follower.' );
-
-		// The same delivery for the local actor does add one.
-		$json['id']     = 'https://example.com/activities/follow-local';
-		$json['object'] = Actors::get_by_id( self::$user_id )->get_id();
-		$request->set_body( \wp_json_encode( $json ) );
-
-		$response = \rest_do_request( $request );
-
 		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_metadata_callback );
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
 
 		$this->assertEquals( 202, $response->get_status() );
-		$this->assertCount( 1, Followers::get_many( self::$user_id ), 'A Follow of the local actor should add a follower.' );
+		$this->assertCount( 0, Followers::get_many( self::$user_id ), 'A Follow of another actor should not add a follower.' );
 	}
 
 	/**

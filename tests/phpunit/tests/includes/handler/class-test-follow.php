@@ -585,6 +585,41 @@ class Test_Follow extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * With several recipients, the follower is added to the one the Follow names, not the first.
+	 *
+	 * @covers ::handle_follow
+	 */
+	public function test_handle_follow_picks_the_named_recipient() {
+		$other_id  = self::factory()->user->create( array( 'role' => 'author' ) );
+		$actor_url = 'https://example.com/users/several-recipients';
+
+		$mock_metadata_callback = function () use ( $actor_url ) {
+			return array(
+				'id'                => $actor_url,
+				'type'              => 'Person',
+				'preferredUsername' => 'several',
+				'inbox'             => 'https://example.com/inbox',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $mock_metadata_callback );
+
+		Follow::handle_follow(
+			array(
+				'id'     => $actor_url . '/activity/1',
+				'type'   => 'Follow',
+				'actor'  => $actor_url,
+				'object' => Actors::get_by_id( self::$user_id )->get_id(),
+			),
+			array( $other_id, self::$user_id )
+		);
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_metadata_callback );
+
+		$this->assertCount( 1, Followers::get_many( self::$user_id ), 'The named recipient should get the follower.' );
+		$this->assertCount( 0, Followers::get_many( $other_id ), 'The other recipient should not.' );
+	}
+
+	/**
 	 * A Follow names its object in any form the local actor can be addressed by.
 	 *
 	 * @dataProvider object_form_provider

@@ -43,14 +43,12 @@ class Follow {
 	 * @return void
 	 */
 	public static function handle_follow( $activity, $user_ids ) {
-		// Extract the user ID (follow requests are always for a single user).
-		$user_id = \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids;
-
-		// Only a Follow of the actor that received it.
-		$object_id = Actors::get_id_by_resource( $activity['object'] ?? '' );
-		if ( \is_wp_error( $object_id ) || (int) $object_id !== (int) $user_id ) {
+		// Only a Follow of an actor that received it, and the follower is added to that actor.
+		$user_id = Actors::get_id_by_resource( $activity['object'] ?? '' );
+		if ( \is_wp_error( $user_id ) || ! \in_array( (int) $user_id, \array_map( 'intval', (array) $user_ids ), true ) ) {
 			return;
 		}
+		$user_id = (int) $user_id;
 
 		// Check if the actor already follows the user.
 		$already_following = false;
