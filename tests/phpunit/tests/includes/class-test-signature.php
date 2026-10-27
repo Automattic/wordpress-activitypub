@@ -2194,6 +2194,63 @@ class Test_Signature extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * RFC 9421: a signature made out to this site still verifies when a proxy rewrote Host.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers \Activitypub\Signature\Http_Message_Signature::get_component_values
+	 */
+	public function test_verify_http_signature_rfc9421_accepts_our_own_original_host() {
+		\update_option( 'activitypub_rfc9421_signature', '1' );
+		$mock = $this->mock_remote_key();
+
+		$own = \wp_parse_url( \home_url(), \PHP_URL_HOST );
+
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI']    = '/wp-json/activitypub/1.0/inbox';
+		$_SERVER['HTTP_HOST']      = 'internal.local';
+		$_SERVER['HTTPS']          = 'on';
+
+		// The peer signed our public host; a proxy then rewrote `Host` to an internal name.
+		$request = $this->build_replayed_request( $own, 'internal.local', $own );
+		$result  = Signature::verify_http_signature( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+		\delete_option( 'activitypub_rfc9421_signature' );
+
+		$this->assertNotWPError( $result, 'A signature made out to this site must still verify when a proxy rewrote Host.' );
+	}
+
+	/**
+	 * RFC 9421: a foreign X-Original-Host is ignored, so Host has to name this site.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers \Activitypub\Signature\Http_Message_Signature::get_component_values
+	 */
+	public function test_verify_http_signature_rfc9421_rejects_a_foreign_original_host() {
+		\update_option( 'activitypub_rfc9421_signature', '1' );
+		$mock = $this->mock_remote_key();
+
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI']    = '/wp-json/activitypub/1.0/inbox';
+		$_SERVER['HTTPS']          = 'on';
+
+		// Arriving with our host, so the foreign header falls back to it and the signature no longer matches.
+		$_SERVER['HTTP_HOST'] = 'example.org';
+		$own_host             = Signature::verify_http_signature( $this->build_replayed_request( 'evil.example', 'example.org', 'evil.example' ) );
+
+		// Arriving with an internal name, nothing names this site.
+		$_SERVER['HTTP_HOST'] = 'internal.local';
+		$internal             = Signature::verify_http_signature( $this->build_replayed_request( 'evil.example', 'internal.local', 'evil.example' ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+		\delete_option( 'activitypub_rfc9421_signature' );
+
+		$this->assertWPError( $own_host, 'A signature made out to another host must not verify, whatever X-Original-Host claims.' );
+		$this->assertWPError( $internal, 'A foreign X-Original-Host must not stand in for this site.' );
+		$this->assertSame( 'activitypub_signature_host', $internal->get_error_code() );
+	}
+
+	/**
 	 * The reverse-proxy case the header exists for keeps working.
 	 *
 	 * @covers ::verify_http_signature
