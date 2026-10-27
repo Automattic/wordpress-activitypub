@@ -826,6 +826,63 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test that a local delivery only reaches the shared inbox and actor inboxes.
+	 *
+	 * The inbox URL comes from a remote actor document, and signature verification is deferred
+	 * for local deliveries, so any other route on this site must not be dispatched.
+	 *
+	 * @covers ::send_to_inboxes
+	 * @covers ::send_to_local_inbox
+	 */
+	public function test_local_delivery_only_reaches_inbox_routes() {
+		// Local delivery reads the route from the URL path, which plain permalinks do not have.
+		$this->set_permalink_structure( '/%postname%/' );
+
+		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+
+		$inboxes = array(
+			\rest_url( \sprintf( '/%s/inbox', ACTIVITYPUB_REST_NAMESPACE ) ),
+			\rest_url( \sprintf( '/%s/actors/%d/inbox', ACTIVITYPUB_REST_NAMESPACE, self::$user_id ) ),
+		);
+		$others  = array(
+			\rest_url( \sprintf( '/%s/outbox', ACTIVITYPUB_REST_NAMESPACE ) ),
+			\rest_url( \sprintf( '/%s/actors/%d/collections/inbox', ACTIVITYPUB_REST_NAMESPACE, self::$user_id ) ),
+			\rest_url( '/wp/v2/posts' ),
+		);
+
+		$dispatched = array();
+		$record     = function ( $result, $server, $request ) use ( &$dispatched ) {
+			$dispatched[] = $request->get_route();
+
+			return $result;
+		};
+		\add_filter( 'rest_pre_dispatch', $record, 10, 3 );
+
+		$results = array();
+		$collect = function ( $result, $inbox ) use ( &$results ) {
+			$results[ $inbox ] = $result;
+		};
+		\add_action( 'activitypub_sent_to_inbox', $collect, 10, 2 );
+
+		$send_to_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$send_to_inboxes->setAccessible( true );
+		}
+		$send_to_inboxes->invoke( null, \array_merge( $inboxes, $others ), $outbox_item->ID );
+
+		\remove_filter( 'rest_pre_dispatch', $record );
+		\remove_action( 'activitypub_sent_to_inbox', $collect );
+
+		$this->assertCount( 2, $dispatched, 'Only the two inboxes should be dispatched.' );
+
+		foreach ( $others as $other ) {
+			$this->assertWPError( $results[ $other ], $other . ' must not be reached.' );
+			$this->assertSame( 'activitypub_invalid_inbox', $results[ $other ]->get_error_code() );
+		}
+	}
+
+	/**
 	 * Test that remote inboxes still use HTTP.
 	 *
 	 * @covers ::send_to_inboxes
