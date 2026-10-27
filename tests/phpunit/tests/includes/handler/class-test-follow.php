@@ -547,4 +547,110 @@ class Test_Follow extends \WP_UnitTestCase {
 		\remove_action( 'activitypub_handled_follow', $new_hook_callback );
 		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_metadata_callback );
 	}
+
+	/**
+	 * A Follow of another actor is not added to the user whose inbox received it.
+	 *
+	 * @covers ::handle_follow
+	 */
+	public function test_handle_follow_ignores_other_object() {
+		$actor_url = 'https://example.com/other-object-actor';
+
+		$mock_metadata_callback = function () use ( $actor_url ) {
+			return array(
+				'id'                => $actor_url,
+				'type'              => 'Person',
+				'preferredUsername' => 'otherobject',
+				'inbox'             => 'https://example.com/inbox',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $mock_metadata_callback );
+
+		$handled_before = \did_action( 'activitypub_handled_follow' );
+
+		Follow::handle_follow(
+			array(
+				'id'     => $actor_url . '/activity/1',
+				'type'   => 'Follow',
+				'actor'  => $actor_url,
+				'object' => 'https://remote.example/users/bob',
+			),
+			self::$user_id
+		);
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_metadata_callback );
+
+		$this->assertCount( 0, Followers::get_many( self::$user_id ), 'A Follow of another actor should not add a follower.' );
+		$this->assertSame( $handled_before, \did_action( 'activitypub_handled_follow' ), 'A Follow of another actor should not be handled.' );
+	}
+
+	/**
+	 * A Follow names its object in any form the local actor can be addressed by.
+	 *
+	 * @dataProvider object_form_provider
+	 * @covers ::handle_follow
+	 *
+	 * @param string $form    The way the Follow names the local actor.
+	 * @param bool   $is_blog Whether the Follow is for the blog actor.
+	 */
+	public function test_handle_follow_accepts_object_forms( $form, $is_blog ) {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$user_id = $is_blog ? Actors::BLOG_USER_ID : self::$user_id;
+		$actor   = Actors::get_by_id( $user_id );
+		$objects = array(
+			'id'       => $actor->get_id(),
+			'inline'   => array(
+				'id'   => $actor->get_id(),
+				'type' => 'Person',
+			),
+			'acct'     => 'acct:' . $actor->get_webfinger(),
+			'at_name'  => \home_url( '/@' . $actor->get_preferred_username() ),
+			'home_url' => \home_url( '/' ),
+		);
+
+		$actor_url              = 'https://example.com/users/' . $form . ( $is_blog ? '-blog' : '' );
+		$mock_metadata_callback = function () use ( $actor_url ) {
+			return array(
+				'id'                => $actor_url,
+				'type'              => 'Person',
+				'preferredUsername' => 'follower',
+				'inbox'             => 'https://example.com/inbox',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $mock_metadata_callback );
+
+		Follow::handle_follow(
+			array(
+				'id'     => $actor_url . '/activity/1',
+				'type'   => 'Follow',
+				'actor'  => $actor_url,
+				'object' => $objects[ $form ],
+			),
+			$user_id
+		);
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_metadata_callback );
+		\delete_option( 'activitypub_actor_mode' );
+
+		$this->assertCount( 1, Followers::get_many( $user_id ), 'A Follow of the local actor should add a follower.' );
+	}
+
+	/**
+	 * Data provider for test_handle_follow_accepts_object_forms.
+	 *
+	 * @return array The object forms.
+	 */
+	public function object_form_provider() {
+		return array(
+			'actor id'      => array( 'id', false ),
+			'inline object' => array( 'inline', false ),
+			'acct uri'      => array( 'acct', false ),
+			'at-name url'   => array( 'at_name', false ),
+			'blog actor id' => array( 'id', true ),
+			'blog acct uri' => array( 'acct', true ),
+			'blog at-name'  => array( 'at_name', true ),
+			'blog home url' => array( 'home_url', true ),
+		);
+	}
 }

@@ -46,6 +46,12 @@ class Follow {
 		// Extract the user ID (follow requests are always for a single user).
 		$user_id = \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids;
 
+		// Only a Follow of the actor that received it.
+		$object_id = Actors::get_id_by_resource( $activity['object'] ?? '' );
+		if ( \is_wp_error( $object_id ) || (int) $object_id !== (int) $user_id ) {
+			return;
+		}
+
 		// Check if the actor already follows the user.
 		$already_following = false;
 		$remote_actor      = Remote_Actors::get_by_uri( $activity['actor'] );

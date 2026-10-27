@@ -246,6 +246,18 @@ class Actors {
 			// Check for http(s) URIs.
 			case 'http':
 			case 'https':
+				// Only this site or the host it moved from, compared the same way as an acct: resource below.
+				$host      = normalize_host( fold_host( (string) \wp_parse_url( $uri, \PHP_URL_HOST ) ) );
+				$blog_host = normalize_host( fold_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) ) );
+
+				if ( '' === $host || ( $blog_host !== $host && normalize_host( fold_host( \get_option( 'activitypub_old_host' ) ) ) !== $host ) ) {
+					return new \WP_Error(
+						'activitypub_no_user_found',
+						\__( 'Actor not found', 'activitypub' ),
+						array( 'status' => 404 )
+					);
+				}
+
 				// Check for http(s)://blog.example.com/@username.
 				$resource_path = \wp_parse_url( $uri, PHP_URL_PATH );
 

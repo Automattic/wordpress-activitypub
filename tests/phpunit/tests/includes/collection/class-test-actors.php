@@ -93,11 +93,12 @@ class Test_Actors extends \WP_UnitTestCase {
 		$path = wp_parse_url( $item, PHP_URL_PATH ) ?? '';
 
 		if ( str_starts_with( $path, '/blog/' ) ) {
+			$host = wp_parse_url( $item, PHP_URL_HOST );
 			add_filter(
 				'home_url',
 				// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.Found
-				function ( $url ) {
-					return 'http://example.org/blog/';
+				function ( $url ) use ( $host ) {
+					return 'http://' . $host . '/blog/';
 				}
 			);
 		}
@@ -228,6 +229,8 @@ class Test_Actors extends \WP_UnitTestCase {
 			array( \rtrim( $https_home_url, '/' ), 'Activitypub\Model\Blog' ),
 			array( $home_url . '/@blog/s', 'WP_Error' ),
 			array( $home_url . '/@blogs/', 'WP_Error' ),
+			array( 'https://remote.example/@admin', 'WP_Error' ),
+			array( 'https://remote.example/@blog', 'WP_Error' ),
 		);
 	}
 
@@ -268,7 +271,7 @@ class Test_Actors extends \WP_UnitTestCase {
 	public function test_disabled_blog_profile() {
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
-		$resource = 'http://example.org/@blog';
+		$resource = \home_url( '/@blog' );
 
 		$this->assertEquals( 'Activitypub\Model\Blog', get_class( Actors::get_by_resource( $resource ) ) );
 

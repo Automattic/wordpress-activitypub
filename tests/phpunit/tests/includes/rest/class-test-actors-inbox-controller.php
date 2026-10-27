@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Rest;
 
 use Activitypub\Application;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox as Inbox_Collection;
 use Activitypub\Collection\Outbox;
 use Activitypub\Handler\Feature_Request;
@@ -231,6 +232,55 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$this->assertEquals( 202, $response->get_status() );
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+	}
+
+	/**
+	 * A Follow of another server's actor, delivered to a local inbox, adds no follower.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_follow_of_other_actor_adds_no_follower() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$actor_url              = 'https://example.com/users/alice';
+		$mock_metadata_callback = function () use ( $actor_url ) {
+			return array(
+				'id'                => $actor_url,
+				'type'              => 'Person',
+				'preferredUsername' => 'alice',
+				'inbox'             => 'https://example.com/inbox',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $mock_metadata_callback );
+
+		$json = array(
+			'id'     => 'https://example.com/activities/follow-bob',
+			'type'   => 'Follow',
+			'actor'  => $actor_url,
+			'object' => 'https://remote.example/actors/1',
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $json ) );
+
+		$response = \rest_do_request( $request );
+
+		$this->assertEquals( 202, $response->get_status() );
+		$this->assertCount( 0, Followers::get_many( self::$user_id ), 'A Follow of another actor should not add a follower.' );
+
+		// The same delivery for the local actor does add one.
+		$json['id']     = 'https://example.com/activities/follow-local';
+		$json['object'] = Actors::get_by_id( self::$user_id )->get_id();
+		$request->set_body( \wp_json_encode( $json ) );
+
+		$response = \rest_do_request( $request );
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_metadata_callback );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$this->assertEquals( 202, $response->get_status() );
+		$this->assertCount( 1, Followers::get_many( self::$user_id ), 'A Follow of the local actor should add a follower.' );
 	}
 
 	/**
