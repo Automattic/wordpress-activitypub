@@ -1875,6 +1875,46 @@ class Test_Signature extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A signature for a server on a non-default port names the port, as `Host` does.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers \Activitypub\Signature\Http_Signature_Draft::sign
+	 * @covers \Activitypub\Signature\Http_Message_Signature::sign
+	 * @dataProvider signature_format_provider
+	 *
+	 * @param string $rfc9421 '1' for RFC 9421, '0' for Draft Cavage.
+	 */
+	public function test_sign_names_a_non_default_port( $rfc9421 ) {
+		\update_option( 'activitypub_rfc9421_signature', $rfc9421 );
+		$mock = $this->mock_remote_key();
+
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI']    = '/wp-json/activitypub/1.0/inbox';
+		$_SERVER['HTTP_HOST']      = 'example.org:8443';
+		$_SERVER['HTTPS']          = 'on';
+
+		$request = $this->build_replayed_request( 'example.org:8443', 'example.org:8443' );
+		$result  = Signature::verify_http_signature( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+		\delete_option( 'activitypub_rfc9421_signature' );
+
+		$this->assertNotWPError( $result, 'A signature has to name the port the request is sent with.' );
+	}
+
+	/**
+	 * Signature formats.
+	 *
+	 * @return array[]
+	 */
+	public function signature_format_provider() {
+		return array(
+			'draft cavage' => array( '0' ),
+			'rfc 9421'     => array( '1' ),
+		);
+	}
+
+	/**
 	 * Build a draft-signed request made out to one host, then present it as arriving at another.
 	 *
 	 * @param string      $signed_for    Host the signature is made out to.

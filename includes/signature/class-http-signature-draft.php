@@ -13,6 +13,7 @@ namespace Activitypub\Signature;
 
 use Activitypub\Collection\Remote_Actors;
 
+use function Activitypub\get_authority;
 use function Activitypub\is_signature_host;
 
 /**
@@ -35,7 +36,7 @@ class Http_Signature_Draft implements Http_Signature {
 	public function sign( $args, $url ) {
 		$url_parts = \wp_parse_url( $url );
 
-		$host = $url_parts['host'];
+		$host = get_authority( $url );
 		$path = '/';
 
 		// Add path.

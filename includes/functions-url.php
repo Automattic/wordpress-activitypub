@@ -197,6 +197,40 @@ function is_signature_host( $authority ) {
 }
 
 /**
+ * Get the authority of a URL the way an HTTP client sends it in `Host`.
+ *
+ * The host, plus the port whenever it is not the scheme's default, as RFC 9110 defines `Host`
+ * and as WordPress' HTTP transports send it. A signature over the host has to name this value,
+ * or a server on a non-default port cannot verify it.
+ *
+ * @since unreleased
+ *
+ * @param string $url The URL.
+ *
+ * @return string The authority, or an empty string when the URL has no host.
+ */
+function get_authority( $url ) {
+	$parts = \wp_parse_url( $url );
+
+	if ( empty( $parts['host'] ) ) {
+		return '';
+	}
+
+	static $default = array(
+		'http'  => 80,
+		'https' => 443,
+	);
+
+	$scheme = \strtolower( $parts['scheme'] ?? '' );
+
+	if ( isset( $parts['port'] ) && ( $default[ $scheme ] ?? null ) !== (int) $parts['port'] ) {
+		return $parts['host'] . ':' . (int) $parts['port'];
+	}
+
+	return $parts['host'];
+}
+
+/**
  * Check if a URL is from the same domain as the site.
  *
  * @param string $url The URL to check.
