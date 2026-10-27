@@ -83,6 +83,46 @@ class Test_Search extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Searching for a comment's URL leads to it, but leaves its moderation status alone.
+	 *
+	 * @covers \Activitypub\Search::enhance_admin_comment_search
+	 */
+	public function test_search_keeps_comment_status() {
+		$user = \get_user_by( 'id', self::factory()->user->create( array( 'role' => 'author' ) ) );
+		$user->add_cap( 'activitypub' );
+		\wp_set_current_user( $user->ID );
+
+		// A public IP, so wp_http_validate_url() accepts the URL without a DNS lookup.
+		$url        = 'https://1.1.1.1/notes/1';
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => self::factory()->post->create(),
+				'comment_approved' => '0',
+			)
+		);
+		\add_comment_meta( $comment_id, 'source_id', $url );
+
+		$redirect = function ( $location ) {
+			throw new \Exception( \esc_url_raw( $location ) );
+		};
+		\add_filter( 'wp_redirect', $redirect );
+
+		$_GET['s']  = $url;
+		$redirected = '';
+		try {
+			Search::enhance_admin_comment_search();
+		} catch ( \Exception $e ) {
+			$redirected = $e->getMessage();
+		}
+		unset( $_GET['s'] );
+
+		\remove_filter( 'wp_redirect', $redirect );
+
+		$this->assertNotEmpty( $redirected, 'The search should still redirect after finding the comment.' );
+		$this->assertSame( '0', \get_comment( $comment_id )->comment_approved, 'The search must not approve the comment.' );
+	}
+
+	/**
 	 * Helper method to access private try_import_activitypub_object method via reflection.
 	 *
 	 * @param string $url The URL to import.
