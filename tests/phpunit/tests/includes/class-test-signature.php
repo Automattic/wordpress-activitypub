@@ -1951,6 +1951,30 @@ class Test_Signature extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The WordPress address is not a host this site answers on for signatures.
+	 *
+	 * @covers ::verify_http_signature
+	 */
+	public function test_verify_http_signature_rejects_the_site_url_host() {
+		\update_option( 'activitypub_rfc9421_signature', '0' );
+		$mock = $this->mock_remote_key();
+
+		$site_url = function () {
+			return 'https://shared.example/site';
+		};
+		\add_filter( 'site_url', $site_url );
+
+		$request = $this->build_replayed_request( 'shared.example', 'internal.local', 'shared.example' );
+		$result  = Signature::verify_http_signature( $request );
+
+		\remove_filter( 'site_url', $site_url );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+		\delete_option( 'activitypub_rfc9421_signature' );
+
+		$this->assertWPError( $result, 'A signature made out to the WordPress address host must not verify.' );
+	}
+
+	/**
 	 * The reverse-proxy case the header exists for keeps working.
 	 *
 	 * @covers ::verify_http_signature

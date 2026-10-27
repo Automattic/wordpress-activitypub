@@ -303,9 +303,9 @@ class Http_Signature_Draft implements Http_Signature {
 				/**
 				 * Filters the hosts a signature may legitimately have been made out to.
 				 *
-				 * Sites whose proxy terminates on a name that is neither `home_url()` nor
-				 * `site_url()` add it here. Write them the way they appear in a URL; they are
-				 * folded before they are compared.
+				 * Sites whose proxy terminates on a name other than `home_url()` add it here.
+				 * Write them the way they appear in a URL; they are folded before they are
+				 * compared.
 				 *
 				 * @since 9.3.1
 				 *
@@ -313,10 +313,7 @@ class Http_Signature_Draft implements Http_Signature {
 				 */
 				$hosts = \apply_filters(
 					'activitypub_signature_original_hosts',
-					array(
-						home_host(),
-						\wp_parse_url( \site_url(), \PHP_URL_HOST ),
-					)
+					array( home_host() )
 				);
 
 				/*
