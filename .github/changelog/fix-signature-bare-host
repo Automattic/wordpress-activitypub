@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Signed requests from other servers are now checked more strictly, and requests that are not meant for your site are rejected before the sender's key is fetched.

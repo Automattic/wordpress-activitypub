@@ -339,7 +339,7 @@ trait Verification {
 	 * consented to, so reading owner-only material additionally requires the `read` scope. A
 	 * WordPress session is not scope-limited.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return bool True if the owner may read owner-only material.

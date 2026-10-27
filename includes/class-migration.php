@@ -235,7 +235,7 @@ class Migration {
 			self::migrate_application_keypair_option();
 			self::delete_application_outbox_items();
 		}
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) && ! \wp_next_scheduled( 'activitypub_remove_duplicate_cache_files' ) ) {
+		if ( \version_compare( $version_from_db, '9.4.0', '<' ) && ! \wp_next_scheduled( 'activitypub_remove_duplicate_cache_files' ) ) {
 			// A filesystem walk, so off the upgrade request and onto cron.
 			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_remove_duplicate_cache_files' );
 		}
@@ -1396,7 +1396,7 @@ class Migration {
 	 * `<hash>-N` copy each time; see {@see File::remove_duplicates()}. Running this twice is
 	 * harmless, the second pass finds nothing.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @return void
 	 */

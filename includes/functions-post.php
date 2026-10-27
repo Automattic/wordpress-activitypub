@@ -459,7 +459,7 @@ function get_post_id( $id ) {
 /**
  * Get the post URL, preserving its published permalink after withdrawal.
  *
- * @since unreleased
+ * @since 9.4.0
  *
  * @param \WP_Post $post The post.
  *
@@ -533,7 +533,7 @@ function get_content_visibility( $post_id ) {
 /**
  * Get the quote intent URI as a JavaScript URI.
  *
- * @since unreleased
+ * @since 9.4.0
  *
  * @return string The quote intent URI.
  */
@@ -547,7 +547,7 @@ function get_quote_intent_js() {
 /**
  * Get the quote intent URI.
  *
- * @since unreleased
+ * @since 9.4.0
  *
  * @return string The quote intent URI.
  */
@@ -555,7 +555,7 @@ function get_quote_intent_url() {
 	/**
 	 * Filters the quote intent parameters.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param array $params The quote intent parameters.
 	 */
@@ -569,7 +569,7 @@ function get_quote_intent_url() {
 	/**
 	 * Filters the quote intent URL.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param string $url The quote intent URL.
 	 */

@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Signed requests from other servers are now only accepted when they are addressed to your site's address. Sites reached under more than one domain can allow the others with the `activitypub_signature_original_hosts` filter.

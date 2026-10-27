@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Post summaries now respect plugins that change or hide parts of the post content.
