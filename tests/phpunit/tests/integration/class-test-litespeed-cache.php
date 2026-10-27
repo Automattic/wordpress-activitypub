@@ -161,6 +161,42 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A response is kept out of the cache when the rewrite rule and the plugin disagree on the Accept header.
+	 *
+	 * @covers ::maybe_disable_cache
+	 * @dataProvider accept_cache_provider
+	 *
+	 * @param string $accept   The Accept header.
+	 * @param bool   $no_cache Whether the response must not be cached.
+	 */
+	public function test_maybe_disable_cache( $accept, $no_cache ) {
+		$_SERVER['HTTP_ACCEPT'] = $accept;
+		$before                 = \did_action( 'litespeed_control_set_nocache' );
+
+		Litespeed_Cache::maybe_disable_cache();
+
+		unset( $_SERVER['HTTP_ACCEPT'] );
+
+		$this->assertSame( $no_cache, \did_action( 'litespeed_control_set_nocache' ) > $before );
+	}
+
+	/**
+	 * Accept headers for test_maybe_disable_cache.
+	 *
+	 * @return array[]
+	 */
+	public function accept_cache_provider() {
+		return array(
+			'activitypub'                     => array( 'application/activity+json', false ),
+			'mastodon'                        => array( 'application/ld+json; profile="https://www.w3.org/ns/activitystreams", application/activity+json, text/html;q=0.1', false ),
+			'browser'                         => array( 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', false ),
+			'empty'                           => array( '', false ),
+			'activitypub wins, listed second' => array( 'text/html;q=0.1, application/activity+json', true ),
+			'activitypub listed first, loses' => array( 'application/activity+json;q=0.1, text/html', true ),
+		);
+	}
+
+	/**
 	 * Test that the option is deleted when rules are removed.
 	 *
 	 * @covers ::remove_htaccess_rules
