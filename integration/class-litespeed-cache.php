@@ -7,6 +7,7 @@
 
 namespace Activitypub\Integration;
 
+use function Activitypub\accept_prefers_activitypub;
 use function Activitypub\is_plugin_active;
 
 /**
@@ -17,13 +18,20 @@ use function Activitypub\is_plugin_active;
 class Litespeed_Cache {
 
 	/**
+	 * The `Accept` pattern that puts a request into the JSON cache bucket.
+	 *
+	 * @var string
+	 */
+	const ACCEPT_PATTERN = '^[\s,]*(application/activity\+json|application/ld\+json[^,]*activitystreams)';
+
+	/**
 	 * The rules to add to the htaccess file.
 	 *
 	 * @var string
 	 */
 	public static $rules = '<IfModule LiteSpeed>
 RewriteEngine On
-RewriteCond %{HTTP:Accept} ^[\s,]*(application/activity\+json|application/ld\+json[^,]*activitystreams) [NC]
+RewriteCond %{HTTP:Accept} ' . self::ACCEPT_PATTERN . ' [NC]
 RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 </IfModule>';
 
@@ -63,6 +71,7 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 			}
 
 			\add_filter( 'site_status_tests', array( self::class, 'add_site_health_test' ) );
+			\add_action( 'template_redirect', array( self::class, 'maybe_disable_cache' ) );
 
 			// Remove rules if LiteSpeed Cache is not active but rules were previously set.
 		} elseif ( \get_option( self::$option_name ) ) {
@@ -71,6 +80,24 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 
 		// Clean up when LiteSpeed Cache plugin is deleted.
 		\add_action( 'deleted_plugin', array( self::class, 'on_plugin_deleted' ) );
+	}
+
+	/**
+	 * Keep a response out of the cache when its cache bucket and its representation can disagree.
+	 *
+	 * The rewrite rule picks the bucket by whether an ActivityPub type comes first in `Accept`, while
+	 * the plugin picks the representation by quality. When the two disagree, the response could be
+	 * stored in the other representation's bucket, so it is not cached at all.
+	 *
+	 * @return void
+	 */
+	public static function maybe_disable_cache() {
+		$accept = isset( $_SERVER['HTTP_ACCEPT'] ) ? \wp_unslash( $_SERVER['HTTP_ACCEPT'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$bucket = (bool) \preg_match( \sprintf( '#%s#i', self::ACCEPT_PATTERN ), $accept );
+
+		if ( accept_prefers_activitypub( $accept ) !== $bucket ) {
+			\do_action( 'litespeed_control_set_nocache', 'ActivityPub: Accept order and quality disagree' );
+		}
 	}
 
 	/**

@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed LiteSpeed Cache possibly showing visitors the technical ActivityPub version of a page instead of the normal page.
