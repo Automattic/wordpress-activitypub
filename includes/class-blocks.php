@@ -7,6 +7,8 @@
 
 namespace Activitypub;
 
+use Activitypub\Cache\Comment_Media;
+use Activitypub\Cache\Media;
 use Activitypub\Cache\Stats_Image;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
@@ -235,8 +237,11 @@ class Blocks {
 			'activitypub/image',
 			array(
 				'attributes'      => array(
-					'url' => array( 'type' => 'string' ),
+					'url'        => array( 'type' => 'string' ),
+					'urlEncoded' => array( 'type' => 'boolean' ),
+					'alt'        => array( 'type' => 'string' ),
 				),
+				'uses_context'    => array( 'postId', 'commentId' ),
 				'render_callback' => array( self::class, 'render_image_block' ),
 			)
 		);
@@ -651,22 +656,32 @@ class Blocks {
 	 *
 	 * Replaces remote image URL with cached URL at runtime.
 	 *
-	 * @param array  $attrs   The block attributes.
-	 * @param string $content The block inner content (img tag).
+	 * @param array          $attrs   The block attributes.
+	 * @param string         $content The block inner content (img tag).
+	 * @param \WP_Block|null $block   Optional. The block instance.
 	 *
-	 * @return string The rendered content with cached URL.
+	 * @return string The rendered content with cached URL, or the image description if a comment image has no URL.
 	 */
-	public static function render_image_block( $attrs, $content ) {
-		if ( empty( $attrs['url'] ) || empty( $content ) ) {
-			return $content;
+	public static function render_image_block( $attrs, $content, $block = null ) {
+		$comment_id = $block->context['commentId'] ?? null;
+
+		// Only blocks that carry their alt text can rebuild a missing img.
+		if ( empty( $attrs['url'] ) || ( empty( $content ) && ! isset( $attrs['alt'] ) ) ) {
+			return $comment_id ? self::render_image_description( $attrs ) : $content;
 		}
 
-		$url = $attrs['url'];
+		$url       = self::get_image_url( $attrs );
+		$processor = new \WP_HTML_Tag_Processor( $content );
+		if ( isset( $attrs['alt'] ) && ( ! $processor->next_tag( array( 'tag_name' => 'IMG' ) ) || ! $processor->get_attribute( 'src' ) ) ) {
+			// Comment sanitization removes img attributes; retain them in the block instead.
+			$content = \sprintf( '<img src="%s" alt="%s" loading="lazy" />', \esc_url( \htmlspecialchars( $url, ENT_QUOTES, 'UTF-8', true ) ), \esc_attr( $attrs['alt'] ) );
+		}
 
-		// Get entity ID from context.
-		$entity_id = null;
-		$post      = \get_post();
-		if ( $post ) {
+		// Get entity ID from context, comment images are cached per comment.
+		$cache_context = $comment_id ? Comment_Media::CONTEXT : Media::CONTEXT;
+		$entity_id     = $comment_id ?: ( $block->context['postId'] ?? null );
+		$post          = \get_post();
+		if ( ! $entity_id && $post ) {
 			$entity_id = $post->ID;
 		}
 
@@ -674,17 +689,59 @@ class Blocks {
 		 * Filters a remote image URL for caching.
 		 *
 		 * @param string      $url       The remote image URL.
-		 * @param string      $context   The context ('media').
-		 * @param int|null    $entity_id The entity ID.
+		 * @param string      $context   The context ('media' or 'comment_media').
+		 * @param int|null    $entity_id The entity ID, a comment ID for 'comment_media'.
 		 * @param array       $options   Additional options.
 		 */
-		$cached_url = \apply_filters( 'activitypub_remote_media_url', $url, 'media', $entity_id, array() );
+		$cached_url = \apply_filters( 'activitypub_remote_media_url', $url, $cache_context, $entity_id, array() );
 
 		if ( $cached_url && $cached_url !== $url ) {
-			return \str_replace( $url, $cached_url, $content );
+			$processor = new \WP_HTML_Tag_Processor( $content );
+			if ( $processor->next_tag( array( 'tag_name' => 'IMG' ) ) ) {
+				$processor->set_attribute( 'src', $cached_url );
+				// Browsers prefer srcset candidates, which still point to the remote host.
+				$processor->remove_attribute( 'srcset' );
+				return $processor->get_updated_html();
+			}
 		}
 
 		return $content;
+	}
+
+	/**
+	 * Get the remote URL of an image block.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $attrs The image block attributes.
+	 *
+	 * @return string The remote URL, empty if the block has none.
+	 */
+	public static function get_image_url( $attrs ) {
+		if ( empty( $attrs['url'] ) || ! \is_string( $attrs['url'] ) ) {
+			return '';
+		}
+
+		// Comment sanitization would mangle a raw URL, so generated blocks store it encoded.
+		return ! empty( $attrs['urlEncoded'] ) ? \wp_specialchars_decode( $attrs['url'], ENT_QUOTES ) : $attrs['url'];
+	}
+
+	/**
+	 * Render the description of an image that is not shown.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $attrs The image block attributes.
+	 *
+	 * @return string The description as a paragraph.
+	 */
+	public static function render_image_description( $attrs ) {
+		$alt = $attrs['alt'] ?? '';
+
+		return '<p>' . \esc_html(
+			/* translators: %s: Image description. */
+			$alt ? \sprintf( \__( 'Image: %s', 'activitypub' ), $alt ) : \__( 'Image', 'activitypub' )
+		) . '</p>';
 	}
 
 	/**

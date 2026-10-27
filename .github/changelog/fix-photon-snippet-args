@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed a fatal error on sites using the Photon snippet, which now also serves images in Fediverse replies through the CDN.

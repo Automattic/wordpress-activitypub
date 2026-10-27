@@ -12,7 +12,9 @@ use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Interactions;
 use Activitypub\Transformer\Post;
 
+use function Activitypub\generate_image_block;
 use function Activitypub\object_to_uri;
+use function Activitypub\process_remote_images;
 use function Activitypub\register_comment_type;
 
 /**
@@ -21,6 +23,123 @@ use function Activitypub\register_comment_type;
  * @coversDefaultClass \Activitypub\Blocks
  */
 class Test_Blocks extends \WP_UnitTestCase {
+	/**
+	 * URLs supplied by JSON are not HTML entity encoded.
+	 *
+	 * @covers ::render_image_block
+	 */
+	public function test_render_image_block_preserves_literal_url_entities() {
+		$url     = 'https://example.com/a&amp;b.jpg';
+		$seen    = null;
+		$filter  = static function ( $value ) use ( &$seen ) {
+			$seen = $value;
+			return false;
+		};
+		$content = '<img src="https://example.com/a&amp;amp;b.jpg" />';
+		\add_filter( 'activitypub_remote_media_url', $filter, 1 );
+		Blocks::render_image_block( array( 'url' => $url ), $content );
+		\remove_filter( 'activitypub_remote_media_url', $filter, 1 );
+
+		$this->assertSame( $url, $seen );
+	}
+
+	/**
+	 * Image blocks without content or alt text render nothing and fetch nothing.
+	 *
+	 * @covers ::render_image_block
+	 */
+	public function test_render_image_block_without_content_skips_cache() {
+		$calls  = 0;
+		$filter = static function ( $value ) use ( &$calls ) {
+			++$calls;
+			return $value;
+		};
+		\add_filter( 'activitypub_remote_media_url', $filter, 1 );
+		$rendered = Blocks::render_image_block( array( 'url' => 'https://example.com/photo.jpg' ), '' );
+		\remove_filter( 'activitypub_remote_media_url', $filter, 1 );
+
+		$this->assertSame( '', $rendered );
+		$this->assertSame( 0, $calls );
+	}
+
+	/**
+	 * The cached URL replaces srcset too, so browsers do not pick a remote candidate.
+	 *
+	 * @covers ::render_image_block
+	 */
+	public function test_render_image_block_drops_remote_srcset() {
+		$cached = static function () {
+			return 'https://local.example/cached.jpg';
+		};
+
+		\add_filter( 'activitypub_remote_media_url', $cached, 20 );
+		$rendered = Blocks::render_image_block(
+			array( 'url' => 'https://example.com/photo.jpg' ),
+			'<img src="https://example.com/photo.jpg" srcset="https://example.com/photo.jpg 1x, https://example.com/photo-2x.jpg 2x" />'
+		);
+		\remove_filter( 'activitypub_remote_media_url', $cached, 20 );
+
+		$this->assertStringContainsString( 'src="https://local.example/cached.jpg"', $rendered );
+		$this->assertStringNotContainsString( 'example.com', $rendered );
+	}
+
+	/**
+	 * Comment images are shown from the local cache, else from the remote host. Without a URL their description is shown.
+	 *
+	 * @covers ::render_image_block
+	 * @covers ::render_image_description
+	 */
+	public function test_render_image_block_comment_context() {
+		$parsed  = \parse_blocks( generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' ) )[0];
+		$context = array();
+		$cached  = static function ( $url, $cache_context, $entity_id ) use ( &$context ) {
+			$context = array( $cache_context, $entity_id );
+			return 'https://local.example/cached.jpg';
+		};
+
+		\add_filter( 'activitypub_remote_media_url', $cached, 20, 3 );
+		$with_cache = ( new \WP_Block( $parsed, array( 'commentId' => 7 ) ) )->render();
+		\remove_filter( 'activitypub_remote_media_url', $cached, 20 );
+		$uncached = ( new \WP_Block( $parsed, array( 'commentId' => 7 ) ) )->render();
+		$no_url   = Blocks::render_image_block( array( 'alt' => 'Cat' ), '<img src="https://example.com/photo.jpg" alt="Cat" />', new \WP_Block( $parsed, array( 'commentId' => 7 ) ) );
+
+		$this->assertSame( array( 'comment_media', 7 ), $context );
+		$this->assertStringContainsString( 'src="https://local.example/cached.jpg"', $with_cache );
+		$this->assertStringContainsString( 'src="https://example.com/photo.jpg"', $uncached );
+		$this->assertStringContainsString( 'alt="Cat"', $uncached );
+		$this->assertSame( '<p>Image: Cat</p>', $no_url );
+		$this->assertSame( '<p>Image</p>', Blocks::render_image_description( array() ) );
+	}
+
+	/**
+	 * Generated image URLs survive comment KSES without changing the resource.
+	 *
+	 * @covers ::render_image_block
+	 */
+	public function test_render_image_block_preserves_generated_urls_through_kses() {
+		$seen   = null;
+		$filter = static function ( $value ) use ( &$seen ) {
+			$seen = $value;
+			return false;
+		};
+		\add_filter( 'activitypub_remote_media_url', $filter, 1 );
+		$results = array();
+		foreach ( array( 'https://example.com/photo.jpg?a=1&b=2', 'https://example.com/a&amp;b.jpg' ) as $url ) {
+			$content = process_remote_images( '', array( array( 'url' => $url ) ) );
+			$content = \wp_kses( $content, array() );
+			$block   = \parse_blocks( \trim( $content ) )[0];
+			$output  = Blocks::render_image_block( $block['attrs'], $block['innerHTML'] );
+			$img     = new \WP_HTML_Tag_Processor( $output );
+			$img->next_tag( 'IMG' );
+			$results[] = array( $url, $seen, $img->get_attribute( 'src' ) );
+		}
+		\remove_filter( 'activitypub_remote_media_url', $filter, 1 );
+
+		foreach ( $results as $result ) {
+			$this->assertSame( $result[0], $result[1] );
+			$this->assertSame( $result[0], $result[2] );
+		}
+	}
 
 	/**
 	 * User ID for Extra Fields block tests.
