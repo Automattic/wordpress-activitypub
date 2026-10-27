@@ -1953,8 +1953,6 @@ class Test_Signature extends \WP_UnitTestCase {
 	/**
 	 * The WordPress address is not a host this site answers on for signatures.
 	 *
-	 * On a shared host, other sites can live under the same WordPress address host.
-	 *
 	 * @covers ::verify_http_signature
 	 */
 	public function test_verify_http_signature_rejects_the_site_url_host() {
