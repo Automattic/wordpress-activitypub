@@ -275,7 +275,7 @@ class Http_Signature_Draft implements Http_Signature {
 	 * @param array $signature_block The signature block.
 	 * @param array $headers         The HTTP headers.
 	 *
-	 * @return string signed headers for comparison
+	 * @return string|false Signed headers for comparison, or false if they are invalid or expired.
 	 */
 	private function get_signed_data( $signed_headers, $signature_block, $headers ) {
 		$signed_data       = '';
