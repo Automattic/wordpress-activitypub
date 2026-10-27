@@ -56,7 +56,7 @@
 		"@wordpress/date": "^5.56.0",
 		"@wordpress/dependency-extraction-webpack-plugin": "^7.0.0",
 		"@wordpress/dom": "^4.54.0",
-		"@wordpress/dom-ready": "^4.48.0",
+		"@wordpress/dom-ready": "^5.0.0",
 		"@wordpress/e2e-test-utils-playwright": "~3.0.0",
 		"@wordpress/edit-post": "^8.56.0",
 		"@wordpress/editor": "^15.1.0",
