@@ -13,6 +13,7 @@ namespace Activitypub\Signature;
 
 use Activitypub\Collection\Remote_Actors;
 
+use function Activitypub\get_authority;
 use function Activitypub\is_signature_host;
 
 /**
@@ -96,7 +97,7 @@ class Http_Message_Signature implements Http_Signature {
 		$components = array(
 			'"@method"'     => \strtoupper( $args['method'] ),
 			'"@target-uri"' => $url,
-			'"@authority"'  => \wp_parse_url( $url, PHP_URL_HOST ),
+			'"@authority"'  => get_authority( $url ),
 		);
 
 		if ( isset( $args['headers']['Collection-Synchronization'] ) ) {

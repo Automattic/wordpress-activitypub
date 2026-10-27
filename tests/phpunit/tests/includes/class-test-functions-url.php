@@ -212,4 +212,34 @@ class Test_Functions_Url extends \WP_UnitTestCase {
 			'a port without a host'     => array( ':8080', false ),
 		);
 	}
+
+	/**
+	 * The authority keeps a port only when it is not the scheme's default, like `Host`.
+	 *
+	 * @covers \Activitypub\get_authority
+	 * @dataProvider authority_provider
+	 *
+	 * @param string $url      The URL.
+	 * @param string $expected The expected authority.
+	 */
+	public function test_get_authority( $url, $expected ) {
+		$this->assertSame( $expected, \Activitypub\get_authority( $url ) );
+	}
+
+	/**
+	 * URLs for test_get_authority.
+	 *
+	 * @return array[]
+	 */
+	public function authority_provider() {
+		return array(
+			'no port'              => array( 'https://example.org/inbox', 'example.org' ),
+			'default https port'   => array( 'https://example.org:443/inbox', 'example.org' ),
+			'default http port'    => array( 'http://example.org:80/inbox', 'example.org' ),
+			'non-default port'     => array( 'https://example.org:8443/inbox', 'example.org:8443' ),
+			'other scheme default' => array( 'http://example.org:443/inbox', 'example.org:443' ),
+			'ipv6 with a port'     => array( 'https://[2001:db8::1]:8443/', '[2001:db8::1]:8443' ),
+			'no host'              => array( '/inbox', '' ),
+		);
+	}
 }
