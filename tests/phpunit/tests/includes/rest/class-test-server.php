@@ -988,6 +988,7 @@ class Test_Server extends \WP_Test_REST_TestCase {
 		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_actor );
 
 		$route = '/' . \strtoupper( ACTIVITYPUB_REST_NAMESPACE ) . '/Inbox';
+		$host  = \wp_parse_url( \home_url(), \PHP_URL_HOST );
 		$args  = \apply_filters(
 			'http_request_args',
 			array(
@@ -999,10 +1000,10 @@ class Test_Server extends \WP_Test_REST_TestCase {
 				'headers'     => array(
 					'Content-Type' => 'application/activity+json',
 					'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
-					'Host'         => 'example.org',
+					'Host'         => $host,
 				),
 			),
-			'https://example.org/wp-json' . $route
+			'https://' . $host . '/wp-json' . $route
 		);
 
 		$request = new \WP_REST_Request( 'POST', $route );

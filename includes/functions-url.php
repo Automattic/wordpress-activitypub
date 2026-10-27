@@ -154,6 +154,49 @@ function fold_authority( $authority ) {
 }
 
 /**
+ * Check if an authority names a host a signature may be made out to.
+ *
+ * A signature is bound to the host it was made out to, and the verifiers read that host from the
+ * request. Only a host this site answers on may enter a signature base, or a signature made out
+ * to another server would verify here when it is replayed to the same path with that server's name.
+ *
+ * @since unreleased
+ *
+ * @param string $authority A host, optionally bracketed and optionally with a port.
+ *
+ * @return bool True if the authority names one of this site's hosts, false otherwise.
+ */
+function is_signature_host( $authority ) {
+	$authority = fold_authority( $authority );
+
+	// An unparseable value folds to nothing and must not match an unparseable entry.
+	if ( '' === $authority ) {
+		return false;
+	}
+
+	/**
+	 * Filters the hosts a signature may legitimately have been made out to.
+	 *
+	 * Sites reached under a name other than `home_url()`, for example behind a proxy, add it
+	 * here. Write them the way they appear in a URL; they are folded before they are compared.
+	 *
+	 * @since 9.3.1
+	 *
+	 * @param string[] $hosts Hosts this site answers on.
+	 */
+	$hosts = \apply_filters( 'activitypub_signature_original_hosts', array( home_host() ) );
+
+	// Cast because a callback returning one host outside an array would otherwise be a fatal rather than a non-match.
+	foreach ( (array) $hosts as $host ) {
+		if ( fold_authority( $host ) === $authority ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
  * Check if a URL is from the same domain as the site.
  *
  * @param string $url The URL to check.

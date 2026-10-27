@@ -170,4 +170,46 @@ class Test_Functions_Url extends \WP_UnitTestCase {
 		$this->assertSame( 'xn--caf-dma.example', \Activitypub\fold_host( 'café.example.' ) );
 		$this->assertSame( 'xn--caf-dma.example', \Activitypub\fold_host( 'XN--CAF-DMA.example' ) );
 	}
+
+	/**
+	 * Only a host this site answers on, or one added through the filter, may be signed for.
+	 *
+	 * @covers \Activitypub\is_signature_host
+	 * @dataProvider signature_host_provider
+	 *
+	 * @param string $authority The authority, with `%s` standing for this site's host.
+	 * @param bool   $expected  The expected result.
+	 */
+	public function test_is_signature_host( $authority, $expected ) {
+		$allow = function ( $hosts ) {
+			$hosts[] = 'Mapped.Example';
+
+			return $hosts;
+		};
+		\add_filter( 'activitypub_signature_original_hosts', $allow );
+
+		$result = \Activitypub\is_signature_host( \sprintf( $authority, \Activitypub\home_host() ) );
+
+		\remove_filter( 'activitypub_signature_original_hosts', $allow );
+
+		$this->assertSame( $expected, $result );
+	}
+
+	/**
+	 * Authorities for test_is_signature_host.
+	 *
+	 * @return array[]
+	 */
+	public function signature_host_provider() {
+		return array(
+			'home host'                 => array( '%s', true ),
+			'home host with a port'     => array( '%s:8080', true ),
+			'filtered host'             => array( 'mapped.example', true ),
+			'filtered host, case, port' => array( 'MAPPED.EXAMPLE:443', true ),
+			'foreign host'              => array( 'evil.example', false ),
+			'home host as a subdomain'  => array( 'evil.%s', false ),
+			'empty'                     => array( '', false ),
+			'a port without a host'     => array( ':8080', false ),
+		);
+	}
 }
