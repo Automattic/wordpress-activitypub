@@ -171,7 +171,7 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		);
 
 		$route                     = '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox';
-		$url                       = \set_url_scheme( 'http://example.net' . \wp_parse_url( \home_url( '/' . \rest_get_url_prefix() . $route ), PHP_URL_PATH ) );
+		$url                       = \set_url_scheme( 'http://' . \wp_parse_url( \home_url(), PHP_URL_HOST ) . \wp_parse_url( \home_url( '/' . \rest_get_url_prefix() . $route ), PHP_URL_PATH ) );
 		$signer                    = 'draft' === $format ? new Http_Signature_Draft() : new Http_Message_Signature();
 		$args                      = $signer->sign(
 			array(

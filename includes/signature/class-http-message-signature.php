@@ -13,6 +13,8 @@ namespace Activitypub\Signature;
 
 use Activitypub\Collection\Remote_Actors;
 
+use function Activitypub\is_signature_host;
+
 /**
  * Class Http_Message_Signature.
  *
@@ -265,6 +267,12 @@ class Http_Message_Signature implements Http_Signature {
 			return new \WP_Error( 'missing_time_anchor', 'The signature is missing a time anchor (created or expires).' );
 		}
 
+		// Read before the key is fetched, so a request made out to another host fails without a lookup.
+		$components = $this->get_component_values( $data['components'], $headers );
+		if ( \is_wp_error( $components ) ) {
+			return $components;
+		}
+
 		// KeyId verification.
 		if ( empty( $params['keyid'] ) ) {
 			return new \WP_Error( 'missing_keyid', 'Missing keyId in signature parameters.' );
@@ -287,7 +295,6 @@ class Http_Message_Signature implements Http_Signature {
 			return $result;
 		}
 
-		$components     = $this->get_component_values( $data['components'], $headers );
 		$signature_base = $this->get_signature_base_string( $components, $params );
 
 		$verified = \openssl_verify( $signature_base, $data['signature'], $public_key, $algorithm ) > 0;
@@ -436,7 +443,7 @@ class Http_Message_Signature implements Http_Signature {
 	 * @param array $components Signature component names.
 	 * @param array $headers    HTTP headers.
 	 *
-	 * @return array Signature components.
+	 * @return array|\WP_Error Signature components, or an error if the request is made out to another host.
 	 */
 	private function get_component_values( $components, $headers ) {
 		$signature_components = array();
@@ -444,6 +451,15 @@ class Http_Message_Signature implements Http_Signature {
 		foreach ( $components as $component ) {
 			$key = \strtok( $component, ';' ); // See https://www.rfc-editor.org/rfc/rfc9421.html#name-query-parameters.
 			$key = \strtolower( \trim( $key, '"' ) );
+
+			// These name this server through the client-supplied `Host`, so check the value that enters the base.
+			if ( \in_array( $key, array( '@target-uri', '@authority', 'host' ), true ) ) {
+				$host = 'host' === $key ? ( $headers['host'][0] ?? '' ) : ( $_SERVER['HTTP_HOST'] ?? '' );
+
+				if ( ! is_signature_host( $host ) ) {
+					return new \WP_Error( 'activitypub_signature_host', 'The signature is not made out to this site.' );
+				}
+			}
 
 			switch ( $key ) {
 				case '@method':
