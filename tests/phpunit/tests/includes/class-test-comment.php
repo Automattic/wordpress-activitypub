@@ -348,11 +348,11 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * An image that cannot be cached shows its description, so visitors never load it from the remote host.
+	 * An image that cannot be cached is loaded from the remote host.
 	 *
 	 * @covers ::render_blocks
 	 */
-	public function test_uncached_image_shows_description() {
+	public function test_uncached_image_shows_remote_image() {
 		\update_option( 'activitypub_allow_comment_images', '1' );
 		$comment   = self::factory()->comment->create_and_get(
 			array( 'comment_meta' => array( 'protocol' => 'activitypub' ) )
@@ -370,16 +370,15 @@ class Test_Comment extends \WP_UnitTestCase {
 		\delete_option( 'activitypub_allow_comment_images' );
 
 		$this->assertSame( 1, $downloads, 'The image was shown and its download attempted.' );
-		$this->assertStringNotContainsString( 'example.com', $rendered );
-		$this->assertSame( '<p>Image: Cat</p>', $rendered );
+		$this->assertStringContainsString( 'src="https://example.com/photo.jpg"', $rendered );
 	}
 
 	/**
-	 * Without the local cache, images are not shown, so visitors never load them from the remote host.
+	 * Without the local cache, images are loaded from the remote host.
 	 *
 	 * @covers ::render_blocks
 	 */
-	public function test_images_hidden_without_cache() {
+	public function test_images_shown_without_cache() {
 		\update_option( 'activitypub_allow_comment_images', '1' );
 		$comment = self::factory()->comment->create_and_get(
 			array( 'comment_meta' => array( 'protocol' => 'activitypub' ) )
@@ -391,8 +390,7 @@ class Test_Comment extends \WP_UnitTestCase {
 		\remove_filter( 'activitypub_remote_cache_enabled', '__return_false' );
 		\delete_option( 'activitypub_allow_comment_images' );
 
-		$this->assertStringNotContainsString( '<img', $rendered );
-		$this->assertStringContainsString( '<p>Image: Cat</p>', $rendered );
+		$this->assertStringContainsString( 'src="https://example.com/photo.jpg"', $rendered );
 	}
 
 	/**

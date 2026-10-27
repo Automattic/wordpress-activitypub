@@ -177,4 +177,53 @@ class Test_Media extends WP_UnitTestCase {
 		// Clean up.
 		remove_filter( 'activitypub_remote_media_url', $cdn_filter );
 	}
+
+	/**
+	 * Test get_storage_paths_for_context returns correct paths for media.
+	 *
+	 * @expectedDeprecated Activitypub\Cache\Media::get_storage_paths_for_context
+	 */
+	public function test_get_storage_paths_for_context_media() {
+		$paths = Media::get_storage_paths_for_context( 123, 'media' );
+
+		$this->assertIsArray( $paths );
+		$this->assertStringContainsString( '/activitypub/posts/', $paths['basedir'] );
+		$this->assertStringContainsString( '/activitypub/posts/', $paths['baseurl'] );
+	}
+
+	/**
+	 * Test get_storage_paths_for_context returns correct paths for comment_media.
+	 *
+	 * @expectedDeprecated Activitypub\Cache\Media::get_storage_paths_for_context
+	 */
+	public function test_get_storage_paths_for_context_comment() {
+		$paths = Media::get_storage_paths_for_context( 123, 'comment_media' );
+
+		$this->assertIsArray( $paths );
+		$this->assertStringContainsString( '/activitypub/comments/', $paths['basedir'] );
+		$this->assertStringContainsString( '/activitypub/comments/', $paths['baseurl'] );
+	}
+
+	/**
+	 * Test invalidate_comment removes comment directory.
+	 *
+	 * @expectedDeprecated Activitypub\Cache\Media::get_storage_paths_for_context
+	 * @expectedDeprecated Activitypub\Cache\Media::invalidate_comment
+	 */
+	public function test_invalidate_comment() {
+		$paths = Media::get_storage_paths_for_context( 'test-comment', 'comment_media' );
+
+		// Create directory with a file.
+		wp_mkdir_p( $paths['basedir'] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $paths['basedir'] . '/test.txt', 'test content' );
+
+		$this->assertTrue( is_dir( $paths['basedir'] ) );
+
+		// Invalidate.
+		$result = Media::invalidate_comment( 'test-comment' );
+
+		$this->assertTrue( $result );
+		$this->assertFalse( is_dir( $paths['basedir'] ) );
+	}
 }

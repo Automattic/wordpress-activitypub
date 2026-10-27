@@ -654,14 +654,13 @@ class Blocks {
 	/**
 	 * Render the image block.
 	 *
-	 * Replaces remote image URL with cached URL at runtime. Comment images are only shown
-	 * from the local cache, otherwise their description is shown instead.
+	 * Replaces remote image URL with cached URL at runtime.
 	 *
 	 * @param array          $attrs   The block attributes.
 	 * @param string         $content The block inner content (img tag).
 	 * @param \WP_Block|null $block   Optional. The block instance.
 	 *
-	 * @return string The rendered content with cached URL, or the image description.
+	 * @return string The rendered content with cached URL, or the image description if a comment image has no URL.
 	 */
 	public static function render_image_block( $attrs, $content, $block = null ) {
 		$comment_id = $block->context['commentId'] ?? null;
@@ -704,11 +703,6 @@ class Blocks {
 				$processor->remove_attribute( 'srcset' );
 				return $processor->get_updated_html();
 			}
-		}
-
-		// Visitors never load comment images from the remote host.
-		if ( $comment_id ) {
-			return self::render_image_description( $attrs );
 		}
 
 		return $content;

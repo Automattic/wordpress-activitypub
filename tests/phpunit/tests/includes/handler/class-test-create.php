@@ -150,6 +150,31 @@ class Test_Create extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Image-only quotes are allowed like image-only replies.
+	 *
+	 * @covers ::validate_object
+	 */
+	public function test_image_only_quote_is_valid() {
+		$object  = array(
+			'id'    => 'https://example.com/quote',
+			'quote' => 'https://example.org/post',
+			'image' => 'https://example.com/photo.jpg',
+		);
+		$request = new \WP_REST_Request( 'POST' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'   => 'Create',
+					'object' => $object,
+				)
+			)
+		);
+
+		$this->assertTrue( Create::validate_object( true, $object, $request ) );
+	}
+
+	/**
 	 * Text, supported images, and unsupported or malformed media.
 	 *
 	 * @return array The object fields and validation result.

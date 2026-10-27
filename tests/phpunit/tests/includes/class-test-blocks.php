@@ -84,7 +84,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Comment images are only shown from the local cache, otherwise their description is shown.
+	 * Comment images are shown from the local cache, else from the remote host. Without a URL their description is shown.
 	 *
 	 * @covers ::render_image_block
 	 * @covers ::render_image_description
@@ -105,7 +105,8 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		$this->assertSame( array( 'comment_media', 7 ), $context );
 		$this->assertStringContainsString( 'src="https://local.example/cached.jpg"', $with_cache );
-		$this->assertSame( '<p>Image: Cat</p>', $uncached );
+		$this->assertStringContainsString( 'src="https://example.com/photo.jpg"', $uncached );
+		$this->assertStringContainsString( 'alt="Cat"', $uncached );
 		$this->assertSame( '<p>Image: Cat</p>', $no_url );
 		$this->assertSame( '<p>Image</p>', Blocks::render_image_description( array() ) );
 	}

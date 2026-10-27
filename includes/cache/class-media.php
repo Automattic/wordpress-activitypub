@@ -43,6 +43,24 @@ class Media extends File {
 	const BASE_DIR_POSTS = '/activitypub/posts/';
 
 	/**
+	 * Context identifier for comment media.
+	 *
+	 * @deprecated unreleased Use {@see Comment_Media::CONTEXT}.
+	 *
+	 * @var string
+	 */
+	const CONTEXT_COMMENT = Comment_Media::CONTEXT;
+
+	/**
+	 * Base directory for comment media.
+	 *
+	 * @deprecated unreleased Use {@see Comment_Media::BASE_DIR}.
+	 *
+	 * @var string
+	 */
+	const BASE_DIR_COMMENTS = Comment_Media::BASE_DIR;
+
+	/**
 	 * Get the cache type identifier.
 	 *
 	 * @return string Cache type.
@@ -129,5 +147,41 @@ class Media extends File {
 		}
 
 		self::invalidate_entity( $post_id );
+	}
+
+	/**
+	 * Get storage paths based on context.
+	 *
+	 * @deprecated unreleased Use {@see Media::get_storage_paths()} or {@see Comment_Media::get_storage_paths()}.
+	 *
+	 * @param string|int $entity_id The entity identifier.
+	 * @param string     $context   The context ('media' or 'comment_media').
+	 *
+	 * @return array {
+	 *     Storage paths for the entity.
+	 *
+	 *     @type string $basedir Base directory path.
+	 *     @type string $baseurl Base URL.
+	 * }
+	 */
+	public static function get_storage_paths_for_context( $entity_id, $context = self::CONTEXT ) {
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Cache\Media::get_storage_paths or Activitypub\Cache\Comment_Media::get_storage_paths' );
+
+		return Comment_Media::CONTEXT === $context ? Comment_Media::get_storage_paths( $entity_id ) : self::get_storage_paths( $entity_id );
+	}
+
+	/**
+	 * Invalidate cached media for a comment.
+	 *
+	 * @deprecated unreleased Use {@see Comment_Media::clear_cached_images()}.
+	 *
+	 * @param int $comment_id The comment ID.
+	 *
+	 * @return bool True on success, false on failure.
+	 */
+	public static function invalidate_comment( $comment_id ) {
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Cache\Comment_Media::clear_cached_images' );
+
+		return Comment_Media::invalidate_entity( $comment_id );
 	}
 }

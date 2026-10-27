@@ -155,11 +155,11 @@ class Create {
 		}
 		if ( ! isset( $activity['object']['content'] ) ) {
 			/*
-			 * Image-only replies have something to show only when comment images are enabled; other posts
-			 * still need text. This runs before the signature check, so it leaves the host checks to
-			 * Interactions::add_comment().
+			 * Image-only replies and quotes have something to show only when comment images are enabled;
+			 * other posts still need text. This runs before the signature check, so it leaves the host
+			 * checks to Interactions::add_comment().
 			 */
-			if ( ! is_activity_reply( $activity ) || ! Interactions::get_image_attachments( $activity['object'], false ) ) {
+			if ( ( ! is_activity_reply( $activity ) && ! is_quote_activity( $activity ) ) || ! Interactions::get_image_attachments( $activity['object'], false ) ) {
 				return false;
 			}
 		}
