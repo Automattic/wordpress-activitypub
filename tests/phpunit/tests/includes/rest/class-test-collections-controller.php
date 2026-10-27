@@ -124,6 +124,31 @@ class Test_Collections_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	}
 
 	/**
+	 * A sticky post that is not publicly queryable, here a password-protected one, is not featured.
+	 *
+	 * @covers ::get_featured
+	 */
+	public function test_get_featured_skips_password_protected_posts() {
+		$protected_id = self::factory()->post->create(
+			array(
+				'post_author'   => self::$user_id,
+				'post_password' => 'secret',
+			)
+		);
+		stick_post( self::$post_id );
+		stick_post( $protected_id );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/collections/featured' );
+		$request->set_param( 'page', 1 );
+		$request->set_param( 'per_page', 10 );
+		$response = rest_get_server()->dispatch( $request )->get_data();
+
+		$this->assertSame( 1, $response['totalItems'], 'The password-protected post must not be counted.' );
+		$this->assertCount( 1, $response['orderedItems'] );
+		$this->assertSame( \get_permalink( self::$post_id ), $response['orderedItems'][0]['url'] ?? '' );
+	}
+
+	/**
 	 * Test schema.
 	 *
 	 * @covers ::get_item_schema

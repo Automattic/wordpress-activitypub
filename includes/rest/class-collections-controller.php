@@ -183,7 +183,8 @@ class Collections_Controller extends Actors_Controller {
 					$args['author'] = $user_id;
 				}
 
-				$posts = \get_posts( $args );
+				// The query cannot see everything that keeps a post private (a password, post type support), so check each one.
+				$posts = \array_values( \array_filter( \get_posts( $args ), 'Activitypub\is_post_publicly_queryable' ) );
 			}
 		}
 
@@ -191,7 +192,7 @@ class Collections_Controller extends Actors_Controller {
 			'@context'     => Base_Object::JSON_LD_CONTEXT,
 			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/collections/featured', $user_id ) ),
 			'type'         => 'OrderedCollection',
-			'totalItems'   => \is_countable( $posts ) ? \count( $posts ) : 0,
+			'totalItems'   => \count( $posts ),
 			'orderedItems' => array(),
 		);
 
