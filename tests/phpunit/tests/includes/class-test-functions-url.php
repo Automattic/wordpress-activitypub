@@ -250,4 +250,44 @@ class Test_Functions_Url extends \WP_UnitTestCase {
 			'no host'              => array( '/inbox', '' ),
 		);
 	}
+
+	/**
+	 * A host is local when it folds to this site's host or to the host the site moved from.
+	 *
+	 * @covers \Activitypub\is_local_host
+	 * @dataProvider local_host_provider
+	 *
+	 * @param string|null $host     The host, with `%s` standing for this site's host.
+	 * @param string|null $old_host The stored old host, or null for none.
+	 * @param bool        $expected The expected result.
+	 */
+	public function test_is_local_host( $host, $old_host, $expected ) {
+		if ( null !== $old_host ) {
+			\update_option( 'activitypub_old_host', $old_host );
+		}
+
+		$result = \Activitypub\is_local_host( null === $host ? null : \sprintf( $host, \Activitypub\home_host() ) );
+
+		\delete_option( 'activitypub_old_host' );
+
+		$this->assertSame( $expected, $result );
+	}
+
+	/**
+	 * Hosts for test_is_local_host.
+	 *
+	 * @return array[]
+	 */
+	public function local_host_provider() {
+		return array(
+			'home host'             => array( '%s', null, true ),
+			'home host, other case' => array( 'WWW.%s.', null, true ),
+			'old host'              => array( 'old.example', 'old.example', true ),
+			'old host, unset'       => array( 'old.example', null, false ),
+			'foreign host'          => array( 'evil.example', 'old.example', false ),
+			'empty host'            => array( '', null, false ),
+			'host that folds away'  => array( '.', null, false ),
+			'no host'               => array( null, null, false ),
+		);
+	}
 }

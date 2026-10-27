@@ -236,6 +236,32 @@ function get_authority( $url ) {
 }
 
 /**
+ * Check if a host is this site's host or the host it moved from.
+ *
+ * Both sides are folded before they are compared: the host is whatever a caller sent, and the stored
+ * ones are whatever an admin entered. A host of `.` or `[]` folds away to nothing and is dropped, so
+ * it never matches an unset old host.
+ *
+ * @since unreleased
+ *
+ * @param string|null $host The host.
+ *
+ * @return bool True if the host is local, false otherwise.
+ */
+function is_local_host( $host ) {
+	$local = \array_filter(
+		\array_map(
+			function ( $local_host ) {
+				return normalize_host( fold_host( $local_host ) );
+			},
+			array( home_host(), \get_option( 'activitypub_old_host' ) )
+		)
+	);
+
+	return \in_array( normalize_host( fold_host( $host ) ), $local, true );
+}
+
+/**
  * Check if a URL is from the same domain as the site.
  *
  * @param string $url The URL to check.
