@@ -28,6 +28,7 @@ class Blocked_Actors {
 			return false;
 		}
 
+		Remote_Actors::set_cache_only( $actor_post, false );
 		$blocked = \get_post_meta( $actor_post->ID, Moderation::BLOCKED_ACTORS_META_KEY, false );
 		if ( ! \in_array( (string) $user_id, $blocked, true ) ) {
 			/**

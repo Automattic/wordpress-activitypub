@@ -28,6 +28,14 @@ use function Activitypub\add_to_outbox;
  */
 class Test_Scheduler extends \WP_UnitTestCase {
 	/**
+	 * Existing scheduler tests exercise cleanup after a completed upgrade.
+	 */
+	public function set_up() {
+		parent::set_up();
+		\update_option( 'activitypub_actor_retention_migrated', true, false );
+	}
+
+	/**
 	 * Test user ID.
 	 *
 	 * @var int
@@ -45,6 +53,38 @@ class Test_Scheduler extends \WP_UnitTestCase {
 				'role' => 'author',
 			)
 		);
+	}
+
+	/**
+	 * The existing cleanup job processes candidates and schedules only continuation.
+	 */
+	public function test_cleanup_remote_actors_processes_candidates() {
+		$ids = self::factory()->post->create_many(
+			2,
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'post_status' => 'publish',
+				'meta_input'  => array( '_activitypub_inbox' => 'https://example.com/inbox' ),
+			)
+		);
+		foreach ( $ids as $id ) {
+			Remote_Actors::set_cache_only( $id, true );
+		}
+		$batch_size = static function () {
+			return 1;
+		};
+		\add_filter( 'activitypub_actor_cleanup_batch_size', $batch_size );
+		try {
+			\do_action( 'activitypub_cleanup_remote_actors' );
+			$this->assertNull( \get_post( $ids[0] ) );
+			$this->assertNotNull( \get_post( $ids[1] ) );
+			$this->assertNotFalse( \wp_next_scheduled( 'activitypub_cleanup_actor_candidates', array( 1 ) ) );
+			$this->assertArrayNotHasKey( 'activitypub_cleanup_actor_candidates', Scheduler::SCHEDULES );
+			\do_action( 'activitypub_cleanup_actor_candidates', 1 );
+			$this->assertNull( \get_post( $ids[1] ) );
+		} finally {
+			\remove_filter( 'activitypub_actor_cleanup_batch_size', $batch_size );
+		}
 	}
 
 	/**
@@ -1053,5 +1093,236 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$this->assertSame( $uri, \get_post( $id )->guid, 'The cached actor guid must be left unchanged.' );
 		$this->assertSame( 'Old Name', \get_post( $id )->post_title, 'A changed remote identity must not be applied to the cached actor.' );
 		$this->assertEmpty( Remote_Actors::get_outdated(), 'A skipped actor must be touched so it is not re-fetched on the next run.' );
+	}
+	/**
+	 * Create a stored actor without network requests.
+	 *
+	 * @return int Actor ID.
+	 */
+	private function cached_actor() {
+		return self::factory()->post->create(
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'post_status' => 'publish',
+			)
+		);
+	}
+
+	/**
+	 * Both unclassified and explicitly disposable actors are removed after migration.
+	 */
+	public function test_cleanup_removes_unretained_actors() {
+		$candidate = $this->cached_actor();
+		$retained  = $this->cached_actor();
+		$this->assertTrue( Remote_Actors::set_cache_only( $candidate, true ) );
+		$this->assertTrue( Remote_Actors::set_cache_only( $candidate, true ) );
+		Scheduler::cleanup_cache_only_remote_actors_batch();
+		$this->assertNull( \get_post( $candidate ) );
+		$this->assertNull( \get_post( $retained ) );
+	}
+
+	/**
+	 * Refresh selection is maintenance rather than public access.
+	 */
+	public function test_maintenance_does_not_rescue_actor() {
+		$id = $this->cached_actor();
+		Remote_Actors::set_cache_only( $id, true );
+		Remote_Actors::get_outdated();
+		Remote_Actors::get_faulty();
+		$this->assertFalse( (bool) \get_post_meta( $id, Remote_Actors::RETAIN_META_KEY, true ) );
+	}
+
+	/**
+	 * Blog ID zero must count as a relationship, and pending follows and blocks matter.
+	 */
+	public function test_native_relationships_protect_candidates() {
+		foreach ( array( '_activitypub_following', '_activitypub_followed_by', '_activitypub_followed_by_pending', '_activitypub_blocked_by' ) as $key ) {
+			$id = $this->cached_actor();
+			\add_post_meta( $id, $key, '0' );
+			Remote_Actors::set_cache_only( $id, true );
+			Scheduler::cleanup_cache_only_remote_actors_batch();
+			$this->assertNotNull( \get_post( $id ) );
+			$this->assertTrue( (bool) \get_post_meta( $id, Remote_Actors::RETAIN_META_KEY, true ) );
+		}
+	}
+
+	/**
+	 * Trashed interactions retain their actor IDs.
+	 */
+	public function test_trashed_interaction_protects_actor() {
+		$id      = $this->cached_actor();
+		$comment = self::factory()->comment->create();
+		\add_comment_meta( $comment, '_activitypub_remote_actor_id', $id );
+		\wp_trash_comment( $comment );
+		Remote_Actors::set_cache_only( $id, true );
+		Scheduler::cleanup_cache_only_remote_actors_batch();
+		$this->assertNotNull( \get_post( $id ) );
+	}
+
+	/**
+	 * Only the collection that owns the metadata should protect an actor.
+	 *
+	 * @dataProvider post_reference_provider
+	 * @param string $post_type Referencing post type.
+	 * @param string $key Reference metadata key.
+	 * @param bool   $preserved Whether this reference must preserve the actor.
+	 */
+	public function test_post_references_are_scoped_to_their_collection( $post_type, $key, $preserved ) {
+		$id = $this->cached_actor();
+		\wp_update_post(
+			array(
+				'ID'   => $id,
+				'guid' => 'https://example.com/actor/' . $id,
+			)
+		);
+		$value = '_activitypub_remote_actor_id' === $key ? $id : \get_post( $id )->guid;
+		self::factory()->post->create(
+			array(
+				'post_type'   => $post_type,
+				'post_status' => 'trash',
+				'meta_input'  => array( $key => $value ),
+			)
+		);
+		Remote_Actors::set_cache_only( $id, true );
+		Scheduler::cleanup_cache_only_remote_actors_batch();
+		$this->assertSame( $preserved, (bool) \get_post( $id ) );
+	}
+
+	/**
+	 * Native references and matching metadata on unrelated post types.
+	 *
+	 * @return array<string, array> Reference cases.
+	 */
+	public function post_reference_provider() {
+		return array(
+			'remote post author' => array( Remote_Posts::POST_TYPE, '_activitypub_remote_actor_id', true ),
+			'inbox sender'       => array( Inbox::POST_TYPE, '_activitypub_activity_remote_actor', true ),
+			'ordinary post'      => array( 'post', '_activitypub_remote_actor_id', false ),
+			'wrong collection'   => array( Inbox::POST_TYPE, '_activitypub_remote_actor_id', false ),
+		);
+	}
+
+	/**
+	 * Stored outgoing activities retain referenced actors.
+	 */
+	public function test_outbox_reference_protects_actor() {
+		$id       = $this->cached_actor();
+		$activity = new Activity();
+		$activity->set_type( 'Like' );
+		$activity->set_actor( 'https://example.com/local-actor' );
+		$activity->set_object( \get_post( $id )->guid );
+		$outbox_id = Outbox::add( $activity, 0 );
+		$this->assertIsInt( $outbox_id );
+		$this->assertSame( \get_post( $id )->guid, Outbox::get_activity( $outbox_id )->get_object() );
+		Remote_Actors::set_cache_only( $id, true );
+		Scheduler::cleanup_cache_only_remote_actors_batch();
+		$this->assertNotNull( \get_post( $id ) );
+	}
+
+	/**
+	 * Integrations can promote an actor while inspecting it.
+	 */
+	public function test_promotion_during_integration_check_protects_actor() {
+		$id = $this->cached_actor();
+		Remote_Actors::set_cache_only( $id, true );
+		$access = static function ( $in_use, $actor ) {
+			Remote_Actors::set_cache_only( $actor, false );
+			return $in_use;
+		};
+		\add_filter( 'activitypub_remote_actor_is_in_use', $access, 10, 2 );
+		try {
+			Scheduler::cleanup_cache_only_remote_actors_batch();
+			$this->assertNotNull( \get_post( $id ) );
+		} finally {
+			\remove_filter( 'activitypub_remote_actor_is_in_use', $access, 10 );
+		}
+	}
+	/**
+	 * Explicit non-cache classification survives repeated cleanup runs.
+	 */
+	public function test_cleanup_preserves_non_cache_actors() {
+		$id = $this->cached_actor();
+		Remote_Actors::set_cache_only( $id, false );
+		$this->assertNull( Scheduler::cleanup_cache_only_remote_actors_batch() );
+		$this->assertNull( Scheduler::cleanup_cache_only_remote_actors_batch() );
+		$this->assertNotNull( \get_post( $id ) );
+	}
+
+	/**
+	 * An integration veto promotes its actor so later batches leave it alone.
+	 */
+	public function test_cleanup_honors_integration_reference() {
+		$id = $this->cached_actor();
+		Remote_Actors::set_cache_only( $id, true );
+		$protect = static function ( $in_use, $actor ) use ( $id ) {
+			return $id === $actor->ID || $in_use;
+		};
+		\add_filter( 'activitypub_remote_actor_is_in_use', $protect, 10, 2 );
+		try {
+			Scheduler::cleanup_cache_only_remote_actors_batch();
+		} finally {
+			\remove_filter( 'activitypub_remote_actor_is_in_use', $protect, 10 );
+		}
+		Scheduler::cleanup_cache_only_remote_actors_batch();
+		$this->assertNotNull( \get_post( $id ) );
+		$this->assertTrue( (bool) \get_post_meta( $id, Remote_Actors::RETAIN_META_KEY, true ) );
+	}
+
+	/**
+	 * Failed deletion leaves the cache eligible for a later run without spinning.
+	 */
+	public function test_cleanup_stops_when_deletion_makes_no_progress() {
+		$id = $this->cached_actor();
+		Remote_Actors::set_cache_only( $id, true );
+		$batch_size     = static function () {
+			return 1;
+		};
+		$prevent_delete = static function ( $delete, $post ) use ( $id ) {
+			return $id === $post->ID ? false : $delete;
+		};
+		\add_filter( 'activitypub_actor_cleanup_batch_size', $batch_size );
+		\add_filter( 'pre_delete_post', $prevent_delete, 10, 2 );
+		try {
+			$this->assertNull( Scheduler::cleanup_cache_only_remote_actors_batch() );
+			$this->assertNotNull( \get_post( $id ) );
+			$this->assertFalse( (bool) \get_post_meta( $id, Remote_Actors::RETAIN_META_KEY, true ) );
+		} finally {
+			\remove_filter( 'pre_delete_post', $prevent_delete, 10 );
+			\remove_filter( 'activitypub_actor_cleanup_batch_size', $batch_size );
+		}
+		Scheduler::cleanup_cache_only_remote_actors_batch();
+		$this->assertNull( \get_post( $id ) );
+	}
+	/**
+	 * Cleanup cannot run until the retention migration has finished.
+	 */
+	public function test_cleanup_waits_for_retention_migration() {
+		\delete_option( 'activitypub_actor_retention_migrated' );
+		$id = $this->cached_actor();
+		Remote_Actors::set_cache_only( $id, true );
+		Scheduler::cleanup_cache_only_remote_actors();
+		$this->assertNotNull( \get_post( $id ) );
+		$this->assertFalse( \wp_next_scheduled( 'activitypub_cleanup_actor_candidates', array( 1 ) ) );
+		\update_option( 'activitypub_actor_retention_migrated', true, false );
+		Scheduler::cleanup_cache_only_remote_actors();
+		$this->assertNull( \get_post( $id ) );
+	}
+	/**
+	 * An integration can defer cleanup after ActivityPub has finished migrating.
+	 */
+	public function test_cleanup_waits_for_integration_readiness() {
+		$id        = $this->cached_actor();
+		$not_ready = static function () {
+			return false;
+		};
+		\add_filter( 'activitypub_remote_actor_cleanup_ready', $not_ready );
+		try {
+			Scheduler::cleanup_cache_only_remote_actors();
+			$this->assertNotNull( \get_post( $id ) );
+		} finally {
+			\remove_filter( 'activitypub_remote_actor_cleanup_ready', $not_ready );
+		}
+		Scheduler::cleanup_cache_only_remote_actors();
+		$this->assertNull( \get_post( $id ) );
 	}
 }
