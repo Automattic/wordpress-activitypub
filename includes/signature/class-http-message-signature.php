@@ -453,11 +453,17 @@ class Http_Message_Signature implements Http_Signature {
 			$key = \strtok( $component, ';' ); // See https://www.rfc-editor.org/rfc/rfc9421.html#name-query-parameters.
 			$key = \strtolower( \trim( $key, '"' ) );
 
-			// These name this server through the client-supplied `Host`, so check the value that enters the base.
+			/*
+			 * These name this server through the client-supplied `Host`, so check the value that enters the base.
+			 * A proxy that rewrites `Host` leaves the value the peer signed only in `X-Original-Host`, so it is read first.
+			 */
+			$host = '';
 			if ( \in_array( $key, array( '@target-uri', '@authority', 'host' ), true ) ) {
 				$host = 'host' === $key ? ( $headers['host'][0] ?? '' ) : ( $_SERVER['HTTP_HOST'] ?? '' );
 
-				if ( ! is_signature_host( $host ) ) {
+				if ( is_signature_host( $headers['x_original_host'][0] ?? '' ) ) {
+					$host = $headers['x_original_host'][0];
+				} elseif ( ! is_signature_host( $host ) ) {
 					return new \WP_Error( 'activitypub_signature_host', 'The signature is not made out to this site.' );
 				}
 			}
@@ -468,11 +474,15 @@ class Http_Message_Signature implements Http_Signature {
 					break;
 
 				case '@target-uri':
-					$value = \set_url_scheme( '//' . ( $_SERVER['HTTP_HOST'] ?? '' ) . ( $_SERVER['REQUEST_URI'] ?? '/' ) );
+					$value = \set_url_scheme( \sprintf( '//%s%s', $host, $_SERVER['REQUEST_URI'] ?? '/' ) );
 					break;
 
 				case '@authority':
-					$value = $_SERVER['HTTP_HOST'] ?? '';
+					$value = $host;
+					break;
+
+				case 'host':
+					$value = \preg_replace( '/\s+/', ' ', \trim( $host ) );
 					break;
 
 				case '@scheme':

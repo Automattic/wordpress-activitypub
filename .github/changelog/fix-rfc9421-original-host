@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed signed requests from other servers being rejected on sites behind a proxy that changes the host name.
