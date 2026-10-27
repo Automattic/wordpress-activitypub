@@ -722,6 +722,25 @@ class Test_Router extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that the client configuration discovery is mapped to its REST route.
+	 *
+	 * @covers ::add_rewrite_rules
+	 */
+	public function test_client_config_rewrite_rule() {
+		$this->set_permalink_structure( '/%postname%/' );
+
+		Router::add_rewrite_rules();
+		\flush_rewrite_rules();
+
+		$rules     = get_option( 'rewrite_rules' );
+		$discovery = 'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/client-config';
+
+		$this->assertSame( $discovery, $this->resolve_rewrite( $rules, '.well-known/activitypub-client-config' ) );
+		$this->assertSame( $discovery, $this->resolve_rewrite( $rules, '.well-known/activitypub-client-config/' ) );
+		$this->assertNotSame( $discovery, $this->resolve_rewrite( $rules, '.well-known/activitypub-client-config/suffix' ) );
+	}
+
+	/**
 	 * Return the query of the first rewrite rule matching a request path, the way WP::parse_request() matches.
 	 *
 	 * @param array  $rules   The rewrite rules.

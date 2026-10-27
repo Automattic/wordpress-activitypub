@@ -68,6 +68,7 @@ function rest_init() {
 	( new Rest\Moderators_Controller() )->register_routes();
 	if ( \get_option( 'activitypub_api', false ) ) {
 		( new Rest\Actor_Autocomplete_Controller() )->register_routes();
+		( new Rest\Client_Config_Controller() )->register_routes();
 		( new Rest\OAuth\Authorization_Controller() )->register_routes();
 		( new Rest\OAuth\Clients_Controller() )->register_routes();
 		( new Rest\OAuth\Token_Controller() )->register_routes();
