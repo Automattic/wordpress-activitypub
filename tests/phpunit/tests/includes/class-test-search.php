@@ -85,7 +85,7 @@ class Test_Search extends \WP_UnitTestCase {
 	/**
 	 * Searching for a comment's URL leads to it, but leaves its moderation status alone.
 	 *
-	 * @covers ::enhance_admin_comment_search
+	 * @covers \Activitypub\Search::enhance_admin_comment_search
 	 */
 	public function test_search_keeps_comment_status() {
 		$user = \get_user_by( 'id', self::factory()->user->create( array( 'role' => 'author' ) ) );
