@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Account moves are only accepted when the new account lists the old one by its ActivityPub ID, as Mastodon does.

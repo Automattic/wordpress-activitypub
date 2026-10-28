@@ -202,23 +202,18 @@ class Move {
 			return false;
 		}
 
-		// Normalize alsoKnownAs to an array (some JSON-LD payloads may use a string).
-		$also_known_as = (array) ( $target_object['alsoKnownAs'] ?? array() );
+		// Normalize alsoKnownAs to a list of ids (some JSON-LD payloads use a string or objects).
+		$also_known_as = \array_map( '\Activitypub\object_to_uri', (array) ( $target_object['alsoKnownAs'] ?? array() ) );
 		if ( empty( $also_known_as ) ) {
 			return false;
 		}
 
-		// Collect all possible origin identifiers (id, url, webfinger).
-		$origin_ids = \array_filter(
-			array(
-				$origin_object['id'] ?? null,
-				$origin_object['url'] ?? null,
-				$origin_object['webfinger'] ?? null,
-			)
-		);
-
-		// Check if any origin identifier is in the alsoKnownAs property of the target.
-		if ( ! \array_intersect( $origin_ids, $also_known_as ) ) {
+		/*
+		 * The target must list the origin by its id, which the fetch confirmed. The origin's url and
+		 * webfinger are its own claims: matching them would let an actor claim an alias of the
+		 * account it pretends to move to. Mastodon compares the id only as well.
+		 */
+		if ( ! \in_array( $origin_object['id'], $also_known_as, true ) ) {
 			return false;
 		}
 
