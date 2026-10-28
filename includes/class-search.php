@@ -59,6 +59,12 @@ class Search {
 
 		if ( $imported ) {
 			// The comment keeps the status moderation gave it; a search must not approve it.
+			if ( '1' !== \get_comment( $imported )->comment_approved && \current_user_can( 'moderate_comments' ) ) {
+				// Admin::edit_comment() sends received replies on to their moderation view.
+				\wp_safe_redirect( \admin_url( 'comment.php?action=editcomment&c=' . $imported ) );
+				exit;
+			}
+
 			$comment_link   = \get_comment_link( $imported );
 			$validated_link = \wp_validate_redirect( $comment_link, \home_url() );
 			if ( $validated_link ) {
@@ -99,6 +105,12 @@ class Search {
 
 		if ( $imported ) {
 			// The comment keeps the status moderation gave it; a search must not approve it.
+			if ( '1' !== \get_comment( $imported )->comment_approved && \current_user_can( 'moderate_comments' ) ) {
+				// Admin::edit_comment() sends received replies on to their moderation view.
+				\wp_safe_redirect( \admin_url( 'comment.php?action=editcomment&c=' . $imported ) );
+				exit;
+			}
+
 			$comment_link   = \get_comment_link( $imported );
 			$validated_link = \wp_validate_redirect( $comment_link, \home_url() );
 			if ( $validated_link ) {

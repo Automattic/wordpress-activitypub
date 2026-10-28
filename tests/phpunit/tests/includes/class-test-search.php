@@ -85,10 +85,17 @@ class Test_Search extends \WP_UnitTestCase {
 	/**
 	 * Searching for a comment's URL leads to it, but leaves its moderation status alone.
 	 *
+	 * A pending reply does not render on the front end, so a moderator goes to its moderation view.
+	 *
+	 * @dataProvider data_search_keeps_comment_status
 	 * @covers \Activitypub\Search::enhance_admin_comment_search
+	 *
+	 * @param string $role       The searching user's role.
+	 * @param string $status     The comment's approval status.
+	 * @param bool   $moderation Whether the search leads to the moderation view.
 	 */
-	public function test_search_keeps_comment_status() {
-		$user = \get_user_by( 'id', self::factory()->user->create( array( 'role' => 'author' ) ) );
+	public function test_search_keeps_comment_status( $role, $status, $moderation ) {
+		$user = \get_user_by( 'id', self::factory()->user->create( array( 'role' => $role ) ) );
 		$user->add_cap( 'activitypub' );
 		\wp_set_current_user( $user->ID );
 
@@ -97,7 +104,7 @@ class Test_Search extends \WP_UnitTestCase {
 		$comment_id = self::factory()->comment->create(
 			array(
 				'comment_post_ID'  => self::factory()->post->create(),
-				'comment_approved' => '0',
+				'comment_approved' => $status,
 			)
 		);
 		\add_comment_meta( $comment_id, 'source_id', $url );
@@ -119,7 +126,21 @@ class Test_Search extends \WP_UnitTestCase {
 		\remove_filter( 'wp_redirect', $redirect );
 
 		$this->assertNotEmpty( $redirected, 'The search should still redirect after finding the comment.' );
-		$this->assertSame( '0', \get_comment( $comment_id )->comment_approved, 'The search must not approve the comment.' );
+		$this->assertSame( $status, \get_comment( $comment_id )->comment_approved, 'The search must not change the comment status.' );
+		$this->assertSame( $moderation, \admin_url( 'comment.php?action=editcomment&c=' . $comment_id ) === $redirected );
+	}
+
+	/**
+	 * Roles for the comment status test.
+	 *
+	 * @return array[] Role, comment status and whether the search leads to the moderation view.
+	 */
+	public function data_search_keeps_comment_status() {
+		return array(
+			'author, pending'     => array( 'author', '0', false ),
+			'moderator, pending'  => array( 'editor', '0', true ),
+			'moderator, approved' => array( 'editor', '1', false ),
+		);
 	}
 
 	/**
