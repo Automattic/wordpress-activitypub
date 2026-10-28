@@ -7,8 +7,9 @@
 
 namespace Activitypub\Integration;
 
-use function Activitypub\accept_prefers_activitypub;
+use function Activitypub\is_activitypub_request;
 use function Activitypub\is_plugin_active;
+use function Activitypub\should_negotiate_content;
 
 /**
  * LiteSpeed Cache integration.
@@ -85,18 +86,22 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	/**
 	 * Keep a response out of the cache when its cache bucket and its representation can disagree.
 	 *
-	 * The rewrite rule picks the bucket by whether an ActivityPub type comes first in `Accept`, while
-	 * the plugin picks the representation by quality. When the two disagree, the response could be
-	 * stored in the other representation's bucket, so it is not cached at all.
+	 * The rewrite rule picks a bucket from `Accept`. The request decision also includes query
+	 * parameters and filters, so a mismatch must not be stored in that bucket.
 	 *
 	 * @return void
 	 */
 	public static function maybe_disable_cache() {
+		// A request through `?activitypub` or the `/activitypub/` endpoint has its own cache entry, whatever `Accept` says.
+		if ( false !== \get_query_var( 'activitypub', false ) ) {
+			return;
+		}
+
 		$accept = isset( $_SERVER['HTTP_ACCEPT'] ) ? \wp_unslash( $_SERVER['HTTP_ACCEPT'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		$bucket = (bool) \preg_match( \sprintf( '#%s#i', self::ACCEPT_PATTERN ), $accept );
 
-		if ( accept_prefers_activitypub( $accept ) !== $bucket ) {
-			\do_action( 'litespeed_control_set_nocache', 'ActivityPub: Accept order and quality disagree' );
+		if ( ( is_activitypub_request() && should_negotiate_content() ) !== $bucket ) {
+			\do_action( 'litespeed_control_set_nocache', 'ActivityPub: cache bucket and request disagree' );
 		}
 	}
 

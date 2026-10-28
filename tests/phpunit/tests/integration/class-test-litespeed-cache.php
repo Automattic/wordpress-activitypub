@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Integration;
 
 use Activitypub\Integration\Litespeed_Cache;
+use Activitypub\Query;
 
 /**
  * Test LiteSpeed Cache integration.
@@ -165,17 +166,21 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 	 *
 	 * @covers ::maybe_disable_cache
 	 * @dataProvider accept_cache_provider
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
 	 *
 	 * @param string $accept   The Accept header.
 	 * @param bool   $no_cache Whether the response must not be cached.
 	 */
 	public function test_maybe_disable_cache( $accept, $no_cache ) {
+		Query::get_instance()->__destruct();
 		$_SERVER['HTTP_ACCEPT'] = $accept;
 		$before                 = \did_action( 'litespeed_control_set_nocache' );
 
 		Litespeed_Cache::maybe_disable_cache();
 
 		unset( $_SERVER['HTTP_ACCEPT'] );
+		Query::get_instance()->__destruct();
 
 		$this->assertSame( $no_cache, \did_action( 'litespeed_control_set_nocache' ) > $before );
 	}
@@ -194,6 +199,73 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 			'activitypub wins, listed second' => array( 'text/html;q=0.1, application/activity+json', true ),
 			'activitypub listed first, loses' => array( 'application/activity+json;q=0.1, text/html', true ),
 		);
+	}
+
+	/**
+	 * The cache bucket must follow the full request decision, including its filters.
+	 *
+	 * @dataProvider negotiation_filter_provider
+	 * @covers ::maybe_disable_cache
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 *
+	 * @param string $accept           The Accept header.
+	 * @param string $request_filter   Callback for the ActivityPub request decision.
+	 * @param string $negotiate_filter Callback for content negotiation.
+	 * @param bool   $no_cache         Whether the response must not be cached.
+	 */
+	public function test_maybe_disable_cache_for_filtered_request( $accept, $request_filter, $negotiate_filter, $no_cache ) {
+		$_SERVER['HTTP_ACCEPT'] = $accept;
+		Query::get_instance()->__destruct();
+		\add_filter( 'activitypub_is_activitypub_request', $request_filter );
+		\add_filter( 'activitypub_should_negotiate_content', $negotiate_filter );
+		$before = \did_action( 'litespeed_control_set_nocache' );
+
+		Litespeed_Cache::maybe_disable_cache();
+
+		\remove_filter( 'activitypub_is_activitypub_request', $request_filter );
+		\remove_filter( 'activitypub_should_negotiate_content', $negotiate_filter );
+		Query::get_instance()->__destruct();
+		unset( $_SERVER['HTTP_ACCEPT'] );
+
+		$this->assertSame( $no_cache, \did_action( 'litespeed_control_set_nocache' ) > $before );
+	}
+
+	/**
+	 * Filtered request decisions and cache buckets.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function negotiation_filter_provider() {
+		return array(
+			'force ActivityPub'    => array( 'text/html', '__return_true', '__return_true', true ),
+			'disable negotiation'  => array( 'application/activity+json', '__return_true', '__return_false', true ),
+			'matching ActivityPub' => array( 'application/activity+json', '__return_true', '__return_true', false ),
+		);
+	}
+
+	/**
+	 * A request through the `activitypub` query var stays cacheable with a browser Accept header.
+	 *
+	 * The URL already gives it its own cache entry, so the Accept bucket cannot mix it up.
+	 *
+	 * @covers ::maybe_disable_cache
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_maybe_disable_cache_for_activitypub_query_parameter() {
+		Query::get_instance()->__destruct();
+		$_SERVER['HTTP_ACCEPT'] = 'text/html';
+		// Both `?activitypub` and the `/activitypub/` endpoint set the query var.
+		\set_query_var( 'activitypub', '' );
+		$before = \did_action( 'litespeed_control_set_nocache' );
+
+		Litespeed_Cache::maybe_disable_cache();
+
+		unset( $GLOBALS['wp_query']->query_vars['activitypub'], $_SERVER['HTTP_ACCEPT'] );
+		Query::get_instance()->__destruct();
+
+		$this->assertSame( $before, \did_action( 'litespeed_control_set_nocache' ) );
 	}
 
 	/**
