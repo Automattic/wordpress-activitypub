@@ -58,12 +58,6 @@ class Comment extends Base {
 			$object->set_updated( \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $updated ) );
 		}
 
-		$object->set_content_map(
-			array(
-				$this->get_locale() => $this->get_content(),
-			)
-		);
-
 		return $object;
 	}
 
