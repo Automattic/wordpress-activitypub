@@ -268,6 +268,26 @@ class Http_Message_Signature implements Http_Signature {
 			return new \WP_Error( 'missing_time_anchor', 'The signature is missing a time anchor (created or expires).' );
 		}
 
+		/*
+		 * Require the components that tie a signature to this request: one naming this site, which
+		 * get_component_values() checks is ours, and the digest of a body. A signature over less
+		 * verifies on its own terms, but could be presented to any site, with any body.
+		 */
+		$covered = \array_map(
+			static function ( $component ) {
+				return \strtolower( \trim( \strtok( $component, ';' ), '"' ) );
+			},
+			$data['components']
+		);
+
+		if ( ! \array_intersect( array( '@target-uri', '@authority', 'host' ), $covered ) ) {
+			return new \WP_Error( 'activitypub_signature_components', 'The signature does not cover the request target.' );
+		}
+
+		if ( '' !== (string) $body && ! \in_array( 'content-digest', $covered, true ) ) {
+			return new \WP_Error( 'activitypub_signature_components', 'The signature does not cover the request body.' );
+		}
+
 		// Read before the key is fetched, so a request made out to another host fails without a lookup.
 		$components = $this->get_component_values( $data['components'], $headers );
 		if ( \is_wp_error( $components ) ) {
@@ -314,7 +334,12 @@ class Http_Message_Signature implements Http_Signature {
 	 * @return bool|\WP_Error True, if the signature is valid, WP_Error on failure.
 	 */
 	private function verify_content_digest( $headers, $body ) {
-		if ( ! isset( $headers['content_digest'][0] ) || null === $body ) {
+		// A covered but absent header enters the signature base empty and would vouch for any body.
+		if ( ! isset( $headers['content_digest'][0] ) ) {
+			return '' === (string) $body ? true : new \WP_Error( 'missing_digest', 'The Content-Digest header is missing.' );
+		}
+
+		if ( null === $body ) {
 			return true;
 		}
 
