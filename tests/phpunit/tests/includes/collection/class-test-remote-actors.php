@@ -200,6 +200,85 @@ class Test_Remote_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A stored actor whose key failed is refreshed from its host, at most once every few minutes.
+	 *
+	 * @covers ::refresh_public_key
+	 */
+	public function test_refresh_public_key() {
+		global $wpdb;
+
+		$id      = 'https://example.com/users/rotated';
+		$actor   = array(
+			'id'                => $id,
+			'type'              => 'Person',
+			'inbox'             => $id . '/inbox',
+			'preferredUsername' => 'rotated',
+			'publicKey'         => array(
+				'id'           => $id . '#main-key',
+				'owner'        => $id,
+				'publicKeyPem' => $this->x509_key,
+			),
+		);
+		$post_id = Remote_Actors::upsert( $actor );
+
+		$fetches = 0;
+		$served  = $actor;
+
+		$served['publicKey']['publicKeyPem'] = $this->pkcs1_key;
+
+		$mock = static function ( $pre, $url ) use ( &$fetches, &$served, $id ) {
+			if ( $url !== $id ) {
+				return $pre;
+			}
+			++$fetches;
+			return $served;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock, 10, 2 );
+
+		// Let the next refresh through, as if the throttle had expired.
+		$expire = static function () use ( $id ) {
+			\delete_transient( 'activitypub_key_refresh_' . \md5( $id ) );
+		};
+
+		// A new key is stored, and a second failing signature right after does not fetch again.
+		$this->assertTrue( Remote_Actors::refresh_public_key( $id . '#main-key' ) );
+		$this->assertFalse( Remote_Actors::refresh_public_key( $id . '#main-key' ) );
+		$this->assertSame( 1, $fetches, 'A refreshed actor is not fetched again at once.' );
+		$this->assertSame( $this->pkcs1_key, \json_decode( \get_post( $post_id )->post_content, true )['publicKey']['publicKeyPem'] );
+
+		// The same document again is no change, and leaves the record's modified date to the scheduler.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->update( $wpdb->posts, array( 'post_modified_gmt' => '2020-01-01 00:00:00' ), array( 'ID' => $post_id ) );
+		\clean_post_cache( $post_id );
+		$expire();
+		$this->assertFalse( Remote_Actors::refresh_public_key( $id . '#main-key' ) );
+		$this->assertSame( 2, $fetches );
+		$this->assertSame( '2020-01-01 00:00:00', \get_post( $post_id )->post_modified_gmt, 'An unchanged document is not written.' );
+
+		// A changed profile with the same key is stored.
+		$served['name'] = 'Renamed';
+		$expire();
+		$this->assertTrue( Remote_Actors::refresh_public_key( $id . '#main-key' ) );
+		$this->assertSame( 3, $fetches );
+		$this->assertSame( 'Renamed', \json_decode( \get_post( $post_id )->post_content, true )['name'] );
+
+		// A failed fetch changes nothing and is not retried at once.
+		$served = new \WP_Error( 'activitypub_not_found', 'Not found' );
+		$expire();
+		$this->assertFalse( Remote_Actors::refresh_public_key( $id . '#main-key' ) );
+		$this->assertFalse( Remote_Actors::refresh_public_key( $id . '#main-key' ) );
+		$this->assertSame( 4, $fetches, 'A failed fetch is not retried at once.' );
+		$this->assertSame( $this->pkcs1_key, \json_decode( \get_post( $post_id )->post_content, true )['publicKey']['publicKeyPem'] );
+
+		// An actor that is not stored is left to the proxy cache.
+		$this->assertFalse( Remote_Actors::refresh_public_key( 'https://example.com/users/unknown#main-key' ) );
+		$this->assertSame( 4, $fetches );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock, 10 );
+		$expire();
+	}
+
+	/**
 	 * Key and owner reference redirects.
 	 *
 	 * @return array Test cases.

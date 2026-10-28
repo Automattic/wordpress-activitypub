@@ -10,6 +10,7 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
 use Activitypub\Signature;
 
@@ -1087,6 +1088,95 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 		\delete_option( 'activitypub_rfc9421_signature' );
+	}
+
+	/**
+	 * A stored key that does not verify is refreshed from the actor's host once, so a rotated key heals.
+	 *
+	 * @covers ::verify_http_signature
+	 */
+	public function test_verify_http_signature_refreshes_a_rotated_key() {
+		\update_option( 'activitypub_rfc9421_signature', '0' );
+		$old = self::$test_keys['rsa']['4096'];
+		$new = self::$test_keys['rsa']['2048'];
+		$id  = 'https://example.org/users/rotated';
+
+		$document = static function ( $public_key ) use ( $id ) {
+			return array(
+				'id'                => $id,
+				'type'              => 'Person',
+				'inbox'             => $id . '/inbox',
+				'preferredUsername' => 'rotated',
+				'publicKey'         => array(
+					'id'           => $id . '#main-key',
+					'owner'        => $id,
+					'publicKeyPem' => $public_key,
+				),
+			);
+		};
+		Remote_Actors::upsert( $document( $old['public_key'] ) );
+
+		// Let the next refresh through, as if the throttle had expired.
+		$expire = static function () use ( $id ) {
+			\delete_transient( 'activitypub_key_refresh_' . \md5( $id ) );
+		};
+
+		$served  = $document( $new['public_key'] );
+		$fetches = 0;
+		$mock    = static function ( $pre, $url ) use ( &$fetches, &$served, $id ) {
+			if ( $url !== $id ) {
+				return $pre;
+			}
+			++$fetches;
+			return $served;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock, 10, 2 );
+
+		$request = static function () use ( $id, $new ) {
+			$args    = \apply_filters(
+				'http_request_args',
+				array(
+					'method'      => 'POST',
+					'body'        => \wp_json_encode(
+						array(
+							'type'  => 'Update',
+							'actor' => $id,
+						)
+					),
+					'key_id'      => $id . '#main-key',
+					'private_key' => \openssl_pkey_get_private( $new['private_key'] ),
+					'user_id'     => 1,
+					'headers'     => array(
+						'Content-Type' => 'application/activity+json',
+						'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
+						'Host'         => 'example.org',
+					),
+				),
+				'https://example.org/wp-json/activitypub/1.0/inbox'
+			);
+			$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+			$request->set_body( $args['body'] );
+			$request->set_headers( $args['headers'] );
+
+			return $request;
+		};
+
+		// The actor rotated to the new key; its host serves it, the stored record still has the old one.
+		$this->assertSame( $id, Signature::verify_http_signature( $request() ), 'A rotated key verifies after one refresh.' );
+		$this->assertSame( 1, $fetches );
+
+		// A key its host does not serve either still fails, and is not fetched again at once.
+		$served = $document( $old['public_key'] );
+		Remote_Actors::upsert( $served );
+		$expire();
+		$this->assertWPError( Signature::verify_http_signature( $request() ) );
+		$this->assertSame( 2, $fetches );
+		$this->assertWPError( Signature::verify_http_signature( $request() ) );
+		$this->assertSame( 2, $fetches, 'An actor refreshed a moment ago is not fetched again.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock, 10 );
+		\delete_option( 'activitypub_rfc9421_signature' );
+		$expire();
 	}
 
 	/**

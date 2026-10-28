@@ -872,6 +872,58 @@ class Remote_Actors {
 	}
 
 	/**
+	 * Refresh a stored actor from its own host after its key failed to verify.
+	 *
+	 * The key of a stored actor is read from the stored record first, so an actor that rotates its
+	 * key would stay locked out until something refreshes that record. A key taken from the proxy
+	 * is at most as old as the proxy's cache, so only stored actors are refreshed.
+	 *
+	 * Each actor is refreshed at most once every few minutes, so failing signatures cannot cause a
+	 * fetch every time. The throttle is a transient, not the record's modified date, so the
+	 * scheduler still refreshes, counts errors for and cleans up this actor as before.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $key_id The keyId whose key did not verify.
+	 *
+	 * @return bool True if the stored actor changed, false otherwise.
+	 */
+	public static function refresh_public_key( $key_id ) {
+		$post = self::get_by_uri( \strip_fragment_from_url( $key_id ) );
+		if ( \is_wp_error( $post ) ) {
+			return false;
+		}
+
+		// The stored document's id, not the post's guid, which core may rewrite on save.
+		$stored = \json_decode( $post->post_content, true );
+		$id     = $stored['id'] ?? null;
+		if ( ! \is_string( $id ) ) {
+			return false;
+		}
+
+		$throttle = 'activitypub_key_refresh_' . \md5( $id );
+		if ( \get_transient( $throttle ) ) {
+			return false;
+		}
+		\set_transient( $throttle, 1, 5 * MINUTE_IN_SECONDS );
+
+		// Proxy::get() only answers with the document its own host serves under this id.
+		$actor = Proxy::get( $id, array( 'cached' => false ) );
+		if ( ! \is_array( $actor ) || ( $actor['id'] ?? null ) !== $id ) {
+			return false;
+		}
+
+		$fresh = Actor::init_from_array( $actor );
+
+		// Only a changed document is worth a write, compared the way it would be stored.
+		if ( ! $fresh instanceof Actor || \json_decode( self::serialize_for_storage( $fresh )[0], true ) === $stored ) {
+			return false;
+		}
+
+		return ! \is_wp_error( self::update( $post, $fresh ) );
+	}
+
+	/**
 	 * Extract public key PEM from a fetched object.
 	 *
 	 * Supports two formats:
