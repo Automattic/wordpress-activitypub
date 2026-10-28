@@ -9,6 +9,8 @@ namespace Activitypub\Tests\Rest;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Inbox as Inbox_Collection;
+use Activitypub\Collection\Remote_Posts;
+use Activitypub\Moderation;
 
 /**
  * Test class for Activitypub Rest Inbox.
@@ -294,7 +296,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	 *
 	 * @dataProvider data_owner_blocked_activities
 	 * @covers ::create_item
-	 * @covers \Activitypub\Moderation::activity_is_blocked_by_content_owner
+	 * @covers Moderation::activity_is_blocked_by_content_owner
 	 *
 	 * @param string $type     The activity type.
 	 * @param string $target   Where the activity points: `post`, `comment`, `remote comment`, `remote post` or `comment on remote post`.
@@ -315,7 +317,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 			$target_id = 'https://elsewhere.example/post/1';
 			$post_id   = self::factory()->post->create(
 				array(
-					'post_type'   => \Activitypub\Collection\Remote_Posts::POST_TYPE,
+					'post_type'   => Remote_Posts::POST_TYPE,
 					'post_author' => $owner,
 					'guid'        => $target_id,
 				)
@@ -401,7 +403,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		// Without the block the activity reaches the handlers, so the test below is not passing by accident.
 		$this->assertNotEmpty( $send(), 'The activity should reach the handlers without a block.' );
 
-		$this->assertTrue( \Activitypub\Moderation::add_user_block( $owner, \Activitypub\Moderation::TYPE_ACTOR, $actor ) );
+		$this->assertTrue( Moderation::add_user_block( $owner, Moderation::TYPE_ACTOR, $actor ) );
 		if ( $blocked ) {
 			$this->assertSame( array(), $send(), 'No handler may see an activity the content owner blocked.' );
 		} else {
@@ -411,6 +413,78 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $profile, 10 );
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
 		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * No block stops a sender from taking back what it sent.
+	 *
+	 * @dataProvider data_retractions
+	 * @covers ::create_item
+	 * @covers \Activitypub\Moderation::activity_is_blocked
+	 *
+	 * @param string $type The retracting activity type.
+	 */
+	public function test_blocks_do_not_stop_retractions( $type ) {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		$actor     = 'https://remote.example/@test';
+		$recipient = self::factory()->user->create( array( 'role' => 'author' ) );
+		$profile   = static function ( $response, $url ) use ( $actor ) {
+			return $actor === $url ? array(
+				'id'    => $actor,
+				'type'  => 'Person',
+				'inbox' => $actor . '/inbox',
+			) : $response;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $profile, 10, 2 );
+
+		// Blocked site-wide and by the only recipient.
+		$this->assertTrue( Moderation::add_site_block( Moderation::TYPE_ACTOR, $actor ) );
+		$this->assertTrue( Moderation::add_user_block( $recipient, Moderation::TYPE_ACTOR, $actor ) );
+
+		$fired  = array();
+		$record = static function ( $hook ) use ( &$fired ) {
+			if ( \preg_match( '/^activitypub_(handled_)?inbox_(shared_)?(delete|undo)$/', $hook ) ) {
+				$fired[] = $hook;
+			}
+		};
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'id'     => 'https://remote.example/activity/' . $type,
+					'type'   => $type,
+					'actor'  => $actor,
+					'object' => 'https://remote.example/post/1',
+					'to'     => array( 'https://www.w3.org/ns/activitystreams#Public', Actors::get_by_id( $recipient )->get_id() ),
+				)
+			)
+		);
+
+		\add_action( 'all', $record );
+		$this->assertSame( 202, \rest_do_request( $request )->get_status() );
+		\remove_action( 'all', $record );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $profile, 10 );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\delete_option( 'activitypub_actor_mode' );
+
+		$this->assertNotEmpty( $fired, 'A block must not keep a retraction from its handler.' );
+	}
+
+	/**
+	 * Retracting activity types.
+	 *
+	 * @return array[] Activity type.
+	 */
+	public function data_retractions() {
+		return array(
+			'Delete' => array( 'Delete' ),
+			'Undo'   => array( 'Undo' ),
+		);
 	}
 
 	/**
@@ -431,6 +505,8 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 			'reply to a remote comment'           => array( 'Create', 'remote comment', 'inReplyTo' ),
 			'reply to a remote post'              => array( 'Create', 'remote post', 'inReplyTo', false ),
 			'reply to a comment on a remote post' => array( 'Create', 'comment on remote post', 'inReplyTo' ),
+			'deleting its own reply'              => array( 'Delete', 'remote comment', 'object', false ),
+			'undoing its own reaction'            => array( 'Undo', 'remote comment', 'object', false ),
 		);
 	}
 

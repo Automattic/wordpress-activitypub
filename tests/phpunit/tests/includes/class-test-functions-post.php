@@ -9,6 +9,7 @@ namespace Activitypub\Tests;
 
 use function Activitypub\get_post_id;
 use function Activitypub\get_post_url;
+use function Activitypub\get_target_post_id;
 
 /**
  * Test class for Post Functions.
@@ -1085,5 +1086,30 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 			)
 		);
 		$this->assertFalse( \Activitypub\is_ap_post( $custom_id ), 'Should return false for custom post type' );
+	}
+
+	/**
+	 * A comment or actor URL does not resolve to the static front page.
+	 *
+	 * Core's url_to_postid() drops the query string, so `/?c=5` and `/?author=5` read as the home
+	 * URL, which it maps to the front page.
+	 *
+	 * @covers \Activitypub\get_target_post_id
+	 */
+	public function test_get_target_post_id_ignores_front_page() {
+		$front   = self::factory()->post->create( array( 'post_type' => 'page' ) );
+		$post_id = self::factory()->post->create();
+		$comment = self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) );
+		\update_option( 'show_on_front', 'page' );
+		\update_option( 'page_on_front', $front );
+
+		$comment_url = \add_query_arg( 'c', $comment, \home_url( '/' ) );
+
+		$this->assertSame( $post_id, get_target_post_id( $comment_url, $comment ), 'A comment URL leads to the comment\'s post.' );
+		$this->assertSame( 0, get_target_post_id( \add_query_arg( 'author', 1, \home_url( '/' ) ) ), 'An actor URL is not a post.' );
+		$this->assertSame( $post_id, get_target_post_id( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) ), 'A post id URL still resolves.' );
+
+		\delete_option( 'show_on_front' );
+		\delete_option( 'page_on_front' );
 	}
 }

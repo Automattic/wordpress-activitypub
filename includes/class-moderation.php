@@ -40,6 +40,14 @@ class Moderation {
 	);
 
 	/**
+	 * Activities that only take back what their sender sent, so no block stops them.
+	 *
+	 * A block keeps an actor's content out. Stopping its Delete or Undo would keep that content in
+	 * instead; whether the sender owns what it takes back is for the handler to check.
+	 */
+	const RETRACTION_TYPES = array( 'Delete', 'Undo' );
+
+	/**
 	 * Option key for site-wide blocked keywords.
 	 */
 	const OPTION_KEYS = array(
@@ -102,7 +110,7 @@ class Moderation {
 	 * @return bool True if blocked, false otherwise.
 	 */
 	public static function activity_is_blocked( $activity, $user_id = null ) {
-		if ( ! $activity instanceof Activity ) {
+		if ( ! $activity instanceof Activity || \in_array( $activity->get_type(), self::RETRACTION_TYPES, true ) ) {
 			return false;
 		}
 
@@ -589,6 +597,11 @@ class Moderation {
 	 * @return bool True if blocked, false otherwise.
 	 */
 	private static function check_activity_against_blocks( $activity, $blocks ) {
+		// Site-wide, recipient and owner blocks all end here.
+		if ( \in_array( $activity->get_type(), self::RETRACTION_TYPES, true ) ) {
+			return false;
+		}
+
 		// Extract actor information.
 		$actor_id = object_to_uri( $activity->get_actor() );
 

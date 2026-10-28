@@ -125,7 +125,21 @@ class Announce {
 		}
 
 		// The inbox checked its blocks against the Announce, not against the activity it carries.
-		if ( Moderation::activity_is_blocked( Activity::init_from_array( $object ) ) ) {
+		$inner = Activity::init_from_array( $object );
+		if ( Moderation::activity_is_blocked( $inner ) ) {
+			return;
+		}
+
+		$user_ids = \array_values(
+			\array_filter(
+				(array) $user_ids,
+				static function ( $user_id ) use ( $inner ) {
+					return ! Moderation::activity_is_blocked_for_user( $inner, $user_id );
+				}
+			)
+		);
+
+		if ( ! $user_ids ) {
 			return;
 		}
 

@@ -1104,4 +1104,39 @@ class Test_Scheduler extends \WP_UnitTestCase {
 
 		$this->assertSame( 1, $handled->get_call_count(), 'A block added after storing must stop the activity.' );
 	}
+
+	/**
+	 * A stored activity without recipients is still handled; only blocks stop it.
+	 *
+	 * @covers ::process_inbox_activity
+	 */
+	public function test_process_inbox_activity_handles_item_without_recipients() {
+		$activity = Activity::init_from_array(
+			array(
+				'id'     => 'https://remote.example/activity/no-recipients',
+				'type'   => 'Create',
+				'actor'  => 'https://remote.example/@test',
+				'object' => array(
+					'id'      => 'https://remote.example/post/no-recipients',
+					'type'    => 'Note',
+					'content' => 'Hello',
+				),
+			)
+		);
+
+		self::factory()->post->create(
+			array(
+				'post_type'    => Inbox::POST_TYPE,
+				'post_content' => \wp_slash( $activity->to_json() ),
+				'guid'         => $activity->get_id(),
+			)
+		);
+
+		$handled = new \MockAction();
+		\add_action( 'activitypub_handled_inbox', array( $handled, 'action' ) );
+		Scheduler::process_inbox_activity( $activity->get_id() );
+		\remove_action( 'activitypub_handled_inbox', array( $handled, 'action' ) );
+
+		$this->assertSame( 1, $handled->get_call_count() );
+	}
 }

@@ -586,8 +586,8 @@ function get_quote_intent_url() {
  *
  * @since unreleased
  *
- * @param string $url               The target URL.
- * @param int    $parent_comment_id Optional. The comment the URL resolved to, see url_to_commentid().
+ * @param string   $url               The target URL.
+ * @param int|null $parent_comment_id Optional. The comment the URL resolved to, see url_to_commentid().
  *
  * @return int The post ID, or 0 when the target is unknown.
  */
@@ -596,20 +596,22 @@ function get_target_post_id( $url, $parent_comment_id = 0 ) {
 		return 0;
 	}
 
-	$url     = \esc_url_raw( $url );
-	$post_id = \url_to_postid( $url );
+	// A comment's URL leads to its post, and core's url_to_postid() would read `/?c=5` as the front page.
+	$parent_comment = $parent_comment_id ? \get_comment( $parent_comment_id ) : null;
+	if ( $parent_comment instanceof \WP_Comment ) {
+		return (int) $parent_comment->comment_post_ID;
+	}
+
+	$url = \esc_url_raw( $url );
+
+	// url_to_postid() drops other query arguments, so `/?author=5` would also land on the front page.
+	\wp_parse_str( (string) \wp_parse_url( $url, PHP_URL_QUERY ), $query );
+	$post_id = \array_diff( \array_keys( $query ), array( 'p', 'page_id' ) ) ? 0 : \url_to_postid( $url );
 
 	if ( ! $post_id ) {
 		$remote_post = Remote_Posts::get_by_guid( $url );
 		if ( $remote_post instanceof \WP_Post ) {
 			$post_id = $remote_post->ID;
-		}
-	}
-
-	if ( ! $post_id && $parent_comment_id ) {
-		$parent_comment = \get_comment( $parent_comment_id );
-		if ( $parent_comment instanceof \WP_Comment ) {
-			$post_id = $parent_comment->comment_post_ID;
 		}
 	}
 
