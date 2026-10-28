@@ -2204,6 +2204,204 @@ class Test_Signature extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Data provider for test_verify_http_signature_rfc9421_requires_covered_components.
+	 *
+	 * @return array[] Covered components, whether a body and a Content-Digest header are sent, the expected error code.
+	 */
+	public function covered_components_provider() {
+		return array(
+			'target and digest'       => array( array( '@method', 'host', 'content-digest' ), true, true, null ),
+			'target without body'     => array( array( '@method', 'host' ), false, false, null ),
+			'no target'               => array( array( '@method', 'content-digest' ), true, true, 'activitypub_signature_components' ),
+			'body not covered'        => array( array( '@method', 'host' ), true, true, 'activitypub_signature_components' ),
+			'covered digest not sent' => array( array( '@method', 'host', 'content-digest' ), true, false, 'missing_digest' ),
+			'digest without body'     => array( array( '@method', 'host', 'content-digest' ), false, true, 'digest_mismatch' ),
+			'target uri'              => array( array( '@method', '@target-uri', 'content-digest' ), true, true, null ),
+			'authority'               => array( array( '@method', '@authority', 'content-digest' ), true, true, null ),
+			'no target and no body'   => array( array( '@method' ), false, false, 'activitypub_signature_components' ),
+		);
+	}
+
+	/**
+	 * An RFC 9421 signature has to cover this site and, with a body, the body's digest.
+	 *
+	 * Signed by hand because this class's own `sign()` always covers both.
+	 *
+	 * @dataProvider covered_components_provider
+	 * @covers ::verify_http_signature
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_content_digest
+	 *
+	 * @param string[]    $covered     Covered components.
+	 * @param bool        $with_body   Whether the request carries a body.
+	 * @param bool        $with_digest Whether the Content-Digest header is sent.
+	 * @param string|null $error       The expected error code, null if the signature verifies.
+	 */
+	public function test_verify_http_signature_rfc9421_requires_covered_components( $covered, $with_body, $with_digest, $error ) {
+		$keys = self::$test_keys['rsa']['2048'];
+
+		$mock = function () use ( $keys ) {
+			return array(
+				'id'        => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock );
+
+		// The digest is always of the activity, so one sent without a body does not match.
+		$activity = '{"type":"Create","actor":"https://example.org/author/admin"}';
+		$body     = $with_body ? $activity : '';
+		$digest   = $with_digest ? 'sha-256=:' . \base64_encode( \hash( 'sha256', $activity, true ) ) . ':' : '';
+		$values   = array(
+			'@method'        => 'POST',
+			'@target-uri'    => 'https://example.org/wp-json/activitypub/1.0/inbox',
+			'@authority'     => 'example.org',
+			'host'           => 'example.org',
+			'content-digest' => $digest,
+		);
+
+		$base = '';
+		foreach ( $covered as $component ) {
+			$base .= \sprintf( "\"%s\": %s\n", $component, $values[ $component ] );
+		}
+
+		$params = \sprintf( '("%s");created=%d;keyid="https://example.org/author/admin#main-key";alg="rsa-v1_5-sha256"', \implode( '" "', $covered ), \time() );
+		\openssl_sign( $base . '"@signature-params": ' . $params, $signature, \openssl_pkey_get_private( $keys['private_key'] ), \OPENSSL_ALGO_SHA256 );
+
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI']    = '/wp-json/activitypub/1.0/inbox';
+		$_SERVER['HTTP_HOST']      = 'example.org';
+		$_SERVER['HTTPS']          = 'on';
+
+		$headers = array(
+			'Host'            => 'example.org',
+			'Signature-Input' => 'sig=' . $params,
+			'Signature'       => 'sig=:' . \base64_encode( $signature ) . ':',
+		);
+		if ( $with_digest ) {
+			$headers['Content-Digest'] = $digest;
+		}
+
+		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_body( $body );
+		$request->set_headers( $headers );
+
+		$result = Signature::verify_http_signature( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+
+		if ( null === $error ) {
+			$this->assertNotWPError( $result );
+		} else {
+			$this->assertWPError( $result );
+			$this->assertContains( $error, $result->get_error_codes() );
+		}
+	}
+
+	/**
+	 * Data provider for test_verify_http_signature_draft_requires_signed_headers.
+	 *
+	 * @return array[] Signed headers, whether a body and a Digest header are sent, the expected error code.
+	 */
+	public function signed_headers_provider() {
+		return array(
+			'host and digest'        => array( array( '(request-target)', 'host', 'date', 'digest' ), true, true, null ),
+			'host without body'      => array( array( '(request-target)', 'host', 'date' ), false, false, null ),
+			'no host'                => array( array( '(request-target)', 'date', 'digest' ), true, true, 'activitypub_signature_components' ),
+			'body not signed'        => array( array( '(request-target)', 'host', 'date' ), true, true, 'activitypub_signature_components' ),
+			'signed digest not sent' => array( array( '(request-target)', 'host', 'date', 'digest' ), true, false, 'missing_digest' ),
+			'digest without body'    => array( array( '(request-target)', 'host', 'date', 'digest' ), false, true, 'digest_mismatch' ),
+		);
+	}
+
+	/**
+	 * A draft signature has to sign the host and, with a body, the body's digest.
+	 *
+	 * Signed by hand because this class's own `sign()` always signs both.
+	 *
+	 * @dataProvider signed_headers_provider
+	 * @covers ::verify_http_signature
+	 * @covers \Activitypub\Signature\Http_Signature_Draft::verify
+	 * @covers \Activitypub\Signature\Http_Signature_Draft::verify_content_digest
+	 *
+	 * @param string[]    $signed      Signed headers.
+	 * @param bool        $with_body   Whether the request carries a body.
+	 * @param bool        $with_digest Whether the Digest header is sent.
+	 * @param string|null $error       The expected error code, null if the signature verifies.
+	 */
+	public function test_verify_http_signature_draft_requires_signed_headers( $signed, $with_body, $with_digest, $error ) {
+		$keys = Actors::get_keypair( 1 );
+
+		$mock = function () use ( $keys ) {
+			return array(
+				'id'        => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock );
+
+		// The digest is always of the activity, so one sent without a body does not match.
+		$activity = '{"type":"Create","actor":"https://example.org/author/admin"}';
+		$body     = $with_body ? $activity : '';
+		$date     = \gmdate( 'D, d M Y H:i:s T' );
+		$values   = array(
+			'(request-target)' => 'post /wp-json/activitypub/1.0/inbox',
+			'host'             => 'example.org',
+			'date'             => $date,
+			'digest'           => 'SHA-256=' . \base64_encode( \hash( 'sha256', $activity, true ) ),
+		);
+
+		// A header that is not sent is left out of the signed data.
+		$lines = array();
+		foreach ( $signed as $header ) {
+			if ( 'digest' !== $header || $with_digest ) {
+				$lines[] = \sprintf( '%s: %s', $header, $values[ $header ] );
+			}
+		}
+		\openssl_sign( \implode( "\n", $lines ), $signature, $keys['private_key'], \OPENSSL_ALGO_SHA256 );
+
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI']    = '/wp-json/activitypub/1.0/inbox';
+		$_SERVER['HTTP_HOST']      = 'example.org';
+
+		$headers = array(
+			'Host'      => 'example.org',
+			'Date'      => $date,
+			'Signature' => \sprintf(
+				'keyId="https://example.org/author/admin#main-key",algorithm="rsa-sha256",headers="%s",signature="%s"',
+				\implode( ' ', $signed ),
+				\base64_encode( $signature )
+			),
+		);
+		if ( $with_digest ) {
+			$headers['Digest'] = $values['digest'];
+		}
+
+		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_body( $body );
+		$request->set_headers( $headers );
+
+		$result = Signature::verify_http_signature( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+
+		if ( null === $error ) {
+			$this->assertNotWPError( $result );
+		} else {
+			$this->assertWPError( $result );
+			$this->assertContains( $error, $result->get_error_codes() );
+		}
+	}
+
+	/**
 	 * RFC 9421: a signature made out to this site still verifies when a proxy rewrote Host.
 	 *
 	 * @covers ::verify_http_signature

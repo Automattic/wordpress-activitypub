@@ -108,6 +108,19 @@ class Http_Signature_Draft implements Http_Signature {
 			return new \WP_Error( 'activitypub_signature', 'No Key ID present.' );
 		}
 
+		/*
+		 * Require the headers that tie a signature to this request: `host`, which get_signed_data()
+		 * checks is ours, and the digest of a body. A signature over less verifies on its own terms,
+		 * but could be presented to any site, with any body.
+		 */
+		if ( ! \in_array( 'host', $parsed['headers'], true ) ) {
+			return new \WP_Error( 'activitypub_signature_components', 'The signature does not cover the host.', array( 'status' => 401 ) );
+		}
+
+		if ( '' !== (string) $body && ! \in_array( 'digest', $parsed['headers'], true ) ) {
+			return new \WP_Error( 'activitypub_signature_components', 'The signature does not cover the request body.', array( 'status' => 401 ) );
+		}
+
 		// Read before the key is fetched, so a request made out to another host or out of its time window fails without a lookup.
 		$signed_data = $this->get_signed_data( $parsed['headers'], $parsed, $headers );
 		if ( ! $signed_data ) {
@@ -211,7 +224,12 @@ class Http_Signature_Draft implements Http_Signature {
 	 * @return bool|\WP_Error True, if the signature is valid, WP_Error on failure.
 	 */
 	private function verify_content_digest( $headers, $body ) {
-		if ( ! isset( $headers['digest'][0] ) || null === $body ) {
+		// A signed but absent header enters the signed data empty and would vouch for any body.
+		if ( ! isset( $headers['digest'][0] ) ) {
+			return '' === (string) $body ? true : new \WP_Error( 'missing_digest', 'The Digest header is missing.', array( 'status' => 401 ) );
+		}
+
+		if ( null === $body ) {
 			return true;
 		}
 
