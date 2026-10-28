@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Reaction types added by other plugins no longer cause PHP warnings and are now included in Jetpack.
