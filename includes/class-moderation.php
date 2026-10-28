@@ -43,9 +43,10 @@ class Moderation {
 	 * Activities that only take back what their sender sent, so no block stops them.
 	 *
 	 * A block keeps an actor's content out. Stopping its Delete or Undo would keep that content in
-	 * instead; whether the sender owns what it takes back is for the handler to check.
+	 * instead, and stopping its Reject would leave our Follow pending; whether the sender owns what
+	 * it takes back is for the handler to check. Update is not one: it changes what is shown.
 	 */
-	const RETRACTION_TYPES = array( 'Delete', 'Undo' );
+	const RETRACTION_TYPES = array( 'Delete', 'Undo', 'Reject' );
 
 	/**
 	 * Option key for site-wide blocked keywords.

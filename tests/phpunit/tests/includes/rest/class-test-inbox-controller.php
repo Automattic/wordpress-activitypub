@@ -445,7 +445,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		$fired  = array();
 		$record = static function ( $hook ) use ( &$fired ) {
-			if ( \preg_match( '/^activitypub_(handled_)?inbox_(shared_)?(delete|undo)$/', $hook ) ) {
+			if ( \preg_match( '/^activitypub_(handled_)?inbox_(shared_)?(delete|undo|reject)$/', $hook ) ) {
 				$fired[] = $hook;
 			}
 		};
@@ -458,7 +458,13 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 					'id'     => 'https://remote.example/activity/' . $type,
 					'type'   => $type,
 					'actor'  => $actor,
-					'object' => 'https://remote.example/post/1',
+					// A Reject answers our Follow, so it carries that Follow.
+					'object' => 'Reject' === $type ? array(
+						'id'     => \home_url( '/?follow=1' ),
+						'type'   => 'Follow',
+						'actor'  => Actors::get_by_id( $recipient )->get_id(),
+						'object' => $actor,
+					) : 'https://remote.example/post/1',
 					'to'     => array( 'https://www.w3.org/ns/activitystreams#Public', Actors::get_by_id( $recipient )->get_id() ),
 				)
 			)
@@ -484,6 +490,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		return array(
 			'Delete' => array( 'Delete' ),
 			'Undo'   => array( 'Undo' ),
+			'Reject' => array( 'Reject' ),
 		);
 	}
 
