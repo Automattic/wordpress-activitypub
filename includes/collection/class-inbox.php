@@ -12,6 +12,7 @@ use Activitypub\Activity\Base_Object;
 use Activitypub\Comment;
 
 use function Activitypub\is_activity_public;
+use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 
 /**
@@ -251,10 +252,11 @@ class Inbox {
 		 * comment behind) any activity whose public id it knows but does not own.
 		 *
 		 * Items stored before this meta existed have no actor recorded; those are let
-		 * through for backward compatibility rather than becoming permanently un-undoable.
+		 * through for backward compatibility rather than becoming permanently un-undoable,
+		 * but only from the host of the activity's id.
 		 */
 		$stored_actor = \get_post_meta( $inbox_item->ID, '_activitypub_activity_remote_actor', true );
-		if ( null !== $actor && $stored_actor && object_to_uri( $actor ) !== $stored_actor ) {
+		if ( null !== $actor && ( $stored_actor ? object_to_uri( $actor ) !== $stored_actor : ! is_same_host( $actor, $id ) ) ) {
 			return new \WP_Error(
 				'activitypub_inbox_undo_forbidden',
 				\__( 'Undo is not possible because the actor does not own the activity.', 'activitypub' ),

@@ -2138,6 +2138,222 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a comment without a recorded owner is only updated from its own host.
+	 *
+	 * @covers ::update_comment
+	 */
+	public function test_update_comment_without_owner_rejects_other_host() {
+		// The actor is not cached, so no owner is recorded, as for comments from before the mapping.
+		$comment_id = Interactions::add_comment(
+			array(
+				'actor'  => 'https://example.com/users/legacy-owner',
+				'id'     => 'https://example.com/activities/legacy-comment',
+				'object' => array(
+					'id'        => 'https://example.com/notes/legacy-note',
+					'content'   => 'Original content',
+					'inReplyTo' => self::$post_permalink,
+				),
+			)
+		);
+		$this->assertIsInt( $comment_id );
+		$this->assertEmpty( \get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true ) );
+
+		$result = Interactions::update_comment(
+			array(
+				'actor'  => 'https://attacker.example/users/evil',
+				'id'     => 'https://attacker.example/activities/takeover',
+				'object' => array(
+					'id'        => 'https://example.com/notes/legacy-note',
+					'content'   => 'HACKED content',
+					'inReplyTo' => self::$post_permalink,
+				),
+			)
+		);
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_update_forbidden', $result->get_error_code() );
+		$this->assertStringNotContainsString( 'HACKED', \get_comment( $comment_id )->comment_content );
+
+		// A media object is found by its url, which has to be on the actor's host as well.
+		$result = Interactions::update_comment(
+			array(
+				'actor'  => 'https://attacker.example/users/evil',
+				'id'     => 'https://attacker.example/activities/takeover-image',
+				'object' => array(
+					'type'      => 'Image',
+					'id'        => 'https://attacker.example/image',
+					'url'       => 'https://example.com/notes/legacy-note',
+					'content'   => 'HACKED content',
+					'inReplyTo' => self::$post_permalink,
+				),
+			)
+		);
+		$this->assertWPError( $result );
+		$this->assertStringNotContainsString( 'HACKED', \get_comment( $comment_id )->comment_content );
+
+		// The author on the comment's own host can still update it.
+		Interactions::update_comment(
+			array(
+				'actor'  => 'https://example.com/users/legacy-owner',
+				'id'     => 'https://example.com/activities/legacy-edit',
+				'object' => array(
+					'id'        => 'https://example.com/notes/legacy-note',
+					'content'   => 'Edited by owner',
+					'inReplyTo' => self::$post_permalink,
+				),
+			)
+		);
+		$this->assertStringContainsString( 'Edited by owner', \get_comment( $comment_id )->comment_content );
+	}
+
+	/**
+	 * Test that a media reply, stored under its url, can be updated by its author.
+	 *
+	 * @covers ::update_comment
+	 */
+	public function test_update_comment_finds_media_reply_by_url() {
+		$object = array(
+			'type'      => 'Image',
+			'id'        => 'https://example.com/media/1',
+			'url'       => 'https://example.com/media/1.jpg',
+			'content'   => 'Original content',
+			'inReplyTo' => self::$post_permalink,
+		);
+
+		$comment_id = Interactions::add_comment(
+			array(
+				'actor'  => 'https://example.com/users/photographer',
+				'id'     => 'https://example.com/activities/media-reply',
+				'object' => $object,
+			)
+		);
+		$this->assertIsInt( $comment_id );
+
+		$object['content'] = 'Edited by owner';
+		Interactions::update_comment(
+			array(
+				'actor'  => 'https://example.com/users/photographer',
+				'id'     => 'https://example.com/activities/media-edit',
+				'object' => $object,
+			)
+		);
+
+		$this->assertStringContainsString( 'Edited by owner', \get_comment( $comment_id )->comment_content );
+	}
+
+	/**
+	 * Test that a recorded owner may update the comment from another host, as after a Move.
+	 *
+	 * @covers ::update_comment
+	 */
+	public function test_update_comment_by_owner_on_other_host() {
+		$old_uri = 'https://example.com/users/mover';
+		$new_uri = 'https://new.example/users/mover';
+
+		Remote_Actors::upsert(
+			array(
+				'id'                => $old_uri,
+				'type'              => 'Person',
+				'preferredUsername' => 'mover',
+				'inbox'             => $old_uri . '/inbox',
+			)
+		);
+		$new_id = Remote_Actors::upsert(
+			array(
+				'id'                => $new_uri,
+				'type'              => 'Person',
+				'preferredUsername' => 'mover',
+				'inbox'             => $new_uri . '/inbox',
+			)
+		);
+
+		$object     = array(
+			'id'        => 'https://example.com/notes/moved-note',
+			'content'   => 'Original content',
+			'inReplyTo' => self::$post_permalink,
+		);
+		$comment_id = Interactions::add_comment(
+			array(
+				'actor'  => $old_uri,
+				'id'     => 'https://example.com/activities/moved-comment',
+				'object' => $object,
+			)
+		);
+		$this->assertIsInt( $comment_id );
+
+		// The Move merge points the comment at the new account.
+		\update_comment_meta( $comment_id, '_activitypub_remote_actor_id', $new_id );
+
+		$object['content'] = 'Edited by the old account';
+		$result            = Interactions::update_comment(
+			array(
+				'actor'  => $old_uri,
+				'id'     => 'https://example.com/activities/old-edit',
+				'object' => $object,
+			)
+		);
+		$this->assertWPError( $result, 'The old account no longer owns the comment.' );
+
+		$object['content'] = 'Edited by the new account';
+		Interactions::update_comment(
+			array(
+				'actor'  => $new_uri,
+				'id'     => 'https://new.example/activities/new-edit',
+				'object' => $object,
+			)
+		);
+		$this->assertStringContainsString( 'Edited by the new account', \get_comment( $comment_id )->comment_content );
+	}
+
+	/**
+	 * Test that a comment whose recorded owner is gone cannot be updated by another actor.
+	 *
+	 * @covers ::update_comment
+	 */
+	public function test_update_comment_rejects_when_owner_is_gone() {
+		$owner_uri = 'https://example.com/users/gone-owner';
+
+		$owner_id = Remote_Actors::upsert(
+			array(
+				'id'                => $owner_uri,
+				'type'              => 'Person',
+				'preferredUsername' => 'owner',
+				'inbox'             => $owner_uri . '/inbox',
+			)
+		);
+
+		$comment_id = Interactions::add_comment(
+			array(
+				'actor'  => $owner_uri,
+				'id'     => 'https://example.com/activities/gone-comment',
+				'object' => array(
+					'id'        => 'https://example.com/notes/gone-note',
+					'content'   => 'Original content',
+					'inReplyTo' => self::$post_permalink,
+				),
+			)
+		);
+		$this->assertEquals( $owner_id, \get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true ) );
+
+		Remote_Actors::delete( $owner_id );
+
+		// Another actor on the same host, so only the owner check stands in the way.
+		$result = Interactions::update_comment(
+			array(
+				'actor'  => 'https://example.com/users/neighbour',
+				'id'     => 'https://example.com/activities/neighbour-edit',
+				'object' => array(
+					'id'        => 'https://example.com/notes/gone-note',
+					'content'   => 'HACKED content',
+					'inReplyTo' => self::$post_permalink,
+				),
+			)
+		);
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_update_forbidden', $result->get_error_code() );
+		$this->assertStringNotContainsString( 'HACKED', \get_comment( $comment_id )->comment_content );
+	}
+
+	/**
 	 * Persisting a comment must not leave global comment filters attached.
 	 *
 	 * The Akismet nonce override and the other guards are only meant to apply to the
