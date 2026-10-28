@@ -92,6 +92,11 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	 * @return void
 	 */
 	public static function maybe_disable_cache() {
+		// A request through `?activitypub` or the `/activitypub/` endpoint has its own cache entry, whatever `Accept` says.
+		if ( false !== \get_query_var( 'activitypub', false ) ) {
+			return;
+		}
+
 		$accept = isset( $_SERVER['HTTP_ACCEPT'] ) ? \wp_unslash( $_SERVER['HTTP_ACCEPT'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		$bucket = (bool) \preg_match( \sprintf( '#%s#i', self::ACCEPT_PATTERN ), $accept );
 

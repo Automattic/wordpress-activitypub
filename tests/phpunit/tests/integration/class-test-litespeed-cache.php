@@ -245,7 +245,9 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * A query parameter can request ActivityPub even with a browser Accept header.
+	 * A request through the `activitypub` query var stays cacheable with a browser Accept header.
+	 *
+	 * The URL already gives it its own cache entry, so the Accept bucket cannot mix it up.
 	 *
 	 * @covers ::maybe_disable_cache
 	 * @runInSeparateProcess
@@ -254,17 +256,16 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 	public function test_maybe_disable_cache_for_activitypub_query_parameter() {
 		Query::get_instance()->__destruct();
 		$_SERVER['HTTP_ACCEPT'] = 'text/html';
-		$_GET['activitypub']    = '1';
-		\add_filter( 'activitypub_should_negotiate_content', '__return_true' );
+		// Both `?activitypub` and the `/activitypub/` endpoint set the query var.
+		\set_query_var( 'activitypub', '' );
 		$before = \did_action( 'litespeed_control_set_nocache' );
 
 		Litespeed_Cache::maybe_disable_cache();
 
-		\remove_filter( 'activitypub_should_negotiate_content', '__return_true' );
-		unset( $_GET['activitypub'], $_SERVER['HTTP_ACCEPT'] );
+		unset( $GLOBALS['wp_query']->query_vars['activitypub'], $_SERVER['HTTP_ACCEPT'] );
 		Query::get_instance()->__destruct();
 
-		$this->assertGreaterThan( $before, \did_action( 'litespeed_control_set_nocache' ) );
+		$this->assertSame( $before, \did_action( 'litespeed_control_set_nocache' ) );
 	}
 
 	/**
