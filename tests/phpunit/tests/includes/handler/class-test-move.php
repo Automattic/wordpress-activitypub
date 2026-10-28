@@ -471,9 +471,61 @@ class Test_Move extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that verify_move matches origin by url when id is not in alsoKnownAs.
+	 * Test that verify_move accepts alsoKnownAs entries given as objects.
 	 */
-	public function test_handle_move_matches_origin_by_url() {
+	public function test_handle_move_matches_also_known_as_object() {
+		$target = 'https://example.com/new-profile3';
+		$origin = 'https://example.com/old-profile3';
+
+		$origin_object = array(
+			'type'    => 'Person',
+			'id'      => $origin,
+			'inbox'   => 'https://example.com/old-profile3/inbox',
+			'movedTo' => $target,
+		);
+
+		$target_object = array(
+			'type'        => 'Person',
+			'id'          => $target,
+			'inbox'       => 'https://example.com/new-profile3/inbox',
+			'alsoKnownAs' => array(
+				array(
+					'id'   => $origin,
+					'type' => 'Person',
+				),
+			),
+		);
+
+		$id = Remote_Actors::upsert( $origin_object );
+		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
+
+		$filter = function ( $pre, $url_or_object ) use ( $target, $target_object, $origin, $origin_object ) {
+			$objects = array(
+				$target => $target_object,
+				$origin => $origin_object,
+			);
+			return $objects[ object_to_uri( $url_or_object ) ] ?? $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+
+		Move::handle_move(
+			array(
+				'type'   => 'Move',
+				'actor'  => $origin,
+				'object' => $target,
+			),
+			1
+		);
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertSame( $target, Remote_Actors::get_by_uri( $target )->guid, 'The move should be applied.' );
+	}
+
+	/**
+	 * Test that verify_move does not accept the origin's url in place of its id.
+	 */
+	public function test_handle_move_ignores_origin_url() {
 		$target = 'https://example.com/new-profile';
 		$origin = 'https://example.com/old-profile';
 
@@ -522,17 +574,16 @@ class Test_Move extends \WP_UnitTestCase {
 
 		Move::handle_move( $activity, 1 );
 
-		$updated_follower = Remote_Actors::get_by_uri( $target );
-		$this->assertNotNull( $updated_follower );
-		$this->assertEquals( $target, $updated_follower->guid );
-
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertWPError( Remote_Actors::get_by_uri( $target ), 'The move must not be applied.' );
+		$this->assertSame( $id, Remote_Actors::get_by_uri( $origin )->ID, 'The origin must stay as it is.' );
 	}
 
 	/**
-	 * Test that verify_move matches origin by webfinger when id is not in alsoKnownAs.
+	 * Test that verify_move does not accept the origin's webfinger in place of its id.
 	 */
-	public function test_handle_move_matches_origin_by_webfinger() {
+	public function test_handle_move_ignores_origin_webfinger() {
 		$target = 'https://example.com/new-profile2';
 		$origin = 'https://example.com/old-profile2';
 
@@ -582,10 +633,9 @@ class Test_Move extends \WP_UnitTestCase {
 
 		Move::handle_move( $activity, 1 );
 
-		$updated_follower = Remote_Actors::get_by_uri( $target );
-		$this->assertNotNull( $updated_follower );
-		$this->assertEquals( $target, $updated_follower->guid );
-
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertWPError( Remote_Actors::get_by_uri( $target ), 'The move must not be applied.' );
+		$this->assertSame( $id, Remote_Actors::get_by_uri( $origin )->ID, 'The origin must stay as it is.' );
 	}
 }
