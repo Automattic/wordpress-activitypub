@@ -10,6 +10,7 @@ namespace Activitypub\Tests\Handler;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\Handler\Move;
 
 use function Activitypub\object_to_uri;
@@ -383,6 +384,23 @@ class Test_Move extends \WP_UnitTestCase {
 		\add_post_meta( $origin_id, Followers::FOLLOWER_META_KEY, $this->user_id_2 );
 		\add_post_meta( $target_id, Followers::FOLLOWER_META_KEY, $this->user_id );
 
+		// A comment and a Reader post of the origin.
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => self::factory()->post->create(),
+				'comment_meta'    => array(
+					'protocol'                     => 'activitypub',
+					'_activitypub_remote_actor_id' => $origin_id,
+				),
+			)
+		);
+		$reader_id  = self::factory()->post->create(
+			array(
+				'post_type'  => Remote_Posts::POST_TYPE,
+				'meta_input' => array( '_activitypub_remote_actor_id' => $origin_id ),
+			)
+		);
+
 		// Clear the cache.
 		\wp_cache_delete( $origin_id, 'posts' );
 		\wp_cache_delete( $target_id, 'posts' );
@@ -440,6 +458,10 @@ class Test_Move extends \WP_UnitTestCase {
 
 		// Check if the origin follower was deleted.
 		$this->assertWPError( Remote_Actors::get_by_uri( $origin ) );
+
+		// The origin's comments and Reader posts belong to the target now.
+		$this->assertEquals( $target_id, \get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true ) );
+		$this->assertEquals( $target_id, \get_post_meta( $reader_id, '_activitypub_remote_actor_id', true ) );
 
 		// The moved follower's inbox list points at the target now, and the origin is gone everywhere.
 		$this->assertSame( array( 'https://example.com/new-profile/inbox' ), Followers::get_inboxes( $this->user_id_2 ) );

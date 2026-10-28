@@ -137,8 +137,9 @@ class Interactions {
 			return $meta;
 		}
 
-		// Determine comment_ID.
-		$comment      = object_id_to_comment( \esc_url_raw( $activity['object']['id'] ) );
+		// Determine comment_ID, by the same identifier add_comment() stored it under.
+		$object_id    = object_to_uri( $activity['object'] );
+		$comment      = object_id_to_comment( \esc_url_raw( $object_id ) );
 		$comment_data = \get_comment( $comment, ARRAY_A );
 
 		if ( ! $comment_data ) {
@@ -153,15 +154,16 @@ class Interactions {
 		 * points at it.
 		 *
 		 * Comments created before this mapping existed have no owner recorded; those are let
-		 * through for backward compatibility (matching the Undo path) rather than becoming
-		 * permanently un-editable. On mismatch, return a WP_Error rather than false: false would
-		 * make the Update handler fall back to Create (which re-dispatches to Update for an
-		 * existing comment and recurses), while the unchanged comment array would be read as a
-		 * successful update and relayed onward. A WP_Error is handled but unsuccessful: no Create
-		 * fallback, and the handled-update success flag stays false.
+		 * through for backward compatibility, but only from the host of the identifier the comment
+		 * was found by, as in add_comment(). A recorded owner whose actor post is gone is rejected.
+		 * On mismatch, return a WP_Error rather than false: false would make the Update handler
+		 * fall back to Create (which re-dispatches to Update for an existing comment and recurses),
+		 * while the unchanged comment array would be read as a successful update and relayed
+		 * onward. A WP_Error is handled but unsuccessful: no Create fallback, and the
+		 * handled-update success flag stays false.
 		 */
-		$owner = \get_post( (int) \get_comment_meta( $comment_data['comment_ID'], '_activitypub_remote_actor_id', true ) );
-		if ( $owner instanceof \WP_Post && object_to_uri( $activity['actor'] ) !== $owner->guid ) {
+		$owner_id = (int) \get_comment_meta( $comment_data['comment_ID'], '_activitypub_remote_actor_id', true );
+		if ( $owner_id ? object_to_uri( $activity['actor'] ) !== \get_post_field( 'guid', $owner_id, 'raw' ) : ! is_same_host( $activity['actor'], $object_id ) ) {
 			return new \WP_Error(
 				'activitypub_update_forbidden',
 				\__( 'The Update actor does not own the target comment.', 'activitypub' )
