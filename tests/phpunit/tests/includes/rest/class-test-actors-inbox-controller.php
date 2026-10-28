@@ -494,6 +494,9 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$remote_object_filter = function ( $json, $actor ) {
 			$public_key = Actors::get_public_key( self::$user_id );
 
+			// The key is fetched by its keyId; like a real server, answer with the actor's id without the fragment.
+			$actor = \strip_fragment_from_url( $actor );
+
 			// Return ActivityPub Profile with signature.
 			return array(
 				'id'        => $actor,
