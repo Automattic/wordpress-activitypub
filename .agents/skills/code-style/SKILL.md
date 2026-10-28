@@ -154,8 +154,12 @@ Expose ActivityPub endpoints.
 ## Plugin-Specific Helper Functions
 
 ```php
-// Get remote actor metadata.
-$metadata = get_remote_metadata_by_actor( $actor_url );
+// Fetch a remote actor or object document from its own host (cached; pass array( 'cached' => false ) for a fresh copy).
+$actor = Proxy::get( $actor_url );
+
+// Not get_remote_metadata_by_actor(): it returns the stored ap_actor record, which can be stale.
+// An incoming Update writes its embedded actor into that record; it only stays the actor's own
+// data because the signing key's owner and the object's id both have to be the actor.
 
 // Convert ActivityPub object to URI string.
 $uri = object_to_uri( $object );

@@ -185,6 +185,16 @@ function maybe_set_no_store( $response ) {
 /**
  * Requests the Meta-Data from the Actors profile.
  *
+ * Avoid this function in new code and use {@see \Activitypub\Proxy::get()} instead. It returns
+ * the stored remote actor first (the `ap_actor` post, via {@see Remote_Actors::fetch_by_various()},
+ * which resolves an `acct:` handle through WebFinger first) and only fetches when none is stored,
+ * so it can be stale, and `$cached` is ignored.
+ *
+ * Every writer of that record stores what `Proxy::get()` fetched from the actor's own host, except
+ * an incoming Update, which stores the actor it embeds. Two checks keep that the actor's own data:
+ * the inbox requires the signing key's owner to be the actor, and `Update::update_actor()` requires
+ * the object's id to be the actor. Neither may be relaxed.
+ *
  * @param array|string $actor  The Actor array or URL.
  * @param bool         $cached Optional. Whether the result should be cached. Default true.
  *

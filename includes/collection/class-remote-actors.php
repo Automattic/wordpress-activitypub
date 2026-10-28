@@ -809,11 +809,14 @@ class Remote_Actors {
 	/**
 	 * Get public key from key_id.
 	 *
-	 * @param string $key_id The URL to the public key.
+	 * @since unreleased Added the `$owner` parameter.
+	 *
+	 * @param string      $key_id The URL to the public key.
+	 * @param string|null $owner  Optional. Set to the id of the actor the key was taken from.
 	 *
 	 * @return resource|\WP_Error The public key resource or WP_Error.
 	 */
-	public static function get_public_key( $key_id ) {
+	public static function get_public_key( $key_id, &$owner = null ) {
 		$no_profile_error = new \WP_Error( 'activitypub_no_remote_profile_found', 'No Profile found or Profile not accessible', array( 'status' => 401 ) );
 		$no_key_error     = new \WP_Error( 'activitypub_no_remote_key_found', 'No Public-Key found', array( 'status' => 401 ) );
 
@@ -861,6 +864,9 @@ class Remote_Actors {
 		if ( ! $key_resource ) {
 			return $no_key_error;
 		}
+
+		// The actor this key belongs to, so the caller can bind it to the activity's actor.
+		$owner = $actor['id'];
 
 		return $key_resource;
 	}

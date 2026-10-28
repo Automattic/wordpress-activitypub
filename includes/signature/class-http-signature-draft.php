@@ -91,10 +91,11 @@ class Http_Signature_Draft implements Http_Signature {
 	 * Verify the HTTP Signature against a request.
 	 *
 	 * @since 9.0.0 Returns the verified keyId on success instead of `true`.
+	 * @since unreleased Returns the id of the actor that owns the verified key instead of the keyId.
 	 *
 	 * @param array       $headers The HTTP headers.
 	 * @param string|null $body    The request body, if applicable.
-	 * @return string|\WP_Error The verified keyId on success, WP_Error on failure.
+	 * @return string|\WP_Error The id of the actor that owns the verified key on success, WP_Error on failure.
 	 */
 	public function verify( array $headers, $body = null ) {
 		if ( ! isset( $headers['signature'] ) && ! isset( $headers['authorization'] ) ) {
@@ -127,9 +128,15 @@ class Http_Signature_Draft implements Http_Signature {
 			return new \WP_Error( 'invalid_signed_data', 'Signed data is invalid or expired.' );
 		}
 
-		$public_key = Remote_Actors::get_public_key( $parsed['keyId'] );
+		$owner      = null;
+		$public_key = Remote_Actors::get_public_key( $parsed['keyId'], $owner );
 		if ( \is_wp_error( $public_key ) ) {
 			return $public_key;
+		}
+
+		// The owner is what callers bind to the actor, so a key without one does not verify anything.
+		if ( ! \is_string( $owner ) || '' === $owner ) {
+			return new \WP_Error( 'activitypub_no_key_owner', 'The signing key has no owner.', array( 'status' => 401 ) );
 		}
 
 		$algorithm = $this->get_signature_algorithm( $parsed, $public_key );
@@ -148,8 +155,8 @@ class Http_Signature_Draft implements Http_Signature {
 			return new \WP_Error( 'activitypub_signature', 'Invalid signature', array( 'status' => 401 ) );
 		}
 
-		// Return the verified keyId so the caller can bind it to the activity actor.
-		return $parsed['keyId'];
+		// Return the key's owner so the caller can bind it to the activity actor.
+		return $owner;
 	}
 
 	/**

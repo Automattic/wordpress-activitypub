@@ -659,85 +659,77 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	/**
 	 * Data provider for verify_key_id tests.
 	 *
-	 * @return array[] Test cases: [ verified_key_id, actor, expected_pass ].
+	 * @return array[] Test cases: [ verified key owner, actor, expected_pass ].
 	 */
 	public function data_verify_key_id() {
 		return array(
-			'matching hosts'          => array(
-				'https://remote.example/users/alice#main-key',
+			'own key'                 => array(
+				'https://remote.example/users/alice',
 				'https://remote.example/users/alice',
 				true,
 			),
-			'mismatched hosts'        => array(
-				'https://evil.example/users/alice#main-key',
+			// A user on the same server who holds their own key must not sign for another user.
+			'key of another actor'    => array(
+				'https://remote.example/users/mallory',
+				'https://remote.example/users/alice',
+				false,
+			),
+			'key on another host'     => array(
+				'https://evil.example/users/alice',
 				'https://remote.example/users/alice',
 				false,
 			),
 			'no actor in body'        => array(
-				'https://remote.example/users/alice#main-key',
+				'https://remote.example/users/alice',
 				null,
 				true,
 			),
-			// A missing keyId cannot be bound to the actor, so it must fail closed.
-			'no verified key id'      => array(
+			// No owner cannot be bound to the actor, so it must fail closed.
+			'no key owner'            => array(
 				null,
 				'https://remote.example/users/alice',
 				false,
 			),
-			// A non-URL `acct:` keyId resolves to a real key but yields no host: the bypass this guards.
-			'acct key id cannot bind' => array(
-				'acct:mallory@attacker.example',
-				'https://victim.example/users/alice',
-				false,
-			),
-			// An `acct:` actor likewise has no host and cannot be bound.
-			'acct actor cannot bind'  => array(
-				'https://remote.example/users/alice#main-key',
-				'acct:alice@remote.example',
-				false,
-			),
-			// The FeatureRequest fill sets actor = strip_fragment( keyId ); a hostless `acct:`
-			// keyId makes both sides hostless, which must still fail closed rather than self-match.
-			'acct key id and actor'   => array(
-				'acct:mallory@attacker.example',
-				'acct:mallory@attacker.example',
-				false,
-			),
-			// An empty keyId string has no host and cannot be bound.
-			'empty key id'            => array(
+			'empty key owner'         => array(
 				'',
 				'https://remote.example/users/alice',
 				false,
 			),
+			'acct actor cannot bind'  => array(
+				'https://remote.example/users/alice',
+				'acct:alice@remote.example',
+				false,
+			),
+			// A hostless owner must not bind by matching a hostless actor, as the FeatureRequest fill could produce.
+			'acct owner and actor'    => array(
+				'acct:mallory@attacker.example',
+				'acct:mallory@attacker.example',
+				false,
+			),
 			'actor as object with id' => array(
-				'https://remote.example/users/alice#main-key',
+				'https://remote.example/users/alice',
 				array( 'id' => 'https://remote.example/users/alice' ),
 				true,
 			),
 			'actor object mismatch'   => array(
-				'https://evil.example/users/alice#main-key',
+				'https://remote.example/users/mallory',
 				array( 'id' => 'https://remote.example/users/alice' ),
 				false,
-			),
-			'case-insensitive hosts'  => array(
-				'https://Remote.Example/users/alice#main-key',
-				'https://remote.example/users/alice',
-				true,
 			),
 		);
 	}
 
 	/**
-	 * Test that verify_key_id checks the verified keyId's host against the actor host.
+	 * Test that verify_key_id requires the verified key's owner to be the actor.
 	 *
 	 * @dataProvider data_verify_key_id
 	 * @covers ::verify_key_id
 	 *
-	 * @param string|null       $key_id      The keyId that verified the signature.
+	 * @param string|null       $owner       The id of the actor that owns the verified key.
 	 * @param string|array|null $actor       The actor value in the JSON body.
 	 * @param bool              $should_pass Whether the check should pass.
 	 */
-	public function test_verify_key_id( $key_id, $actor, $should_pass ) {
+	public function test_verify_key_id( $owner, $actor, $should_pass ) {
 		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
 
 		$body = array(
@@ -758,7 +750,7 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		if ( \PHP_VERSION_ID < 80100 ) {
 			$method->setAccessible( true );
 		}
-		$result = $method->invoke( $this->instance, $request, $key_id );
+		$result = $method->invoke( $this->instance, $request, $owner );
 
 		if ( $should_pass ) {
 			$this->assertTrue( $result );
