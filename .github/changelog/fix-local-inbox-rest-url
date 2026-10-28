@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Activities between accounts on the same site are now delivered on sites installed in a subdirectory or using plain permalinks.
