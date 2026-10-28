@@ -577,3 +577,41 @@ function get_quote_intent_url() {
 
 	return \esc_url_raw( $url );
 }
+
+/**
+ * Get the post an interaction with a URL lands on.
+ *
+ * The URL is a local post, a stored remote post, or a comment, in which case the comment's post.
+ * Storing an interaction and checking blocks on it both resolve it here, so they agree.
+ *
+ * @since unreleased
+ *
+ * @param string $url               The target URL.
+ * @param int    $parent_comment_id Optional. The comment the URL resolved to, see url_to_commentid().
+ *
+ * @return int The post ID, or 0 when the target is unknown.
+ */
+function get_target_post_id( $url, $parent_comment_id = 0 ) {
+	if ( ! $url ) {
+		return 0;
+	}
+
+	$url     = \esc_url_raw( $url );
+	$post_id = \url_to_postid( $url );
+
+	if ( ! $post_id ) {
+		$remote_post = Remote_Posts::get_by_guid( $url );
+		if ( $remote_post instanceof \WP_Post ) {
+			$post_id = $remote_post->ID;
+		}
+	}
+
+	if ( ! $post_id && $parent_comment_id ) {
+		$parent_comment = \get_comment( $parent_comment_id );
+		if ( $parent_comment instanceof \WP_Comment ) {
+			$post_id = $parent_comment->comment_post_ID;
+		}
+	}
+
+	return (int) $post_id;
+}

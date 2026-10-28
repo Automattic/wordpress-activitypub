@@ -507,6 +507,22 @@ class Scheduler {
 		$context  = Inbox::CONTEXT_INBOX;
 		$user_ids = Inbox::get_recipients( $inbox_item->ID );
 
+		// A block can be added after the activity was stored, so the inbox decision is made again.
+		if ( Moderation::activity_is_blocked( $activity ) ) {
+			return;
+		}
+
+		foreach ( $user_ids as $key => $user_id ) {
+			if ( Moderation::activity_is_blocked_for_user( $activity, $user_id ) ) {
+				unset( $user_ids[ $key ] );
+			}
+		}
+
+		if ( ! $user_ids ) {
+			return;
+		}
+		$user_ids = \array_values( $user_ids );
+
 		/**
 		 * Fires after any ActivityPub Inbox activity has been handled, regardless of activity type.
 		 *

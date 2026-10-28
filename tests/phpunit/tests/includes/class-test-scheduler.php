@@ -17,6 +17,7 @@ use Activitypub\Collection\Remote_Posts;
 use Activitypub\Comment;
 use Activitypub\Dispatcher;
 use Activitypub\Migration;
+use Activitypub\Moderation;
 use Activitypub\Scheduler;
 
 use function Activitypub\add_to_outbox;
@@ -1053,5 +1054,54 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$this->assertSame( $uri, \get_post( $id )->guid, 'The cached actor guid must be left unchanged.' );
 		$this->assertSame( 'Old Name', \get_post( $id )->post_title, 'A changed remote identity must not be applied to the cached actor.' );
 		$this->assertEmpty( Remote_Actors::get_outdated(), 'A skipped actor must be touched so it is not re-fetched on the next run.' );
+	}
+
+	/**
+	 * A block added after an activity was stored stops it when the stored activity is processed.
+	 *
+	 * @covers ::process_inbox_activity
+	 */
+	public function test_process_inbox_activity_rechecks_blocks() {
+		$actor   = 'https://remote.example/@test';
+		$owner   = self::factory()->user->create( array( 'role' => 'author' ) );
+		$post_id = self::factory()->post->create( array( 'post_author' => $owner ) );
+
+		$activity = Activity::init_from_array(
+			array(
+				'id'     => 'https://remote.example/activity/queued-reply',
+				'type'   => 'Create',
+				'actor'  => $actor,
+				'object' => array(
+					'id'        => 'https://remote.example/post/queued-reply',
+					'type'      => 'Note',
+					'content'   => 'Hello',
+					'inReplyTo' => \get_permalink( $post_id ),
+				),
+			)
+		);
+		$this->assertIsInt( Inbox::add( $activity, array( $owner ) ) );
+
+		$handled = new \MockAction();
+		\add_action( 'activitypub_handled_inbox', array( $handled, 'action' ) );
+
+		Scheduler::process_inbox_activity( $activity->get_id() );
+		$this->assertSame( 1, $handled->get_call_count(), 'Without a block the stored activity is handled.' );
+
+		// Blocking an actor stores its profile, so serve one without a request.
+		$profile = static function ( $response, $url ) use ( $actor ) {
+			return $actor === $url ? array(
+				'id'    => $actor,
+				'type'  => 'Person',
+				'inbox' => $actor . '/inbox',
+			) : $response;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $profile, 10, 2 );
+		$this->assertTrue( Moderation::add_user_block( $owner, Moderation::TYPE_ACTOR, $actor ) );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $profile, 10 );
+
+		Scheduler::process_inbox_activity( $activity->get_id() );
+		\remove_action( 'activitypub_handled_inbox', array( $handled, 'action' ) );
+
+		$this->assertSame( 1, $handled->get_call_count(), 'A block added after storing must stop the activity.' );
 	}
 }

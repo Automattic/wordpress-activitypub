@@ -174,6 +174,37 @@ function is_quote_activity( $data ) {
 }
 
 /**
+ * Get the URL a quote activity quotes.
+ *
+ * Checks the quote properties in priority order: quote, quoteUrl, quoteUri, _misskey_quote.
+ *
+ * @since unreleased
+ *
+ * @param array $activity The activity array.
+ *
+ * @return string|false The quote URL or false if not found.
+ */
+function get_quote_url( $activity ) {
+	if ( ! empty( $activity['object']['quote'] ) ) {
+		return object_to_uri( $activity['object']['quote'] );
+	}
+
+	if ( ! empty( $activity['object']['quoteUrl'] ) ) {
+		return object_to_uri( $activity['object']['quoteUrl'] );
+	}
+
+	if ( ! empty( $activity['object']['quoteUri'] ) ) {
+		return object_to_uri( $activity['object']['quoteUri'] );
+	}
+
+	if ( ! empty( $activity['object']['_misskey_quote'] ) ) {
+		return object_to_uri( $activity['object']['_misskey_quote'] );
+	}
+
+	return false;
+}
+
+/**
  * Get the URI of an ActivityPub object.
  *
  * @param mixed $data The ActivityPub object.

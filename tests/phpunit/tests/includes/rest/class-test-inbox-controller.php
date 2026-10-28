@@ -287,6 +287,154 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	}
 
 	/**
+	 * An owner's block stops every activity that targets their content, before any handler runs.
+	 *
+	 * The activity also goes to another local user who has not blocked the actor, so a handler
+	 * would run for that recipient if only recipients decided.
+	 *
+	 * @dataProvider data_owner_blocked_activities
+	 * @covers ::create_item
+	 * @covers \Activitypub\Moderation::activity_is_blocked_by_content_owner
+	 *
+	 * @param string $type     The activity type.
+	 * @param string $target   Where the activity points: `post`, `comment`, `remote comment`, `remote post` or `comment on remote post`.
+	 * @param string $property How it points there: `object`, `inReplyTo` or `quote`.
+	 * @param bool   $blocked  Whether the owner's block stops it.
+	 */
+	public function test_owner_block_stops_activity( $type, $target, $property, $blocked = true ) {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		$actor     = 'https://remote.example/@test';
+		$owner     = self::factory()->user->create( array( 'role' => 'author' ) );
+		$other     = self::factory()->user->create( array( 'role' => 'author' ) );
+		$post_id   = self::factory()->post->create( array( 'post_author' => 'comment' === $target ? $other : $owner ) );
+		$target_id = \get_permalink( $post_id );
+		if ( \in_array( $target, array( 'remote post', 'comment on remote post' ), true ) ) {
+			// A cached remote object, here with an author, which does not make it that user's content.
+			$target_id = 'https://elsewhere.example/post/1';
+			$post_id   = self::factory()->post->create(
+				array(
+					'post_type'   => \Activitypub\Collection\Remote_Posts::POST_TYPE,
+					'post_author' => $owner,
+					'guid'        => $target_id,
+				)
+			);
+		}
+		if ( 'comment on remote post' === $target ) {
+			$target = 'comment';
+		}
+		if ( 'comment' === $target ) {
+			$comment_id = self::factory()->comment->create(
+				array(
+					'comment_post_ID' => $post_id,
+					'user_id'         => $owner,
+				)
+			);
+			$target_id  = \add_query_arg( 'c', $comment_id, \home_url( '/' ) );
+		}
+		if ( 'remote comment' === $target ) {
+			// A reply received earlier, so it has no local author and the post's author decides.
+			$target_id = 'https://elsewhere.example/reply/1';
+			self::factory()->comment->create(
+				array(
+					'comment_post_ID' => $post_id,
+					'comment_meta'    => array(
+						'source_id' => $target_id,
+						'protocol'  => 'activitypub',
+					),
+				)
+			);
+		}
+
+		$object = array(
+			'id'        => 'https://remote.example/post/' . $type,
+			'type'      => 'Note',
+			'content'   => 'Hello',
+			'published' => '2020-01-01T00:00:00Z',
+		);
+		if ( 'object' !== $property ) {
+			$object[ $property ] = $target_id;
+		}
+
+		$json = array(
+			'id'     => 'https://remote.example/activity/' . $type,
+			'type'   => $type,
+			'actor'  => $actor,
+			'object' => 'object' === $property ? $target_id : $object,
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public', Actors::get_by_id( $other )->get_id() ),
+		);
+		if ( 'QuoteRequest' === $type ) {
+			$json['instrument'] = $object;
+		}
+
+		// Blocking an actor stores its profile, so serve one without a request.
+		$profile = static function ( $response, $url ) use ( $actor ) {
+			return $actor === $url ? array(
+				'id'    => $actor,
+				'type'  => 'Person',
+				'inbox' => $actor . '/inbox',
+			) : $response;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $profile, 10, 2 );
+
+		$fired  = array();
+		$record = static function ( $hook ) use ( &$fired ) {
+			if ( \preg_match( '/^activitypub_(handled_)?inbox(_|$)/', $hook ) && 'activitypub_inbox_create_item' !== $hook ) {
+				$fired[] = $hook;
+			}
+		};
+
+		$send = function () use ( $json, $record, &$fired ) {
+			$fired   = array();
+			$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+			$request->set_header( 'Content-Type', 'application/activity+json' );
+			$request->set_body( \wp_json_encode( $json ) );
+
+			\add_action( 'all', $record );
+			$this->assertSame( 202, \rest_do_request( $request )->get_status() );
+			\remove_action( 'all', $record );
+
+			return $fired;
+		};
+
+		// Without the block the activity reaches the handlers, so the test below is not passing by accident.
+		$this->assertNotEmpty( $send(), 'The activity should reach the handlers without a block.' );
+
+		$this->assertTrue( \Activitypub\Moderation::add_user_block( $owner, \Activitypub\Moderation::TYPE_ACTOR, $actor ) );
+		if ( $blocked ) {
+			$this->assertSame( array(), $send(), 'No handler may see an activity the content owner blocked.' );
+		} else {
+			$this->assertNotEmpty( $send(), 'A cached remote object has no owner whose block stops the activity.' );
+		}
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $profile, 10 );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * Activities that target a local post or comment.
+	 *
+	 * @return array[] Activity type, target and the property that points there.
+	 */
+	public function data_owner_blocked_activities() {
+		return array(
+			'reply to a post'                     => array( 'Create', 'post', 'inReplyTo' ),
+			'edited reply'                        => array( 'Update', 'post', 'inReplyTo' ),
+			'quote of a post'                     => array( 'Create', 'post', 'quote' ),
+			'like of a post'                      => array( 'Like', 'post', 'object' ),
+			'repost of a post'                    => array( 'Announce', 'post', 'object' ),
+			'quote request'                       => array( 'QuoteRequest', 'post', 'object' ),
+			'reply to a comment'                  => array( 'Create', 'comment', 'inReplyTo' ),
+			'like of a comment'                   => array( 'Like', 'comment', 'object' ),
+			'reply to a remote comment'           => array( 'Create', 'remote comment', 'inReplyTo' ),
+			'reply to a remote post'              => array( 'Create', 'remote post', 'inReplyTo', false ),
+			'reply to a comment on a remote post' => array( 'Create', 'comment on remote post', 'inReplyTo' ),
+		);
+	}
+
+	/**
 	 * Test get_item method.
 	 *
 	 * @doesNotPerformAssertions
