@@ -229,6 +229,98 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A key signs only for its own actor, not for another actor on the same host.
+	 *
+	 * @dataProvider signing_key_owner_provider
+	 * @covers ::verify_signature
+	 *
+	 * @param string $format Signature format.
+	 * @param string $actor  The actor the activity claims, on the signer's host.
+	 * @param bool   $passes Whether the signature has to be accepted.
+	 */
+	public function test_verify_signature_binds_the_key_to_its_actor( $format, $actor, $passes ) {
+		$this->stub_remote_requests();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		$fixtures                   = \json_decode( \file_get_contents( AP_TESTS_DIR . '/data/fixtures/http-signature-keys.json' ), true )['rsa'];
+		$keys                       = $fixtures['2048'];
+		$signer                     = 'https://example.com/users/mallory';
+		$this->responses[ $signer ] = array(
+			'id'        => $signer,
+			'type'      => 'Person',
+			'publicKey' => array(
+				'id'           => $signer . '#main-key',
+				'owner'        => $signer,
+				'publicKeyPem' => $keys['public_key'],
+			),
+		);
+		$this->responses['https://example.com/users/alice'] = array(
+			'id'        => 'https://example.com/users/alice',
+			'type'      => 'Person',
+			'publicKey' => array(
+				'id'           => 'https://example.com/users/alice#main-key',
+				'owner'        => 'https://example.com/users/alice',
+				'publicKeyPem' => $fixtures['4096']['public_key'],
+			),
+		);
+
+		$route  = '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox';
+		$url    = \set_url_scheme( 'http://' . \wp_parse_url( \home_url(), PHP_URL_HOST ) . \wp_parse_url( \home_url( '/' . \rest_get_url_prefix() . $route ), PHP_URL_PATH ) );
+		$method = 'draft' === $format ? new Http_Signature_Draft() : new Http_Message_Signature();
+		$args   = $method->sign(
+			array(
+				'method'      => 'POST',
+				'body'        => \wp_json_encode(
+					array(
+						'id'     => 'https://example.com/activities/1',
+						'type'   => 'Update',
+						'actor'  => $actor,
+						'object' => array( 'id' => $actor ),
+					)
+				),
+				'headers'     => array(
+					'Host'         => \wp_parse_url( $url, PHP_URL_HOST ),
+					'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
+					'Content-Type' => 'application/activity+json',
+				),
+				'key_id'      => $signer . '#main-key',
+				'private_key' => \openssl_pkey_get_private( $keys['private_key'] ),
+			),
+			$url
+		);
+
+		$_SERVER['REQUEST_URI']    = \wp_parse_url( $url, PHP_URL_PATH );
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['HTTP_HOST']      = \wp_parse_url( $url, PHP_URL_HOST );
+		$request                   = new \WP_REST_Request( 'POST', $route );
+		$request->set_headers( $args['headers'] );
+		$request->set_body( $args['body'] );
+
+		$result = $this->instance->verify_signature( $request );
+
+		if ( $passes ) {
+			$this->assertTrue( $result );
+		} else {
+			$this->assertWPError( $result );
+			$this->assertSame( 'activitypub_key_actor_mismatch', $result->get_error_code() );
+			$this->assertSame( 403, $result->get_error_data()['status'] );
+		}
+	}
+
+	/**
+	 * Signer and claimed actor on the same host, in both signature formats.
+	 *
+	 * @return array Test cases.
+	 */
+	public function signing_key_owner_provider() {
+		return array(
+			'draft own actor'     => array( 'draft', 'https://example.com/users/mallory', true ),
+			'draft other actor'   => array( 'draft', 'https://example.com/users/alice', false ),
+			'rfc9421 own actor'   => array( 'rfc9421', 'https://example.com/users/mallory', true ),
+			'rfc9421 other actor' => array( 'rfc9421', 'https://example.com/users/alice', false ),
+		);
+	}
+
+	/**
 	 * Test defer filter bypasses signature verification.
 	 *
 	 * @covers ::verify_signature
