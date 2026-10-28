@@ -7,9 +7,11 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\Moderation;
 use Activitypub\Signature;
 
 use function Activitypub\maybe_set_no_store;
+use function Activitypub\object_to_uri;
 use function Activitypub\use_authorized_fetch;
 
 /**
@@ -27,6 +29,7 @@ class Server {
 	 */
 	public static function init() {
 		\add_filter( 'rest_pre_dispatch', array( self::class, 'normalize_route' ), 1, 3 );
+		\add_filter( 'rest_pre_dispatch', array( self::class, 'reject_blocked_sender' ), 5, 3 );
 		\add_filter( 'rest_pre_dispatch', array( self::class, 'maybe_add_actor_from_signature' ), 10, 3 );
 		\add_filter( 'rest_request_before_callbacks', array( self::class, 'validate_requests' ), 9, 3 );
 		\add_filter( 'rest_request_parameter_order', array( self::class, 'request_parameter_order' ), 10, 2 );
@@ -152,6 +155,44 @@ class Server {
 			'URL',
 			'defaults',
 		);
+	}
+
+	/**
+	 * Stop a request from a site-wide blocked sender before its signature is verified.
+	 *
+	 * Verifying fetches the sender's key, so a blocked domain would still hear from the site with
+	 * every request. Only here, before verification, is the activity type known, and retractions
+	 * still go on: verifying them is worth the request, see Moderation::RETRACTION_TYPES.
+	 *
+	 * @since unreleased
+	 *
+	 * @param mixed            $result  Response to replace the requested version with.
+	 * @param \WP_REST_Server  $server  Server instance.
+	 * @param \WP_REST_Request $request Request used to generate the response.
+	 *
+	 * @return mixed The response, or a WP_Error for a blocked sender.
+	 */
+	public static function reject_blocked_sender( $result, $server, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		if ( null !== $result || ! \str_starts_with( $request->get_route(), '/' . ACTIVITYPUB_REST_NAMESPACE ) ) {
+			return $result;
+		}
+
+		$json   = $request->get_json_params();
+		$json   = \is_array( $json ) ? $json : array();
+		$sender = Signature::get_key_id( $request ) ?? object_to_uri( $json['actor'] ?? null );
+
+		if ( ! \is_string( $sender ) || ! Moderation::is_actor_blocked( \strip_fragment_from_url( $sender ) ) ) {
+			return $result;
+		}
+
+		if ( \in_array( $json['type'] ?? '', Moderation::RETRACTION_TYPES, true ) ) {
+			return $result;
+		}
+
+		// A 2XX for deliveries, as for other refused activities, so the sender does not keep retrying.
+		$status = \WP_REST_Server::CREATABLE === $request->get_method() ? 202 : 403;
+
+		return new \WP_Error( 'activitypub_sender_blocked', \__( 'The sender is blocked.', 'activitypub' ), array( 'status' => $status ) );
 	}
 
 	/**
