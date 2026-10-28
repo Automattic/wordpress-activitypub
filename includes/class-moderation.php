@@ -54,7 +54,8 @@ class Moderation {
 	 * someone's post or comment, and that owner is not always among the recipients (the actor's local
 	 * followers, a mention, or nobody at all). So the owner decides for the whole activity, before
 	 * any handler sees it: the author of a post whose type the site publishes, and the author of a
-	 * local comment it targets. A cached remote object has no owner, whoever its `post_author` is.
+	 * local comment it targets. A cached remote object has no owner, whoever its `post_author` is,
+	 * because it sits in several users' streams; a received comment is stored without a user.
 	 *
 	 * @since unreleased
 	 *
@@ -64,36 +65,23 @@ class Moderation {
 	public static function activity_is_blocked_by_content_owner( $activity ) {
 		$data    = $activity->to_array( false );
 		$object  = $data['object'] ?? null;
-		$targets = array( object_to_uri( $object ) );
-
-		if ( \is_array( $object ) ) {
-			$targets[] = object_to_uri( $object['inReplyTo'] ?? null );
-			$targets[] = get_quote_url( $data );
-		}
+		$targets = array( object_to_uri( $object ), object_to_uri( $object['inReplyTo'] ?? null ), get_quote_url( $data ) );
 
 		$owners = array();
-		foreach ( $targets as $url ) {
-			if ( ! $url || ! \is_string( $url ) ) {
-				continue;
-			}
-
-			/*
-			 * Resolved the way an interaction is stored, so a reply to a received remote
-			 * comment counts for the post that comment is on.
-			 */
+		foreach ( \array_unique( \array_filter( $targets, 'is_string' ) ) as $url ) {
+			// Resolved the way the interaction is stored, so a reply to a received comment finds its post.
 			$comment_id = url_to_commentid( $url );
 			$post_id    = get_target_post_id( $url, $comment_id );
-			$author     = $post_id ? (int) \get_post_field( 'post_author', $post_id ) : 0;
+			$post       = $post_id ? \get_post( $post_id ) : null;
 
-			// Only content the site publishes has an owner; a cached remote object sits in several users' streams.
-			if ( $author && \post_type_supports( \get_post_type( $post_id ), 'activitypub' ) ) {
-				$owners[] = $author;
+			if ( $post && $post->post_author && \post_type_supports( $post->post_type, 'activitypub' ) ) {
+				$owners[] = (int) $post->post_author;
 			}
 
-			// A received comment is stored without a user, so only a local comment has an author here.
 			$comment = $comment_id ? \get_comment( $comment_id ) : null;
-			if ( $comment instanceof \WP_Comment && (int) $comment->user_id ) {
-				$owners[] = (int) $comment->user_id;
+			$user_id = $comment ? (int) $comment->user_id : 0;
+			if ( $user_id ) {
+				$owners[] = $user_id;
 			}
 		}
 

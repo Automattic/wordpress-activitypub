@@ -512,16 +512,18 @@ class Scheduler {
 			return;
 		}
 
-		foreach ( $user_ids as $key => $user_id ) {
-			if ( Moderation::activity_is_blocked_for_user( $activity, $user_id ) ) {
-				unset( $user_ids[ $key ] );
-			}
-		}
+		$user_ids = \array_values(
+			\array_filter(
+				$user_ids,
+				static function ( $user_id ) use ( $activity ) {
+					return ! Moderation::activity_is_blocked_for_user( $activity, $user_id );
+				}
+			)
+		);
 
 		if ( ! $user_ids ) {
 			return;
 		}
-		$user_ids = \array_values( $user_ids );
 
 		/**
 		 * Fires after any ActivityPub Inbox activity has been handled, regardless of activity type.

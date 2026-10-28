@@ -63,7 +63,7 @@ class Interactions {
 			$parent_comment_id = url_to_commentid( $target_url );
 		} else {
 			// Check for quote.
-			$target_url = self::get_quote_url( $activity );
+			$target_url = get_quote_url( $activity );
 
 			if ( ! $target_url ) {
 				return false;
