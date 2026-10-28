@@ -17,7 +17,7 @@ Prefer reading project files and `docs/` over relying on training data for WordP
 - **Never edit WordPress core files.** Only modify plugin code.
 - **Pre-commit hooks modify files.** If the hook changed files, stage and commit again — do not assume the first commit succeeded.
 - **`remove_all_filters('pre_http_request')` is forbidden in tests.** The pre-commit hook blocks this. Use targeted filter removal.
-- **Changelog entries MUST be end-user friendly and end with punctuation.** Users see these in the WordPress update screen. Describe what changed from their perspective — no jargon, class names, or method names.
+- **Changelog entries are end-user friendly and end with punctuation.** Users see these in the WordPress update screen. Describe what changed from their perspective — no jargon, class names, or method names.
 - **`post_date_gmt` may be empty.** Check for `0000-00-00` or empty values.
 - **Cleanups change no behaviour.** A lint, static-analysis or refactor task changes docblocks and types, not what the code does. When the analyzer is wrong about a core function, fix its view (a stub), never the output line.
 - **A docblock is a claim, not evidence.** Read the call sites before changing code because of what a comment says, and never revert on a comment's authority either.
@@ -26,17 +26,17 @@ Prefer reading project files and `docs/` over relying on training data for WordP
 
 ## PHP Conventions
 
-**ALWAYS reuse existing functionality instead of hand-rolling it.** Before writing any parsing, validation, escaping, or formatting logic, check for a WordPress core function that does the job (e.g. `wp_kses_bad_protocol()`, `wp_parse_url()`, `wp_http_validate_url()`), then for an existing plugin helper (`includes/functions*.php`, `Sanitize`, `src/shared/`). Core primitives are battle-tested against adversarial input in ways a fresh implementation is not, and reviewers can trust them on sight. A custom implementation needs a stated reason why no existing function fits — "shorter" is not one. This applies to refactors too: never replace a core-function-based check with bespoke logic just to save a line.
+**Reuse existing functionality instead of hand-rolling it.** Before writing any parsing, validation, escaping, or formatting logic, check for a WordPress core function that does the job (e.g. `wp_kses_bad_protocol()`, `wp_parse_url()`, `wp_http_validate_url()`), then for an existing plugin helper (`includes/functions*.php`, `Sanitize`, `src/shared/`). Core primitives are battle-tested against adversarial input in ways a fresh implementation is not, and reviewers can trust them on sight. A custom implementation needs a stated reason why no existing function fits — "shorter" is not one. This applies to refactors too: never replace a core-function-based check with bespoke logic just to save a line.
 
-**MUST** backslash-prefix all WordPress functions in namespaced code: `\get_option()`, `\add_action()`, `\apply_filters()`, `\__()`, `\_e()`, etc. PHP falls back to global scope, but backslashes are a project standard for consistency and to avoid accidentally shadowing globals.
+**Backslash-prefix all WordPress functions** in namespaced code: `\get_option()`, `\add_action()`, `\apply_filters()`, `\__()`, `\_e()`, etc. PHP falls back to global scope, but backslashes are a project standard for consistency and to avoid accidentally shadowing globals.
 
 **No inline namespaces.** Use `use` statements at the top of the file instead of inline fully-qualified class names (e.g., `use Activitypub\Options;` then `Options::method()`, not `\Activitypub\Options::method()`).
 
-**For new or modified code**, MUST use `'unreleased'` for all `@since`, `@deprecated`, and deprecation function version strings so the release script can replace them. Do not introduce new hardcoded version numbers like `'5.1.0'`; existing versioned tags in the codebase are fine.
+**For new or modified code**, use `'unreleased'` for all `@since`, `@deprecated`, and deprecation function version strings so the release script can replace them. Do not introduce new hardcoded version numbers like `'5.1.0'`; existing versioned tags in the codebase are fine.
 
 ## Testing Conventions
 
-**MUST read `tests/README.md` and the `test` skill before writing or changing tests.** It covers test utilities, data factories, and detailed patterns.
+**Read `tests/README.md` and the `test` skill before writing or changing tests.** It covers test utilities, data factories, and detailed patterns.
 
 **One test file per source file.** Tests mirror the file they test: `includes/rest/class-seek-controller.php` → `tests/phpunit/tests/includes/rest/class-test-seek-controller.php`. Add tests to that file; never create a test file that spans several source files. The pre-commit hook enforces this.
 
@@ -58,4 +58,4 @@ FEDERATION.md                    — implemented FEPs, supported standards, comp
 
 Skills are complex procedures loaded on demand. Canonical files live in `.agents/skills/`, with stubs in `.claude/skills/` for Claude Code discovery.
 
-**CRITICAL:** After reading a skill, check for a local override at `~/.claude/skills/{skill-name}-local/SKILL.md`. Local overrides take precedence.
+After reading a skill, check for a local override at `~/.claude/skills/{skill-name}-local/SKILL.md`. Local overrides take precedence.
