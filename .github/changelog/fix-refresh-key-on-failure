@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Accounts on other servers that change their signing key are no longer rejected until their profile is refreshed.
