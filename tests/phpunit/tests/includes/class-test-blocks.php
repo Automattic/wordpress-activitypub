@@ -982,6 +982,80 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test the reactions block renders actions added by other plugins.
+	 */
+	public function test_render_reactions_block_external_actions() {
+		global $activitypub_comment_types;
+		$registered = $activitypub_comment_types;
+
+		$post_id = $this->get_post_id_with_reactions();
+		$this->add_mention( $post_id );
+
+		$block_ids   = array();
+		$add_actions = static function ( $actions, $id, $block_id ) use ( &$block_ids ) {
+			$block_ids[]         = $block_id;
+			$actions['mention']  = array(
+				'title'   => 'Send a Webmention',
+				'content' => '<form action="https://example.org/webmention" method="post"><input type="url" name="source" required /><button type="submit">Send</button></form><script>alert(1)</script>',
+			);
+			$actions['bookmark'] = array(
+				'label'   => 'Bookmark',
+				'content' => '<p>Bookmark it.</p>',
+			);
+			$actions['like']     = array(
+				'title'   => 'Replaced',
+				'content' => '<p>Replaced like.</p>',
+			);
+			$actions['note']     = 'Not an array.';
+			$actions['unknown']  = array( 'content' => '<p>No label.</p>' );
+			$actions[]           = array(
+				'label'   => 'Numeric',
+				'content' => '<p>Numeric key.</p>',
+			);
+
+			return $actions;
+		};
+		\add_filter( 'activitypub_reactions_actions', $add_actions, 10, 3 );
+
+		try {
+			$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . ',"showActions":true} /-->';
+			$output       = do_blocks( $block_markup );
+		} finally {
+			\remove_filter( 'activitypub_reactions_actions', $add_actions, 10 );
+			$activitypub_comment_types = $registered;
+		}
+
+		// The filter gets the block ID.
+		$this->assertCount( 1, $block_ids );
+		$this->assertStringStartsWith( 'activitypub-reactions-block-', $block_ids[0] );
+
+		// A type with items gets the button in its row, a type without items in the actions row.
+		$this->assertStringContainsString( 'data-action="mention" data-title="Send a Webmention"', $output );
+		$this->assertStringContainsString( 'aria-label="Mention">Mention</button>', $output );
+
+		// Without a title, the modal title is the label.
+		$this->assertStringContainsString( 'data-action="bookmark" data-title="Bookmark"', $output );
+		$this->assertStringNotContainsString( 'reaction-action-placeholder', $output );
+
+		// Entries that are no arrays, have no label or a numeric key are skipped.
+		$this->assertStringNotContainsString( 'data-action="note"', $output );
+		$this->assertStringNotContainsString( 'No label.', $output );
+		$this->assertStringNotContainsString( 'Numeric key.', $output );
+
+		// The content is rendered in the modal, with form fields but without scripts.
+		$this->assertStringContainsString( '<form action="https://example.org/webmention" method="post"><input type="url" name="source" required />', $output );
+		$this->assertStringNotContainsString( '<script>', $output );
+		$this->assertStringContainsString( 'data-wp-bind--hidden="state.isActionHidden"', $output );
+
+		// The dialogs are hidden until the modal opens, also before the view script runs.
+		$this->assertStringContainsString( '<div hidden data-wp-bind--hidden="context.modal.isCompact">', $output );
+
+		// The types ActivityPub handles itself can't be replaced.
+		$this->assertStringNotContainsString( 'Replaced like.', $output );
+		$this->assertStringNotContainsString( 'data-action="like"', $output );
+	}
+
+	/**
 	 * Register a mention comment type and add a mention to a post.
 	 *
 	 * @param int $post_id Post ID.
