@@ -229,6 +229,98 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A key signs only for its own actor, not for another actor on the same host.
+	 *
+	 * @dataProvider signing_key_owner_provider
+	 * @covers ::verify_signature
+	 *
+	 * @param string $format Signature format.
+	 * @param string $actor  The actor the activity claims, on the signer's host.
+	 * @param bool   $passes Whether the signature has to be accepted.
+	 */
+	public function test_verify_signature_binds_the_key_to_its_actor( $format, $actor, $passes ) {
+		$this->stub_remote_requests();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		$fixtures                   = \json_decode( \file_get_contents( AP_TESTS_DIR . '/data/fixtures/http-signature-keys.json' ), true )['rsa'];
+		$keys                       = $fixtures['2048'];
+		$signer                     = 'https://example.com/users/mallory';
+		$this->responses[ $signer ] = array(
+			'id'        => $signer,
+			'type'      => 'Person',
+			'publicKey' => array(
+				'id'           => $signer . '#main-key',
+				'owner'        => $signer,
+				'publicKeyPem' => $keys['public_key'],
+			),
+		);
+		$this->responses['https://example.com/users/alice'] = array(
+			'id'        => 'https://example.com/users/alice',
+			'type'      => 'Person',
+			'publicKey' => array(
+				'id'           => 'https://example.com/users/alice#main-key',
+				'owner'        => 'https://example.com/users/alice',
+				'publicKeyPem' => $fixtures['4096']['public_key'],
+			),
+		);
+
+		$route  = '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox';
+		$url    = \set_url_scheme( 'http://' . \wp_parse_url( \home_url(), PHP_URL_HOST ) . \wp_parse_url( \home_url( '/' . \rest_get_url_prefix() . $route ), PHP_URL_PATH ) );
+		$method = 'draft' === $format ? new Http_Signature_Draft() : new Http_Message_Signature();
+		$args   = $method->sign(
+			array(
+				'method'      => 'POST',
+				'body'        => \wp_json_encode(
+					array(
+						'id'     => 'https://example.com/activities/1',
+						'type'   => 'Update',
+						'actor'  => $actor,
+						'object' => array( 'id' => $actor ),
+					)
+				),
+				'headers'     => array(
+					'Host'         => \wp_parse_url( $url, PHP_URL_HOST ),
+					'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
+					'Content-Type' => 'application/activity+json',
+				),
+				'key_id'      => $signer . '#main-key',
+				'private_key' => \openssl_pkey_get_private( $keys['private_key'] ),
+			),
+			$url
+		);
+
+		$_SERVER['REQUEST_URI']    = \wp_parse_url( $url, PHP_URL_PATH );
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['HTTP_HOST']      = \wp_parse_url( $url, PHP_URL_HOST );
+		$request                   = new \WP_REST_Request( 'POST', $route );
+		$request->set_headers( $args['headers'] );
+		$request->set_body( $args['body'] );
+
+		$result = $this->instance->verify_signature( $request );
+
+		if ( $passes ) {
+			$this->assertTrue( $result );
+		} else {
+			$this->assertWPError( $result );
+			$this->assertSame( 'activitypub_key_actor_mismatch', $result->get_error_code() );
+			$this->assertSame( 403, $result->get_error_data()['status'] );
+		}
+	}
+
+	/**
+	 * Signer and claimed actor on the same host, in both signature formats.
+	 *
+	 * @return array Test cases.
+	 */
+	public function signing_key_owner_provider() {
+		return array(
+			'draft own actor'     => array( 'draft', 'https://example.com/users/mallory', true ),
+			'draft other actor'   => array( 'draft', 'https://example.com/users/alice', false ),
+			'rfc9421 own actor'   => array( 'rfc9421', 'https://example.com/users/mallory', true ),
+			'rfc9421 other actor' => array( 'rfc9421', 'https://example.com/users/alice', false ),
+		);
+	}
+
+	/**
 	 * Test defer filter bypasses signature verification.
 	 *
 	 * @covers ::verify_signature
@@ -659,85 +751,77 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	/**
 	 * Data provider for verify_key_id tests.
 	 *
-	 * @return array[] Test cases: [ verified_key_id, actor, expected_pass ].
+	 * @return array[] Test cases: [ verified key owner, actor, expected_pass ].
 	 */
 	public function data_verify_key_id() {
 		return array(
-			'matching hosts'          => array(
-				'https://remote.example/users/alice#main-key',
+			'own key'                 => array(
+				'https://remote.example/users/alice',
 				'https://remote.example/users/alice',
 				true,
 			),
-			'mismatched hosts'        => array(
-				'https://evil.example/users/alice#main-key',
+			// A user on the same server who holds their own key must not sign for another user.
+			'key of another actor'    => array(
+				'https://remote.example/users/mallory',
+				'https://remote.example/users/alice',
+				false,
+			),
+			'key on another host'     => array(
+				'https://evil.example/users/alice',
 				'https://remote.example/users/alice',
 				false,
 			),
 			'no actor in body'        => array(
-				'https://remote.example/users/alice#main-key',
+				'https://remote.example/users/alice',
 				null,
 				true,
 			),
-			// A missing keyId cannot be bound to the actor, so it must fail closed.
-			'no verified key id'      => array(
+			// No owner cannot be bound to the actor, so it must fail closed.
+			'no key owner'            => array(
 				null,
 				'https://remote.example/users/alice',
 				false,
 			),
-			// A non-URL `acct:` keyId resolves to a real key but yields no host: the bypass this guards.
-			'acct key id cannot bind' => array(
-				'acct:mallory@attacker.example',
-				'https://victim.example/users/alice',
-				false,
-			),
-			// An `acct:` actor likewise has no host and cannot be bound.
-			'acct actor cannot bind'  => array(
-				'https://remote.example/users/alice#main-key',
-				'acct:alice@remote.example',
-				false,
-			),
-			// The FeatureRequest fill sets actor = strip_fragment( keyId ); a hostless `acct:`
-			// keyId makes both sides hostless, which must still fail closed rather than self-match.
-			'acct key id and actor'   => array(
-				'acct:mallory@attacker.example',
-				'acct:mallory@attacker.example',
-				false,
-			),
-			// An empty keyId string has no host and cannot be bound.
-			'empty key id'            => array(
+			'empty key owner'         => array(
 				'',
 				'https://remote.example/users/alice',
 				false,
 			),
+			'acct actor cannot bind'  => array(
+				'https://remote.example/users/alice',
+				'acct:alice@remote.example',
+				false,
+			),
+			// A hostless owner must not bind by matching a hostless actor, as the FeatureRequest fill could produce.
+			'acct owner and actor'    => array(
+				'acct:mallory@attacker.example',
+				'acct:mallory@attacker.example',
+				false,
+			),
 			'actor as object with id' => array(
-				'https://remote.example/users/alice#main-key',
+				'https://remote.example/users/alice',
 				array( 'id' => 'https://remote.example/users/alice' ),
 				true,
 			),
 			'actor object mismatch'   => array(
-				'https://evil.example/users/alice#main-key',
+				'https://remote.example/users/mallory',
 				array( 'id' => 'https://remote.example/users/alice' ),
 				false,
-			),
-			'case-insensitive hosts'  => array(
-				'https://Remote.Example/users/alice#main-key',
-				'https://remote.example/users/alice',
-				true,
 			),
 		);
 	}
 
 	/**
-	 * Test that verify_key_id checks the verified keyId's host against the actor host.
+	 * Test that verify_key_id requires the verified key's owner to be the actor.
 	 *
 	 * @dataProvider data_verify_key_id
 	 * @covers ::verify_key_id
 	 *
-	 * @param string|null       $key_id      The keyId that verified the signature.
+	 * @param string|null       $owner       The id of the actor that owns the verified key.
 	 * @param string|array|null $actor       The actor value in the JSON body.
 	 * @param bool              $should_pass Whether the check should pass.
 	 */
-	public function test_verify_key_id( $key_id, $actor, $should_pass ) {
+	public function test_verify_key_id( $owner, $actor, $should_pass ) {
 		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
 
 		$body = array(
@@ -758,7 +842,7 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		if ( \PHP_VERSION_ID < 80100 ) {
 			$method->setAccessible( true );
 		}
-		$result = $method->invoke( $this->instance, $request, $key_id );
+		$result = $method->invoke( $this->instance, $request, $owner );
 
 		if ( $should_pass ) {
 			$this->assertTrue( $result );

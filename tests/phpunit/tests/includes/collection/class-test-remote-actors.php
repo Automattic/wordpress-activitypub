@@ -121,6 +121,85 @@ class Test_Remote_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The key's owner is the actor the key was taken from: stored, fetched, or a standalone key's owner.
+	 *
+	 * @covers ::get_public_key
+	 */
+	public function test_get_public_key_sets_owner() {
+		$stored = 'https://example.com/users/stored';
+		Remote_Actors::upsert(
+			array(
+				'id'                => $stored,
+				'type'              => 'Person',
+				'inbox'             => $stored . '/inbox',
+				'preferredUsername' => 'stored',
+				'publicKey'         => array(
+					'id'           => $stored . '#main-key',
+					'owner'        => $stored,
+					'publicKeyPem' => $this->x509_key,
+				),
+			)
+		);
+
+		$this->stub_remote_requests();
+		$fetched                                       = 'https://example.com/users/fetched';
+		$this->responses[ $fetched ]                   = array(
+			'id'        => $fetched,
+			'type'      => 'Person',
+			'publicKey' => array(
+				'id'           => $fetched . '#main-key',
+				'owner'        => $fetched,
+				'publicKeyPem' => $this->x509_key,
+			),
+		);
+		$this->responses['https://example.com/keys/1'] = array(
+			'id'           => 'https://example.com/keys/1',
+			'owner'        => $fetched,
+			'publicKeyPem' => $this->x509_key,
+		);
+
+		$owners = array();
+		foreach ( array( $stored . '#main-key', $fetched . '#main-key', 'https://example.com/keys/1' ) as $key_id ) {
+			$owner = null;
+			$this->assertNotWPError( Remote_Actors::get_public_key( $key_id, $owner ) );
+			$owners[] = $owner;
+		}
+		$this->unstub_remote_requests();
+
+		$this->assertSame( array( $stored, $fetched, $fetched ), $owners );
+	}
+
+	/**
+	 * A keyId without a host cannot name the actor it belongs to, so it gets no key and no owner.
+	 *
+	 * @covers ::get_public_key
+	 */
+	public function test_get_public_key_rejects_a_key_id_without_host() {
+		$actor = array(
+			'id'        => 'https://attacker.example/users/mallory',
+			'type'      => 'Person',
+			'publicKey' => array(
+				'id'           => 'https://attacker.example/users/mallory#main-key',
+				'owner'        => 'https://attacker.example/users/mallory',
+				'publicKeyPem' => $this->x509_key,
+			),
+		);
+		$mock  = static function () use ( $actor ) {
+			return $actor;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock );
+
+		$owner  = null;
+		$result = Remote_Actors::get_public_key( 'acct:mallory@attacker.example', $owner );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'activitypub_no_remote_key_found', $result->get_error_code() );
+		$this->assertNull( $owner );
+	}
+
+	/**
 	 * Key and owner reference redirects.
 	 *
 	 * @return array Test cases.

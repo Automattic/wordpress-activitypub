@@ -1157,9 +1157,9 @@ class Test_Signature extends \WP_UnitTestCase {
 		$result = Signature::verify_http_signature( $request );
 
 		$this->assertSame(
-			'https://example.org/author/admin#main-key',
+			'https://example.org/author/admin',
 			$result,
-			'The keyId of the label that actually verified must be returned, not the first label.'
+			'The key owner of the label that actually verified must be returned, not the first label.'
 		);
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
@@ -1823,7 +1823,7 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		$result = Signature::verify_http_signature( $request );
 
-		$this->assertSame( 'https://example.org/author/admin#main-key', $result, 'The verified keyId is returned on success.' );
+		$this->assertSame( 'https://example.org/author/admin', $result, 'The verified key\'s owner is returned on success.' );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 	}

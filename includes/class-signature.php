@@ -129,15 +129,17 @@ class Signature {
 	/**
 	 * Verifies the http signatures
 	 *
-	 * On success the verified keyId is returned (a truthy string), so callers can bind it to
-	 * the activity actor without re-parsing headers, which cannot tell which signature label
-	 * actually validated. Pass/fail callers should branch on {@see is_wp_error()} as before.
+	 * On success the id of the actor that owns the verified key is returned (a truthy string), so
+	 * callers can bind the signer to the activity actor without re-parsing headers, which cannot
+	 * tell which signature label actually validated. Pass/fail callers should branch on
+	 * {@see is_wp_error()} as before.
 	 *
 	 * @since 9.0.0 Returns the verified keyId on success instead of `true`.
+	 * @since unreleased Returns the id of the actor that owns the verified key instead of the keyId.
 	 *
 	 * @param \WP_REST_Request|array $request The request object or $_SERVER array.
 	 *
-	 * @return string|\WP_Error The verified keyId on success, WP_Error on failure.
+	 * @return string|\WP_Error The id of the actor that owns the verified key on success, WP_Error on failure.
 	 */
 	public static function verify_http_signature( $request ) {
 		if ( \is_object( $request ) ) { // REST Request object.
