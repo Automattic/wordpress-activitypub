@@ -330,9 +330,9 @@ class Dispatcher {
 	 * @return array|\WP_Error The result in the format of a remote post response, or WP_Error on failure.
 	 */
 	private static function send_to_local_inbox( $inbox_url, $json ) {
-		// Parse the inbox URL to extract the REST route.
-		$path       = \wp_parse_url( $inbox_url, PHP_URL_PATH ) ?? '';
-		$rest_route = \preg_replace( '#^/' . \preg_quote( \rest_get_url_prefix(), '#' ) . '#', '', $path );
+		// Core resolves the route for subdirectory installs and every permalink setting.
+		$url_request = \WP_REST_Request::from_url( $inbox_url );
+		$rest_route  = $url_request ? $url_request->get_route() : '';
 
 		/*
 		 * The inbox URL comes from a remote actor document, and signature verification is deferred below,
