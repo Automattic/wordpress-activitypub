@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Incoming activities are now only accepted when they are signed with the sending account's own key.

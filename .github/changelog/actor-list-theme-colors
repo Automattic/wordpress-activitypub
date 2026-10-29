@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-The Followers and Following blocks now take their colours and font from the theme, so they are readable on dark themes, and they offer the usual colour, font size and spacing controls in the editor.

@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Replies written through an ActivityPub app no longer mention the person you are replying to twice.

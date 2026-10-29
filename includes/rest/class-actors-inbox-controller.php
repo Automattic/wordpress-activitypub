@@ -310,7 +310,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 	 * The inbox route's permission callback already refuses a non-owner, so unlike the outbox this
 	 * method needs no seek gate of its own.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param string           $item    The ActivityPub activity ID.
 	 * @param \WP_REST_Request $request Full details about the request.

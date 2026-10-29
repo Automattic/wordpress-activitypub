@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Signatures on incoming requests now have to cover the address they were sent to and the content they carry.

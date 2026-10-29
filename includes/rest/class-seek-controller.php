@@ -23,7 +23,7 @@ use function Activitypub\is_same_domain;
  *
  * @see https://swicg.github.io/activitypub-api/seekitem
  *
- * @since unreleased
+ * @since 9.4.0
  */
 class Seek_Controller extends \WP_REST_Controller {
 	use Verification;
@@ -45,7 +45,7 @@ class Seek_Controller extends \WP_REST_Controller {
 	/**
 	 * Whether a seek dispatch is currently in flight.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @var bool
 	 */
@@ -120,7 +120,7 @@ class Seek_Controller extends \WP_REST_Controller {
 	 * than the requested route, because patterns match case-insensitively: a route of `/…/Seek`
 	 * resolves back to this endpoint and would slip past a comparison against the requested route.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param string $route The route of the request about to be dispatched.
 	 *

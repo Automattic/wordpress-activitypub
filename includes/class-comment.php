@@ -495,7 +495,7 @@ class Comment {
 	/**
 	 * Keeps replies to remote posts out of the Recent Comments widget and the Latest Comments block.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param array $args The comment query arguments.
 	 *

@@ -760,7 +760,7 @@ class Client {
 	 * host and without a user name. The check runs on read to also cover values stored before it existed.
 	 *
 	 * @since 8.1.0
-	 * @since unreleased Only returns http(s) URLs with a host and no user name.
+	 * @since 9.4.0 Only returns http(s) URLs with a host and no user name.
 	 *
 	 * @return string A URL for the client, or empty string if none available.
 	 */

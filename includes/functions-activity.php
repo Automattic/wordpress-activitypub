@@ -178,7 +178,7 @@ function is_quote_activity( $data ) {
  *
  * Checks the quote properties in priority order: quote, quoteUrl, quoteUri, _misskey_quote.
  *
- * @since unreleased
+ * @since 9.4.0
  *
  * @param array $activity The activity array.
  *

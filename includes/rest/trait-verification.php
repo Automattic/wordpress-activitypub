@@ -176,7 +176,7 @@ trait Verification {
 	 * @since 8.1.0
 	 * @since 9.0.0 Added the `$key_id` parameter; binds against the verified keyId.
 	 * @since 9.2.1 Reject a keyId or actor with no parsable host instead of allowing it.
-	 * @since unreleased The second parameter is the verified key's owner; it has to be the actor.
+	 * @since 9.4.0 The second parameter is the verified key's owner; it has to be the actor.
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @param string|null      $owner   The id of the actor that owns the verified key.
@@ -345,7 +345,7 @@ trait Verification {
 	 * consented to, so reading owner-only material additionally requires the `read` scope. A
 	 * WordPress session is not scope-limited.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return bool True if the owner may read owner-only material.

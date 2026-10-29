@@ -91,7 +91,7 @@ class Http_Signature_Draft implements Http_Signature {
 	 * Verify the HTTP Signature against a request.
 	 *
 	 * @since 9.0.0 Returns the verified keyId on success instead of `true`.
-	 * @since unreleased Returns the id of the actor that owns the verified key instead of the keyId.
+	 * @since 9.4.0 Returns the id of the actor that owns the verified key instead of the keyId.
 	 *
 	 * @param array       $headers The HTTP headers.
 	 * @param string|null $body    The request body, if applicable.

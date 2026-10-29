@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Searching for the address of a reply that cannot be imported now shows the normal search results instead of a broken link.

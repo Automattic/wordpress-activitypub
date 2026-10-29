@@ -108,6 +108,18 @@ class Test_Blocks extends \WP_UnitTestCase {
 		$this->assertStringContainsString( 'src="https://example.com/photo.jpg"', $uncached );
 		$this->assertStringContainsString( 'alt="Cat"', $uncached );
 		$this->assertSame( '<p>Image: Cat</p>', $no_url );
+
+		// Sanitization drops a reply's img, so it is rebuilt, sized to stay inside its comment.
+		$stored = Blocks::render_image_block(
+			array(
+				'url' => 'https://example.com/photo.jpg',
+				'alt' => 'Cat',
+			),
+			'',
+			new \WP_Block( $parsed, array( 'commentId' => 7 ) )
+		);
+		$this->assertStringContainsString( 'style="max-width:100%;height:auto"', $stored );
+		$this->assertStringContainsString( 'alt="Cat"', $stored );
 		$this->assertSame( '<p>Image</p>', Blocks::render_image_description( array() ) );
 	}
 

@@ -149,7 +149,7 @@ class Blocks {
 	 * The script reads the parameter itself and prefills the matching block, so nothing
 	 * is read here beyond the presence of the parameter.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param string $param  The URL parameter carrying the address.
 	 * @param string $script The build folder and script handle suffix.
@@ -170,7 +170,7 @@ class Blocks {
 	/**
 	 * Enqueue the quote intent script if the quotation_of GET param is set.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @return void
 	 */
@@ -674,7 +674,7 @@ class Blocks {
 		$processor = new \WP_HTML_Tag_Processor( $content );
 		if ( isset( $attrs['alt'] ) && ( ! $processor->next_tag( array( 'tag_name' => 'IMG' ) ) || ! $processor->get_attribute( 'src' ) ) ) {
 			// Comment sanitization removes img attributes; retain them in the block instead.
-			$content = \sprintf( '<img src="%s" alt="%s" loading="lazy" />', \esc_url( \htmlspecialchars( $url, ENT_QUOTES, 'UTF-8', true ) ), \esc_attr( $attrs['alt'] ) );
+			$content = \sprintf( '<img src="%s" alt="%s" loading="lazy" style="max-width:100%%;height:auto" />', \esc_url( \htmlspecialchars( $url, ENT_QUOTES, 'UTF-8', true ) ), \esc_attr( $attrs['alt'] ) );
 		}
 
 		// Get entity ID from context, comment images are cached per comment.
@@ -711,7 +711,7 @@ class Blocks {
 	/**
 	 * Get the remote URL of an image block.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param array $attrs The image block attributes.
 	 *
@@ -729,7 +729,7 @@ class Blocks {
 	/**
 	 * Render the description of an image that is not shown.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param array $attrs The image block attributes.
 	 *
@@ -897,7 +897,7 @@ class Blocks {
 	/**
 	 * Render the Quote block.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @see https://indieweb.org/quotation
 	 *
@@ -961,7 +961,7 @@ class Blocks {
 	 * Comments come first, with the labels core uses. The reaction types bring their icons and
 	 * labels from the comment type registry.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @return array[] Types keyed by comment type, each with `icon`, `count_single` and `count_plural`.
 	 */
@@ -1334,7 +1334,7 @@ class Blocks {
 	 *
 	 * Receivers render the quoted post from the `quote` property; inlining the embed would duplicate it.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param string $block_content The block content.
 	 * @param array  $block         The block data.
