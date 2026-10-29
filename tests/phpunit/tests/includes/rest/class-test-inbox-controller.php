@@ -296,7 +296,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	 *
 	 * @dataProvider data_owner_blocked_activities
 	 * @covers ::create_item
-	 * @covers Moderation::activity_is_blocked_by_content_owner
+	 * @covers \Activitypub\Moderation::activity_is_blocked_by_content_owner
 	 *
 	 * @param string $type     The activity type.
 	 * @param string $target   Where the activity points: `post`, `comment`, `remote comment`, `remote post` or `comment on remote post`.
