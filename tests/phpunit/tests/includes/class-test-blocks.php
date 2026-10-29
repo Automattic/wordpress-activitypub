@@ -107,6 +107,10 @@ class Test_Blocks extends \WP_UnitTestCase {
 		$this->assertStringContainsString( 'src="https://local.example/cached.jpg"', $with_cache );
 		$this->assertStringContainsString( 'src="https://example.com/photo.jpg"', $uncached );
 		$this->assertStringContainsString( 'alt="Cat"', $uncached );
+		// Sanitization strips the image's size, so a reply photo is kept inside its comment.
+		$this->assertStringContainsString( 'style="max-width:100%;height:auto"', $with_cache );
+		$this->assertStringContainsString( 'style="max-width:100%;height:auto"', $uncached );
+		$this->assertStringNotContainsString( 'max-width', ( new \WP_Block( $parsed, array( 'postId' => 7 ) ) )->render(), 'Post images keep their own size.' );
 		$this->assertSame( '<p>Image: Cat</p>', $no_url );
 		$this->assertSame( '<p>Image</p>', Blocks::render_image_description( array() ) );
 	}

@@ -695,14 +695,21 @@ class Blocks {
 		 */
 		$cached_url = \apply_filters( 'activitypub_remote_media_url', $url, $cache_context, $entity_id, array() );
 
-		if ( $cached_url && $cached_url !== $url ) {
-			$processor = new \WP_HTML_Tag_Processor( $content );
-			if ( $processor->next_tag( array( 'tag_name' => 'IMG' ) ) ) {
+		$cached    = $cached_url && $cached_url !== $url;
+		$processor = new \WP_HTML_Tag_Processor( $content );
+		if ( ( $cached || $comment_id ) && $processor->next_tag( array( 'tag_name' => 'IMG' ) ) ) {
+			if ( $cached ) {
 				$processor->set_attribute( 'src', $cached_url );
 				// Browsers prefer srcset candidates, which still point to the remote host.
 				$processor->remove_attribute( 'srcset' );
-				return $processor->get_updated_html();
 			}
+
+			// Comment sanitization removes the image's size and classes, so keep a reply photo inside its comment.
+			if ( $comment_id ) {
+				$processor->set_attribute( 'style', 'max-width:100%;height:auto' );
+			}
+
+			return $processor->get_updated_html();
 		}
 
 		return $content;
