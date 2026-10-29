@@ -151,7 +151,9 @@ class Search {
 			'object' => $object,
 		);
 
-		// Import the reply as a comment.
-		return Interactions::add_comment( $activity );
+		// Import the reply as a comment; a failed import is no comment to lead to.
+		$imported = Interactions::add_comment( $activity );
+
+		return \is_wp_error( $imported ) ? false : $imported;
 	}
 }

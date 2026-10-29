@@ -144,6 +144,65 @@ class Test_Search extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A reply that cannot be stored leads nowhere, instead of breaking the search.
+	 *
+	 * @covers \Activitypub\Search::enhance_admin_comment_search
+	 */
+	public function test_search_with_failed_import() {
+		$user = \get_user_by( 'id', self::factory()->user->create( array( 'role' => 'editor' ) ) );
+		$user->add_cap( 'activitypub' );
+		\wp_set_current_user( $user->ID );
+
+		// A public IP, so wp_http_validate_url() accepts the URL without a DNS lookup.
+		$url   = 'https://1.1.1.1/notes/2';
+		$actor = 'https://1.1.1.1/users/test';
+		$fetch = static function ( $pre, $url_or_object ) use ( $url, $actor ) {
+			return $url === $url_or_object ? array(
+				'id'           => $url,
+				'type'         => 'Note',
+				'attributedTo' => $actor,
+				'content'      => 'Hello',
+				'inReplyTo'    => \get_permalink( self::factory()->post->create() ),
+			) : $pre;
+		};
+		$meta  = static function () use ( $actor ) {
+			return array(
+				'id'                => $actor,
+				'name'              => 'Test',
+				'preferredUsername' => 'test',
+				'url'               => $actor,
+			);
+		};
+		$fail  = static function () {
+			return new \WP_Error( 'comment_duplicate', 'Duplicate comment.' );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10, 2 );
+		\add_filter( 'pre_get_remote_metadata_by_actor', $meta );
+		\add_filter( 'pre_comment_approved', $fail, 99 );
+
+		$redirect = static function ( $location ) {
+			throw new \Exception( \esc_url_raw( $location ) );
+		};
+		\add_filter( 'wp_redirect', $redirect );
+
+		$_GET['s']  = $url;
+		$redirected = '';
+		try {
+			Search::enhance_admin_comment_search();
+		} catch ( \Exception $e ) {
+			$redirected = $e->getMessage();
+		}
+		unset( $_GET['s'] );
+
+		\remove_filter( 'wp_redirect', $redirect );
+		\remove_filter( 'pre_comment_approved', $fail, 99 );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $meta );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10 );
+
+		$this->assertSame( '', $redirected, 'A failed import must not redirect.' );
+	}
+
+	/**
 	 * Helper method to access private try_import_activitypub_object method via reflection.
 	 *
 	 * @param string $url The URL to import.
