@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Follow requests are now only accepted when they are meant for the account that received them, and profile links on other sites no longer count as accounts on your site.

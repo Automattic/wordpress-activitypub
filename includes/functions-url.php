@@ -60,7 +60,7 @@ function normalize_host( $host ) {
  * `xn--caf-dma.example`), which is the form `acct:` URIs and DNS use. ASCII hosts, IPv6
  * literals included, are returned as they are.
  *
- * @since unreleased
+ * @since 9.4.0
  *
  * @param string $host The host.
  *
@@ -160,7 +160,7 @@ function fold_authority( $authority ) {
  * request. Only a host this site answers on may enter a signature base, or a signature made out
  * to another server would verify here when it is replayed to the same path with that server's name.
  *
- * @since unreleased
+ * @since 9.4.0
  *
  * @param string $authority A host, optionally bracketed and optionally with a port.
  *
@@ -208,7 +208,7 @@ function is_signature_host( $authority ) {
  * and as WordPress' HTTP transports send it. A signature over the host has to name this value,
  * or a server on a non-default port cannot verify it.
  *
- * @since unreleased
+ * @since 9.4.0
  *
  * @param string $url The URL.
  *
@@ -242,7 +242,7 @@ function get_authority( $url ) {
  * ones are whatever an admin entered. A host of `.` or `[]` folds away to nothing and is dropped, so
  * it never matches an unset old host.
  *
- * @since unreleased
+ * @since 9.4.0
  *
  * @param string|null $host The host.
  *

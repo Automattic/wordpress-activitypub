@@ -45,7 +45,7 @@ class Media extends File {
 	/**
 	 * Context identifier for comment media.
 	 *
-	 * @deprecated unreleased Use {@see Comment_Media::CONTEXT}.
+	 * @deprecated 9.4.0 Use {@see Comment_Media::CONTEXT}.
 	 *
 	 * @var string
 	 */
@@ -54,7 +54,7 @@ class Media extends File {
 	/**
 	 * Base directory for comment media.
 	 *
-	 * @deprecated unreleased Use {@see Comment_Media::BASE_DIR}.
+	 * @deprecated 9.4.0 Use {@see Comment_Media::BASE_DIR}.
 	 *
 	 * @var string
 	 */
@@ -152,7 +152,7 @@ class Media extends File {
 	/**
 	 * Get storage paths based on context.
 	 *
-	 * @deprecated unreleased Use {@see Media::get_storage_paths()} or {@see Comment_Media::get_storage_paths()}.
+	 * @deprecated 9.4.0 Use {@see Media::get_storage_paths()} or {@see Comment_Media::get_storage_paths()}.
 	 *
 	 * @param string|int $entity_id The entity identifier.
 	 * @param string     $context   The context ('media' or 'comment_media').
@@ -165,7 +165,7 @@ class Media extends File {
 	 * }
 	 */
 	public static function get_storage_paths_for_context( $entity_id, $context = self::CONTEXT ) {
-		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Cache\Media::get_storage_paths or Activitypub\Cache\Comment_Media::get_storage_paths' );
+		\_deprecated_function( __METHOD__, '9.4.0', 'Activitypub\Cache\Media::get_storage_paths or Activitypub\Cache\Comment_Media::get_storage_paths' );
 
 		return Comment_Media::CONTEXT === $context ? Comment_Media::get_storage_paths( $entity_id ) : self::get_storage_paths( $entity_id );
 	}
@@ -173,14 +173,14 @@ class Media extends File {
 	/**
 	 * Invalidate cached media for a comment.
 	 *
-	 * @deprecated unreleased Use {@see Comment_Media::clear_cached_images()}.
+	 * @deprecated 9.4.0 Use {@see Comment_Media::clear_cached_images()}.
 	 *
 	 * @param int $comment_id The comment ID.
 	 *
 	 * @return bool True on success, false on failure.
 	 */
 	public static function invalidate_comment( $comment_id ) {
-		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Cache\Comment_Media::clear_cached_images' );
+		\_deprecated_function( __METHOD__, '9.4.0', 'Activitypub\Cache\Comment_Media::clear_cached_images' );
 
 		return Comment_Media::invalidate_entity( $comment_id );
 	}

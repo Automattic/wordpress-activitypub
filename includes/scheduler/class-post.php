@@ -52,7 +52,7 @@ class Post {
 	/**
 	 * Preserve the published URL before post fields and terms change.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param int $post_id Post ID.
 	 * @return void

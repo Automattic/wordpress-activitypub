@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fixed requests to servers on a non-standard port being rejected because their signature did not include the port.

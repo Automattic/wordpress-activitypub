@@ -66,7 +66,7 @@ class Moderation {
 	 * local comment it targets. A cached remote object has no owner, whoever its `post_author` is,
 	 * because it sits in several users' streams; a received comment is stored without a user.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param Activity $activity The activity.
 	 * @return bool True if an owner blocked it, false otherwise.

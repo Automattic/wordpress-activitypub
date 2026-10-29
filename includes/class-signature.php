@@ -136,8 +136,8 @@ class Signature {
 	 * {@see is_wp_error()} as before.
 	 *
 	 * @since 9.0.0 Returns the verified keyId on success instead of `true`.
-	 * @since unreleased Returns the id of the actor that owns the verified key instead of the keyId.
-	 * @since unreleased Refreshes a stored actor once when its key does not verify.
+	 * @since 9.4.0 Returns the id of the actor that owns the verified key instead of the keyId.
+	 * @since 9.4.0 Refreshes a stored actor once when its key does not verify.
 	 *
 	 * @param \WP_REST_Request|array $request The request object or $_SERVER array.
 	 *

@@ -92,7 +92,7 @@ class Post extends Base {
 	/**
 	 * The quoted object URI, or null once resolved to "not a quote".
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @var string|null|false
 	 */
@@ -323,7 +323,7 @@ class Post extends Base {
 	 * getter onto the property of the same name, and FEP-b2b8 reserves `icon` for the author's
 	 * avatar.
 	 *
-	 * @since unreleased Renamed from `get_icon()`, so it no longer maps onto the object.
+	 * @since 9.4.0 Renamed from `get_icon()`, so it no longer maps onto the object.
 	 *
 	 * @see https://fediverse.codeberg.page/fep/fep/b2b8/
 	 *
@@ -693,7 +693,7 @@ class Post extends Base {
 	 * Returns the URI quoted by the first valid Quote block.
 	 *
 	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @return string|null The quoted object URI, or null if there is none or the quote was rejected.
 	 */
@@ -727,7 +727,7 @@ class Post extends Base {
 	/**
 	 * Returns the Fedibird alias of the quote property.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @return string|null The quoted object URI.
 	 */
@@ -738,7 +738,7 @@ class Post extends Base {
 	/**
 	 * Returns the Misskey alias of the quote property.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @return string|null The quoted object URI.
 	 */
@@ -749,7 +749,7 @@ class Post extends Base {
 	/**
 	 * Returns the QuoteAuthorization stamp URI once the quoted author accepted.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @return string|null The stamp URI or null.
 	 */

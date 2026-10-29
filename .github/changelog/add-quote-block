@@ -1,4 +1,0 @@
-Significance: minor
-Type: added
-
-Added a Federated Quote block to quote posts from the Fediverse. The author of the quoted post is asked for permission, and the quote is marked as verified once they agree.

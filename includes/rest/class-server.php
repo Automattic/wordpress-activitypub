@@ -164,7 +164,7 @@ class Server {
 	 * every request. Only here, before verification, is the activity type known, and retractions
 	 * still go on: verifying them is worth the request, see Moderation::RETRACTION_TYPES.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param mixed            $result  Response to replace the requested version with.
 	 * @param \WP_REST_Server  $server  Server instance.

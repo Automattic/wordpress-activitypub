@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Incoming requests and account lookups now only match the site address, not the WordPress address.

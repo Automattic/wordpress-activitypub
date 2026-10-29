@@ -65,7 +65,7 @@ class Webfinger {
 	 * An internationalized handle gets the form RFC 7565 asks for: the userpart percent-encoded
 	 * and the host as A-label.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param string $handle The handle, `user@host`.
 	 *

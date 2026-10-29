@@ -317,7 +317,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * the position counts only the activities they can see, so it cannot reveal how many private
 	 * ones precede it.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param string           $item    The ActivityPub activity ID.
 	 * @param \WP_REST_Request $request Full details about the request.

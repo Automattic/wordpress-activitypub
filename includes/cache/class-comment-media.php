@@ -16,7 +16,7 @@ use Activitypub\Blocks;
  * Images are stored in /wp-content/uploads/activitypub/comments/{comment_id}/
  * and removed as soon as the comment is deleted, edited, or no longer approved.
  *
- * @since unreleased
+ * @since 9.4.0
  */
 class Comment_Media extends Media {
 	/**
