@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+The Federated Quote block now also warns about posts that do not allow quotes on sites with a custom REST API path, such as WordPress.com.
