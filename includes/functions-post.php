@@ -577,3 +577,48 @@ function get_quote_intent_url() {
 
 	return \esc_url_raw( $url );
 }
+
+/**
+ * Get the post an interaction with a URL lands on.
+ *
+ * The URL is a local post, a stored remote post, or a comment, in which case the comment's post.
+ * Storing an interaction and checking blocks on it both resolve it here, so they agree.
+ *
+ * @since unreleased
+ *
+ * @param string   $url               The target URL.
+ * @param int|null $parent_comment_id Optional. The comment the URL resolved to, see url_to_commentid().
+ *
+ * @return int The post ID, or 0 when the target is unknown.
+ */
+function get_target_post_id( $url, $parent_comment_id = 0 ) {
+	if ( ! $url ) {
+		return 0;
+	}
+
+	// A comment's URL leads to its post, and core's url_to_postid() would read `/?c=5` as the front page.
+	$parent_comment = $parent_comment_id ? \get_comment( $parent_comment_id ) : null;
+	if ( $parent_comment instanceof \WP_Comment ) {
+		return (int) $parent_comment->comment_post_ID;
+	}
+
+	$url = \esc_url_raw( $url );
+
+	$post_id = \url_to_postid( $url );
+
+	// url_to_postid() drops query arguments it does not know, so `/?author=5` reads as the static front page.
+	$query = array();
+	\wp_parse_str( (string) \wp_parse_url( $url, PHP_URL_QUERY ), $query );
+	if ( $post_id && (int) \get_option( 'page_on_front' ) === $post_id && $query && ! \array_intersect( \array_keys( $query ), array( 'p', 'page_id' ) ) ) {
+		$post_id = 0;
+	}
+
+	if ( ! $post_id ) {
+		$remote_post = Remote_Posts::get_by_guid( $url );
+		if ( $remote_post instanceof \WP_Post ) {
+			$post_id = $remote_post->ID;
+		}
+	}
+
+	return (int) $post_id;
+}

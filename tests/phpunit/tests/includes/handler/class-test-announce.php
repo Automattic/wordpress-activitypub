@@ -10,6 +10,7 @@ namespace Activitypub\Tests\Handler;
 use Activitypub\Activity\Activity;
 use Activitypub\Handler\Announce;
 use Activitypub\Model\Blog;
+use Activitypub\Moderation;
 
 /**
  * Test class for Activitypub Announce Handler.
@@ -189,6 +190,107 @@ class Test_Announce extends \WP_UnitTestCase {
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10 );
 
 		$this->assertSame( 1, $inbox->get_call_count(), 'An origin-authentic announced activity must be relayed.' );
+	}
+
+	/**
+	 * An announced activity from an actor the post owner blocked is not relayed.
+	 *
+	 * The inbox checks blocks against the Announce, so an unblocked booster must not carry a
+	 * blocked actor's Like past the owner's block.
+	 *
+	 * @covers ::handle_announce
+	 */
+	public function test_handle_announce_does_not_relay_owner_blocked_activity() {
+		$activity_url = 'https://example.com/activities/like-1';
+		$fetch        = function ( $pre, $url_or_object ) use ( $activity_url ) {
+			if ( 'https://example.com/user' === $url_or_object ) {
+				return array(
+					'id'    => 'https://example.com/user',
+					'type'  => 'Person',
+					'inbox' => 'https://example.com/user/inbox',
+				);
+			}
+
+			if ( $activity_url !== $url_or_object ) {
+				return $pre;
+			}
+
+			return array(
+				'id'     => $activity_url,
+				'type'   => 'Like',
+				'actor'  => 'https://example.com/user',
+				'object' => $this->post_permalink,
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10, 2 );
+		$this->assertTrue( Moderation::add_user_block( $this->user_id, Moderation::TYPE_ACTOR, 'https://example.com/user' ) );
+
+		$inbox = new \MockAction();
+		\add_action( 'activitypub_inbox', array( $inbox, 'action' ) );
+
+		$announce = array(
+			'actor'  => 'https://booster.example/user',
+			'type'   => 'Announce',
+			'id'     => 'https://booster.example/a/1',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => $activity_url,
+		);
+		Announce::handle_announce( $announce, $this->user_id, Activity::init_from_array( $announce ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10 );
+
+		$this->assertSame( 0, $inbox->get_call_count(), 'A Like the post owner blocked must not be relayed.' );
+	}
+
+	/**
+	 * An announced activity is not relayed to a recipient who blocked its actor.
+	 *
+	 * The inbox checked the recipient's blocks against the booster, not against the actor whose
+	 * activity the Announce carries.
+	 *
+	 * @covers ::handle_announce
+	 */
+	public function test_handle_announce_does_not_relay_to_recipient_who_blocked_actor() {
+		$activity_url = 'https://example.com/activities/like-2';
+		$fetch        = function ( $pre, $url_or_object ) use ( $activity_url ) {
+			if ( 'https://example.com/user' === $url_or_object ) {
+				return array(
+					'id'    => 'https://example.com/user',
+					'type'  => 'Person',
+					'inbox' => 'https://example.com/user/inbox',
+				);
+			}
+
+			if ( $activity_url !== $url_or_object ) {
+				return $pre;
+			}
+
+			// A remote target, so no content owner decides and only the recipient's block applies.
+			return array(
+				'id'     => $activity_url,
+				'type'   => 'Like',
+				'actor'  => 'https://example.com/user',
+				'object' => 'https://elsewhere.example/post/1',
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10, 2 );
+		$this->assertTrue( Moderation::add_user_block( $this->user_id, Moderation::TYPE_ACTOR, 'https://example.com/user' ) );
+
+		$inbox = new \MockAction();
+		\add_action( 'activitypub_inbox', array( $inbox, 'action' ) );
+
+		$announce = array(
+			'actor'  => 'https://booster.example/user',
+			'type'   => 'Announce',
+			'id'     => 'https://booster.example/a/2',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => $activity_url,
+		);
+		Announce::handle_announce( $announce, $this->user_id, Activity::init_from_array( $announce ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10 );
+
+		$this->assertSame( 0, $inbox->get_call_count(), 'An activity from an actor the recipient blocked must not be relayed to them.' );
 	}
 
 	/**

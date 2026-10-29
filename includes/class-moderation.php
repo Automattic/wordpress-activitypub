@@ -40,12 +40,68 @@ class Moderation {
 	);
 
 	/**
+	 * Activities that only take back what their sender sent, so no block stops them.
+	 *
+	 * A block keeps an actor's content out. Stopping its Delete or Undo would keep that content in
+	 * instead, and stopping its Reject would leave our Follow pending; whether the sender owns what
+	 * it takes back is for the handler to check. Update is not one: it changes what is shown.
+	 */
+	const RETRACTION_TYPES = array( 'Delete', 'Undo', 'Reject' );
+
+	/**
 	 * Option key for site-wide blocked keywords.
 	 */
 	const OPTION_KEYS = array(
 		self::TYPE_DOMAIN  => 'activitypub_site_blocked_domains',
 		self::TYPE_KEYWORD => 'activitypub_site_blocked_keywords',
 	);
+
+	/**
+	 * Check if an owner of the local content an activity targets has blocked it.
+	 *
+	 * The inbox checks recipient blocks per recipient, but a reply, a reaction or a quote lands on
+	 * someone's post or comment, and that owner is not always among the recipients (the actor's local
+	 * followers, a mention, or nobody at all). So the owner decides for the whole activity, before
+	 * any handler sees it: the author of a post whose type the site publishes, and the author of a
+	 * local comment it targets. A cached remote object has no owner, whoever its `post_author` is,
+	 * because it sits in several users' streams; a received comment is stored without a user.
+	 *
+	 * @since unreleased
+	 *
+	 * @param Activity $activity The activity.
+	 * @return bool True if an owner blocked it, false otherwise.
+	 */
+	public static function activity_is_blocked_by_content_owner( $activity ) {
+		$data    = $activity->to_array( false );
+		$object  = $data['object'] ?? null;
+		$targets = array( object_to_uri( $object ), object_to_uri( $object['inReplyTo'] ?? null ), get_quote_url( $data ) );
+
+		$owners = array();
+		foreach ( \array_unique( \array_filter( $targets, 'is_string' ) ) as $url ) {
+			// Resolved the way the interaction is stored, so a reply to a received comment finds its post.
+			$comment_id = url_to_commentid( $url );
+			$post_id    = get_target_post_id( $url, $comment_id );
+			$post       = $post_id ? \get_post( $post_id ) : null;
+
+			if ( $post && $post->post_author && \post_type_supports( $post->post_type, 'activitypub' ) ) {
+				$owners[] = (int) $post->post_author;
+			}
+
+			$comment = $comment_id ? \get_comment( $comment_id ) : null;
+			$user_id = $comment ? (int) $comment->user_id : 0;
+			if ( $user_id ) {
+				$owners[] = $user_id;
+			}
+		}
+
+		foreach ( \array_unique( $owners ) as $owner ) {
+			if ( self::activity_is_blocked_for_user( $activity, $owner ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
 
 	/**
 	 * Check if an activity should be blocked for a specific user.
@@ -55,7 +111,7 @@ class Moderation {
 	 * @return bool True if blocked, false otherwise.
 	 */
 	public static function activity_is_blocked( $activity, $user_id = null ) {
-		if ( ! $activity instanceof Activity ) {
+		if ( ! $activity instanceof Activity || \in_array( $activity->get_type(), self::RETRACTION_TYPES, true ) ) {
 			return false;
 		}
 
@@ -66,6 +122,11 @@ class Moderation {
 
 		// Then check user-specific blocks.
 		if ( $user_id && self::activity_is_blocked_for_user( $activity, $user_id ) ) {
+			return true;
+		}
+
+		// Then the blocks of whoever owns the local content the activity targets.
+		if ( self::activity_is_blocked_by_content_owner( $activity ) ) {
 			return true;
 		}
 
@@ -537,6 +598,11 @@ class Moderation {
 	 * @return bool True if blocked, false otherwise.
 	 */
 	private static function check_activity_against_blocks( $activity, $blocks ) {
+		// Site-wide, recipient and owner blocks all end here.
+		if ( \in_array( $activity->get_type(), self::RETRACTION_TYPES, true ) ) {
+			return false;
+		}
+
 		// Extract actor information.
 		$actor_id = object_to_uri( $activity->get_actor() );
 

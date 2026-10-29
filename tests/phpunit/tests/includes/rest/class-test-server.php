@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Rest;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Moderation;
 use Activitypub\Rest\Server;
 use Activitypub\Signature;
 
@@ -39,6 +40,7 @@ class Test_Server extends \WP_Test_REST_TestCase {
 		$this->assertEquals( 10, \has_filter( 'rest_post_dispatch', array( Server::class, 'add_cors_headers' ) ) );
 		$this->assertEquals( 10, \has_filter( 'rest_allowed_cors_headers', array( Server::class, 'allow_cors_headers' ) ) );
 		$this->assertEquals( 10, \has_filter( 'rest_pre_dispatch', array( Server::class, 'maybe_add_actor_from_signature' ) ) );
+		$this->assertEquals( 5, \has_filter( 'rest_pre_dispatch', array( Server::class, 'reject_blocked_sender' ) ) );
 		$this->assertEquals( 1, \has_filter( 'rest_pre_dispatch', array( Server::class, 'normalize_route' ) ), 'The route has to be normalized before any other callback reads it.' );
 	}
 
@@ -1017,5 +1019,94 @@ class Test_Server extends \WP_Test_REST_TestCase {
 		$this->assertWPError( Signature::verify_http_signature( $request ), 'Once the route is normalized, the rebuilt request-target no longer matches what was signed.' );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_actor );
+	}
+
+	/**
+	 * A site-wide blocked sender is stopped before its signature is verified, except to retract.
+	 *
+	 * @dataProvider data_blocked_senders
+	 * @covers ::reject_blocked_sender
+	 *
+	 * @param string   $type   The activity type.
+	 * @param string   $host   The host of the signing key.
+	 * @param int|null $status The expected error status, or null when the request goes on.
+	 */
+	public function test_reject_blocked_sender( $type, $host, $status ) {
+		\update_option( Moderation::OPTION_KEYS[ Moderation::TYPE_DOMAIN ], array( 'blocked.example' ) );
+
+		$request = $this->build_signed_inbox_request(
+			array(
+				'type'   => $type,
+				'actor'  => 'https://' . $host . '/users/test',
+				'object' => 'https://' . $host . '/notes/1',
+			),
+			'https://' . $host . '/users/test#main-key'
+		);
+		$result  = Server::reject_blocked_sender( null, new \WP_REST_Server(), $request );
+
+		\delete_option( Moderation::OPTION_KEYS[ Moderation::TYPE_DOMAIN ] );
+
+		if ( null === $status ) {
+			$this->assertNull( $result );
+		} else {
+			$this->assertWPError( $result );
+			$this->assertSame( $status, $result->get_error_data()['status'] );
+		}
+	}
+
+	/**
+	 * Activity types and signing hosts for test_reject_blocked_sender.
+	 *
+	 * @return array[] Activity type, key host and expected status.
+	 */
+	public function data_blocked_senders() {
+		return array(
+			'create from a blocked domain' => array( 'Create', 'blocked.example', 202 ),
+			'like from a blocked domain'   => array( 'Like', 'blocked.example', 202 ),
+			'delete from a blocked domain' => array( 'Delete', 'blocked.example', null ),
+			'undo from a blocked domain'   => array( 'Undo', 'blocked.example', null ),
+			'reject from a blocked domain' => array( 'Reject', 'blocked.example', null ),
+			'create from another domain'   => array( 'Create', 'remote.example', null ),
+		);
+	}
+
+	/**
+	 * A blocked sender's delivery is answered without contacting its server.
+	 *
+	 * @covers ::reject_blocked_sender
+	 */
+	public function test_blocked_sender_is_not_fetched() {
+		Server::init();
+		\update_option( Moderation::OPTION_KEYS[ Moderation::TYPE_DOMAIN ], array( 'blocked.example' ) );
+
+		$fetches = 0;
+		$watch   = static function ( $pre, $url ) use ( &$fetches ) {
+			if ( false !== \strpos( (string) $url, 'blocked.example' ) ) {
+				++$fetches;
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $watch, 10, 2 );
+
+		$request  = $this->build_signed_inbox_request(
+			array(
+				'id'     => 'https://blocked.example/activities/1',
+				'type'   => 'Create',
+				'actor'  => 'https://blocked.example/users/test',
+				'object' => array(
+					'id'      => 'https://blocked.example/notes/1',
+					'type'    => 'Note',
+					'content' => 'Hello',
+				),
+			),
+			'https://blocked.example/users/test#main-key'
+		);
+		$response = \rest_do_request( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $watch, 10 );
+		\delete_option( Moderation::OPTION_KEYS[ Moderation::TYPE_DOMAIN ] );
+
+		$this->assertSame( 202, $response->get_status() );
+		$this->assertSame( 0, $fetches, 'Nothing may be fetched from a blocked domain.' );
 	}
 }

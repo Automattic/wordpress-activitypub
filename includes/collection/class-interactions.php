@@ -12,7 +12,9 @@ use Activitypub\Emoji;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
+use function Activitypub\get_quote_url;
 use function Activitypub\get_remote_metadata_by_actor;
+use function Activitypub\get_target_post_id;
 use function Activitypub\is_ap_post;
 use function Activitypub\is_post_disabled;
 use function Activitypub\is_same_host;
@@ -61,7 +63,7 @@ class Interactions {
 			$parent_comment_id = url_to_commentid( $target_url );
 		} else {
 			// Check for quote.
-			$target_url = self::get_quote_url( $activity );
+			$target_url = get_quote_url( $activity );
 
 			if ( ! $target_url ) {
 				return false;
@@ -80,7 +82,7 @@ class Interactions {
 			}
 		}
 
-		$comment_post_id = self::resolve_post_id( $target_url, $parent_comment_id );
+		$comment_post_id = get_target_post_id( $target_url, $parent_comment_id );
 
 		if ( ! $comment_post_id ) {
 			// Not a reply to a post or comment.
@@ -220,7 +222,7 @@ class Interactions {
 
 		$url               = object_to_uri( $activity['object'] );
 		$parent_comment_id = url_to_commentid( $url );
-		$comment_post_id   = self::resolve_post_id( $url, $parent_comment_id );
+		$comment_post_id   = get_target_post_id( $url, $parent_comment_id );
 
 		if ( ! $comment_post_id ) {
 			// Not a reply to a post or comment.
@@ -245,41 +247,6 @@ class Interactions {
 		$comment_data['comment_meta']['source_id'] = \esc_url_raw( $activity['id'] );
 
 		return self::persist( $comment_data );
-	}
-
-	/**
-	 * Resolve an interaction target to its WordPress post ID.
-	 *
-	 * @since unreleased
-	 *
-	 * @param string   $url               The target URL.
-	 * @param int|null $parent_comment_id Optional. The resolved parent comment ID.
-	 *
-	 * @return int The post ID, or 0 when the target is unknown.
-	 */
-	private static function resolve_post_id( $url, $parent_comment_id = 0 ) {
-		if ( ! $url ) {
-			return 0;
-		}
-
-		$url     = \esc_url_raw( $url );
-		$post_id = \url_to_postid( $url );
-
-		if ( ! $post_id ) {
-			$remote_post = Remote_Posts::get_by_guid( $url );
-			if ( $remote_post instanceof \WP_Post ) {
-				$post_id = $remote_post->ID;
-			}
-		}
-
-		if ( ! $post_id && $parent_comment_id ) {
-			$parent_comment = \get_comment( $parent_comment_id );
-			if ( $parent_comment instanceof \WP_Comment ) {
-				$post_id = $parent_comment->comment_post_ID;
-			}
-		}
-
-		return (int) $post_id;
 	}
 
 	/**
@@ -749,22 +716,6 @@ class Interactions {
 	 * @return string|false The quote URL or false if not found.
 	 */
 	public static function get_quote_url( $activity ) {
-		if ( ! empty( $activity['object']['quote'] ) ) {
-			return object_to_uri( $activity['object']['quote'] );
-		}
-
-		if ( ! empty( $activity['object']['quoteUrl'] ) ) {
-			return object_to_uri( $activity['object']['quoteUrl'] );
-		}
-
-		if ( ! empty( $activity['object']['quoteUri'] ) ) {
-			return object_to_uri( $activity['object']['quoteUri'] );
-		}
-
-		if ( ! empty( $activity['object']['_misskey_quote'] ) ) {
-			return object_to_uri( $activity['object']['_misskey_quote'] );
-		}
-
-		return false;
+		return get_quote_url( $activity );
 	}
 }

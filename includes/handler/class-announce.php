@@ -7,9 +7,11 @@
 
 namespace Activitypub\Handler;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Interactions;
 use Activitypub\Comment;
+use Activitypub\Moderation;
 use Activitypub\Proxy;
 
 use function Activitypub\is_activity;
@@ -119,6 +121,25 @@ class Announce {
 		$declared_id = isset( $object['id'] ) && \is_string( $object['id'] ) ? $object['id'] : '';
 
 		if ( '' !== $declared_id && ! is_same_host( $declared_id, $object['actor'] ?? '' ) ) {
+			return;
+		}
+
+		// The inbox checked its blocks against the Announce, not against the activity it carries.
+		$inner = Activity::init_from_array( $object );
+		if ( Moderation::activity_is_blocked( $inner ) ) {
+			return;
+		}
+
+		$user_ids = \array_values(
+			\array_filter(
+				(array) $user_ids,
+				static function ( $user_id ) use ( $inner ) {
+					return ! Moderation::activity_is_blocked_for_user( $inner, $user_id );
+				}
+			)
+		);
+
+		if ( ! $user_ids ) {
 			return;
 		}
 
