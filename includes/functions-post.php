@@ -607,6 +607,7 @@ function get_target_post_id( $url, $parent_comment_id = 0 ) {
 	$post_id = \url_to_postid( $url );
 
 	// url_to_postid() drops query arguments it does not know, so `/?author=5` reads as the static front page.
+	$query = array();
 	\wp_parse_str( (string) \wp_parse_url( $url, PHP_URL_QUERY ), $query );
 	if ( $post_id && (int) \get_option( 'page_on_front' ) === $post_id && $query && ! \array_intersect( \array_keys( $query ), array( 'p', 'page_id' ) ) ) {
 		$post_id = 0;
