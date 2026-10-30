@@ -389,7 +389,21 @@ function generate_post_summary( $post, $length = 500 ) {
 	\add_filter( 'excerpt_allowed_wrapper_blocks', $containers );
 	\add_filter( 'excerpt_allowed_blocks', $details );
 
+	/*
+	 * The summary is plain text, so a linked mention would be stripped down to its `@user` label.
+	 * Without the link it keeps `@user@host`, which `Mention::filter_activity_object()` links.
+	 */
+	$mention          = array( Mention::class, 'the_excerpt' );
+	$mention_priority = \has_filter( 'get_the_excerpt', $mention );
+	if ( false !== $mention_priority ) {
+		\remove_filter( 'get_the_excerpt', $mention, $mention_priority );
+	}
+
 	$content = \get_the_excerpt( $teaser );
+
+	if ( false !== $mention_priority ) {
+		\add_filter( 'get_the_excerpt', $mention, $mention_priority );
+	}
 
 	\remove_filter( 'excerpt_allowed_blocks', $details );
 	\remove_filter( 'excerpt_allowed_wrapper_blocks', $containers );

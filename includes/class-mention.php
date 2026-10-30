@@ -23,6 +23,7 @@ class Mention {
 	 */
 	public static function init() {
 		\add_filter( 'the_content', array( self::class, 'the_content' ), 99 );
+		\add_filter( 'get_the_excerpt', array( self::class, 'the_excerpt' ), 99 );
 		\add_filter( 'comment_text', array( self::class, 'the_content' ) );
 		\add_filter( 'activitypub_extra_field_content', array( self::class, 'the_content' ) );
 		\add_filter( 'activitypub_extract_mentions', array( self::class, 'extract_mentions' ), 99, 2 );
@@ -59,13 +60,29 @@ class Mention {
 	public static function the_content( $the_content ) {
 		/*
 		 * An excerpt is stripped of its tags, which would leave only the `@user` of the link. Without
-		 * the link it keeps `@user@host`, so the summary can still be linked by `filter_activity_object()`.
+		 * the link it keeps `@user@host`, which `the_excerpt()` links once the excerpt is built.
 		 */
 		if ( \doing_filter( 'get_the_excerpt' ) ) {
 			return $the_content;
 		}
 
 		return enrich_content_data( $the_content, self::get_pattern( $the_content ), array( self::class, 'replace_with_links' ) );
+	}
+
+	/**
+	 * Filter to replace the mentions in an excerpt with links.
+	 *
+	 * Runs after core and themes built the excerpt, so the links are not stripped with the
+	 * rest of the content's HTML.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $excerpt The post excerpt.
+	 *
+	 * @return string The filtered excerpt.
+	 */
+	public static function the_excerpt( $excerpt ) {
+		return enrich_content_data( $excerpt, self::get_pattern( $excerpt ), array( self::class, 'replace_with_links' ) );
 	}
 
 	/**

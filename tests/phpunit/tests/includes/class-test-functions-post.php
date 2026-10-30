@@ -749,6 +749,41 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The summary keeps a mention as the full handle in plain text, for the object to link.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 */
+	public function test_generate_post_summary_keeps_full_handle() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_excerpt' => '',
+				'post_content' => '<!-- wp:paragraph --><p>Hello @username@example.org how are you</p><!-- /wp:paragraph -->',
+			)
+		);
+
+		$this->assertSame( 'Hello @username@example.org how are you', \Activitypub\generate_post_summary( $post_id ) );
+	}
+
+	/**
+	 * Building the summary puts the mention filter of excerpts back, and leaves it out if it was removed.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 */
+	public function test_generate_post_summary_restores_mention_filter() {
+		$post_id  = self::factory()->post->create( array( 'post_excerpt' => '' ) );
+		$callback = array( \Activitypub\Mention::class, 'the_excerpt' );
+
+		\Activitypub\generate_post_summary( $post_id );
+		$this->assertSame( 99, \has_filter( 'get_the_excerpt', $callback ) );
+
+		\remove_filter( 'get_the_excerpt', $callback, 99 );
+		\Activitypub\generate_post_summary( $post_id );
+		$this->assertFalse( \has_filter( 'get_the_excerpt', $callback ) );
+
+		\add_filter( 'get_the_excerpt', $callback, 99 );
+	}
+
+	/**
 	 * Line breaks and lines that only hold whitespace collapse into a single space.
 	 *
 	 * @covers \Activitypub\generate_post_summary

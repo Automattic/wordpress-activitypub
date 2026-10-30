@@ -316,7 +316,7 @@ ENDPRE;
 	}
 
 	/**
-	 * The content links mentions, an excerpt keeps the full handle, since its tags are stripped.
+	 * While an excerpt is built, the content keeps the full handle, so stripping its tags cannot cut it.
 	 *
 	 * @covers ::the_content
 	 */
@@ -331,11 +331,112 @@ ENDPRE;
 		);
 
 		$this->assertStringContainsString( '<a rel="mention" class="u-url mention" href="https://example.org/users/username">@username</a>', \apply_filters( 'the_content', $post->post_content ) );
-		$this->assertSame( 'hallo @username@example.org test', \get_the_excerpt( $post ) );
+
+		$content  = null;
+		$building = static function ( $excerpt, $post ) use ( &$content ) {
+			$content = \apply_filters( 'the_content', $post->post_content );
+			return $excerpt;
+		};
+		\add_filter( 'get_the_excerpt', $building, 10, 2 );
+		\get_the_excerpt( $post );
+		\remove_filter( 'get_the_excerpt', $building );
+
+		$this->assertSame( "<p>hallo @username@example.org test</p>\n", $content );
 	}
 
 	/**
-	 * A mention in a post summary built from the content is still linked.
+	 * Core's excerpt links mentions once it is built, and drops the HTML other plugins add to the content.
+	 *
+	 * @covers ::the_content
+	 * @covers ::the_excerpt
+	 */
+	public function test_the_excerpt_links_mentions_in_core_excerpt() {
+		$post = \get_post(
+			self::factory()->post->create(
+				array(
+					'post_excerpt' => '',
+					'post_content' => 'hallo @username@example.org test',
+				)
+			)
+		);
+
+		$third_party = static function ( $content ) {
+			return $content . '<div class="share"><a href="https://example.com/share">Share</a></div>';
+		};
+		\add_filter( 'the_content', $third_party );
+		$excerpt = \get_the_excerpt( $post );
+		\remove_filter( 'the_content', $third_party );
+
+		$this->assertSame( 'hallo <a rel="mention" class="u-url mention" href="https://example.org/users/username">@username</a> test Share', $excerpt );
+	}
+
+	/**
+	 * An excerpt that keeps its HTML, like a theme builds it from the content, links mentions once.
+	 *
+	 * @covers ::the_content
+	 * @covers ::the_excerpt
+	 */
+	public function test_the_excerpt_links_mentions_in_html_excerpt() {
+		$post = \get_post(
+			self::factory()->post->create(
+				array(
+					'post_excerpt' => '',
+					'post_content' => 'hallo @username@example.org test',
+				)
+			)
+		);
+
+		$third_party  = static function ( $content ) {
+			return $content . '<div class="share"><a href="https://example.com/share">Share</a></div>';
+		};
+		$html_excerpt = static function ( $text, $post ) {
+			return \strip_tags( \apply_filters( 'the_content', $post->post_content ), '<a>,<p>' );
+		};
+		\add_filter( 'the_content', $third_party );
+		\remove_filter( 'get_the_excerpt', 'wp_trim_excerpt' );
+		\add_filter( 'get_the_excerpt', $html_excerpt, 10, 2 );
+
+		$excerpt = \get_the_excerpt( $post );
+
+		\remove_filter( 'get_the_excerpt', $html_excerpt );
+		\add_filter( 'get_the_excerpt', 'wp_trim_excerpt', 10, 2 );
+		\remove_filter( 'the_content', $third_party );
+
+		$this->assertSame( "<p>hallo <a rel=\"mention\" class=\"u-url mention\" href=\"https://example.org/users/username\">@username</a> test</p>\n<a href=\"https://example.com/share\">Share</a>", $excerpt );
+	}
+
+	/**
+	 * A manual excerpt links mentions.
+	 *
+	 * @covers ::the_excerpt
+	 */
+	public function test_the_excerpt_links_mentions_in_manual_excerpt() {
+		$post = \get_post(
+			self::factory()->post->create(
+				array(
+					'post_excerpt' => 'hallo @username@example.org test',
+					'post_content' => 'Content',
+				)
+			)
+		);
+
+		$this->assertSame( 'hallo <a rel="mention" class="u-url mention" href="https://example.org/users/username">@username</a> test', \get_the_excerpt( $post ) );
+	}
+
+	/**
+	 * A handle that is already the text of a link in the excerpt is not linked again.
+	 *
+	 * @covers ::the_excerpt
+	 */
+	public function test_the_excerpt_keeps_existing_links() {
+		$excerpt = '<p><a href="https://example.org/@username">@username@example.org</a> test</p>';
+
+		$this->assertSame( $excerpt, Mention::the_excerpt( $excerpt ) );
+	}
+
+	/**
+	 * A mention in a post summary built from the content is still linked, while the HTML other
+	 * plugins add to the content is stripped.
 	 *
 	 * @covers ::the_content
 	 * @covers ::filter_activity_object
@@ -350,10 +451,17 @@ ENDPRE;
 			)
 		);
 
+		$third_party = static function ( $content ) {
+			return $content . '<div class="share"><a href="https://example.com/share">Share</a></div>';
+		};
+		\add_filter( 'the_content', $third_party );
+
 		$object = \Activitypub\Transformer\Factory::get_transformer( \get_post( $post_id ) )->to_object()->to_array();
 
+		\remove_filter( 'the_content', $third_party );
+
 		$this->assertSame( 'Article', $object['type'] );
-		$this->assertSame( 'Hello <a rel="mention" class="u-url mention" href="https://example.org/users/username">@username</a> how are you', $object['summary'] );
+		$this->assertSame( 'Hello <a rel="mention" class="u-url mention" href="https://example.org/users/username">@username</a> how are you Share', $object['summary'] );
 	}
 
 	/**

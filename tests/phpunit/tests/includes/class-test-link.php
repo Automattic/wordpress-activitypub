@@ -70,4 +70,45 @@ ENDPRE;
 			array( $a_href, $a_href ),
 		);
 	}
+
+	/**
+	 * Excerpts on the website do not link URLs, like the post does not, as before.
+	 *
+	 * @covers ::the_content
+	 */
+	public function test_excerpt_keeps_url_as_text() {
+		$post = $this->create_url_post();
+
+		$this->assertSame( 'see https://example.com/page test', \get_the_excerpt( $post ) );
+	}
+
+	/**
+	 * The summary of a post keeps URLs as text, the content links them, as before.
+	 *
+	 * @covers ::filter_activity_object
+	 */
+	public function test_post_summary_keeps_url_as_text() {
+		$object = \Activitypub\Transformer\Factory::get_transformer( $this->create_url_post() )->to_object()->to_array();
+
+		$this->assertSame( 'see https://example.com/page test', $object['summary'] );
+		$this->assertStringContainsString( '<a href="https://example.com/page"', $object['content'] );
+	}
+
+	/**
+	 * Create a post with a URL in its text.
+	 *
+	 * @return \WP_Post The post.
+	 */
+	private function create_url_post() {
+		return \get_post(
+			self::factory()->post->create(
+				array(
+					'post_author'  => self::factory()->user->create( array( 'role' => 'author' ) ),
+					'post_title'   => 'Title',
+					'post_excerpt' => '',
+					'post_content' => '<!-- wp:paragraph --><p>see https://example.com/page test</p><!-- /wp:paragraph -->',
+				)
+			)
+		);
+	}
 }
