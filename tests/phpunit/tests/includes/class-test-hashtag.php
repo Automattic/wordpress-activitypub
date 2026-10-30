@@ -408,7 +408,13 @@ ENDPRE;
 		\remove_filter( 'get_the_excerpt', $html_excerpt );
 		\add_filter( 'get_the_excerpt', 'wp_trim_excerpt', 10, 2 );
 
-		$this->assertStringContainsString( \sprintf( 'hallo <a rel="tag" class="hashtag u-tag u-category" href="%s">#object</a> test', \esc_url( $link ) ), $excerpt );
+		// WordPress trunk serializes the attributes of rendered blocks in its own order.
+		$processor = new \WP_HTML_Tag_Processor( $excerpt );
+		$this->assertTrue( $processor->next_tag( array( 'class_name' => 'hashtag' ) ) );
+		$this->assertSame( 'A', $processor->get_tag() );
+		$this->assertSame( 'tag', $processor->get_attribute( 'rel' ) );
+		$this->assertSame( \esc_url( $link ), $processor->get_attribute( 'href' ) );
+		$this->assertStringContainsString( '#object</a> test', $excerpt );
 	}
 
 	/**
