@@ -17,6 +17,7 @@ use function Activitypub\object_to_uri;
  * @coversDefaultClass \Activitypub\Mention
  */
 class Test_Mention extends \WP_UnitTestCase {
+	use Equal_Html;
 
 	/**
 	 * Actors.
@@ -330,7 +331,7 @@ ENDPRE;
 			)
 		);
 
-		$this->assertStringContainsString( '<a rel="mention" class="u-url mention" href="https://example.org/users/username">@username</a>', \apply_filters( 'the_content', $post->post_content ) );
+		$this->assert_equal_html( "<p>hallo <a rel=\"mention\" class=\"u-url mention\" href=\"https://example.org/users/username\">@username</a> test</p>\n", \apply_filters( 'the_content', $post->post_content ) );
 
 		$content  = null;
 		$building = static function ( $excerpt, $post ) use ( &$content ) {
@@ -341,7 +342,7 @@ ENDPRE;
 		\get_the_excerpt( $post );
 		\remove_filter( 'get_the_excerpt', $building );
 
-		$this->assertSame( "<p>hallo @username@example.org test</p>\n", $content );
+		$this->assert_equal_html( "<p>hallo @username@example.org test</p>\n", $content );
 	}
 
 	/**
@@ -367,7 +368,7 @@ ENDPRE;
 		$excerpt = \get_the_excerpt( $post );
 		\remove_filter( 'the_content', $third_party );
 
-		$this->assertSame( 'hallo <a rel="mention" class="u-url mention" href="https://example.org/users/username">@username</a> test Share', $excerpt );
+		$this->assert_equal_html( 'hallo <a rel="mention" class="u-url mention" href="https://example.org/users/username">@username</a> test Share', $excerpt );
 	}
 
 	/**
@@ -402,7 +403,7 @@ ENDPRE;
 		\add_filter( 'get_the_excerpt', 'wp_trim_excerpt', 10, 2 );
 		\remove_filter( 'the_content', $third_party );
 
-		$this->assertSame( "<p>hallo <a rel=\"mention\" class=\"u-url mention\" href=\"https://example.org/users/username\">@username</a> test</p>\n<a href=\"https://example.com/share\">Share</a>", $excerpt );
+		$this->assert_equal_html( "<p>hallo <a rel=\"mention\" class=\"u-url mention\" href=\"https://example.org/users/username\">@username</a> test</p>\n<a href=\"https://example.com/share\">Share</a>", $excerpt );
 	}
 
 	/**
@@ -420,7 +421,7 @@ ENDPRE;
 			)
 		);
 
-		$this->assertSame( 'hallo <a rel="mention" class="u-url mention" href="https://example.org/users/username">@username</a> test', \get_the_excerpt( $post ) );
+		$this->assert_equal_html( 'hallo <a rel="mention" class="u-url mention" href="https://example.org/users/username">@username</a> test', \get_the_excerpt( $post ) );
 	}
 
 	/**
@@ -431,7 +432,7 @@ ENDPRE;
 	public function test_the_excerpt_keeps_existing_links() {
 		$excerpt = '<p><a href="https://example.org/@username">@username@example.org</a> test</p>';
 
-		$this->assertSame( $excerpt, Mention::the_excerpt( $excerpt ) );
+		$this->assert_equal_html( $excerpt, Mention::the_excerpt( $excerpt ) );
 	}
 
 	/**
@@ -461,7 +462,7 @@ ENDPRE;
 		\remove_filter( 'the_content', $third_party );
 
 		$this->assertSame( 'Article', $object['type'] );
-		$this->assertSame( 'Hello <a rel="mention" class="u-url mention" href="https://example.org/users/username">@username</a> how are you Share', $object['summary'] );
+		$this->assert_equal_html( 'Hello <a rel="mention" class="u-url mention" href="https://example.org/users/username">@username</a> how are you Share', $object['summary'] );
 	}
 
 	/**

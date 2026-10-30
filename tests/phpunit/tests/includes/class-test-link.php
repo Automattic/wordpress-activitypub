@@ -13,6 +13,8 @@ namespace Activitypub\Tests;
  * @coversDefaultClass \Activitypub\Link
  */
 class Test_Link extends \WP_UnitTestCase {
+	use Equal_Html;
+
 	/**
 	 * Test the content.
 	 *
@@ -91,7 +93,7 @@ ENDPRE;
 		$object = \Activitypub\Transformer\Factory::get_transformer( $this->create_url_post() )->to_object()->to_array();
 
 		$this->assertSame( 'see https://example.com/page test', $object['summary'] );
-		$this->assertStringContainsString( '<a href="https://example.com/page"', $object['content'] );
+		$this->assert_equal_html( '<p>see <a href="https://example.com/page" target="_blank" rel="nofollow noopener noreferrer" translate="no"><span class="invisible">https://</span><span class="">example.com/page</span><span class="invisible"></span></a> test</p>', $object['content'] );
 	}
 
 	/**
@@ -106,7 +108,7 @@ ENDPRE;
 					'post_author'  => self::factory()->user->create( array( 'role' => 'author' ) ),
 					'post_title'   => 'Title',
 					'post_excerpt' => '',
-					'post_content' => '<!-- wp:paragraph --><p>see https://example.com/page test</p><!-- /wp:paragraph -->',
+					'post_content' => 'see https://example.com/page test',
 				)
 			)
 		);

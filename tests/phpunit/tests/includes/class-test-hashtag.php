@@ -15,6 +15,8 @@ use Activitypub\Collection\Remote_Actors;
  * @coversDefaultClass \Activitypub\Hashtag
  */
 class Test_Hashtag extends \WP_UnitTestCase {
+	use Equal_Html;
+
 	/**
 	 * Test the content.
 	 *
@@ -408,13 +410,7 @@ ENDPRE;
 		\remove_filter( 'get_the_excerpt', $html_excerpt );
 		\add_filter( 'get_the_excerpt', 'wp_trim_excerpt', 10, 2 );
 
-		// WordPress trunk serializes the attributes of rendered blocks in its own order.
-		$processor = new \WP_HTML_Tag_Processor( $excerpt );
-		$this->assertTrue( $processor->next_tag( array( 'class_name' => 'hashtag' ) ) );
-		$this->assertSame( 'A', $processor->get_tag() );
-		$this->assertSame( 'tag', $processor->get_attribute( 'rel' ) );
-		$this->assertSame( \esc_url( $link ), $processor->get_attribute( 'href' ) );
-		$this->assertStringContainsString( '#object</a> test', $excerpt );
+		$this->assert_equal_html( \sprintf( "<p>hallo <a rel=\"tag\" class=\"hashtag u-tag u-category\" href=\"%s\">#object</a> test</p>\n", \esc_url( $link ) ), $excerpt );
 	}
 
 	/**
@@ -431,7 +427,7 @@ ENDPRE;
 		$this->disable_hashtags();
 
 		$this->assertSame( 'hallo #object test', $object['summary'] );
-		$this->assertStringContainsString( \sprintf( '<a rel="tag" class="hashtag u-tag u-category" href="%s">#object</a>', \esc_url( $link ) ), $object['content'] );
+		$this->assert_equal_html( \sprintf( '<p>hallo <a rel="tag" class="hashtag u-tag u-category" href="%s">#object</a> test</p>', \esc_url( $link ) ), $object['content'] );
 	}
 
 	/**
@@ -448,7 +444,7 @@ ENDPRE;
 					'post_author'  => self::factory()->user->create( array( 'role' => 'author' ) ),
 					'post_title'   => 'Title',
 					'post_excerpt' => '',
-					'post_content' => '<!-- wp:paragraph --><p>hallo #object test</p><!-- /wp:paragraph -->',
+					'post_content' => 'hallo #object test',
 				)
 			)
 		);
