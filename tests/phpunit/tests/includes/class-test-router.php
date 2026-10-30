@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Outbox;
 use Activitypub\Query;
 use Activitypub\Router;
@@ -57,6 +58,9 @@ class Test_Router extends \WP_UnitTestCase {
 		\set_query_var( 'preview', null );
 		\set_query_var( 'term_id', null );
 		Query::get_instance()->__destruct();
+		\delete_option( 'activitypub_actor_mode' );
+		\delete_option( 'show_on_front' );
+		\delete_option( 'page_on_front' );
 
 		parent::tear_down();
 	}
@@ -845,5 +849,219 @@ class Test_Router extends \WP_UnitTestCase {
 
 		\set_query_var( 'actor', null );
 		\set_query_var( 'stamp', null );
+	}
+
+	/**
+	 * A post links back to its author when the author's field links to it.
+	 *
+	 * @covers ::add_rel_me_links
+	 */
+	public function test_rel_me_on_own_post() {
+		$user_id = $this->create_actor();
+		$post_id = self::factory()->post->create( array( 'post_author' => $user_id ) );
+		$this->create_field( $user_id, \set_url_scheme( \get_permalink( $post_id ), 'https' ) );
+
+		$this->go_to( \get_permalink( $post_id ) );
+
+		$this->assertSame( \sprintf( '<link rel="me" href="%s" />' . PHP_EOL, \esc_url( \get_author_posts_url( $user_id ) ) ), $this->get_rel_me_links() );
+	}
+
+	/**
+	 * A field cannot claim a post of another author.
+	 *
+	 * @covers ::add_rel_me_links
+	 */
+	public function test_no_rel_me_on_post_of_other_author() {
+		$user_id = $this->create_actor();
+		$post_id = self::factory()->post->create( array( 'post_author' => $this->create_actor() ) );
+		$this->create_field( $user_id, \set_url_scheme( \get_permalink( $post_id ), 'https' ) );
+
+		$this->go_to( \get_permalink( $post_id ) );
+
+		$this->assertSame( '', $this->get_rel_me_links() );
+	}
+
+	/**
+	 * The front page links back to the users who manage the site, not to other authors.
+	 *
+	 * @covers ::add_rel_me_links
+	 */
+	public function test_rel_me_on_front_page_only_for_administrators() {
+		$admin_id  = $this->create_actor( 'administrator' );
+		$author_id = $this->create_actor();
+		$this->create_field( $admin_id, \set_url_scheme( \home_url( '/' ), 'https' ) );
+		$this->create_field( $author_id, \set_url_scheme( \home_url( '/' ), 'https' ) );
+
+		$this->go_to( \home_url( '/' ) );
+
+		$this->assertSame( \sprintf( '<link rel="me" href="%s" />' . PHP_EOL, \esc_url( \get_author_posts_url( $admin_id ) ) ), $this->get_rel_me_links() );
+	}
+
+	/**
+	 * Only `https` links on this site count.
+	 *
+	 * @dataProvider foreign_link_provider
+	 * @covers ::add_rel_me_links
+	 *
+	 * @param string $prefix The scheme and host the field link uses, `%s` is the host of the site.
+	 */
+	public function test_no_rel_me_for_foreign_links( $prefix ) {
+		$user_id = $this->create_actor();
+		$post_id = self::factory()->post->create( array( 'post_author' => $user_id ) );
+		$this->create_field( $user_id, \sprintf( $prefix, \wp_parse_url( \home_url(), PHP_URL_HOST ) ) . '/?p=' . $post_id );
+
+		$this->go_to( \get_permalink( $post_id ) );
+
+		$this->assertSame( '', $this->get_rel_me_links() );
+	}
+
+	/**
+	 * Field links that do not point to this site over `https`.
+	 *
+	 * @return array[] The scheme and host.
+	 */
+	public function foreign_link_provider() {
+		return array(
+			'http'         => array( 'http://%s' ),
+			'longer host'  => array( 'https://%s.evil.example' ),
+			'userinfo'     => array( 'https://%s@evil.example' ),
+			'other domain' => array( 'https://evil.example' ),
+			'other port'   => array( 'https://%s:8443' ),
+		);
+	}
+
+	/**
+	 * A static front page stands for the site, so its author cannot claim it, only the administrators.
+	 *
+	 * @covers ::add_rel_me_links
+	 */
+	public function test_rel_me_on_static_front_page_only_for_administrators() {
+		$admin_id  = $this->create_actor( 'administrator' );
+		$author_id = $this->create_actor( 'editor' );
+		$page_id   = self::factory()->post->create(
+			array(
+				'post_type'   => 'page',
+				'post_author' => $author_id,
+			)
+		);
+		\update_option( 'show_on_front', 'page' );
+		\update_option( 'page_on_front', $page_id );
+		$this->create_field( $admin_id, \set_url_scheme( \home_url( '/' ), 'https' ) );
+		$this->create_field( $author_id, \set_url_scheme( \home_url( '/' ), 'https' ) );
+
+		$this->go_to( \home_url( '/' ) );
+
+		$this->assertTrue( \is_front_page() && \is_singular() );
+		$this->assertSame( \sprintf( '<link rel="me" href="%s" />' . PHP_EOL, \esc_url( \get_author_posts_url( $admin_id ) ) ), $this->get_rel_me_links() );
+	}
+
+	/**
+	 * Mastodon compares the link case-insensitively, so the front page does too.
+	 *
+	 * @covers ::add_rel_me_links
+	 */
+	public function test_rel_me_on_front_page_ignores_case() {
+		$admin_id = $this->create_actor( 'administrator' );
+		$home     = \set_url_scheme( \home_url( '/' ), 'https' );
+		$host     = \wp_parse_url( $home, PHP_URL_HOST );
+		$this->create_field( $admin_id, \str_replace( $host, \strtoupper( $host ), $home ) );
+
+		$this->go_to( \home_url( '/' ) );
+
+		$this->assertSame( \sprintf( '<link rel="me" href="%s" />' . PHP_EOL, \esc_url( \get_author_posts_url( $admin_id ) ) ), $this->get_rel_me_links() );
+	}
+
+	/**
+	 * The blog actor stands for the whole site, so its fields can claim any post.
+	 *
+	 * @covers ::add_rel_me_links
+	 */
+	public function test_rel_me_for_blog_actor() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		$post_id = self::factory()->post->create( array( 'post_author' => $this->create_actor() ) );
+		self::factory()->post->create(
+			array(
+				'post_type'    => Extra_Fields::BLOG_POST_TYPE,
+				'post_content' => \set_url_scheme( \get_permalink( $post_id ), 'https' ),
+				'post_title'   => 'Post',
+			)
+		);
+
+		$this->go_to( \get_permalink( $post_id ) );
+
+		$this->assertSame( \sprintf( '<link rel="me" href="%s" />' . PHP_EOL, \esc_url( \get_bloginfo( 'url' ) ) ), $this->get_rel_me_links() );
+	}
+
+	/**
+	 * A user who does not federate gets no link back.
+	 *
+	 * @covers ::add_rel_me_links
+	 */
+	public function test_no_rel_me_without_activitypub() {
+		$user_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		$post_id = self::factory()->post->create( array( 'post_author' => $user_id ) );
+		$this->create_field( $user_id, \set_url_scheme( \get_permalink( $post_id ), 'https' ) );
+
+		$this->go_to( \get_permalink( $post_id ) );
+
+		$this->assertSame( '', $this->get_rel_me_links() );
+	}
+
+	/**
+	 * Previews get no link back.
+	 *
+	 * @covers ::add_rel_me_links
+	 */
+	public function test_no_rel_me_in_preview() {
+		$user_id = $this->create_actor();
+		$post_id = self::factory()->post->create( array( 'post_author' => $user_id ) );
+		$this->create_field( $user_id, \set_url_scheme( \get_permalink( $post_id ), 'https' ) );
+
+		$this->go_to( \add_query_arg( 'preview', 'true', \get_permalink( $post_id ) ) );
+
+		$this->assertSame( '', $this->get_rel_me_links() );
+	}
+
+	/**
+	 * Create a user that federates.
+	 *
+	 * @param string $role The role of the user.
+	 *
+	 * @return int The user ID.
+	 */
+	private function create_actor( $role = 'author' ) {
+		$user_id = self::factory()->user->create( array( 'role' => $role ) );
+		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
+
+		return $user_id;
+	}
+
+	/**
+	 * Create a field of a user that links to a URL.
+	 *
+	 * @param int    $user_id The user ID.
+	 * @param string $url     The URL.
+	 */
+	private function create_field( $user_id, $url ) {
+		self::factory()->post->create(
+			array(
+				'post_type'    => Extra_Fields::USER_POST_TYPE,
+				'post_author'  => $user_id,
+				'post_content' => $url,
+				'post_title'   => 'Link',
+			)
+		);
+	}
+
+	/**
+	 * Get the `rel="me"` links printed for the current page.
+	 *
+	 * @return string The printed links.
+	 */
+	private function get_rel_me_links() {
+		\ob_start();
+		Router::add_rel_me_links();
+
+		return \ob_get_clean();
 	}
 }
