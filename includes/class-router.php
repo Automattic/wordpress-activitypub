@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Outbox;
 
 /**
@@ -23,6 +24,7 @@ class Router {
 		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
 
 		\add_action( 'send_headers', array( self::class, 'add_headers' ) );
+		\add_action( 'wp_head', array( self::class, 'add_rel_me_links' ) );
 		\add_filter( 'template_include', array( self::class, 'render_activitypub_template' ), 99 );
 		\add_action( 'template_redirect', array( self::class, 'template_redirect' ) );
 		\add_filter( 'redirect_canonical', array( self::class, 'redirect_canonical' ), 10, 2 );
@@ -242,6 +244,98 @@ class Router {
 		}
 
 		return $template;
+	}
+
+	/**
+	 * Add `rel="me"` links to the actors whose fields link to the current page.
+	 *
+	 * Mastodon verifies a profile field when the linked page links back to the profile with
+	 * `rel="me"`. The site only confirms what it already knows: a post belongs to its author,
+	 * the front page to the users who manage the site, and every page to the blog actor.
+	 *
+	 * @since unreleased
+	 *
+	 * @return void
+	 */
+	public static function add_rel_me_links() {
+		if ( \is_preview() || ( ! \is_singular() && ! \is_front_page() ) ) {
+			return;
+		}
+
+		$user_ids = array( Actors::BLOG_USER_ID );
+
+		// A static front page stands for the site, not for its author.
+		if ( \is_singular() && ! \is_front_page() ) {
+			$user_ids[] = (int) \get_post_field( 'post_author', \get_queried_object_id() );
+		}
+
+		if ( \is_front_page() ) {
+			$user_ids = \array_merge(
+				$user_ids,
+				\get_users(
+					array(
+						'capability' => 'manage_options',
+						'fields'     => 'ID',
+					)
+				)
+			);
+		}
+
+		$urls = array();
+
+		foreach ( \array_unique( \array_map( 'intval', $user_ids ) ) as $user_id ) {
+			$actor = Actors::get_by_id( $user_id );
+
+			if ( \is_wp_error( $actor ) ) {
+				continue;
+			}
+
+			foreach ( Extra_Fields::get_actor_fields( $user_id ) as $field ) {
+				// Rendering the field would run blocks and count its images in the head, finding the link is enough.
+				if ( false === \stripos( $field->post_content, (string) \wp_parse_url( \home_url(), PHP_URL_HOST ) ) ) {
+					continue;
+				}
+
+				$link = Extra_Fields::get_link( Link::the_content( $field->post_content ) );
+
+				if ( $link && self::is_current_page( $link['href'] ) ) {
+					$urls[] = $actor->get_url();
+					break;
+				}
+			}
+		}
+
+		foreach ( \array_unique( $urls ) as $url ) {
+			\printf( '<link rel="me" href="%s" />' . PHP_EOL, \esc_url( $url ) );
+		}
+	}
+
+	/**
+	 * Whether a link points to the page that is being rendered.
+	 *
+	 * Only `https` links on this site count, the only ones Mastodon verifies.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $url The link.
+	 *
+	 * @return bool True if the link points to the current page.
+	 */
+	private static function is_current_page( $url ) {
+		if (
+			'https' !== \wp_parse_url( $url, PHP_URL_SCHEME ) ||
+			! is_same_host( $url, \home_url() ) ||
+			\wp_parse_url( $url, PHP_URL_PORT ) !== \wp_parse_url( \home_url(), PHP_URL_PORT )
+		) {
+			return false;
+		}
+
+		if ( \is_front_page() ) {
+			// Mastodon compares the link case-insensitively.
+			return \strtolower( \untrailingslashit( $url ) ) === \strtolower( \untrailingslashit( \set_url_scheme( \home_url(), 'https' ) ) );
+		}
+
+		return \url_to_postid( $url ) === \get_queried_object_id();
 	}
 
 	/**

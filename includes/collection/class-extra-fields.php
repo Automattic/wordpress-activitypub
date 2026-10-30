@@ -107,39 +107,42 @@ class Extra_Fields {
 		\add_filter( 'activitypub_link_rel', array( self::class, 'add_rel_me' ) );
 
 		foreach ( $fields as $post ) {
-			$title         = \html_entity_decode( \get_the_title( $post ), \ENT_QUOTES, 'UTF-8' );
-			$content       = self::get_formatted_content( $post );
+			$title   = \html_entity_decode( \get_the_title( $post ), \ENT_QUOTES, 'UTF-8' );
+			$content = self::get_formatted_content( $post );
+			$link    = self::get_link( $content );
+			$value   = $content;
+
+			/*
+			 * Mastodon only verifies a field whose value is a single link with the URL as its text.
+			 * The link format of `Link` keeps the full URL as text and shows it shortened.
+			 */
+			if ( $link && \in_array( \wp_parse_url( $link['href'], PHP_URL_SCHEME ), array( 'http', 'https' ), true ) ) {
+				$url_link = Link::replace_with_links( array( $link['href'] ) );
+
+				// Some URLs, an empty query for example, lose a character on the way to the text.
+				if ( \html_entity_decode( \wp_strip_all_tags( $url_link ), \ENT_QUOTES, 'UTF-8' ) === $link['href'] ) {
+					$value = $url_link;
+				}
+			}
+
 			$attachments[] = array(
 				'type'  => 'PropertyValue',
 				'name'  => $title,
-				'value' => \html_entity_decode( $content, \ENT_QUOTES, 'UTF-8' ),
+				'value' => \html_entity_decode( $value, \ENT_QUOTES, 'UTF-8' ),
 			);
 
 			$attachment = false;
 
 			// Add support for FEP-fb2a, for more information see FEDERATION.md.
-			$link_content = \trim( \strip_tags( $content, '<a>' ) );
-			if (
-				\stripos( $link_content, '<a' ) === 0 &&
-				\stripos( $link_content, '<a', 3 ) === false &&
-				\stripos( $link_content, '</a>', \strlen( $link_content ) - 4 ) !== false &&
-				\class_exists( '\WP_HTML_Tag_Processor' )
-			) {
-				$tags = new \WP_HTML_Tag_Processor( $link_content );
-				$tags->next_tag( array( 'tag_name' => 'A' ) );
+			if ( $link ) {
+				$attachment = array(
+					'type' => 'Link',
+					'name' => $title,
+					'href' => \esc_url_raw( $link['href'] ),
+				);
 
-				if ( 'A' === $tags->get_tag() ) {
-					$attachment = array(
-						'type' => 'Link',
-						'name' => $title,
-						'href' => \esc_url_raw( $tags->get_attribute( 'href' ) ),
-					);
-
-					$rel = $tags->get_attribute( 'rel' );
-
-					if ( $rel && \is_string( $rel ) ) {
-						$attachment['rel'] = \explode( ' ', $rel );
-					}
+				if ( $link['rel'] ) {
+					$attachment['rel'] = \explode( ' ', $link['rel'] );
 				}
 			}
 
@@ -157,6 +160,46 @@ class Extra_Fields {
 		\remove_filter( 'activitypub_link_rel', array( self::class, 'add_rel_me' ) );
 
 		return $attachments;
+	}
+
+	/**
+	 * Get the link of a field that holds nothing but a single link.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $content The formatted field content.
+	 *
+	 * @return array|false The `href` and `rel` of the link, or false if the field is not a single link with an `href`.
+	 */
+	public static function get_link( $content ) {
+		$link_content = \trim( \strip_tags( $content, '<a>' ) );
+		if (
+			\stripos( $link_content, '<a' ) !== 0 ||
+			\stripos( $link_content, '<a', 3 ) !== false ||
+			\stripos( $link_content, '</a>', \strlen( $link_content ) - 4 ) === false ||
+			! \class_exists( '\WP_HTML_Tag_Processor' )
+		) {
+			return false;
+		}
+
+		$tags = new \WP_HTML_Tag_Processor( $link_content );
+		$tags->next_tag( array( 'tag_name' => 'A' ) );
+
+		if ( 'A' !== $tags->get_tag() ) {
+			return false;
+		}
+
+		$href = $tags->get_attribute( 'href' );
+		$rel  = $tags->get_attribute( 'rel' );
+
+		if ( ! \is_string( $href ) || '' === $href ) {
+			return false;
+		}
+
+		return array(
+			'href' => $href,
+			'rel'  => \is_string( $rel ) ? $rel : '',
+		);
 	}
 
 	/**
