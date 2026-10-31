@@ -1,6 +1,6 @@
 <?php
 /**
- * Remote Posts collection file.
+ * Base Remote Posts collection file.
  *
  * @package Activitypub
  */
@@ -16,21 +16,41 @@ use function Activitypub\object_to_uri;
 use function Activitypub\process_remote_media;
 
 /**
- * Remote Posts collection.
+ * Base class for remote posts collections.
  *
  * Provides methods to retrieve, create, update, and manage remote
  * ActivityPub posts (articles, notes, media, etc.) received via
- * Server-to-Server (S2S) federation.
+ * Server-to-Server (S2S) federation, cached as a custom post type.
  *
  * @see Posts for local posts created via Client-to-Server (C2S) outbox.
+ * @see Remote_Posts
  */
-class Remote_Posts {
+abstract class Remote_Posts {
 	/**
-	 * The post type for the posts.
+	 * The default post type for the remote cached posts.
 	 *
 	 * @var string
 	 */
 	const POST_TYPE = 'ap_post';
+
+	/**
+	 * Post type support flag for remote objects.
+	 *
+	 * Deliberately not `activitypub`: the plugin already uses that flag for local post types that
+	 * federate outwards, whereas this one marks post types that cache objects received from others.
+	 *
+	 * @since unreleased
+	 *
+	 * @var string
+	 */
+	const SUPPORT_FEATURE = 'activitypub-remote';
+
+	/**
+	 * This post type supports exclusively remote cached posts.
+	 *
+	 * @var string
+	 */
+	const SUPPORT_EXCLUSIVE = 'activitypub-remote-exclusive';
 
 	/**
 	 * Maximum number of remote post items to keep.
@@ -54,6 +74,63 @@ class Remote_Posts {
 	const PURGE_TIMEOUT = 30;
 
 	/**
+	 * Get the WordPress post type that is used to cache the objects of this collection.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string The post type.
+	 */
+	abstract public static function get_post_type();
+
+	/**
+	 * Get the ActivityPub object type that this collection is for. E.g. `Poll`.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string The ActivityPub object type.
+	 */
+	abstract public static function get_activitypub_object_type();
+
+	/**
+	 * Define whether the post type of this remote posts collection exclusively contains remote cached objects.
+	 *
+	 * @return bool
+	 */
+	abstract public static function is_exclusive();
+
+	/**
+	 * Get the post types that opted in to remote object handling.
+	 *
+	 * Only registered post types are returned, so this is complete from `init` priority 10 onward.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string[] The post type names.
+	 */
+	final public static function get_supporting_post_types() {
+		return \get_post_types_by_support( self::SUPPORT_FEATURE );
+	}
+
+
+	/**
+	 * Get the post types that contain only cached remote objects.
+	 *
+	 * @return string[]
+	 */
+	final public static function get_exclusive_post_types() {
+		return \get_post_types_by_support( array( self::SUPPORT_FEATURE, self::SUPPORT_EXCLUSIVE ) );
+	}
+
+	/**
+	 * Get the post types that may contain cached remote objects next to local content.
+	 *
+	 * @return string[]
+	 */
+	final public static function get_non_exclusive_post_types() {
+		return \array_values( \array_diff( self::get_supporting_post_types(), \get_post_types_by_support( self::SUPPORT_EXCLUSIVE ) ) );
+	}
+
+	/**
 	 * Add an object to the collection.
 	 *
 	 * @param array     $activity   The activity object data.
@@ -62,13 +139,14 @@ class Remote_Posts {
 	 * @return \WP_Post|\WP_Error The object post or WP_Error on failure.
 	 */
 	public static function add( $activity, $recipients ) {
+		$collection      = Remote_Posts_Collection_Registry::get( $activity['object']['type'] );
 		$recipients      = (array) $recipients;
 		$activity_object = $activity['object'];
 
 		$existing = self::get_by_guid( $activity_object['id'] );
 		// If post exists, call update instead.
 		if ( ! \is_wp_error( $existing ) ) {
-			return self::update( $activity, $recipients );
+			return $collection::update( $activity, $recipients );
 		}
 
 		// An actor may only create posts attributed to itself; only the actor is signature-bound, not attributedTo.
@@ -102,7 +180,7 @@ class Remote_Posts {
 			return $actor;
 		}
 
-		$post_array = self::activity_to_post( $activity_object );
+		$post_array = $collection::activity_to_post( $activity_object );
 		$post_id    = \wp_insert_post( $post_array, true );
 
 		if ( \is_wp_error( $post_id ) ) {
@@ -116,7 +194,7 @@ class Remote_Posts {
 			self::add_recipient( $post_id, $user_id );
 		}
 
-		self::add_taxonomies( $post_id, $activity_object );
+		$collection::add_taxonomies( $post_id, $activity_object );
 
 		return \get_post( $post_id );
 	}
@@ -128,7 +206,7 @@ class Remote_Posts {
 	 *
 	 * @return \WP_Post|null The post object or null on failure.
 	 */
-	public static function get( $id ) {
+	final public static function get( $id ) {
 		return \get_post( $id );
 	}
 
@@ -139,16 +217,26 @@ class Remote_Posts {
 	 *
 	 * @return \WP_Post|\WP_Error The object post or WP_Error on failure.
 	 */
-	public static function get_by_guid( $guid ) {
+	final public static function get_by_guid( $guid ) {
 		global $wpdb;
+
+		$post_types = self::get_supporting_post_types();
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE guid IN (%s, %s) AND post_type=%s ORDER BY ID ASC",
-				// What `pre_post_guid` stores on this WordPress version, and the `esc_url()` form older releases saved.
-				\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $guid ), 0, 'db' ) ),
-				\esc_url( $guid ),
-				self::POST_TYPE
+				\sprintf(
+					"SELECT ID FROM $wpdb->posts WHERE guid IN (%%s, %%s) AND post_type IN (%s) ORDER BY ID ASC",
+					\implode( ',', \array_fill( 0, \count( $post_types ), '%s' ) )
+				),
+				\array_merge(
+					array(
+						// What `pre_post_guid` stores on this WordPress version, and the `esc_url()` form older releases saved.
+						\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $guid ), 0, 'db' ) ),
+						\esc_url( $guid ),
+					),
+					\array_values( $post_types )
+				)
 			)
 		);
 
@@ -172,6 +260,7 @@ class Remote_Posts {
 	 * @return \WP_Post|\WP_Error The updated object post or WP_Error on failure.
 	 */
 	public static function update( $activity, $recipients ) {
+		$collection = Remote_Posts_Collection_Registry::get( $activity['object']['type'] );
 		$recipients = (array) $recipients;
 
 		$post = self::get_by_guid( $activity['object']['id'] );
@@ -198,7 +287,7 @@ class Remote_Posts {
 			}
 		}
 
-		$post_array       = self::activity_to_post( $activity['object'] );
+		$post_array       = $collection::activity_to_post( $activity['object'] );
 		$post_array['ID'] = $post->ID;
 		$post_id          = \wp_update_post( $post_array, true );
 
@@ -211,7 +300,7 @@ class Remote_Posts {
 			self::add_recipient( $post_id, $user_id );
 		}
 
-		self::add_taxonomies( $post_id, $activity['object'] );
+		$collection::add_taxonomies( $post_id, $activity['object'] );
 
 		return \get_post( $post_id );
 	}
@@ -223,7 +312,7 @@ class Remote_Posts {
 	 *
 	 * @return \WP_Post|false|null Post data on success, false or null on failure.
 	 */
-	public static function delete( $id ) {
+	final public static function delete( $id ) {
 		return \wp_delete_post( $id, true );
 	}
 
@@ -234,7 +323,7 @@ class Remote_Posts {
 	 *
 	 * @return \WP_Post|\WP_Error|false|null Post data on success, false or null on failure, or WP_Error if no post to delete.
 	 */
-	public static function delete_by_guid( $guid ) {
+	final public static function delete_by_guid( $guid ) {
 		$post = self::get_by_guid( $guid );
 		if ( \is_wp_error( $post ) ) {
 			return $post;
@@ -250,7 +339,7 @@ class Remote_Posts {
 	 *
 	 * @return array Array of normalized hashtag names (without # prefix, trimmed, sanitized).
 	 */
-	public static function extract_hashtags( $tags ) {
+	final public static function extract_hashtags( $tags ) {
 		$hashtags = array();
 
 		if ( empty( $tags ) || ! \is_array( $tags ) ) {
@@ -283,7 +372,7 @@ class Remote_Posts {
 	 *
 	 * @return string The content with trailing hashtags removed.
 	 */
-	public static function remove_hashtags( $content, $tags ) {
+	final public static function remove_hashtags( $content, $tags ) {
 		if ( empty( $content ) || empty( $tags ) || ! \is_array( $tags ) ) {
 			return $content;
 		}
@@ -325,7 +414,7 @@ class Remote_Posts {
 	 *
 	 * @return array|\WP_Error The post array or WP_Error on failure.
 	 */
-	private static function activity_to_post( $activity ) {
+	protected static function activity_to_post( $activity ) {
 		if ( ! \is_array( $activity ) ) {
 			return new \WP_Error( 'invalid_activity', \__( 'Invalid activity format', 'activitypub' ) );
 		}
@@ -352,7 +441,7 @@ class Remote_Posts {
 			'post_content'  => \wp_slash( $content ),
 			'post_excerpt'  => \wp_slash( \is_string( $activity['summary'] ?? null ) ? \wp_strip_all_tags( $activity['summary'] ) : \wp_trim_words( $content, 55 ) ),
 			'post_status'   => 'publish',
-			'post_type'     => self::POST_TYPE,
+			'post_type'     => static::resolve_post_type(),
 			'post_date_gmt' => $gm_date,
 			'post_date'     => \get_date_from_gmt( $gm_date ),
 			'guid'          => isset( $activity['id'] ) ? \esc_url_raw( $activity['id'] ) : '',
@@ -367,7 +456,7 @@ class Remote_Posts {
 	 *
 	 * @return void
 	 */
-	private static function add_taxonomies( $post_id, $activity_object ) {
+	protected static function add_taxonomies( $post_id, $activity_object ) {
 		// Save Object Type as Taxonomy item.
 		\wp_set_post_terms( $post_id, array( $activity_object['type'] ), 'ap_object_type' );
 
@@ -389,7 +478,7 @@ class Remote_Posts {
 	 *
 	 * @return array<int, array{url: string, alt: string, type: string}> Array of attachments with 'url', 'alt', and 'type' keys.
 	 */
-	public static function extract_attachments( $activity_object, $limit = 20, $attachment_type = '' ) {
+	final public static function extract_attachments( $activity_object, $limit = 20, $attachment_type = '' ) {
 		$limit = (int) $limit;
 		if ( $limit <= 0 ) {
 			return array();
@@ -482,31 +571,33 @@ class Remote_Posts {
 	/**
 	 * Get posts by remote actor.
 	 *
-	 * @param string $actor The remote actor URI.
+	 * @param string $actor       The remote actor URI.
+	 * @param string $object_type Whether the query should return a certain ActivityPub object type.
 	 *
 	 * @return array Array of WP_Post objects.
 	 */
-	public static function get_by_remote_actor( $actor ) {
+	final public static function get_by_remote_actor( $actor, $object_type = '' ) {
 		$remote_actor = Remote_Actors::fetch_by_uri( $actor );
 
 		if ( \is_wp_error( $remote_actor ) ) {
 			return array();
 		}
 
-		return self::get_by_remote_actor_id( $remote_actor->ID );
+		return self::get_by_remote_actor_id( $remote_actor->ID, $object_type );
 	}
 
 	/**
 	 * Get posts by remote actor ID.
 	 *
-	 * @param int $actor_id The remote actor post ID.
+	 * @param int    $actor_id   The remote actor post ID.
+	 * @param string $object_type Whether the query should return a certain ActivityPub object type.
 	 *
 	 * @return array Array of WP_Post objects.
 	 */
-	public static function get_by_remote_actor_id( $actor_id ) {
+	final public static function get_by_remote_actor_id( $actor_id, $object_type = '' ) {
 		$query = new \WP_Query(
 			array(
-				'post_type'      => self::POST_TYPE,
+				'post_type'      => $object_type ? Remote_Posts_Collection_Registry::get( $object_type )::get_post_type() : self::get_supporting_post_types(),
 				'posts_per_page' => -1,
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 				'meta_key'       => '_activitypub_remote_actor_id',
@@ -525,7 +616,7 @@ class Remote_Posts {
 	 *
 	 * @return int[] Array of user IDs who are recipients.
 	 */
-	public static function get_recipients( $post_id ) {
+	final public static function get_recipients( $post_id ) {
 		// Get all meta values with key '_activitypub_user_id' (single => false).
 		$recipients = \get_post_meta( $post_id, '_activitypub_user_id', false );
 		$recipients = \array_map( 'intval', $recipients );
@@ -555,7 +646,7 @@ class Remote_Posts {
 	 *
 	 * @return bool True on success, false on failure.
 	 */
-	public static function add_recipient( $post_id, $user_id ) {
+	final public static function add_recipient( $post_id, $user_id ) {
 		$user_id = (int) $user_id;
 		// Allow 0 for blog user, but reject negative values.
 		if ( $user_id < 0 ) {
@@ -579,7 +670,7 @@ class Remote_Posts {
 	 *
 	 * @return void
 	 */
-	public static function add_recipients( $post_id, $user_ids ) {
+	final public static function add_recipients( $post_id, $user_ids ) {
 		foreach ( $user_ids as $user_id ) {
 			self::add_recipient( $post_id, $user_id );
 		}
@@ -593,7 +684,7 @@ class Remote_Posts {
 	 *
 	 * @return bool True on success, false on failure.
 	 */
-	public static function remove_recipient( $post_id, $user_id ) {
+	final public static function remove_recipient( $post_id, $user_id ) {
 		$user_id = (int) $user_id;
 
 		// Allow 0 for blog user, but reject negative values.
@@ -609,13 +700,15 @@ class Remote_Posts {
 	 * Delete all posts.
 	 *
 	 * Used during plugin uninstall to clean up all remote posts.
+	 * This can only purge exclusive post_types. For non-exclusive
+	 * remote post-types the companion plugin is in charge!
 	 *
 	 * @return int The number of posts deleted.
 	 */
-	public static function delete_all() {
+	final public static function delete_all() {
 		$post_ids = \get_posts(
 			array(
-				'post_type'   => self::POST_TYPE,
+				'post_type'   => self::get_exclusive_post_types(),
 				'post_status' => array( 'any', 'trash', 'auto-draft' ),
 				'fields'      => 'ids',
 				'numberposts' => -1,
@@ -641,11 +734,13 @@ class Remote_Posts {
 	 * @return int The number of items deleted.
 	 */
 	public static function purge( $days ) {
+		$post_type = static::resolve_post_type();
+
 		if ( $days <= 0 ) {
 			return 0;
 		}
 
-		$counts = \wp_count_posts( self::POST_TYPE );
+		$counts = \wp_count_posts( $post_type );
 		$total  = 0;
 		foreach ( $counts as $count ) {
 			$total += (int) $count;
@@ -663,7 +758,7 @@ class Remote_Posts {
 		$exclude    = array();
 
 		// If total exceeds the hard cap, drop the date filter to purge oldest items first.
-		$overflow   = $total > self::MAX_ITEMS;
+		$overflow   = $total > static::MAX_ITEMS;
 		$date_query = array(
 			array(
 				'before' => $cutoff,
@@ -671,7 +766,7 @@ class Remote_Posts {
 		);
 
 		$query_args = array(
-			'post_type'   => self::POST_TYPE,
+			'post_type'   => $post_type,
 			'post_status' => 'any',
 			'fields'      => 'ids',
 			'numberposts' => self::PURGE_BATCH_SIZE,
@@ -715,6 +810,20 @@ class Remote_Posts {
 					continue;
 				}
 
+				/**
+				 * Filter whether to preserve a specific remote post from being purged.
+				 *
+				 * @param bool   $preserve  Whether to preserve this post. Default false.
+				 * @param int    $post_id   The remote post ID being considered for deletion.
+				 * @param string $post_type The post type of the collection being purged.
+				 *
+				 * @return bool Whether to preserve this post from deletion.
+				 */
+				if ( \apply_filters( 'activitypub_preserve_remote_post', false, $post_id, $post_type ) ) {
+					$exclude[] = $post_id;
+					continue;
+				}
+
 				// Preserve posts with comments from local users.
 				if ( isset( $commented_post_ids[ $post_id ] ) ) {
 					$exclude[] = $post_id;
@@ -726,12 +835,26 @@ class Remote_Posts {
 			}
 
 			// Once we're back under the cap, re-apply the date filter.
-			if ( $overflow && ( $total - $deleted ) <= self::MAX_ITEMS ) {
+			if ( $overflow && ( $total - $deleted ) <= static::MAX_ITEMS ) {
 				$overflow                 = false;
 				$query_args['date_query'] = $date_query;
 			}
 		} while ( ! empty( $post_ids ) && ( \time() - $start_time ) < self::PURGE_TIMEOUT );
 
 		return $deleted;
+	}
+
+	/**
+	 * Get the post type a call on this class operates on.
+	 *
+	 * A subclass uses its own post type. Called on the base class itself, which has none, the
+	 * default collection's post type is used.
+	 *
+	 * @return string
+	 */
+	protected static function resolve_post_type() {
+		return self::class === static::class
+			? Default_Remote_Posts::get_post_type()
+			: static::get_post_type();
 	}
 }

@@ -98,7 +98,7 @@ class Remote_Actors_Controller extends \WP_REST_Posts_Controller {
 
 		$posts = \get_posts(
 			array(
-				'post_type'      => Remote_Posts::POST_TYPE,
+				'post_type'      => Remote_Posts::get_supporting_post_types(),
 				'post_status'    => 'publish',
 				'posts_per_page' => 1,
 				'fields'         => 'ids',

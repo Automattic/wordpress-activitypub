@@ -1118,7 +1118,7 @@ class Comment {
 	 * @return string[] Array of post type names to hide comments for.
 	 */
 	public static function hide_for() {
-		$post_types = array( Remote_Posts::POST_TYPE );
+		$post_types = Remote_Posts::get_exclusive_post_types();
 
 		/**
 		 * Filters the list of post types to hide comments for.
