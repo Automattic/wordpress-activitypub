@@ -24,7 +24,7 @@ use Activitypub\Activity\Extended_Object\Place;
  * @method Base_Object|string|array|null get_object()     Gets the direct object of the activity.
  * @method string|string[]|null          get_origin()     Gets the origin property of the activity.
  * @method array|null                    get_replies()    Gets the collection of responses to this activity.
- * @method string|null                   get_result()     Gets the result property of the activity.
+ * @method string|array|null             get_result()     Gets the result property of the activity.
  * @method string|string[]|null          get_target()     Gets the target property of the activity.
  *
  * @method Activity set_actor( string|array $actor )                    Sets one or more entities that performed the activity.
