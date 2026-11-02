@@ -149,13 +149,13 @@ class Interactions {
 		}
 
 		/*
-		 * Only the comment's author may update it. The comment maps to the remote actor that
-		 * created it via _activitypub_remote_actor_id; that actor post's guid is the
-		 * (signature-bound) actor URI. The Update's actor must match it, otherwise a remote
-		 * server could rewrite another actor's comment by sending an Update whose object.id
-		 * points at it.
+		 * Only the comment's author may update it. The comment stores the (signature-bound) URI
+		 * of the actor that created it in _activitypub_actor_id; older comments map to the remote
+		 * actor post via _activitypub_remote_actor_id, whose guid is that URI. The Update's actor
+		 * must match it, otherwise a remote server could rewrite another actor's comment by sending
+		 * an Update whose object.id points at it.
 		 *
-		 * Comments created before this mapping existed have no owner recorded; those are let
+		 * Comments created before either mapping existed have no owner recorded; those are let
 		 * through for backward compatibility, but only from the host of the identifier the comment
 		 * was found by, as in add_comment(). A recorded owner whose actor post is gone is rejected.
 		 * On mismatch, return a WP_Error rather than false: false would make the Update handler
@@ -164,8 +164,15 @@ class Interactions {
 		 * onward. A WP_Error is handled but unsuccessful: no Create fallback, and the
 		 * handled-update success flag stays false.
 		 */
-		$owner_id = (int) \get_comment_meta( $comment_data['comment_ID'], '_activitypub_remote_actor_id', true );
-		if ( $owner_id ? object_to_uri( $activity['actor'] ) !== \get_post_field( 'guid', $owner_id, 'raw' ) : ! is_same_host( $activity['actor'], $object_id ) ) {
+		$owner = \get_comment_meta( $comment_data['comment_ID'], '_activitypub_actor_id', true );
+		if ( $owner ) {
+			$forbidden = \esc_url_raw( object_to_uri( $activity['actor'] ) ) !== $owner;
+		} else {
+			$owner_id  = (int) \get_comment_meta( $comment_data['comment_ID'], '_activitypub_remote_actor_id', true );
+			$forbidden = $owner_id ? object_to_uri( $activity['actor'] ) !== \get_post_field( 'guid', $owner_id, 'raw' ) : ! is_same_host( $activity['actor'], $object_id );
+		}
+
+		if ( $forbidden ) {
 			return new \WP_Error(
 				'activitypub_update_forbidden',
 				\__( 'The Update actor does not own the target comment.', 'activitypub' )
@@ -302,26 +309,24 @@ class Interactions {
 	/**
 	 * Get interaction(s) by actor.
 	 *
-	 * @param string $actor The Actor-URL.
+	 * @since unreleased Matches the actor ID stored on the interaction, not the profile URL.
+	 *
+	 * @param string $actor The actor ID.
 	 *
 	 * @return array The interactions as WP_Comment objects.
 	 */
 	public static function get_by_actor( $actor ) {
-		$meta = get_remote_metadata_by_actor( $actor );
-
-		// Get URL, because $actor seems to be the ID.
-		if ( $meta && ! \is_wp_error( $meta ) && isset( $meta['url'] ) ) {
-			$actor = object_to_uri( $meta['url'] );
-		}
-
 		$args = array(
 			'nopaging'   => true,
-			'author_url' => $actor,
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query' => array(
 				array(
 					'key'   => 'protocol',
 					'value' => 'activitypub',
+				),
+				array(
+					'key'   => '_activitypub_actor_id',
+					'value' => \esc_url_raw( $actor ),
 				),
 			),
 		);
@@ -478,6 +483,12 @@ class Interactions {
 	 */
 	private static function prepare_remote_comment_data( $activity ) {
 		$actor = object_to_uri( $activity['actor'] ?? null );
+
+		// The stored actor ID is who owns the comment, so a comment without one is not stored.
+		if ( ! \is_string( $actor ) || ! \esc_url_raw( $actor ) ) {
+			return false;
+		}
+
 		$actor = get_remote_metadata_by_actor( $actor );
 
 		if ( ! $actor || \is_wp_error( $actor ) ) {
@@ -517,7 +528,7 @@ class Interactions {
 			'comment_author_url'   => $comment_author_url,
 			'comment_content'      => $comment_content,
 			'comment_author_email' => $comment_author_email,
-			'comment_meta'         => self::prepare_remote_comment_meta( $activity ),
+			'comment_meta'         => self::prepare_remote_comment_meta( $activity, $actor ),
 		);
 	}
 
@@ -571,28 +582,81 @@ class Interactions {
 	 * @since 9.4.0
 	 *
 	 * @param array $activity The Activity array.
+	 * @param array $actor    The actor array.
 	 *
 	 * @return array The comment metadata.
 	 */
-	private static function prepare_remote_comment_meta( $activity ) {
+	private static function prepare_remote_comment_meta( $activity, $actor ) {
 		$comment_meta = array(
 			'protocol'  => 'activitypub',
 			'source_id' => \esc_url_raw( object_to_uri( $activity['object'] ) ),
 		);
 
-		$actor_uri = object_to_uri( $activity['actor'] ?? null );
-		if ( $actor_uri ) {
-			$remote_actor = Remote_Actors::get_by_uri( $actor_uri );
-			if ( ! \is_wp_error( $remote_actor ) ) {
-				$comment_meta['_activitypub_remote_actor_id'] = $remote_actor->ID;
-			}
-		}
+		// Only what the actor has; an empty value would be stored as an empty row.
+		$comment_meta = \array_merge( $comment_meta, \array_filter( self::get_actor_meta( object_to_uri( $activity['actor'] ?? null ), $actor ) ) );
 
 		if ( isset( $activity['object']['url'] ) ) {
 			$comment_meta['source_url'] = \esc_url_raw( object_to_uri( $activity['object']['url'] ) );
 		}
 
 		return $comment_meta;
+	}
+
+	/**
+	 * Get the comment meta that shows the actor of an interaction.
+	 *
+	 * An interaction keeps its own copy of the avatar and the emoji of the name, as core keeps
+	 * the name, so it is shown without the actor.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $actor_id The actor ID.
+	 * @param array  $actor    The actor array.
+	 *
+	 * @return array The actor ID, the avatar URL and the emoji, an empty string for what the actor does not have.
+	 */
+	private static function get_actor_meta( $actor_id, $actor ) {
+		$emoji = Emoji::prepare_actor_meta( $actor );
+
+		return array(
+			'_activitypub_actor_id' => \esc_url_raw( (string) $actor_id ),
+			'avatar_url'            => \esc_url_raw( (string) object_to_uri( $actor['icon'] ?? '' ) ),
+			// Meta is unslashed on save, which would break the escapes in the JSON.
+			'_activitypub_emoji'    => isset( $emoji['_activitypub_emoji'] ) ? \wp_slash( $emoji['_activitypub_emoji'] ) : '',
+		);
+	}
+
+	/**
+	 * Update the actor on the interactions of an actor.
+	 *
+	 * Called on an Update of the actor, and on a Move with the new account.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $actor_id The actor ID the interactions are stored under.
+	 * @param array  $actor    The actor array, the new account on a Move.
+	 *
+	 * @return void
+	 */
+	public static function update_actor( $actor_id, $actor ) {
+		$comments = self::get_by_actor( $actor_id );
+
+		if ( ! $comments ) {
+			return;
+		}
+
+		$meta = self::get_actor_meta( object_to_uri( $actor['id'] ?? $actor_id ), $actor );
+
+		foreach ( $comments as $comment ) {
+			foreach ( $meta as $key => $value ) {
+				// Core skips the write when the value is the same.
+				if ( '' !== $value ) {
+					\update_comment_meta( $comment->comment_ID, $key, $value );
+				} elseif ( \get_comment_meta( $comment->comment_ID, $key, true ) ) {
+					\delete_comment_meta( $comment->comment_ID, $key );
+				}
+			}
+		}
 	}
 
 	/**

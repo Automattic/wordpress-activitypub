@@ -756,11 +756,12 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertIsArray( $comment );
 		$this->assertEquals( self::$post_id, $comment['comment_post_ID'] );
 
-		// Verify remote actor reference was stored.
-		$stored_actor_id = get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true );
-		$this->assertEquals( $remote_actor_id, $stored_actor_id );
+		// The comment stores the signed actor and its own copy of the avatar, not the actor post.
+		$this->assertSame( self::$user_url, get_comment_meta( $comment_id, '_activitypub_actor_id', true ) );
+		$this->assertSame( 'https://example.com/icon', get_comment_meta( $comment_id, 'avatar_url', true ) );
+		$this->assertEmpty( get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true ) );
 
-		// Verify avatar URL is stored on the remote actor.
+		// The avatar URL is still stored on the remote actor.
 		$avatar_url = \Activitypub\Collection\Remote_Actors::get_avatar_url( $remote_actor_id );
 		$this->assertEquals( 'https://example.com/avatar.jpg', $avatar_url );
 	}
@@ -958,13 +959,13 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertIsInt( $comment_id_2, 'Second comment should be created' );
 		$this->assertNotEquals( $comment_id_1, $comment_id_2, 'Comments should have different IDs' );
 
-		// Verify both comments have remote_actor_id set.
-		$meta_1 = get_comment_meta( $comment_id_1, '_activitypub_remote_actor_id', true );
-		$meta_2 = get_comment_meta( $comment_id_2, '_activitypub_remote_actor_id', true );
-		$this->assertEquals( $remote_actor_id, $meta_1, 'First comment should have remote_actor_id' );
-		$this->assertEquals( $remote_actor_id, $meta_2, 'Second comment should have remote_actor_id' );
+		// Verify both comments have the actor ID set.
+		$meta_1 = get_comment_meta( $comment_id_1, '_activitypub_actor_id', true );
+		$meta_2 = get_comment_meta( $comment_id_2, '_activitypub_actor_id', true );
+		$this->assertEquals( $actor_url, $meta_1, 'First comment should have the actor ID' );
+		$this->assertEquals( $actor_url, $meta_2, 'Second comment should have the actor ID' );
 
-		// Test get_by_actor - should use optimized query with remote_actor_id.
+		// Test get_by_actor - should query the actor ID.
 		$interactions = Interactions::get_by_actor( $actor_url );
 
 		// Verify both comments are returned.
@@ -977,10 +978,10 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertGreaterThanOrEqual( 1, count( $interactions ), 'Should return at least 1 comment from the actor' );
 
 		if ( count( $interactions ) >= 1 ) {
-			// Verify the returned comment(s) have the correct remote_actor_id.
+			// Verify the returned comment(s) have the correct actor ID.
 			foreach ( $interactions as $interaction ) {
-				$meta = get_comment_meta( $interaction->comment_ID, '_activitypub_remote_actor_id', true );
-				$this->assertEquals( $remote_actor_id, $meta, 'Returned comment should have correct remote_actor_id' );
+				$meta = get_comment_meta( $interaction->comment_ID, '_activitypub_actor_id', true );
+				$this->assertEquals( $actor_url, $meta, 'Returned comment should have the correct actor ID' );
 			}
 		}
 
@@ -1072,6 +1073,13 @@ class Test_Interactions extends \WP_UnitTestCase {
 				),
 			)
 		);
+
+		// Comments from before the actor ID was stored on them map to the actor post.
+		foreach ( array( $comment_id_1, $comment_id_2 ) as $comment_id ) {
+			if ( \is_int( $comment_id ) ) {
+				\add_comment_meta( $comment_id, '_activitypub_remote_actor_id', $remote_actor_id );
+			}
+		}
 
 		// Test get_by_remote_actor_id - should use optimized query.
 		$interactions = Interactions::get_by_remote_actor_id( $remote_actor_id );
@@ -1338,13 +1346,15 @@ class Test_Interactions extends \WP_UnitTestCase {
 		// Test that shortcode is stored in database, not HTML (for author name).
 		$this->assertSame( 'Test User :kappa:', $comment->comment_author );
 
-		// Test that comment is linked to remote actor.
-		$remote_actor_id = get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true );
-		$this->assertEquals( $actor_post_id, $remote_actor_id );
+		// Test that comment is linked to the actor.
+		$this->assertSame( $actor_uri, get_comment_meta( $comment_id, '_activitypub_actor_id', true ) );
 
-		// Test that emoji data is stored on remote actor (for author name rendering).
-		$emoji_data = get_post_meta( $actor_post_id, '_activitypub_emoji', true );
-		$this->assertNotEmpty( $emoji_data );
+		// Test that emoji data is stored on the comment (for author name rendering).
+		$emoji_data = get_comment_meta( $comment_id, '_activitypub_emoji', true );
+		$this->assertStringContainsString( 'kappa.png', $emoji_data );
+
+		// The author name keeps its emoji when the actor post is gone.
+		\wp_delete_post( $actor_post_id, true );
 
 		// Test emoji replacement on display via comment_text filter (blocks are rendered).
 		$comment_text_with_emoji = apply_filters( 'comment_text', $comment->comment_content, $comment );
@@ -1359,6 +1369,73 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertStringNotContainsString( ':kappa:', $author_with_emoji );
 
 		\remove_filter( 'pre_get_remote_metadata_by_actor', $filter, 10 );
+	}
+
+	/**
+	 * Test that the emoji stored on the comment keep the escapes of their JSON.
+	 *
+	 * @covers ::add_comment
+	 * @covers ::update_actor
+	 */
+	public function test_comment_emoji_keep_json_escapes() {
+		$actor_uri = 'https://example.com/users/escaped-emoji';
+		$actor     = array(
+			'id'   => $actor_uri,
+			'type' => 'Person',
+			'name' => 'Café :café:',
+			'tag'  => array(
+				array(
+					'type' => 'Emoji',
+					'name' => ':café:',
+					'icon' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/files/caf%C3%A9.png',
+					),
+				),
+			),
+		);
+
+		$filter = static function ( $value, $actor_id ) use ( $actor_uri, $actor ) {
+			return $actor_id === $actor_uri ? $actor : $value;
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $filter, 10, 2 );
+
+		$comment_id = Interactions::add_comment(
+			array(
+				'actor'  => $actor_uri,
+				'id'     => 'https://example.com/activities/escaped-emoji',
+				'object' => array(
+					'id'        => 'https://example.com/objects/escaped-emoji',
+					'content'   => 'Hello',
+					'inReplyTo' => self::$post_permalink,
+				),
+			)
+		);
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $filter, 10 );
+
+		$this->assertIsInt( $comment_id );
+		$emoji = \json_decode( \get_comment_meta( $comment_id, '_activitypub_emoji', true ), true );
+		$this->assertSame( ':café:', $emoji[0]['name'] ?? null );
+
+		// The same on an update of the actor.
+		$actor['tag'][0]['name'] = ':thé:';
+		Interactions::update_actor( $actor_uri, $actor );
+
+		$emoji = \json_decode( \get_comment_meta( $comment_id, '_activitypub_emoji', true ), true );
+		$this->assertSame( ':thé:', $emoji[0]['name'] ?? null );
+	}
+
+	/**
+	 * Test that a comment is not stored when its actor ID cannot be stored as its owner.
+	 *
+	 * @covers ::add_comment
+	 */
+	public function test_add_comment_rejects_actor_id_that_cannot_be_stored() {
+		$activity          = $this->create_test_object( 'https://example.com/objects/did-actor' );
+		$activity['actor'] = 'did:example:123456';
+
+		$this->assertFalse( Interactions::add_comment( $activity ) );
 	}
 
 	/**
@@ -2097,9 +2174,10 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		$comment_id = Interactions::add_comment( $create_activity );
 		$this->assertIsInt( $comment_id );
-		$this->assertNotEmpty(
-			\get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true ),
-			'The comment should map to its remote actor.'
+		$this->assertSame(
+			$owner_uri,
+			\get_comment_meta( $comment_id, '_activitypub_actor_id', true ),
+			'The comment should map to its actor.'
 		);
 
 		// A different actor attempts to rewrite the comment.
@@ -2257,7 +2335,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 				'inbox'             => $old_uri . '/inbox',
 			)
 		);
-		$new_id = Remote_Actors::upsert(
+		Remote_Actors::upsert(
 			array(
 				'id'                => $new_uri,
 				'type'              => 'Person',
@@ -2280,8 +2358,14 @@ class Test_Interactions extends \WP_UnitTestCase {
 		);
 		$this->assertIsInt( $comment_id );
 
-		// The Move merge points the comment at the new account.
-		\update_comment_meta( $comment_id, '_activitypub_remote_actor_id', $new_id );
+		// The Move points the comment at the new account.
+		Interactions::update_actor(
+			$old_uri,
+			array(
+				'id'   => $new_uri,
+				'type' => 'Person',
+			)
+		);
 
 		$object['content'] = 'Edited by the old account';
 		$result            = Interactions::update_comment(
@@ -2332,7 +2416,9 @@ class Test_Interactions extends \WP_UnitTestCase {
 				),
 			)
 		);
-		$this->assertEquals( $owner_id, \get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true ) );
+		// A comment from before the actor ID was stored on it maps to the actor post.
+		\delete_comment_meta( $comment_id, '_activitypub_actor_id' );
+		\add_comment_meta( $comment_id, '_activitypub_remote_actor_id', $owner_id );
 
 		Remote_Actors::delete( $owner_id );
 

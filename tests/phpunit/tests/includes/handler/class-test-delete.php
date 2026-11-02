@@ -187,6 +187,66 @@ class Test_Delete extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a deleted actor's interactions are deleted without an actor post.
+	 *
+	 * @covers ::maybe_delete_follower
+	 * @covers ::delete_interactions
+	 */
+	public function test_delete_actor_interactions_without_actor_post() {
+		$actor_url = 'https://example.com/users/gone-commenter';
+		$post_id   = self::factory()->post->create();
+
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'comment_meta'    => array(
+					'protocol'              => 'activitypub',
+					'_activitypub_actor_id' => $actor_url,
+				),
+			)
+		);
+		$other_id   = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'comment_meta'    => array(
+					'protocol'              => 'activitypub',
+					'_activitypub_actor_id' => 'https://example.com/users/someone-else',
+				),
+			)
+		);
+
+		// The actor is gone from its own host.
+		$filter = static function ( $preempt, $args, $url ) use ( $actor_url ) {
+			if ( $url === $actor_url ) {
+				return array(
+					'body'     => '',
+					'response' => array( 'code' => 410 ),
+				);
+			}
+			return $preempt;
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		Delete::maybe_delete_follower(
+			array(
+				'type'   => 'Delete',
+				'actor'  => $actor_url,
+				'object' => $actor_url,
+			)
+		);
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertWPError( Remote_Actors::get_by_uri( $actor_url ), 'There is no actor post.' );
+		$this->assertNotFalse( \wp_next_scheduled( 'activitypub_delete_remote_actor_interactions', array( $actor_url ) ) );
+
+		\do_action( 'activitypub_delete_remote_actor_interactions', $actor_url );
+
+		$this->assertNull( \get_comment( $comment_id ), 'The actor\'s comment is deleted.' );
+		$this->assertNotNull( \get_comment( $other_id ), 'Comments of other actors stay.' );
+	}
+
+	/**
 	 * Test delete_posts action deletes posts from actor.
 	 *
 	 * @covers ::delete_posts

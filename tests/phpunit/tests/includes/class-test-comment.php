@@ -2559,18 +2559,66 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that render_emoji() reads the emoji stored on the comment.
+	 *
+	 * @covers ::render_emoji
+	 */
+	public function test_render_emoji_from_comment() {
+		list( $comment_id ) = $this->create_activitypub_comment();
+		\add_comment_meta( $comment_id, '_activitypub_emoji', \wp_slash( $this->party_emoji_json() ) );
+
+		$this->assertStringContainsString( 'party.png', Comment::render_emoji( 'Party :party:', $comment_id ) );
+	}
+
+	/**
+	 * Test that render_emoji() reads the actor post for comments from before the emoji were stored on them.
+	 *
+	 * @covers ::render_emoji
+	 */
+	public function test_render_emoji_from_actor_post_for_older_comments() {
+		$comment_id    = self::factory()->comment->create( array( 'comment_post_ID' => self::factory()->post->create() ) );
+		$actor_post_id = self::factory()->post->create();
+		\add_comment_meta( $comment_id, 'protocol', 'activitypub' );
+		\add_comment_meta( $comment_id, '_activitypub_remote_actor_id', $actor_post_id );
+		\add_post_meta( $actor_post_id, '_activitypub_emoji', \wp_slash( $this->party_emoji_json() ) );
+
+		$this->assertStringContainsString( 'party.png', Comment::render_emoji( 'Party :party:', $comment_id ) );
+	}
+
+	/**
+	 * The emoji tags of an actor named with :party:.
+	 *
+	 * @return string The emoji tags as JSON.
+	 */
+	protected function party_emoji_json() {
+		return \wp_json_encode(
+			array(
+				array(
+					'type' => 'Emoji',
+					'name' => ':party:',
+					'icon' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/party.png',
+					),
+				),
+			)
+		);
+	}
+
+	/**
 	 * Create a comment that looks like it came from a remote actor.
 	 *
-	 * @return array The comment ID and the remote actor's post ID.
+	 * @return array The comment ID and the remote actor's ID.
 	 */
 	protected function create_activitypub_comment() {
-		$post_id       = self::factory()->post->create();
-		$actor_post_id = self::factory()->post->create();
-		$comment_id    = self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) );
+		$post_id    = self::factory()->post->create();
+		$actor_id   = 'https://example.com/users/party';
+		$comment_id = self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) );
 
-		\add_comment_meta( $comment_id, '_activitypub_remote_actor_id', $actor_post_id );
+		\add_comment_meta( $comment_id, 'protocol', 'activitypub' );
+		\add_comment_meta( $comment_id, '_activitypub_actor_id', $actor_id );
 
-		return array( $comment_id, $actor_post_id );
+		return array( $comment_id, $actor_id );
 	}
 
 	/**

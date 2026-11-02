@@ -14,7 +14,8 @@ use Activitypub\Collection\Remote_Actors;
  *
  * Handles caching of remote actor avatars locally.
  * Avatars are stored in /wp-content/uploads/activitypub/actors/{actor_id}/
- * and cleaned up automatically when the actor is deleted.
+ * and cleaned up automatically when the actor is deleted. Comment avatars are
+ * stored under the hash of their URL instead of an actor.
  *
  * @since 5.6.0
  */
@@ -114,7 +115,7 @@ class Avatar extends File {
 	 *
 	 * @param string     $url       The remote URL.
 	 * @param string     $context   The context ('avatar', 'media', 'emoji', etc.).
-	 * @param string|int $entity_id The entity identifier (actor post ID).
+	 * @param string|int $entity_id The entity identifier (actor post ID, or the hash of the URL).
 	 * @param array      $options   Optional. Additional options (unused for avatars).
 	 *
 	 * @return string The local URL if cached successfully, otherwise the original URL.

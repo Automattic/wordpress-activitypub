@@ -256,9 +256,13 @@ class Delete {
 		// The actor is gone from its own host, so the cached copy goes with it.
 		Proxy::purge( $actor );
 
+		// Interactions are stored under the actor ID, with or without an actor post.
+		self::maybe_delete_interactions( $actor );
+
 		$follower = Remote_Actors::get_by_uri( $actor );
 
 		if ( ! \is_wp_error( $follower ) ) {
+			// Interactions from before the actor ID was stored on them.
 			self::maybe_delete_interactions( $follower->ID );
 			self::maybe_delete_posts( $follower->ID );
 			$state = Remote_Actors::delete( $follower->ID );
@@ -270,7 +274,7 @@ class Delete {
 	/**
 	 * Schedule Deletion of Interactions of a Remote Actor.
 	 *
-	 * @param int $id The remote actor ID.
+	 * @param string|int $id The actor ID, or the ID of the remote actor post.
 	 *
 	 * @return void
 	 */
@@ -300,12 +304,12 @@ class Delete {
 	/**
 	 * Delete Interactions from a Remote Actor.
 	 *
-	 * @param int $id The ID of the actor whose comments to delete.
+	 * @param string|int $id The actor ID, or the ID of the remote actor post for interactions from before the actor ID was stored on them.
 	 *
 	 * @return bool True on success, false otherwise.
 	 */
 	public static function delete_interactions( $id ) {
-		$comments = Interactions::get_by_remote_actor_id( $id );
+		$comments = \is_numeric( $id ) ? Interactions::get_by_remote_actor_id( $id ) : Interactions::get_by_actor( $id );
 
 		foreach ( $comments as $comment ) {
 			\wp_delete_comment( $comment, true );
