@@ -566,7 +566,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 		// Verify images were replaced with local URLs.
 		$this->assertStringNotContainsString( 'https://example.com/image1.jpg', $post->post_content );
 		$this->assertStringNotContainsString( 'https://example.com/image2.png', $post->post_content );
-		$this->assertStringContainsString( 'wp-content/uploads', $post->post_content );
+		$this->assertStringContainsString( \wp_upload_dir()['baseurl'], $post->post_content );
 
 		// Verify attachments were created.
 		$attachments = \get_attached_media( '', $post_id );
@@ -614,7 +614,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 		// Verify inline images were replaced.
 		$this->assertStringNotContainsString( 'https://example.com/shared.jpg', $post->post_content );
 		$this->assertStringNotContainsString( 'https://example.com/inline-only.jpg', $post->post_content );
-		$this->assertStringContainsString( 'wp-content/uploads', $post->post_content );
+		$this->assertStringContainsString( \wp_upload_dir()['baseurl'], $post->post_content );
 
 		// Verify correct number of attachments (no duplicates).
 		$attachments = \get_attached_media( '', $post_id );

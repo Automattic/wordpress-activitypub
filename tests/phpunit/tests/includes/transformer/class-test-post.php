@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Transformer;
 
 use Activitypub\Activity\Base_Object;
+use Activitypub\Post_Types;
 use Activitypub\Tests\Equal_Html;
 use Activitypub\Transformer\Post;
 
@@ -1493,6 +1494,8 @@ class Test_Post extends \WP_UnitTestCase {
 	 */
 	public function test_get_interaction_policy_no_meta_fallback_to_global_followers() {
 		\update_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS );
+		// The registered meta default reads the option, register it again to pick up the change.
+		Post_Types::register_activitypub_post_meta();
 
 		$post        = $this->create_test_post();
 		$transformer = new Post( $post );
@@ -1504,6 +1507,7 @@ class Test_Post extends \WP_UnitTestCase {
 		$this->assertStringContainsString( 'followers', $policy['canQuote']['automaticApproval'], 'Should use global default followers policy.' );
 
 		\delete_option( 'activitypub_default_quote_policy' );
+		Post_Types::register_activitypub_post_meta();
 	}
 
 	/**
