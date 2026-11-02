@@ -477,8 +477,8 @@ class Interactions {
 	 * @return array|false The prepared fields, or false when actor data is unavailable.
 	 */
 	private static function prepare_remote_comment_data( $activity ) {
-		$actor = object_to_uri( $activity['actor'] ?? null );
-		$actor = get_remote_metadata_by_actor( $actor );
+		$actor_id = object_to_uri( $activity['actor'] ?? null );
+		$actor    = get_remote_metadata_by_actor( $actor_id );
 
 		if ( ! $actor || \is_wp_error( $actor ) ) {
 			return false;
@@ -499,9 +499,13 @@ class Interactions {
 		// the slashing is ours: wp_new_comment() unslashes the whole array.
 		$comment_author     = \wp_slash( $comment_author ?? \__( 'Anonymous', 'activitypub' ) );
 		$comment_author_url = \esc_url_raw( object_to_uri( $actor['url'] ?? $actor['id'] ) );
-		$webfinger          = Webfinger::uri_to_acct( $comment_author_url );
+		$webfinger          = Webfinger::uri_to_acct( $actor_id );
 
-		if ( \is_wp_error( $webfinger ) ) {
+		/*
+		 * Core's "previously approved" check matches name and email, so the email has to belong to the signed actor.
+		 * The actor's server may name any account, so the account has to point back to the actor.
+		 */
+		if ( \is_wp_error( $webfinger ) || Webfinger::resolve( $webfinger ) !== $actor_id ) {
 			$comment_author_email = '';
 		} else {
 			$comment_author_email = Sanitize::webfinger( $webfinger );

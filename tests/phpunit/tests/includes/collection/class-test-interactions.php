@@ -1419,12 +1419,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 			),
 		);
 
-		$filter = function () {
-			return array(
-				'body'     => wp_json_encode( array( 'subject' => 'acct:tester@example.com' ) ),
-				'response' => array( 'code' => 200 ),
-			);
-		};
+		$filter = $this->webfinger_answer( 'acct:tester@example.com', $actor_url );
 		\add_filter( 'pre_http_request', $filter );
 
 		$comment_data = Interactions::activity_to_comment( $activity );
@@ -1432,6 +1427,62 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertEquals( 'tester@example.com', $comment_data['comment_author_email'] );
 
 		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * A handle that does not point back to the actor is not used as email.
+	 *
+	 * The actor's server answers the first lookup and may name any account. Core's
+	 * "previously approved" check matches on the email, so it must be the actor's own.
+	 *
+	 * @covers ::activity_to_comment
+	 */
+	public function test_activity_to_comment_ignores_foreign_webfinger_handle() {
+		$activity = array(
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/users/mallory',
+			'object' => array(
+				'content' => 'Test comment content',
+				'id'      => 'https://example.com/activities/2',
+			),
+		);
+
+		$filter = $this->webfinger_answer( 'acct:victim@example.com', 'https://example.com/users/victim' );
+		\add_filter( 'pre_http_request', $filter );
+
+		$comment_data = Interactions::activity_to_comment( $activity );
+
+		$this->assertSame( '', $comment_data['comment_author_email'] );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Answer every WebFinger lookup with a handle and the actor it points to.
+	 *
+	 * @param string $subject The acct URI.
+	 * @param string $actor   The actor ID of the `self` link.
+	 *
+	 * @return callable The `pre_http_request` callback.
+	 */
+	private function webfinger_answer( $subject, $actor ) {
+		return function () use ( $subject, $actor ) {
+			return array(
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => $subject,
+						'links'   => array(
+							array(
+								'rel'  => 'self',
+								'type' => 'application/activity+json',
+								'href' => $actor,
+							),
+						),
+					)
+				),
+				'response' => array( 'code' => 200 ),
+			);
+		};
 	}
 
 	/**

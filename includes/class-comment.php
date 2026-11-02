@@ -983,11 +983,11 @@ class Comment {
 	 */
 	public static function pre_comment_approved( $approved, $comment_data ) {
 		/*
-		 * Only return early for already-approved comments, trash, or errors.
+		 * Only return early for trash, or errors.
 		 * Don't short-circuit on 'spam' - we may want to override Akismet.
 		 * Respect 'trash' since it comes from the WordPress disallowed list.
 		 */
-		if ( 1 === $approved || '1' === $approved || 'trash' === $approved || \is_wp_error( $approved ) ) {
+		if ( 'trash' === $approved || \is_wp_error( $approved ) ) {
 			return $approved;
 		}
 
@@ -1010,30 +1010,32 @@ class Comment {
 			return 1;
 		}
 
-		if ( '1' !== \get_option( 'comment_previously_approved' ) ) {
-			return $approved;
-		}
-
 		if (
+			! \in_array( $approved, array( 1, '1' ), true ) ||
+			'1' !== \get_option( 'comment_previously_approved' ) ||
 			empty( $comment_data['comment_meta']['protocol'] ) ||
 			'activitypub' !== $comment_data['comment_meta']['protocol']
 		) {
 			return $approved;
 		}
 
-		global $wpdb;
-
-		$author     = $comment_data['comment_author'];
-		$author_url = $comment_data['comment_author_url'];
-		// Only previously approved normal comments count, not approved likes or reposts.
-		// phpcs:ignore
-		$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author = %s AND comment_author_url = %s AND comment_approved = '1' AND comment_type = 'comment' LIMIT 1", $author, $author_url ) );
-
-		if ( 1 === (int) $ok_to_comment ) {
+		// Core counts every approved comment of the author, likes and reposts too. Only normal comments count here.
+		if (
+			'' !== $comment_data['comment_author_email'] &&
+			\get_comments(
+				array(
+					'author_email' => $comment_data['comment_author_email'],
+					'type'         => 'comment',
+					'status'       => 'approve',
+					'number'       => 1,
+					'fields'       => 'ids',
+				)
+			)
+		) {
 			return 1;
 		}
 
-		return $approved;
+		return 0;
 	}
 
 	/**

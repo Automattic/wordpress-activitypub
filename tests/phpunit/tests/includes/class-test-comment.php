@@ -618,7 +618,7 @@ class Test_Comment extends \WP_UnitTestCase {
 				'comment_author'       => 'Approved',
 				'comment_author_url'   => 'https://example.com/@approved',
 				'comment_post_ID'      => $post_id,
-				'comment_author_email' => '',
+				'comment_author_email' => 'approved@example.com',
 				'comment_meta'         => array(
 					'protocol' => 'activitypub',
 				),
@@ -639,7 +639,7 @@ class Test_Comment extends \WP_UnitTestCase {
 				'comment_author'       => 'Approved',
 				'comment_author_url'   => 'https://example.com/@approved',
 				'comment_post_ID'      => $post_id,
-				'comment_author_email' => '',
+				'comment_author_email' => 'approved@example.com',
 				'comment_meta'         => array(
 					'protocol' => 'activitypub',
 				),
@@ -651,22 +651,23 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		\remove_filter( 'pre_comment_approved', array( 'Activitypub\Comment', 'pre_comment_approved' ), 11 );
 
-		$comment_id_unapproved = \wp_new_comment(
+		$comment_id_core = \wp_new_comment(
 			array(
 				'comment_type'         => 'comment',
 				'comment_content'      => 'This is final comment.',
 				'comment_author'       => 'Approved',
 				'comment_author_url'   => 'https://example.com/@approved',
 				'comment_post_ID'      => $post_id,
-				'comment_author_email' => '',
+				'comment_author_email' => 'approved@example.com',
 				'comment_meta'         => array(
 					'protocol' => 'activitypub',
 				),
 			)
 		);
 
-		$comment_unapproved = \get_comment( $comment_id_unapproved );
-		$this->assertEquals( '0', $comment_unapproved->comment_approved );
+		// Core approves it on its own, it matches the name and the email, which is the verified WebFinger handle.
+		$comment_core = \get_comment( $comment_id_core );
+		$this->assertEquals( '1', $comment_core->comment_approved );
 
 		// Restore flood control.
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
@@ -705,7 +706,7 @@ class Test_Comment extends \WP_UnitTestCase {
 				'comment_author'       => 'Approved',
 				'comment_author_url'   => 'https://example.com/@approved',
 				'comment_post_ID'      => $post_id,
-				'comment_author_email' => '',
+				'comment_author_email' => 'approved@example.com',
 				'comment_meta'         => array(
 					'protocol' => 'activitypub',
 				),
@@ -720,7 +721,7 @@ class Test_Comment extends \WP_UnitTestCase {
 				'comment_author'       => 'Approved',
 				'comment_author_url'   => 'https://example.com/@approved',
 				'comment_post_ID'      => $post_id,
-				'comment_author_email' => '',
+				'comment_author_email' => 'approved@example.com',
 				'comment_meta'         => array(
 					'protocol' => 'activitypub',
 				),
@@ -733,6 +734,140 @@ class Test_Comment extends \WP_UnitTestCase {
 		// Restore the option and flood control.
 		\update_option( 'comment_previously_approved', $previous );
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	/**
+	 * A copied name and URL do not count as previously approved.
+	 *
+	 * Both come from the actor document. The email is the WebFinger handle of the signed actor,
+	 * so another actor has another email.
+	 *
+	 * @covers ::pre_comment_approved
+	 */
+	public function test_pre_comment_approved_ignores_copied_name_and_url() {
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
+		\update_option( 'comment_previously_approved', '1' );
+
+		$post_id = self::factory()->post->create();
+
+		$this->new_remote_comment( $post_id, 'approved@example.com', 'Hello.', true );
+
+		$spoof = $this->new_remote_comment( $post_id, 'mallory@attacker.example', 'Not from the approved author.' );
+		$this->assertSame( '0', \get_comment( $spoof )->comment_approved );
+
+		$genuine = $this->new_remote_comment( $post_id, 'approved@example.com', 'From the approved author.' );
+		$this->assertSame( '1', \get_comment( $genuine )->comment_approved );
+
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	/**
+	 * Core's moderation rules hold for a previously approved author.
+	 *
+	 * @dataProvider moderation_rule_provider
+	 * @covers ::pre_comment_approved
+	 *
+	 * @param string $option  The option to set.
+	 * @param string $value   The option value.
+	 * @param string $content The comment content.
+	 */
+	public function test_pre_comment_approved_keeps_core_moderation( $option, $value, $content ) {
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
+		\update_option( 'comment_previously_approved', '1' );
+
+		$post_id = self::factory()->post->create();
+
+		$this->new_remote_comment( $post_id, 'approved@example.com', 'Hello.', true );
+
+		\update_option( $option, $value );
+
+		$held = $this->new_remote_comment( $post_id, 'approved@example.com', $content );
+		$this->assertSame( '0', \get_comment( $held )->comment_approved );
+
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	/**
+	 * Core's moderation rules.
+	 *
+	 * @return array[] The option, its value and the comment content.
+	 */
+	public function moderation_rule_provider() {
+		return array(
+			'manual approval' => array( 'comment_moderation', '1', 'A plain reply.' ),
+			'moderation key'  => array( 'moderation_keys', 'casino', 'Visit the casino.' ),
+			'too many links'  => array( 'comment_max_links', '2', '<a href="https://a.example/">a</a> <a href="https://b.example/">b</a> <a href="https://c.example/">c</a>' ),
+		);
+	}
+
+	/**
+	 * A spam verdict stays for a previously approved author, as it does for a normal comment.
+	 *
+	 * Only comments on remote posts and auto-approved reactions override it.
+	 *
+	 * @covers ::pre_comment_approved
+	 */
+	public function test_pre_comment_approved_keeps_spam_for_approved_author() {
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
+		\update_option( 'comment_previously_approved', '1' );
+
+		$post_id = self::factory()->post->create();
+
+		$this->new_remote_comment( $post_id, 'approved@example.com', 'Hello.', true );
+
+		$comment_data = array(
+			'comment_post_ID'      => $post_id,
+			'comment_author'       => 'Approved',
+			'comment_author_email' => 'approved@example.com',
+			'comment_author_url'   => 'https://example.com/@approved',
+			'comment_content'      => 'A reply.',
+			'comment_author_IP'    => '',
+			'comment_agent'        => '',
+			'comment_type'         => 'comment',
+			'comment_meta'         => array(
+				'protocol' => 'activitypub',
+			),
+		);
+
+		$this->assertSame( 'spam', Comment::pre_comment_approved( 'spam', $comment_data ) );
+		$this->assertSame( 1, Comment::pre_comment_approved( 1, $comment_data ) );
+
+		$comment_data['comment_author_email'] = '';
+		$this->assertSame( 0, Comment::pre_comment_approved( 1, $comment_data ), 'An empty email matches nobody.' );
+
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	/**
+	 * Add a federated comment, with the same name and URL for every author.
+	 *
+	 * @param int    $post_id The post ID.
+	 * @param string $email   The comment author email, the WebFinger handle.
+	 * @param string $content The comment content.
+	 * @param bool   $approve Optional. Whether to approve the comment after it was added. Default false.
+	 *
+	 * @return int The comment ID.
+	 */
+	private function new_remote_comment( $post_id, $email, $content, $approve = false ) {
+		$comment_id = \wp_new_comment(
+			array(
+				'comment_type'         => 'comment',
+				'comment_content'      => $content,
+				'comment_author'       => 'Approved',
+				'comment_author_url'   => 'https://example.com/@approved',
+				'comment_author_email' => $email,
+				'comment_post_ID'      => $post_id,
+				'comment_meta'         => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		if ( $approve ) {
+			\wp_set_comment_status( $comment_id, 'approve' );
+		}
+
+		return $comment_id;
 	}
 
 	/**
