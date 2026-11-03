@@ -87,12 +87,13 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * @preserveGlobalState disabled
 	 *
 	 * @covers ::triage
+	 * @covers ::skip_imported_federation_state
 	 */
 	public function test_triage_marks_imported_posts_local() {
 		$existing_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
 		$outbox      = \wp_count_posts( Outbox::POST_TYPE );
 
-		\define( 'WP_IMPORTING', true );
+		require_once AP_TESTS_DIR . '/includes/constants-wp-importing.php';
 
 		// The federation state and the visibility of the source site do not come along.
 		$post_id = self::factory()->post->create(
