@@ -29,6 +29,7 @@ class Post {
 		// Post transitions.
 		\add_action( 'pre_post_update', array( self::class, 'save_canonical_url' ) );
 		\add_action( 'wp_after_insert_post', array( self::class, 'triage' ), 33, 4 );
+		\add_filter( 'add_post_metadata', array( self::class, 'skip_imported_federation_state' ), 10, 3 );
 
 		// Attachment transitions.
 		\add_action( 'add_attachment', array( self::class, 'transition_attachment_status' ) );
@@ -67,6 +68,28 @@ class Post {
 	}
 
 	/**
+	 * Drop the federation state that an import brings along.
+	 *
+	 * An export carries the state of the site it came from. Kept, it makes an
+	 * imported post look federated, and a later save sends an Update or Delete.
+	 *
+	 * @since unreleased
+	 *
+	 * @param null|bool $check    Whether to allow adding the metadata.
+	 * @param int       $post_id  Post ID.
+	 * @param string    $meta_key Metadata key.
+	 *
+	 * @return null|bool True to skip the metadata, the unchanged check otherwise.
+	 */
+	public static function skip_imported_federation_state( $check, $post_id, $meta_key ) {
+		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING && \in_array( $meta_key, array( 'activitypub_status', 'activitypub_deleted_at' ), true ) ) {
+			return true;
+		}
+
+		return $check;
+	}
+
+	/**
 	 * Triage post transitions and determine the appropriate Activity type.
 	 *
 	 * @param int      $post_id     Post ID.
@@ -91,7 +114,7 @@ class Post {
 			 * content once it goes live.
 			 */
 			if ( ! $update && 'publish' === $post->post_status && \post_type_supports( $post->post_type, 'activitypub' ) ) {
-				\add_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, true );
+				\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
 			}
 
 			return;
