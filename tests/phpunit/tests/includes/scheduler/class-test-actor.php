@@ -104,6 +104,22 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test that a profile change during an import queues nothing.
+	 *
+	 * @covers ::schedule_profile_update
+	 */
+	public function test_no_profile_update_during_import() {
+		$outbox = \wp_count_posts( Outbox::POST_TYPE );
+
+		\do_action( 'import_start' );
+		\update_user_meta( self::$user_id, 'description', 'imported description' );
+		\do_action( 'import_end' );
+
+		\wp_cache_delete( \_count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+		$this->assertEquals( $outbox, \wp_count_posts( Outbox::POST_TYPE ) );
+	}
+
+	/**
 	 * Test user update scheduling.
 	 *
 	 * @covers ::user_update

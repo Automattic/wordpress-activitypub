@@ -79,6 +79,90 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test that attachments and sticky posts queue nothing during an import.
+	 *
+	 * @covers ::transition_attachment_status
+	 * @covers ::schedule_featured_update
+	 */
+	public function test_no_activity_during_import() {
+		\add_post_type_support( 'attachment', 'activitypub' );
+		\wp_set_current_user( self::$user_id );
+
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox  = \wp_count_posts( Outbox::POST_TYPE );
+
+		\do_action( 'import_start' );
+
+		self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		\stick_post( $post_id );
+
+		\do_action( 'import_end' );
+
+		\wp_cache_delete( \_count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+		$this->assertEquals( $outbox, \wp_count_posts( Outbox::POST_TYPE ) );
+
+		\remove_post_type_support( 'attachment', 'activitypub' );
+	}
+
+	/**
+	 * Test that imported posts are marked "Do not federate" and queue nothing.
+	 *
+	 * @covers ::triage
+	 * @covers ::skip_imported_federation_state
+	 */
+	public function test_triage_marks_imported_posts_local() {
+		$existing_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox      = \wp_count_posts( Outbox::POST_TYPE );
+
+		\do_action( 'import_start' );
+
+		// The federation state and the visibility of the source site do not come along.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'meta_input'  => array(
+					'activitypub_status'             => 'federated',
+					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC,
+				),
+			)
+		);
+		$this->assertSame( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, \get_post_meta( $post_id, 'activitypub_content_visibility', true ) );
+		\add_post_meta( $post_id, 'activitypub_status', 'federated' );
+		$this->assertSame( '', \get_post_meta( $post_id, 'activitypub_status', true ) );
+
+		// A draft or scheduled post is new content once it goes live.
+		$draft_id = self::factory()->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'post_status' => 'draft',
+			)
+		);
+		$this->assertSame( '', \get_post_meta( $draft_id, 'activitypub_content_visibility', true ) );
+
+		// An update during an import leaves a post that may already be federated alone.
+		\wp_update_post(
+			array(
+				'ID'           => $existing_id,
+				'post_content' => 'Updated during import.',
+			)
+		);
+		$this->assertSame( '', \get_post_meta( $existing_id, 'activitypub_content_visibility', true ) );
+
+		\do_action( 'import_end' );
+
+		// A save after the import, for example by a link checker, does not federate the imported post.
+		\wp_update_post(
+			array(
+				'ID'           => $post_id,
+				'post_content' => 'Fixed a broken link.',
+			)
+		);
+
+		\wp_cache_delete( \_count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+		$this->assertEquals( $outbox, \wp_count_posts( Outbox::POST_TYPE ) );
+	}
+
+	/**
 	 * Test post activity scheduling for regular posts.
 	 *
 	 * @covers ::triage
