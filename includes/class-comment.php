@@ -983,7 +983,6 @@ class Comment {
 	 */
 	public static function pre_comment_approved( $approved, $comment_data ) {
 		/*
-		 * Only return early for trash, or errors.
 		 * Don't short-circuit on 'spam' - we may want to override Akismet.
 		 * Respect 'trash' since it comes from the WordPress disallowed list.
 		 */
@@ -1010,11 +1009,11 @@ class Comment {
 			return 1;
 		}
 
-		if ( ! \in_array( $approved, array( 1, '1' ), true ) || '1' !== \get_option( 'comment_previously_approved' ) ) {
+		if ( 1 !== (int) $approved || '1' !== \get_option( 'comment_previously_approved' ) ) {
 			return $approved;
 		}
 
-		$federated = ! empty( $comment_data['comment_meta']['protocol'] ) && 'activitypub' === $comment_data['comment_meta']['protocol'];
+		$federated = 'activitypub' === ( $comment_data['comment_meta']['protocol'] ?? '' );
 
 		if ( ! $federated && ( ! empty( $comment_data['user_id'] ) || 'comment' !== $comment_data['comment_type'] ) ) {
 			return $approved;
@@ -1033,7 +1032,7 @@ class Comment {
 		// phpcs:ignore
 		$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author_email = %s AND comment_approved = '1' AND comment_type = 'comment' $from_form LIMIT 1", $comment_data['comment_author_email'] ) );
 
-		return $ok_to_comment ? $approved : 0;
+		return (int) $ok_to_comment;
 	}
 
 	/**
