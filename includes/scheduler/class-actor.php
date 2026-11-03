@@ -13,6 +13,7 @@ use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Outbox;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\is_importing;
 use function Activitypub\is_user_type_disabled;
 
 /**
@@ -173,7 +174,7 @@ class Actor {
 	 * @return void
 	 */
 	public static function schedule_profile_update( $user_id ) {
-		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+		if ( is_importing() ) {
 			return;
 		}
 
