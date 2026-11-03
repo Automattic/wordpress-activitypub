@@ -1009,13 +1009,14 @@ class Comment {
 			return 1;
 		}
 
-		if ( 1 !== (int) $approved || '1' !== \get_option( 'comment_previously_approved' ) ) {
+		// Only replies are checked, likes and reposts keep the verdict.
+		if ( 1 !== (int) $approved || '1' !== \get_option( 'comment_previously_approved' ) || 'comment' !== $comment_data['comment_type'] ) {
 			return $approved;
 		}
 
 		$federated = 'activitypub' === ( $comment_data['comment_meta']['protocol'] ?? '' );
 
-		if ( ! $federated && ( ! empty( $comment_data['user_id'] ) || 'comment' !== $comment_data['comment_type'] ) ) {
+		if ( ! $federated && ! empty( $comment_data['user_id'] ) ) {
 			return $approved;
 		}
 

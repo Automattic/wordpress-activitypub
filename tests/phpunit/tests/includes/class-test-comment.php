@@ -782,6 +782,7 @@ class Test_Comment extends \WP_UnitTestCase {
 			'comment_content'      => 'From the comment form.',
 			'comment_author'       => 'Approved',
 			'comment_author_email' => 'approved@example.com',
+			'comment_author_url'   => '',
 			'comment_post_ID'      => $post_id,
 		);
 
