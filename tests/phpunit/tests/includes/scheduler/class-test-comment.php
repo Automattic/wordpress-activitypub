@@ -41,6 +41,30 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test that a comment saved during an import queues nothing.
+	 *
+	 * @covers ::schedule_comment_activity
+	 */
+	public function test_no_activity_during_import() {
+		$outbox = \wp_count_posts( Outbox::POST_TYPE );
+
+		\do_action( 'import_start' );
+
+		self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => self::$comment_post_ID,
+				'user_id'          => self::$user_id,
+				'comment_approved' => 1,
+			)
+		);
+
+		\do_action( 'import_end' );
+
+		\wp_cache_delete( \_count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+		$this->assertEquals( $outbox, \wp_count_posts( Outbox::POST_TYPE ) );
+	}
+
+	/**
 	 * Test scheduling comment activity on approval.
 	 */
 	public function test_schedule_comment_activity_on_approval() {

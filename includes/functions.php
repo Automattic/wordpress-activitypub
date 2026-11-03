@@ -386,3 +386,27 @@ function is_supported_taxonomy( $taxonomy ) {
 
 	return \in_array( $taxonomy, $supported_taxonomies, true );
 }
+
+/**
+ * Check whether an import is running.
+ *
+ * Core defines `WP_IMPORTING` for importers that run from the Tools → Import screen.
+ * Importers also fire `import_start` and `import_end`, which covers an import that
+ * runs somewhere else, for example from WP-CLI.
+ *
+ * @since unreleased
+ *
+ * @return bool True while an import is running.
+ */
+function is_importing() {
+	$importing = ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) || \did_action( 'import_start' ) > \did_action( 'import_end' );
+
+	/**
+	 * Filters whether an import is running.
+	 *
+	 * @since unreleased
+	 *
+	 * @param bool $importing True while an import is running.
+	 */
+	return (bool) \apply_filters( 'activitypub_is_importing', $importing );
+}

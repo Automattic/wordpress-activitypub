@@ -344,4 +344,23 @@ class Test_Functions extends \WP_UnitTestCase {
 		$result = \Activitypub\seconds_to_iso8601( $seconds );
 		$this->assertSame( $expected, $result );
 	}
+
+	/**
+	 * Test is_importing function.
+	 *
+	 * @covers \Activitypub\is_importing
+	 */
+	public function test_is_importing() {
+		$this->assertFalse( \Activitypub\is_importing() );
+
+		\do_action( 'import_start' );
+		$this->assertTrue( \Activitypub\is_importing() );
+
+		\do_action( 'import_end' );
+		$this->assertFalse( \Activitypub\is_importing() );
+
+		\add_filter( 'activitypub_is_importing', '__return_true' );
+		$this->assertTrue( \Activitypub\is_importing() );
+		\remove_filter( 'activitypub_is_importing', '__return_true' );
+	}
 }

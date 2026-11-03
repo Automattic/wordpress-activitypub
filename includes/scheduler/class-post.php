@@ -13,6 +13,7 @@ use Activitypub\Collection\Actors;
 use function Activitypub\add_to_outbox;
 use function Activitypub\get_post_id;
 use function Activitypub\get_wp_object_state;
+use function Activitypub\is_importing;
 use function Activitypub\is_post_disabled;
 use function Activitypub\is_post_publicly_queryable;
 
@@ -29,6 +30,7 @@ class Post {
 		// Post transitions.
 		\add_action( 'pre_post_update', array( self::class, 'save_canonical_url' ) );
 		\add_action( 'wp_after_insert_post', array( self::class, 'triage' ), 33, 4 );
+		\add_filter( 'add_post_metadata', array( self::class, 'skip_imported_federation_state' ), 10, 3 );
 
 		// Attachment transitions.
 		\add_action( 'add_attachment', array( self::class, 'transition_attachment_status' ) );
@@ -67,6 +69,28 @@ class Post {
 	}
 
 	/**
+	 * Drop the federation state that an import brings along.
+	 *
+	 * An export carries the state of the site it came from. Kept, it makes an
+	 * imported post look federated, and a later save sends an Update or Delete.
+	 *
+	 * @since unreleased
+	 *
+	 * @param null|bool $check    Whether to allow adding the metadata.
+	 * @param int       $post_id  Post ID.
+	 * @param string    $meta_key Metadata key.
+	 *
+	 * @return null|bool True to skip the metadata, the unchanged check otherwise.
+	 */
+	public static function skip_imported_federation_state( $check, $post_id, $meta_key ) {
+		if ( is_importing() && \in_array( $meta_key, array( 'activitypub_status', 'activitypub_deleted_at' ), true ) ) {
+			return true;
+		}
+
+		return $check;
+	}
+
+	/**
 	 * Triage post transitions and determine the appropriate Activity type.
 	 *
 	 * @param int      $post_id     Post ID.
@@ -82,7 +106,18 @@ class Post {
 			\delete_post_meta( $post_id, '_activitypub_canonical_url' );
 		}
 
-		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+		if ( is_importing() ) {
+			/*
+			 * Imported posts are old content. Mark them "Do not federate", so a later
+			 * save after the import (a link fixer, a bulk edit) does not send them to
+			 * followers as new posts. Only new, published posts: an update can hit a
+			 * post that was already federated, and a draft or scheduled post is new
+			 * content once it goes live.
+			 */
+			if ( ! $update && 'publish' === $post->post_status && \post_type_supports( $post->post_type, 'activitypub' ) ) {
+				\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+			}
+
 			return;
 		}
 
@@ -212,7 +247,7 @@ class Post {
 	 * @return void
 	 */
 	public static function transition_attachment_status( $post_id ) {
-		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+		if ( is_importing() ) {
 			return;
 		}
 
@@ -283,7 +318,7 @@ class Post {
 	 * @return void
 	 */
 	private static function schedule_featured_update( $post_id, $activity_type ) {
-		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+		if ( is_importing() ) {
 			return;
 		}
 
