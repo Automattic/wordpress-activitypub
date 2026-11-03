@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Old posts that were never shared to the Fediverse are no longer shared when a tool, for example a link checker, saves them again.

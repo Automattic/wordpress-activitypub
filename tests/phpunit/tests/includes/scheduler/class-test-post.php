@@ -12,6 +12,7 @@ use Activitypub\Collection\Outbox;
 use Activitypub\Scheduler\Post;
 
 use function Activitypub\get_object_id;
+use function Activitypub\get_post_id;
 
 /**
  * Test Post scheduler class.
@@ -869,6 +870,79 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		$this->assertSame( 0, $this->count_pending_outbox_items( $activitypub_id, 'Delete' ), 'No pending Delete should survive three publish/draft/publish cycles.' );
 		$this->assertSame( 1, $this->count_pending_outbox_items( $activitypub_id, 'Create' ), 'Exactly one pending Create should remain after the cycles.' );
+	}
+
+	/**
+	 * Test that saving an old post that was never federated only federates it from an editor.
+	 *
+	 * @covers ::triage
+	 */
+	public function test_old_unfederated_post_federates_only_from_an_editor() {
+		$date    = \gmdate( 'Y-m-d H:i:s', \time() - 2 * MONTH_IN_SECONDS );
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author'   => self::$user_id,
+				'post_date'     => $date,
+				'post_date_gmt' => $date,
+			)
+		);
+
+		// The newest outbox item for a post. A new Create deletes the pending one it supersedes, so compare IDs, not counts.
+		$latest = function ( $id ) {
+			$items = \get_posts(
+				array(
+					'post_type'   => Outbox::POST_TYPE,
+					'post_status' => 'any',
+					'fields'      => 'ids',
+					'orderby'     => 'ID',
+					'order'       => 'DESC',
+					'numberposts' => 1,
+					'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						array(
+							'key'   => '_activitypub_object_id',
+							'value' => get_post_id( $id ),
+						),
+					),
+				)
+			);
+
+			return $items ? $items[0] : 0;
+		};
+
+		// Save the post as one that was never federated.
+		$resave = function ( $id ) {
+			\delete_post_meta( $id, 'activitypub_status' );
+			\wp_update_post(
+				array(
+					'ID'           => $id,
+					'post_content' => \uniqid( 'content ', true ),
+				)
+			);
+		};
+
+		// A link checker, cron or WP-CLI: no visibility in the request.
+		$item = $latest( $post_id );
+		$resave( $post_id );
+		$this->assertSame( $item, $latest( $post_id ), 'A save without a visibility must not federate an old post.' );
+
+		// The classic editor sends the field with every save, "Public" as an empty value.
+		$_POST['activitypub_content_visibility'] = '';
+		$resave( $post_id );
+		unset( $_POST['activitypub_content_visibility'] );
+		$this->assertGreaterThan( $item, $latest( $post_id ), 'A save from the classic editor federates the post.' );
+
+		// The block editor sends the meta in the JSON body, which core reads through WP_REST_Server::get_raw_data().
+		$item                          = $latest( $post_id );
+		$GLOBALS['HTTP_RAW_POST_DATA'] = \wp_json_encode( array( 'meta' => array( 'activitypub_content_visibility' => 'public' ) ) ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The raw body get_raw_data() reads.
+		$resave( $post_id );
+		unset( $GLOBALS['HTTP_RAW_POST_DATA'] );
+		$this->assertGreaterThan( $item, $latest( $post_id ), 'A save from the block editor federates the post.' );
+
+		// A recent post federates without a visibility, as before.
+		$recent_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$item      = $latest( $recent_id );
+		$resave( $recent_id );
+		$this->assertGreaterThan( $item, $latest( $recent_id ), 'A recent post federates on save.' );
 	}
 
 	/**

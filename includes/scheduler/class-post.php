@@ -161,6 +161,26 @@ class Post {
 
 		// If the post was never federated before, it should be a Create activity.
 		if ( empty( $object_status ) && 'Update' === $type ) {
+			/*
+			 * An old post that was never federated stays local when something saves it
+			 * again, for example a link checker. It only federates when the save sends a
+			 * visibility, which the classic editor and the block editor sidebar do once
+			 * the author sees the setting. Both default such a post to "Do not federate".
+			 */
+			if ( \get_post_time( 'U', true, $post ) < \time() - MONTH_IN_SECONDS ) {
+				// phpcs:ignore WordPress.Security.NonceVerification.Missing
+				$visibility_sent = isset( $_POST['activitypub_content_visibility'] );
+
+				if ( ! $visibility_sent ) {
+					$body            = \json_decode( (string) \WP_REST_Server::get_raw_data(), true );
+					$visibility_sent = isset( $body['meta']['activitypub_content_visibility'] );
+				}
+
+				if ( ! $visibility_sent ) {
+					return;
+				}
+			}
+
 			$type = 'Create';
 		}
 
