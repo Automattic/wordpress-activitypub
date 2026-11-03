@@ -79,6 +79,47 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test that imported posts are marked "Do not federate" and queue nothing.
+	 *
+	 * Runs in a separate process, because `WP_IMPORTING` cannot be undefined.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 *
+	 * @covers ::triage
+	 */
+	public function test_triage_marks_imported_posts_local() {
+		$existing_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox      = \wp_count_posts( Outbox::POST_TYPE );
+
+		\define( 'WP_IMPORTING', true );
+
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$this->assertSame( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, \get_post_meta( $post_id, 'activitypub_content_visibility', true ) );
+
+		// A draft or scheduled post is new content once it goes live.
+		$draft_id = self::factory()->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'post_status' => 'draft',
+			)
+		);
+		$this->assertSame( '', \get_post_meta( $draft_id, 'activitypub_content_visibility', true ) );
+
+		// An update during an import leaves a post that may already be federated alone.
+		\wp_update_post(
+			array(
+				'ID'           => $existing_id,
+				'post_content' => 'Updated during import.',
+			)
+		);
+		$this->assertSame( '', \get_post_meta( $existing_id, 'activitypub_content_visibility', true ) );
+
+		\wp_cache_delete( \_count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+		$this->assertEquals( $outbox, \wp_count_posts( Outbox::POST_TYPE ) );
+	}
+
+	/**
 	 * Test post activity scheduling for regular posts.
 	 *
 	 * @covers ::triage

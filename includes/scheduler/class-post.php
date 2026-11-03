@@ -83,6 +83,17 @@ class Post {
 		}
 
 		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+			/*
+			 * Imported posts are old content. Mark them "Do not federate", so a later
+			 * save after the import (a link fixer, a bulk edit) does not send them to
+			 * followers as new posts. Only new, published posts: an update can hit a
+			 * post that was already federated, and a draft or scheduled post is new
+			 * content once it goes live.
+			 */
+			if ( ! $update && 'publish' === $post->post_status && \post_type_supports( $post->post_type, 'activitypub' ) ) {
+				\add_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, true );
+			}
+
 			return;
 		}
 
