@@ -46,9 +46,11 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * @covers ::schedule_comment_activity
 	 */
 	public function test_no_activity_during_import() {
+		$outbox = \wp_count_posts( Outbox::POST_TYPE );
+
 		\do_action( 'import_start' );
 
-		$comment_id = self::factory()->comment->create(
+		self::factory()->comment->create(
 			array(
 				'comment_post_ID'  => self::$comment_post_ID,
 				'user_id'          => self::$user_id,
@@ -58,7 +60,8 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		\do_action( 'import_end' );
 
-		$this->assertNull( $this->get_latest_outbox_item( Comment::generate_id( $comment_id ) ) );
+		\wp_cache_delete( \_count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+		$this->assertEquals( $outbox, \wp_count_posts( Outbox::POST_TYPE ) );
 	}
 
 	/**
