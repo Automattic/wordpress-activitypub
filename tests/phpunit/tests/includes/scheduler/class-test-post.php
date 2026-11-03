@@ -79,12 +79,33 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test that attachments and sticky posts queue nothing during an import.
+	 *
+	 * @covers ::transition_attachment_status
+	 * @covers ::schedule_featured_update
+	 */
+	public function test_no_activity_during_import() {
+		\add_post_type_support( 'attachment', 'activitypub' );
+		\wp_set_current_user( self::$user_id );
+
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox  = \wp_count_posts( Outbox::POST_TYPE );
+
+		\do_action( 'import_start' );
+
+		self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		\stick_post( $post_id );
+
+		\do_action( 'import_end' );
+
+		\wp_cache_delete( \_count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+		$this->assertEquals( $outbox, \wp_count_posts( Outbox::POST_TYPE ) );
+
+		\remove_post_type_support( 'attachment', 'activitypub' );
+	}
+
+	/**
 	 * Test that imported posts are marked "Do not federate" and queue nothing.
-	 *
-	 * Runs in a separate process, because `WP_IMPORTING` cannot be undefined.
-	 *
-	 * @runInSeparateProcess
-	 * @preserveGlobalState disabled
 	 *
 	 * @covers ::triage
 	 * @covers ::skip_imported_federation_state
@@ -93,7 +114,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$existing_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
 		$outbox      = \wp_count_posts( Outbox::POST_TYPE );
 
-		require_once AP_TESTS_DIR . '/includes/constants-wp-importing.php';
+		\do_action( 'import_start' );
 
 		// The federation state and the visibility of the source site do not come along.
 		$post_id = self::factory()->post->create(
@@ -126,6 +147,16 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			)
 		);
 		$this->assertSame( '', \get_post_meta( $existing_id, 'activitypub_content_visibility', true ) );
+
+		\do_action( 'import_end' );
+
+		// A save after the import, for example by a link checker, does not federate the imported post.
+		\wp_update_post(
+			array(
+				'ID'           => $post_id,
+				'post_content' => 'Fixed a broken link.',
+			)
+		);
 
 		\wp_cache_delete( \_count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
 		$this->assertEquals( $outbox, \wp_count_posts( Outbox::POST_TYPE ) );

@@ -13,6 +13,7 @@ use Activitypub\Collection\Actors;
 use function Activitypub\add_to_outbox;
 use function Activitypub\get_post_id;
 use function Activitypub\get_wp_object_state;
+use function Activitypub\is_importing;
 use function Activitypub\is_post_disabled;
 use function Activitypub\is_post_publicly_queryable;
 
@@ -82,7 +83,7 @@ class Post {
 	 * @return null|bool True to skip the metadata, the unchanged check otherwise.
 	 */
 	public static function skip_imported_federation_state( $check, $post_id, $meta_key ) {
-		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING && \in_array( $meta_key, array( 'activitypub_status', 'activitypub_deleted_at' ), true ) ) {
+		if ( is_importing() && \in_array( $meta_key, array( 'activitypub_status', 'activitypub_deleted_at' ), true ) ) {
 			return true;
 		}
 
@@ -105,7 +106,7 @@ class Post {
 			\delete_post_meta( $post_id, '_activitypub_canonical_url' );
 		}
 
-		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+		if ( is_importing() ) {
 			/*
 			 * Imported posts are old content. Mark them "Do not federate", so a later
 			 * save after the import (a link fixer, a bulk edit) does not send them to
@@ -226,7 +227,7 @@ class Post {
 	 * @return void
 	 */
 	public static function transition_attachment_status( $post_id ) {
-		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+		if ( is_importing() ) {
 			return;
 		}
 
@@ -297,7 +298,7 @@ class Post {
 	 * @return void
 	 */
 	private static function schedule_featured_update( $post_id, $activity_type ) {
-		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+		if ( is_importing() ) {
 			return;
 		}
 

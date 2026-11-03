@@ -10,6 +10,7 @@ namespace Activitypub\Scheduler;
 use Activitypub\Comment as Comment_Utils;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\is_importing;
 use function Activitypub\should_comment_be_federated;
 
 /**
@@ -44,7 +45,7 @@ class Comment {
 	 * @return void
 	 */
 	public static function schedule_comment_activity( $new_status, $old_status, $comment ) {
-		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+		if ( is_importing() ) {
 			return;
 		}
 
