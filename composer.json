@@ -54,7 +54,7 @@
 			"vendor/bin/phpunit"
 		],
 		"test:wp-env": [
-			"wp-env run tests-cli --env-cwd=\"wp-content/plugins/activitypub\" vendor/bin/phpunit"
+			"npm run env-test --"
 		],
 		"analyze": [
 			"phpstan analyse --memory-limit=-1"
