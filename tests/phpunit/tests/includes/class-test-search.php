@@ -250,6 +250,7 @@ class Test_Search extends \WP_UnitTestCase {
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 
 		$this->assertNotFalse( $comment_id, 'The reply should be imported.' );
+		$this->assertSame( '', \get_comment( $comment_id )->comment_author_email, 'A fetched reply must not carry a verified email.' );
 		$this->assertSame( '0', \get_comment( $comment_id )->comment_approved );
 	}
 

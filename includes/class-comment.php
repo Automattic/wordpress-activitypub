@@ -1033,7 +1033,7 @@ class Comment {
 		// phpcs:ignore
 		$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author_email = %s AND comment_approved = '1' AND comment_type = 'comment' $from_form LIMIT 1", $comment_data['comment_author_email'] ) );
 
-		return 1 === (int) $ok_to_comment ? $approved : 0;
+		return $ok_to_comment ? $approved : 0;
 	}
 
 	/**
