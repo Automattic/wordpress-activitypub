@@ -1014,30 +1014,26 @@ class Comment {
 			return $approved;
 		}
 
-		// Core counts every approved comment of the author, likes and reposts too. Only normal comments count here.
-		$args = array(
-			'author_email' => $comment_data['comment_author_email'],
-			'type'         => 'comment',
-			'status'       => 'approve',
-			'number'       => 1,
-			'fields'       => 'ids',
-		);
+		$federated = ! empty( $comment_data['comment_meta']['protocol'] ) && 'activitypub' === $comment_data['comment_meta']['protocol'];
 
-		if ( empty( $comment_data['comment_meta']['protocol'] ) || 'activitypub' !== $comment_data['comment_meta']['protocol'] ) {
-			if ( ! empty( $comment_data['user_id'] ) || 'comment' !== $comment_data['comment_type'] ) {
-				return $approved;
-			}
-
-			// The email of a federated comment is a public handle, so only comments from the form count for the form.
-			$args['meta_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				array(
-					'key'     => 'protocol',
-					'compare' => 'NOT EXISTS',
-				),
-			);
+		if ( ! $federated && ( ! empty( $comment_data['user_id'] ) || 'comment' !== $comment_data['comment_type'] ) ) {
+			return $approved;
 		}
 
-		return '' !== $comment_data['comment_author_email'] && \get_comments( $args ) ? $approved : 0;
+		if ( '' === $comment_data['comment_author_email'] ) {
+			return 0;
+		}
+
+		global $wpdb;
+
+		// The email of a federated comment is a public handle, so only comments from the form count for the form.
+		$from_form = $federated ? '' : "AND NOT EXISTS ( SELECT 1 FROM $wpdb->commentmeta WHERE $wpdb->commentmeta.comment_id = $wpdb->comments.comment_ID AND meta_key = 'protocol' )";
+
+		// Only previously approved normal comments count, not approved likes or reposts.
+		// phpcs:ignore
+		$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author_email = %s AND comment_approved = '1' AND comment_type = 'comment' $from_form LIMIT 1", $comment_data['comment_author_email'] ) );
+
+		return 1 === (int) $ok_to_comment ? $approved : 0;
 	}
 
 	/**
