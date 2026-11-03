@@ -762,6 +762,42 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The name and handle of an approved Fediverse commenter do not approve a comment from the form.
+	 *
+	 * The handle is the email of a federated comment and it is public, so for the comment form
+	 * only comments that did not come from the Fediverse count as previously approved.
+	 *
+	 * @covers ::pre_comment_approved
+	 */
+	public function test_pre_comment_approved_ignores_federated_history_for_the_form() {
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
+		\update_option( 'comment_previously_approved', '1' );
+
+		$post_id = self::factory()->post->create();
+
+		$this->new_remote_comment( $post_id, 'approved@example.com', 'Hello.', true );
+
+		$form = array(
+			'comment_type'         => 'comment',
+			'comment_content'      => 'From the comment form.',
+			'comment_author'       => 'Approved',
+			'comment_author_email' => 'approved@example.com',
+			'comment_post_ID'      => $post_id,
+		);
+
+		$spoof = \wp_new_comment( $form );
+		$this->assertSame( '0', \get_comment( $spoof )->comment_approved, 'Federated history must not approve a comment from the form.' );
+
+		// A comment from the form that a moderator approved counts, as in core.
+		\wp_set_comment_status( $spoof, 'approve' );
+		$form['comment_content'] = 'Again from the comment form.';
+		$again                   = \wp_new_comment( $form );
+		$this->assertSame( '1', \get_comment( $again )->comment_approved );
+
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	/**
 	 * Core's moderation rules hold for a previously approved author.
 	 *
 	 * @dataProvider moderation_rule_provider

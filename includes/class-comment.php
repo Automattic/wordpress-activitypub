@@ -1010,32 +1010,34 @@ class Comment {
 			return 1;
 		}
 
-		if (
-			! \in_array( $approved, array( 1, '1' ), true ) ||
-			'1' !== \get_option( 'comment_previously_approved' ) ||
-			empty( $comment_data['comment_meta']['protocol'] ) ||
-			'activitypub' !== $comment_data['comment_meta']['protocol']
-		) {
+		if ( ! \in_array( $approved, array( 1, '1' ), true ) || '1' !== \get_option( 'comment_previously_approved' ) ) {
 			return $approved;
 		}
 
 		// Core counts every approved comment of the author, likes and reposts too. Only normal comments count here.
-		if (
-			'' !== $comment_data['comment_author_email'] &&
-			\get_comments(
+		$args = array(
+			'author_email' => $comment_data['comment_author_email'],
+			'type'         => 'comment',
+			'status'       => 'approve',
+			'number'       => 1,
+			'fields'       => 'ids',
+		);
+
+		if ( empty( $comment_data['comment_meta']['protocol'] ) || 'activitypub' !== $comment_data['comment_meta']['protocol'] ) {
+			if ( ! empty( $comment_data['user_id'] ) || 'comment' !== $comment_data['comment_type'] ) {
+				return $approved;
+			}
+
+			// The email of a federated comment is a public handle, so only comments from the form count for the form.
+			$args['meta_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				array(
-					'author_email' => $comment_data['comment_author_email'],
-					'type'         => 'comment',
-					'status'       => 'approve',
-					'number'       => 1,
-					'fields'       => 'ids',
-				)
-			)
-		) {
-			return 1;
+					'key'     => 'protocol',
+					'compare' => 'NOT EXISTS',
+				),
+			);
 		}
 
-		return 0;
+		return '' !== $comment_data['comment_author_email'] && \get_comments( $args ) ? $approved : 0;
 	}
 
 	/**

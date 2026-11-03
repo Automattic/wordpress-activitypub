@@ -203,6 +203,57 @@ class Test_Search extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A reply found by search is not approved through its author's previously approved comments.
+	 *
+	 * The fetched document proves its host, not its author, so it goes to moderation.
+	 *
+	 * @covers \Activitypub\Search::try_import_activitypub_object
+	 */
+	public function test_import_is_not_approved_through_history() {
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
+		\update_option( 'comment_previously_approved', '1' );
+
+		// A public IP, so wp_http_validate_url() accepts the URL without a DNS lookup.
+		$url     = 'https://1.1.1.1/notes/3';
+		$actor   = 'https://1.1.1.1/users/test';
+		$post_id = self::factory()->post->create();
+		$fetch   = static function ( $pre, $url_or_object ) use ( $url, $actor, $post_id ) {
+			return $url === $url_or_object ? array(
+				'id'           => $url,
+				'type'         => 'Note',
+				'attributedTo' => $actor,
+				'content'      => 'Hello',
+				'inReplyTo'    => \get_permalink( $post_id ),
+			) : $pre;
+		};
+		$meta    = static function () use ( $actor ) {
+			return array(
+				'id'                => $actor,
+				'name'              => 'Test',
+				'preferredUsername' => 'test',
+				'url'               => $actor,
+			);
+		};
+		// Core's verdict for an author with a previously approved comment.
+		$history = static function () {
+			return 1;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10, 2 );
+		\add_filter( 'pre_get_remote_metadata_by_actor', $meta );
+		\add_filter( 'pre_comment_approved', $history, 1 );
+
+		$comment_id = $this->try_import_activitypub_object_accessible( $url );
+
+		\remove_filter( 'pre_comment_approved', $history, 1 );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $meta );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10 );
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+
+		$this->assertNotFalse( $comment_id, 'The reply should be imported.' );
+		$this->assertSame( '0', \get_comment( $comment_id )->comment_approved );
+	}
+
+	/**
 	 * Helper method to access private try_import_activitypub_object method via reflection.
 	 *
 	 * @param string $url The URL to import.
