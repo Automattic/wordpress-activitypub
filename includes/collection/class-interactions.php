@@ -501,14 +501,15 @@ class Interactions {
 		$comment_author_url = \esc_url_raw( object_to_uri( $actor['url'] ?? $actor['id'] ) );
 		$webfinger          = Webfinger::uri_to_acct( $actor_id );
 
+		// Sanitized the way core stores it, so the handle that is checked below is the one that is matched.
+		$comment_author_email = \is_wp_error( $webfinger ) ? '' : \sanitize_email( Sanitize::webfinger( $webfinger ) );
+
 		/*
 		 * Core's "previously approved" check matches name and email, so the email has to belong to the signed actor.
 		 * The actor's server may name any account, so the account has to point back to the actor.
 		 */
-		if ( \is_wp_error( $webfinger ) || Webfinger::resolve( $webfinger ) !== $actor_id ) {
+		if ( '' !== $comment_author_email && Webfinger::resolve( $comment_author_email ) !== $actor_id ) {
 			$comment_author_email = '';
-		} else {
-			$comment_author_email = Sanitize::webfinger( $webfinger );
 		}
 
 		// Sanitize remote HTML before adding our own emoji and image blocks.

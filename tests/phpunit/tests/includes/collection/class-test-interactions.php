@@ -1458,6 +1458,43 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The handle is checked in the form it is stored in.
+	 *
+	 * Core runs the email through sanitize_email(), which drops characters it does not allow in a
+	 * domain. A handle on the actor's own look-alike domain must not turn into another account's
+	 * handle after it was checked.
+	 *
+	 * @covers ::activity_to_comment
+	 */
+	public function test_activity_to_comment_checks_the_sanitized_handle() {
+		$mallory  = 'https://exampleé.com/users/mallory';
+		$activity = array(
+			'type'   => 'Create',
+			'actor'  => $mallory,
+			'object' => array(
+				'content' => 'Test comment content',
+				'id'      => 'https://exampleé.com/activities/3',
+			),
+		);
+
+		// The look-alike domain points back to Mallory, the real one to Alice.
+		$filter = function ( $pre, $args, $url ) use ( $mallory ) {
+			$real = 'example.com' === \wp_parse_url( $url, PHP_URL_HOST );
+
+			return \call_user_func(
+				$real ? $this->webfinger_answer( 'acct:alice@example.com', 'https://example.com/users/alice' ) : $this->webfinger_answer( 'acct:alice@exampleé.com', $mallory )
+			);
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		$comment_data = Interactions::activity_to_comment( $activity );
+
+		$this->assertSame( '', $comment_data['comment_author_email'] );
+
+		\remove_filter( 'pre_http_request', $filter, 10 );
+	}
+
+	/**
 	 * Answer every WebFinger lookup with a handle and the actor it points to.
 	 *
 	 * @param string $subject The acct URI.

@@ -234,17 +234,47 @@ class Test_Search extends \WP_UnitTestCase {
 				'url'               => $actor,
 			);
 		};
-		// Core's verdict for an author with a previously approved comment.
-		$history = static function () {
-			return 1;
+		// The handle points back to the actor, so a signed reply from it would carry this email.
+		$webfinger = static function ( $pre, $args, $request_url ) use ( $actor ) {
+			if ( ! \str_contains( $request_url, '/.well-known/webfinger' ) ) {
+				return $pre;
+			}
+
+			return array(
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:test@1.1.1.1',
+						'links'   => array(
+							array(
+								'rel'  => 'self',
+								'type' => 'application/activity+json',
+								'href' => $actor,
+							),
+						),
+					)
+				),
+				'response' => array( 'code' => 200 ),
+			);
 		};
 		\add_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10, 2 );
 		\add_filter( 'pre_get_remote_metadata_by_actor', $meta );
-		\add_filter( 'pre_comment_approved', $history, 1 );
+		\add_filter( 'pre_http_request', $webfinger, 10, 3 );
+
+		// The author has an approved reply.
+		self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_author'       => 'Test',
+				'comment_author_email' => 'test@1.1.1.1',
+				'comment_approved'     => '1',
+				'comment_type'         => 'comment',
+				'comment_meta'         => array( 'protocol' => 'activitypub' ),
+			)
+		);
 
 		$comment_id = $this->try_import_activitypub_object_accessible( $url );
 
-		\remove_filter( 'pre_comment_approved', $history, 1 );
+		\remove_filter( 'pre_http_request', $webfinger, 10 );
 		\remove_filter( 'pre_get_remote_metadata_by_actor', $meta );
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10 );
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
