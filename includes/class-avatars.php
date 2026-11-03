@@ -54,17 +54,23 @@ class Avatars {
 			return $args;
 		}
 
-		$avatar = null;
+		$avatar = \get_comment_meta( $id_or_email->comment_ID, 'avatar_url', true );
 
-		// First, try to get avatar from remote actor.
-		$remote_actor_id = \get_comment_meta( $id_or_email->comment_ID, '_activitypub_remote_actor_id', true );
-		if ( $remote_actor_id ) {
-			$avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
-		}
-
-		// Fall back to avatar_url comment meta for backward compatibility.
-		if ( ! $avatar ) {
-			$avatar = \get_comment_meta( $id_or_email->comment_ID, 'avatar_url', true );
+		if ( \get_comment_meta( $id_or_email->comment_ID, '_activitypub_actor_id', true ) ) {
+			// The comment keeps its own copy of the avatar, as core keeps the name.
+			if ( $avatar ) {
+				// The file is stored under the hash of its URL, so every comment with that avatar shares it.
+				/** This filter is documented in includes/collection/class-remote-actors.php */
+				$avatar = \apply_filters( 'activitypub_remote_media_url', $avatar, 'avatar', \md5( $avatar ), array() );
+			} else {
+				$avatar = ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg';
+			}
+		} else {
+			// Comments from before the actor ID was stored on them, with avatar_url as the fallback.
+			$remote_actor_id = \get_comment_meta( $id_or_email->comment_ID, '_activitypub_remote_actor_id', true );
+			if ( $remote_actor_id ) {
+				$avatar = Remote_Actors::get_avatar_url( $remote_actor_id ) ?: $avatar;
+			}
 		}
 
 		if ( $avatar ) {

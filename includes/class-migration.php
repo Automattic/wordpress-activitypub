@@ -16,6 +16,7 @@ use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Inbox;
+use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Transformer\Factory;
@@ -43,6 +44,7 @@ class Migration {
 		Scheduler::register_async_batch_callback( 'activitypub_backfill_statistics', array( Statistics::class, 'backfill_historical_stats' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_tombstone_migrate', array( self::class, 'migrate_tombstones_to_cpt' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_remove_duplicate_cache_files', array( self::class, 'remove_duplicate_cache_files' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_migrate_comment_actor_id', array( self::class, 'migrate_comment_actor_id' ) );
 	}
 
 	/**
@@ -238,6 +240,9 @@ class Migration {
 		if ( \version_compare( $version_from_db, '9.4.0', '<' ) && ! \wp_next_scheduled( 'activitypub_remove_duplicate_cache_files' ) ) {
 			// A filesystem walk, so off the upgrade request and onto cron.
 			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_remove_duplicate_cache_files' );
+		}
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) && ! \wp_next_scheduled( 'activitypub_migrate_comment_actor_id' ) ) {
+			\wp_schedule_single_event( \time(), 'activitypub_migrate_comment_actor_id' );
 		}
 
 		/*
@@ -1303,6 +1308,60 @@ class Migration {
 		if ( \count( $comments ) === $batch_size ) {
 			return array(
 				'batch_size' => $batch_size,
+			);
+		}
+
+		return null;
+	}
+
+	/**
+	 * Store the actor ID, the avatar and the emoji on ActivityPub comments.
+	 *
+	 * Comments linked to a remote actor post get their own copy, so they are shown without it.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $batch_size Optional. Number of comments to process per batch. Default 50.
+	 * @param int $offset     Optional. Number of comments to skip. Default 0.
+	 *
+	 * @return array|null Array with batch size and offset if there are more comments to process, null otherwise.
+	 */
+	public static function migrate_comment_actor_id( $batch_size = 50, $offset = 0 ) {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT comment_id, meta_value FROM {$wpdb->commentmeta} WHERE meta_key = '_activitypub_remote_actor_id' ORDER BY meta_id LIMIT %d OFFSET %d",
+				$batch_size,
+				$offset
+			)
+		);
+
+		// The actors of this batch, keyed by actor post ID, false for those that are gone.
+		$actors = array();
+		foreach ( $rows as $row ) {
+			if ( ! isset( $actors[ $row->meta_value ] ) ) {
+				$post  = \get_post( (int) $row->meta_value );
+				$actor = $post && Remote_Actors::POST_TYPE === $post->post_type ? Remote_Actors::get_actor( $post ) : null;
+
+				$actors[ $row->meta_value ] = $actor && ! \is_wp_error( $actor ) && \esc_url_raw( (string) $actor->get_id() ) ? $actor->to_array() : false;
+			}
+
+			if ( $actors[ $row->meta_value ] ) {
+				\add_comment_meta( $row->comment_id, '_activitypub_actor_id', \esc_url_raw( $actors[ $row->meta_value ]['id'] ), true );
+			}
+		}
+
+		// The avatar and the emoji, once for all comments of an actor.
+		foreach ( \array_filter( $actors ) as $actor ) {
+			Interactions::update_actor( $actor['id'], $actor );
+		}
+
+		if ( \count( $rows ) === $batch_size ) {
+			return array(
+				'batch_size' => $batch_size,
+				'offset'     => $offset + $batch_size,
 			);
 		}
 

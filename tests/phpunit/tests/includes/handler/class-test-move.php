@@ -471,6 +471,71 @@ class Test_Move extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that the comments of the origin move to the target without actor posts.
+	 *
+	 * @covers ::handle_move
+	 */
+	public function test_handle_move_moves_comments_without_actor_posts() {
+		$target = 'https://example.com/new-commenter';
+		$origin = 'https://example.com/old-commenter';
+
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => self::factory()->post->create(),
+				'comment_meta'    => array(
+					'protocol'              => 'activitypub',
+					'_activitypub_actor_id' => $origin,
+					'avatar_url'            => 'https://example.com/old-avatar.png',
+					'_activitypub_emoji'    => '[{"type":"Emoji","name":":old:"}]',
+				),
+			)
+		);
+
+		$filter = function ( $pre, $url_or_object ) use ( $target, $origin ) {
+			$url = object_to_uri( $url_or_object );
+
+			if ( $url === $target ) {
+				return array(
+					'type'        => 'Person',
+					'id'          => $target,
+					'icon'        => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/new-avatar.png',
+					),
+					'alsoKnownAs' => array( $origin ),
+				);
+			}
+
+			if ( $url === $origin ) {
+				return array(
+					'type'    => 'Person',
+					'id'      => $origin,
+					'movedTo' => $target,
+				);
+			}
+
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+
+		Move::handle_move(
+			array(
+				'type'   => 'Move',
+				'actor'  => $origin,
+				'object' => $target,
+			),
+			1
+		);
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertWPError( Remote_Actors::get_by_uri( $origin ), 'There is no actor post.' );
+		$this->assertSame( $target, \get_comment_meta( $comment_id, '_activitypub_actor_id', true ) );
+		$this->assertSame( 'https://example.com/new-avatar.png', \get_comment_meta( $comment_id, 'avatar_url', true ) );
+		$this->assertSame( '', \get_comment_meta( $comment_id, '_activitypub_emoji', true ), 'The target has no emoji.' );
+	}
+
+	/**
 	 * Test that verify_move accepts alsoKnownAs entries given as objects.
 	 */
 	public function test_handle_move_matches_also_known_as_object() {

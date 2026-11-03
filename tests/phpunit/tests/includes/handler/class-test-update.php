@@ -237,6 +237,81 @@ class Test_Update extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that update_actor refreshes the avatar and the emoji on the actor's comments.
+	 *
+	 * @covers ::update_actor
+	 */
+	public function test_update_actor_updates_comments() {
+		$actor_url = 'https://example.com/users/commenter';
+		$actor     = array(
+			'type'              => 'Person',
+			'id'                => $actor_url,
+			'preferredUsername' => 'commenter',
+			'inbox'             => $actor_url . '/inbox',
+			'icon'              => array(
+				'type' => 'Image',
+				'url'  => 'https://example.com/new-avatar.png',
+			),
+			'tag'               => array(
+				array(
+					'type' => 'Emoji',
+					'name' => ':new:',
+					'icon' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/new.png',
+					),
+				),
+			),
+		);
+
+		$post_id = self::factory()->post->create();
+		$own     = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'comment_meta'    => array(
+					'protocol'              => 'activitypub',
+					'_activitypub_actor_id' => $actor_url,
+					'avatar_url'            => 'https://example.com/old-avatar.png',
+				),
+			)
+		);
+		$other   = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'comment_meta'    => array(
+					'protocol'              => 'activitypub',
+					'_activitypub_actor_id' => 'https://example.com/users/someone-else',
+					'avatar_url'            => 'https://example.com/other-avatar.png',
+				),
+			)
+		);
+
+		// An Update in the actor's name from another actor changes nothing.
+		Update::update_actor(
+			array(
+				'type'   => 'Update',
+				'actor'  => 'https://attacker.example/users/evil',
+				'object' => $actor,
+			),
+			array( $this->user_id )
+		);
+		$this->assertSame( 'https://example.com/old-avatar.png', \get_comment_meta( $own, 'avatar_url', true ) );
+
+		Update::update_actor(
+			array(
+				'type'   => 'Update',
+				'actor'  => $actor_url,
+				'object' => $actor,
+			),
+			array( $this->user_id )
+		);
+
+		$this->assertSame( 'https://example.com/new-avatar.png', \get_comment_meta( $own, 'avatar_url', true ) );
+		$this->assertStringContainsString( ':new:', \get_comment_meta( $own, '_activitypub_emoji', true ) );
+		$this->assertSame( 'https://example.com/other-avatar.png', \get_comment_meta( $other, 'avatar_url', true ), 'Comments of other actors stay as they are.' );
+	}
+
+	/**
 	 * Test that update_actor falls back to remote fetch when object is a string IRI.
 	 *
 	 * @covers ::update_actor

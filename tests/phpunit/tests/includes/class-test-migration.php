@@ -1468,6 +1468,83 @@ class Test_Migration extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that migrate_comment_actor_id stores the actor on comments linked to an actor post.
+	 *
+	 * @covers ::migrate_comment_actor_id
+	 */
+	public function test_migrate_comment_actor_id() {
+		$actor_url     = 'https://example.com/users/migrated';
+		$actor_post_id = Remote_Actors::upsert(
+			array(
+				'id'                => $actor_url,
+				'type'              => 'Person',
+				'preferredUsername' => 'migrated',
+				'inbox'             => $actor_url . '/inbox',
+				'icon'              => array(
+					'type' => 'Image',
+					'url'  => 'https://example.com/current-avatar.png',
+				),
+				'tag'               => array(
+					array(
+						'type' => 'Emoji',
+						'name' => ':blob:',
+						'icon' => array(
+							'type' => 'Image',
+							'url'  => 'https://example.com/blob.png',
+						),
+					),
+				),
+			)
+		);
+
+		$post_id     = self::factory()->post->create();
+		$comment_ids = array();
+		for ( $i = 0; $i < 3; $i++ ) {
+			$comment_ids[] = self::factory()->comment->create(
+				array(
+					'comment_post_ID' => $post_id,
+					'comment_meta'    => array(
+						'protocol'                     => 'activitypub',
+						'_activitypub_remote_actor_id' => $actor_post_id,
+						'avatar_url'                   => 'https://example.com/stale-avatar.png',
+					),
+				)
+			);
+		}
+
+		// A comment whose actor post is gone keeps what it has.
+		$orphan_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'comment_meta'    => array(
+					'protocol'                     => 'activitypub',
+					'_activitypub_remote_actor_id' => 999999,
+				),
+			)
+		);
+
+		// Three per batch, so the second batch picks up where the first stopped.
+		$next = Migration::migrate_comment_actor_id( 3 );
+		$this->assertSame(
+			array(
+				'batch_size' => 3,
+				'offset'     => 3,
+			),
+			$next
+		);
+		$this->assertNull( Migration::migrate_comment_actor_id( 3, 3 ) );
+
+		foreach ( $comment_ids as $comment_id ) {
+			$this->assertSame( $actor_url, \get_comment_meta( $comment_id, '_activitypub_actor_id', true ) );
+			$this->assertSame( 'https://example.com/current-avatar.png', \get_comment_meta( $comment_id, 'avatar_url', true ) );
+			$this->assertStringContainsString( ':blob:', \get_comment_meta( $comment_id, '_activitypub_emoji', true ) );
+		}
+
+		$this->assertSame( '', \get_comment_meta( $orphan_id, '_activitypub_actor_id', true ) );
+		$this->assertSame( '999999', \get_comment_meta( $orphan_id, '_activitypub_remote_actor_id', true ), 'The old reference stays.' );
+	}
+
+	/**
 	 * Test migrate_application_keypair_option renames the old option.
 	 *
 	 * @covers ::migrate_application_keypair_option

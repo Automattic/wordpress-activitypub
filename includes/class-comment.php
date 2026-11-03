@@ -1132,7 +1132,7 @@ class Comment {
 	 * Render emoji in comment author name.
 	 *
 	 * Replaces emoji shortcodes with img tags on the get_comment_author filter.
-	 * Emoji data is retrieved from the linked remote actor.
+	 * Emoji data is stored on the comment, or on the linked remote actor for older comments.
 	 *
 	 * @param string $author     The comment author name.
 	 * @param string $comment_id The comment ID as a numeric string.
@@ -1140,13 +1140,18 @@ class Comment {
 	 * @return string The comment author name with rendered emoji.
 	 */
 	public static function render_emoji( $author, $comment_id ) {
-		$remote_actor_id = \get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true );
+		$emoji_data = \get_comment_meta( $comment_id, '_activitypub_emoji', true );
 
-		if ( empty( $remote_actor_id ) ) {
-			return $author;
+		// Comments from before the emoji were stored on them.
+		if ( ! $emoji_data && ! \get_comment_meta( $comment_id, '_activitypub_actor_id', true ) ) {
+			$remote_actor_id = \get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true );
+
+			if ( empty( $remote_actor_id ) ) {
+				return $author;
+			}
+
+			$emoji_data = \get_post_meta( $remote_actor_id, '_activitypub_emoji', true );
 		}
-
-		$emoji_data = \get_post_meta( $remote_actor_id, '_activitypub_emoji', true );
 
 		if ( empty( $emoji_data ) ) {
 			return $author;
@@ -1187,7 +1192,7 @@ class Comment {
 			return $author;
 		}
 
-		if ( ! \get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true ) ) {
+		if ( ! self::was_received( $comment_id ) ) {
 			return $author;
 		}
 

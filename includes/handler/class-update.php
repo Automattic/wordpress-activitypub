@@ -173,6 +173,9 @@ class Update {
 		 */
 		if ( \is_array( $actor ) && isset( $actor['id'] ) && object_to_uri( $actor ) === object_to_uri( $activity['actor'] ) ) {
 			$state = Remote_Actors::upsert( $actor );
+
+			// Interactions keep their own copy of the avatar and the emoji.
+			Interactions::update_actor( object_to_uri( $actor ), $actor );
 		} else {
 			$state = new \WP_Error( 'activitypub_update_failed', \__( 'Update failed: missing, invalid, or unauthorized actor object in Update activity.', 'activitypub' ) );
 			$actor = array();

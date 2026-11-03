@@ -8,6 +8,7 @@
 namespace Activitypub\Handler;
 
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Proxy;
 
@@ -54,6 +55,9 @@ class Move {
 		if ( ! $verified ) {
 			return;
 		}
+
+		// Interactions are stored under the actor ID, with or without an actor post.
+		Interactions::update_actor( $origin_json['id'], $target_json );
 
 		$target_object = Remote_Actors::get_by_uri( $target_uri );
 		$origin_object = Remote_Actors::get_by_uri( $origin_uri );

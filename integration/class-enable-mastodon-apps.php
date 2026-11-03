@@ -1240,8 +1240,16 @@ class Enable_Mastodon_Apps {
 	private static function get_account_for_comment( $comment ) {
 		$default_avatar = \get_avatar_url( $comment->comment_author_email ?: '', array( 'size' => 96 ) );
 
-		// Try to get cached remote actor data.
-		$remote_actor_id = \get_comment_meta( $comment->comment_ID, '_activitypub_remote_actor_id', true );
+		// Try to get cached remote actor data, only locally: the API must not fetch remote actors.
+		$actor_id = \get_comment_meta( $comment->comment_ID, '_activitypub_actor_id', true );
+		if ( $actor_id ) {
+			$actor_post      = Remote_Actors::get_by_uri( $actor_id );
+			$remote_actor_id = \is_wp_error( $actor_post ) ? 0 : $actor_post->ID;
+		} else {
+			// Comments from before the actor ID was stored on them.
+			$remote_actor_id = \get_comment_meta( $comment->comment_ID, '_activitypub_remote_actor_id', true );
+		}
+
 		if ( $remote_actor_id ) {
 			$actor = Remote_Actors::get_actor( $remote_actor_id );
 			if ( $actor && ! \is_wp_error( $actor ) ) {
