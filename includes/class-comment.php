@@ -983,10 +983,38 @@ class Comment {
 	 */
 	public static function pre_comment_approved( $approved, $comment_data ) {
 		/*
+		 * Core approves an author with a previously approved comment of the same name and email, of any type.
+		 * Only replies count, not likes or reposts. The email of a Fediverse comment is a public handle,
+		 * so Fediverse replies count only for Fediverse replies, and form comments only for form comments.
+		 */
+		if (
+			( 1 === $approved || '1' === $approved ) &&
+			'comment' === $comment_data['comment_type'] &&
+			empty( $comment_data['user_id'] ) &&
+			'1' === \get_option( 'comment_previously_approved' )
+		) {
+			$approved = (int) (bool) \get_comments(
+				array(
+					'author_email' => $comment_data['comment_author_email'],
+					'status'       => 'approve',
+					'type'         => 'comment',
+					'meta_query'   => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						array(
+							'key'     => 'protocol',
+							'compare' => empty( $comment_data['comment_meta']['protocol'] ) ? 'NOT EXISTS' : 'EXISTS',
+						),
+					),
+					'count'        => true,
+				)
+			);
+		}
+
+		/*
+		 * Only return early for already-approved comments, trash, or errors.
 		 * Don't short-circuit on 'spam' - we may want to override Akismet.
 		 * Respect 'trash' since it comes from the WordPress disallowed list.
 		 */
-		if ( 'trash' === $approved || \is_wp_error( $approved ) ) {
+		if ( 1 === $approved || '1' === $approved || 'trash' === $approved || \is_wp_error( $approved ) ) {
 			return $approved;
 		}
 
@@ -1009,31 +1037,7 @@ class Comment {
 			return 1;
 		}
 
-		// Only replies are checked, likes and reposts keep the verdict.
-		if ( 1 !== (int) $approved || '1' !== \get_option( 'comment_previously_approved' ) || 'comment' !== $comment_data['comment_type'] ) {
-			return $approved;
-		}
-
-		$federated = 'activitypub' === ( $comment_data['comment_meta']['protocol'] ?? '' );
-
-		if ( ! $federated && ! empty( $comment_data['user_id'] ) ) {
-			return $approved;
-		}
-
-		if ( '' === $comment_data['comment_author_email'] ) {
-			return 0;
-		}
-
-		global $wpdb;
-
-		// The email of a federated comment is a public handle, so only comments from the form count for the form.
-		$from_form = $federated ? '' : "AND NOT EXISTS ( SELECT 1 FROM $wpdb->commentmeta WHERE $wpdb->commentmeta.comment_id = $wpdb->comments.comment_ID AND meta_key = 'protocol' )";
-
-		// Only previously approved normal comments count, not approved likes or reposts.
-		// phpcs:ignore
-		$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author_email = %s AND comment_approved = '1' AND comment_type = 'comment' $from_form LIMIT 1", $comment_data['comment_author_email'] ) );
-
-		return (int) $ok_to_comment;
+		return $approved;
 	}
 
 	/**

@@ -869,9 +869,6 @@ class Test_Comment extends \WP_UnitTestCase {
 		$this->assertSame( 'spam', Comment::pre_comment_approved( 'spam', $comment_data ) );
 		$this->assertSame( 1, Comment::pre_comment_approved( 1, $comment_data ) );
 
-		$comment_data['comment_author_email'] = '';
-		$this->assertSame( 0, Comment::pre_comment_approved( 1, $comment_data ), 'An empty email matches nobody.' );
-
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 	}
 

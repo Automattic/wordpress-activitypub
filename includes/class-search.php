@@ -151,13 +151,8 @@ class Search {
 			'object' => $object,
 		);
 
-		// A fetched reply proves its host, not its author, so it gets no email: the email is what "previously approved" matches.
-		\add_filter( 'pre_comment_author_email', '__return_empty_string' );
-
 		// Import the reply as a comment; a failed import is no comment to lead to.
 		$imported = Interactions::add_comment( $activity );
-
-		\remove_filter( 'pre_comment_author_email', '__return_empty_string' );
 
 		return \is_wp_error( $imported ) ? false : $imported;
 	}
