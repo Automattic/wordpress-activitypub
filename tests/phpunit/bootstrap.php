@@ -137,6 +137,15 @@ function tests_disable_add_to_outbox_scheduling( $pre, $event ) {
 }
 \tests_add_filter( 'pre_schedule_event', 'tests_disable_add_to_outbox_scheduling', 10, 2 );
 
+/*
+ * A @runInSeparateProcess test loads this file again in a child process. Skip the
+ * install there: it would drop the tables, and with them the fixtures, that the
+ * parent process still uses.
+ */
+if ( isset( $GLOBALS['__PHPUNIT_BOOTSTRAP'] ) ) {
+	\putenv( 'WP_TESTS_SKIP_INSTALL=1' );
+}
+
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
 require __DIR__ . '/includes/trait-equal-html.php';
