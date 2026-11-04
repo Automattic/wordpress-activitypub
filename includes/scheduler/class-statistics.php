@@ -13,6 +13,8 @@ use Activitypub\Collection\Actors;
 use Activitypub\Mailer;
 use Activitypub\Statistics as Statistics_Collector;
 
+use function Activitypub\user_can_activitypub;
+
 /**
  * Statistics scheduler class.
  */
@@ -166,6 +168,7 @@ class Statistics {
 				'most_active_month_name' => $most_active_month_name,
 				'followers_text'         => $followers_text,
 				'supporter_text'         => $supporter_text,
+				'stats_url'              => self::get_stats_url( $user_id ),
 				'user_id'                => $user_id,
 			)
 		);
@@ -194,6 +197,11 @@ class Statistics {
 		if ( ! empty( $most_active_month_name ) ) {
 			/* translators: %s: Month name */
 			$alt_body .= \sprintf( \__( "Most active month: %s\n", 'activitypub' ), $most_active_month_name );
+		}
+
+		if ( ! empty( $args['stats_url'] ) ) {
+			/* translators: %s: URL of the Fediverse Stats dashboard widget */
+			$alt_body .= \sprintf( \__( "\nView your stats: %s\n", 'activitypub' ), $args['stats_url'] );
 		}
 
 		Mailer::send( $user_id, $subject, 'stats-report', $args, $alt_body );
@@ -268,6 +276,7 @@ class Statistics {
 				'closing'        => \__( 'Keep sharing great content on the Fediverse!', 'activitypub' ),
 				'followers_text' => $followers_text,
 				'supporter_text' => $supporter_text,
+				'stats_url'      => self::get_stats_url( $user_id ),
 				'user_id'        => $user_id,
 			)
 		);
@@ -293,7 +302,32 @@ class Statistics {
 			$alt_body .= \sprintf( \__( "New followers: %+d\n", 'activitypub' ), $stats['followers_count'] );
 		}
 
+		if ( ! empty( $args['stats_url'] ) ) {
+			/* translators: %s: URL of the Fediverse Stats dashboard widget */
+			$alt_body .= \sprintf( \__( "\nView your stats: %s\n", 'activitypub' ), $args['stats_url'] );
+		}
+
 		Mailer::send( $user_id, $subject, 'stats-report', $args, $alt_body );
+	}
+
+	/**
+	 * Get the URL of the Fediverse Stats dashboard widget for a report recipient.
+	 *
+	 * Mirrors the gate that registers the widget in `Activitypub\WP_Admin\Dashboard`, so the
+	 * link is only added when the recipient would actually see the widget on their dashboard.
+	 * For the blog actor the report goes to `admin_email`, which satisfies the widget's
+	 * `manage_options` requirement.
+	 *
+	 * @param int $user_id The user ID, or `Actors::BLOG_USER_ID` for the blog actor.
+	 *
+	 * @return string The dashboard URL, or an empty string if the recipient cannot see the widget.
+	 */
+	private static function get_stats_url( $user_id ) {
+		if ( ! user_can_activitypub( $user_id ) ) {
+			return '';
+		}
+
+		return \admin_url( 'index.php#activitypub_stats' );
 	}
 
 	/**
