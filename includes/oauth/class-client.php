@@ -212,6 +212,10 @@ class Client {
 	 * attacker rewrite the metadata response and inject attacker-controlled
 	 * redirect URIs that preserve the same client_id.
 	 *
+	 * Only during a REST request, because the REST routes count the caller before
+	 * they get here. The consent form on wp-login.php is not counted, and it only
+	 * shows clients that the REST authorize route already discovered.
+	 *
 	 * @param string $client_id The client ID to check.
 	 * @return bool True if the client_id is an HTTPS URL eligible for discovery.
 	 */
@@ -220,7 +224,7 @@ class Client {
 			return false;
 		}
 
-		return 'https' === \strtolower( (string) \wp_parse_url( $client_id, PHP_URL_SCHEME ) );
+		return \wp_is_serving_rest_request() && 'https' === \strtolower( (string) \wp_parse_url( $client_id, PHP_URL_SCHEME ) );
 	}
 
 	/**
