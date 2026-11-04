@@ -100,7 +100,7 @@ class Test_Statistics extends WP_UnitTestCase {
 	 * @param \PHPMailer\PHPMailer\PHPMailer $mailer The mailer instance.
 	 */
 	public function capture_alt_body( $mailer ) {
-		$this->sent_alt_body = $mailer->AltBody; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.NotSnakeCase
+		$this->sent_alt_body = $mailer->{'AltBody'};
 	}
 
 	/**
