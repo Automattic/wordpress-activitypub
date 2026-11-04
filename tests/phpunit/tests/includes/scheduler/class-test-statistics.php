@@ -412,6 +412,30 @@ class Test_Statistics extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that the annual report's plain text alternative also carries the stats URL.
+	 *
+	 * @covers ::send_annual_email
+	 */
+	public function test_send_annual_email_adds_stats_url_to_alt_body() {
+		\update_user_option( self::$user_id, 'activitypub_mailer_annual_report', '1' );
+
+		// Let wp_mail run so Mailer's phpmailer_init callback assigns AltBody.
+		\remove_filter( 'pre_wp_mail', array( $this, 'short_circuit_wp_mail' ), 10 );
+		\add_filter( 'wp_mail_from', array( $this, 'valid_mail_from' ) );
+		\add_action( 'phpmailer_init', array( $this, 'capture_alt_body' ), 11 );
+
+		Statistics_Scheduler::send_annual_email( self::$user_id, 2023, array( 'posts_count' => 8 ) );
+
+		\remove_filter( 'wp_mail_from', array( $this, 'valid_mail_from' ) );
+
+		$this->assertStringContainsString(
+			\admin_url( 'index.php#activitypub_stats' ),
+			$this->sent_alt_body,
+			'Annual plain text body should include the stats dashboard URL.'
+		);
+	}
+
+	/**
 	 * Provide a From address PHPMailer accepts.
 	 *
 	 * @return string The From address.
