@@ -331,6 +331,60 @@ class Test_Statistics extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that no stats link is added when user mode is disabled, even if a filter forces
+	 * the ActivityPub capability on. The widget's own gate re-checks the actor type after
+	 * that filter, so the link would otherwise point at a dashboard without the widget.
+	 *
+	 * @covers ::send_monthly_email
+	 */
+	public function test_send_monthly_email_omits_stats_link_when_user_mode_disabled() {
+		$year  = 2026;
+		$month = 9;
+		$this->seed_monthly_stats( self::$user_id, $year, $month );
+
+		// Blog-only mode disables the user actor type.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		\add_filter( 'activitypub_user_can_activitypub', '__return_true' );
+
+		Statistics_Scheduler::send_monthly_email( self::$user_id, $year, $month );
+
+		\remove_filter( 'activitypub_user_can_activitypub', '__return_true' );
+
+		$this->assertSame( 1, $this->sent_count, 'Monthly email should still be sent.' );
+		$this->assertStringNotContainsString(
+			'activitypub_stats',
+			$this->sent_message,
+			'A forced capability should not add a link to a widget the actor type disables.'
+		);
+	}
+
+	/**
+	 * Test that an administrator still gets the link when only the blog actor is enabled,
+	 * since the widget's blog branch shows it to anyone who can manage options.
+	 *
+	 * @covers ::send_monthly_email
+	 */
+	public function test_send_monthly_email_links_to_stats_widget_for_admin_in_blog_mode() {
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\update_user_option( $admin_id, 'activitypub_mailer_monthly_report', '1' );
+
+		$year  = 2026;
+		$month = 10;
+		$this->seed_monthly_stats( $admin_id, $year, $month );
+
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+
+		Statistics_Scheduler::send_monthly_email( $admin_id, $year, $month );
+
+		$this->assertSame( 1, $this->sent_count, 'Monthly email should be sent.' );
+		$this->assertStringContainsString(
+			\esc_url( \admin_url( 'index.php#activitypub_stats' ) ),
+			$this->sent_message,
+			'An administrator sees the widget through its blog branch, so the link belongs in the email.'
+		);
+	}
+
+	/**
 	 * Test that the plain text alternative also carries the stats URL.
 	 *
 	 * @covers ::send_monthly_email
