@@ -18,7 +18,7 @@ if ( Actors::BLOG_USER_ID === $args['user_id'] ) {
 }
 ?>
 	<div class="footer">
-		<p><?php esc_html_e( 'You are receiving this emails because of your ActivityPub plugin settings.', 'activitypub' ); ?></p>
+		<p><?php esc_html_e( 'You are receiving this email because of your ActivityPub plugin settings.', 'activitypub' ); ?></p>
 		<p>
 			<a href="<?php echo esc_url( admin_url( $settings_path ) ); ?>">
 				<?php esc_html_e( 'Manage notification settings', 'activitypub' ); ?>
