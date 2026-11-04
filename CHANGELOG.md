@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.4.2] - 2026-11-04
+### Security
+- The app authorization screen only shows apps that are already known to your site and no longer fetches unknown ones. [#4011]
+- The check for previously approved commenters now also works on sites that save comments without a comment type, such as WordPress.com. [#4010]
+
 ## [9.4.1] - 2026-11-04
 ### Security
 - Only earlier comments of the same verified account count as previously approved: replies from the Fediverse follow your moderation settings, and a Fediverse name and handle typed into the comment form are no longer approved automatically. [#4002]
@@ -2164,6 +2169,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[9.4.2]: https://github.com/Automattic/wordpress-activitypub/compare/9.4.1...9.4.2
 [9.4.1]: https://github.com/Automattic/wordpress-activitypub/compare/9.4.0...9.4.1
 [9.4.0]: https://github.com/Automattic/wordpress-activitypub/compare/9.3.1...9.4.0
 [9.3.1]: https://github.com/Automattic/wordpress-activitypub/compare/9.3.0...9.3.1
