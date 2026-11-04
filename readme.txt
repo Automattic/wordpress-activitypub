@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 7.1
-Stable tag: 9.4.0
+Stable tag: 9.4.1
 Requires PHP: 7.4
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -116,6 +116,16 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 9.4.1 - 2026-11-04
+#### Security
+- Only earlier comments of the same verified account count as previously approved: replies from the Fediverse follow your moderation settings, and a Fediverse name and handle typed into the comment form are no longer approved automatically.
+
+#### Fixed
+- Imported posts are no longer shared to the Fediverse when they are saved again after the import.
+- Mentions in excerpts link to the profile again.
+- Old posts that were never shared to the Fediverse are no longer shared when a tool, for example a link checker, saves them again.
+- The Federated Quote block now also warns about posts that do not allow quotes on sites with a custom REST API path, such as WordPress.com.
 
 ### 9.4.0 - 2026-10-29
 #### Security
