@@ -12,9 +12,9 @@ namespace Activitypub\Scheduler;
 use Activitypub\Collection\Actors;
 use Activitypub\Mailer;
 use Activitypub\Statistics as Statistics_Collector;
-use Activitypub\WP_Admin\Dashboard;
 
 use function Activitypub\is_user_type_disabled;
+use function Activitypub\user_can_see_stats;
 
 /**
  * Statistics scheduler class.
@@ -327,7 +327,7 @@ class Statistics {
 		if ( Actors::BLOG_USER_ID === $user_id ) {
 			$can_see_stats = ! is_user_type_disabled( 'blog' );
 		} else {
-			$can_see_stats = Dashboard::user_can_see_stats( $user_id );
+			$can_see_stats = user_can_see_stats( $user_id );
 		}
 
 		if ( ! $can_see_stats ) {
