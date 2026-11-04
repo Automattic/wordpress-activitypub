@@ -185,7 +185,7 @@ class Dashboard {
 		<p><label for="activitypub-user-identifier"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-identifier" value="<?php echo \esc_attr( $user->get_webfinger() ); ?>" readonly /></p>
 		<p><label for="activitypub-user-url"><?php \esc_html_e( 'Profile URL', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-url" value="<?php echo \esc_attr( $user->get_url() ); ?>" readonly /></p>
 		<p>
-			<?php \esc_html_e( 'Authors who can not access this settings page will find their username on the "Edit Profile" page.', 'activitypub' ); ?>
+			<?php \esc_html_e( 'Authors who cannot access this settings page will find their username on the "Edit Profile" page.', 'activitypub' ); ?>
 			<a href="<?php echo \esc_url( \admin_url( '/profile.php#activitypub' ) ); ?>">
 			<?php \esc_html_e( 'Customize username on "Edit Profile" page.', 'activitypub' ); ?>
 			</a>
