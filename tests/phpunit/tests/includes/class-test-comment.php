@@ -818,6 +818,39 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Comments with the type `''` are checked like comments with the type `comment`.
+	 *
+	 * WordPress.com does not set core's `comment` default, so replies there have the type `''`,
+	 * both the stored ones and the new ones.
+	 *
+	 * @covers ::check_previous_comment_approval
+	 */
+	public function test_check_previous_comment_approval_with_empty_type() {
+		global $wpdb;
+
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
+		\update_option( 'comment_previously_approved', '1' );
+
+		$post_id     = self::factory()->post->create();
+		$approved_id = $this->new_remote_comment( $post_id, 'approved@example.com', 'Hello.', true );
+		$wpdb->update( $wpdb->comments, array( 'comment_type' => '' ), array( 'comment_ID' => $approved_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+
+		$comment = array(
+			'comment_type'         => '',
+			'comment_author'       => 'Approved',
+			'comment_author_email' => 'approved@example.com',
+			'comment_meta'         => array( 'protocol' => 'activitypub' ),
+		);
+
+		$this->assertSame( 1, Comment::check_previous_comment_approval( 1, $comment ), 'A stored reply with the type "" counts for a Fediverse reply.' );
+
+		unset( $comment['comment_meta'] );
+		$this->assertSame( 0, Comment::check_previous_comment_approval( 1, $comment ), 'Federated history must not approve a comment from the form.' );
+
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	/**
 	 * Core's moderation rules hold for a previously approved author.
 	 *
 	 * @dataProvider moderation_rule_provider
