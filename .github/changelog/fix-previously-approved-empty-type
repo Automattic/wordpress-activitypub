@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+The check for previously approved commenters now also works on sites that save comments without a comment type, such as WordPress.com.

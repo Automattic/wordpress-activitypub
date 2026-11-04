@@ -990,10 +990,11 @@ class Comment {
 		 * Core approves an author with a previously approved comment of the same name and email, of any type.
 		 * Only replies count, not likes or reposts. The email of a Fediverse comment is a public handle,
 		 * so Fediverse replies count only for Fediverse replies, and form comments only for form comments.
+		 * A reply has the type `comment`, or `''` where core does not set that default (WordPress.com).
 		 */
 		if (
 			( 1 === $approved || '1' === $approved ) &&
-			'comment' === $comment_data['comment_type'] &&
+			\in_array( $comment_data['comment_type'], array( 'comment', '' ), true ) &&
 			empty( $comment_data['user_id'] ) &&
 			'1' === \get_option( 'comment_previously_approved' )
 		) {
@@ -1002,7 +1003,7 @@ class Comment {
 			// Core's query, plus the type and the origin.
 			$origin = empty( $comment_data['comment_meta']['protocol'] ) ? 'NOT EXISTS' : 'EXISTS';
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			$approved = (int) $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author = %s AND comment_author_email = %s AND comment_approved = '1' AND comment_type = 'comment' AND $origin ( SELECT 1 FROM $wpdb->commentmeta WHERE $wpdb->commentmeta.comment_id = $wpdb->comments.comment_ID AND meta_key = 'protocol' ) LIMIT 1", \wp_unslash( $comment_data['comment_author'] ), \wp_unslash( $comment_data['comment_author_email'] ) ) );
+			$approved = (int) $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author = %s AND comment_author_email = %s AND comment_approved = '1' AND comment_type IN ( 'comment', '' ) AND $origin ( SELECT 1 FROM $wpdb->commentmeta WHERE $wpdb->commentmeta.comment_id = $wpdb->comments.comment_ID AND meta_key = 'protocol' ) LIMIT 1", \wp_unslash( $comment_data['comment_author'] ), \wp_unslash( $comment_data['comment_author_email'] ) ) );
 		}
 
 		return $approved;
