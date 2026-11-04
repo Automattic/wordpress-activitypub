@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+The app authorization screen only shows apps that are already known to your site and no longer fetches unknown ones.

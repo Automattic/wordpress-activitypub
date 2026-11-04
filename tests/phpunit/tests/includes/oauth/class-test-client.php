@@ -425,6 +425,29 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An unknown client is not discovered outside a REST request.
+	 *
+	 * The consent form on wp-login.php is not rate-limited, so it must not fetch client metadata.
+	 *
+	 * @covers ::get
+	 */
+	public function test_get_outside_rest_makes_no_request() {
+		$requests = 0;
+		$count    = static function ( $response ) use ( &$requests ) {
+			++$requests;
+			return $response;
+		};
+		\add_filter( 'pre_http_request', $count );
+
+		$result = Client::get( 'https://app.example.com/client.json' );
+
+		\remove_filter( 'pre_http_request', $count );
+
+		$this->assertSame( 'activitypub_client_not_found', $result->get_error_code() );
+		$this->assertSame( 0, $requests );
+	}
+
+	/**
 	 * Test validate method for public client.
 	 *
 	 * @covers ::validate
