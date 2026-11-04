@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Only earlier comments of the same verified account count as previously approved: replies from the Fediverse follow your moderation settings, and a Fediverse name and handle typed into the comment form are no longer approved automatically.

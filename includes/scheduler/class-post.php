@@ -74,7 +74,7 @@ class Post {
 	 * An export carries the state of the site it came from. Kept, it makes an
 	 * imported post look federated, and a later save sends an Update or Delete.
 	 *
-	 * @since unreleased
+	 * @since 9.4.1
 	 *
 	 * @param null|bool $check    Whether to allow adding the metadata.
 	 * @param int       $post_id  Post ID.

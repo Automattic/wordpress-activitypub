@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.4.1] - 2026-11-04
+### Security
+- Only earlier comments of the same verified account count as previously approved: replies from the Fediverse follow your moderation settings, and a Fediverse name and handle typed into the comment form are no longer approved automatically. [#4002]
+
+### Fixed
+- Imported posts are no longer shared to the Fediverse when they are saved again after the import. [#4000]
+- Mentions in excerpts link to the profile again. [#3994]
+- Old posts that were never shared to the Fediverse are no longer shared when a tool, for example a link checker, saves them again. [#4001]
+- The Federated Quote block now also warns about posts that do not allow quotes on sites with a custom REST API path, such as WordPress.com. [#3992]
+
 ## [9.4.0] - 2026-10-29
 ### Security
 - Accounts you blocked can no longer reply to, like, repost or quote your posts and comments. [#3988]
@@ -2154,6 +2164,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[9.4.1]: https://github.com/Automattic/wordpress-activitypub/compare/9.4.0...9.4.1
 [9.4.0]: https://github.com/Automattic/wordpress-activitypub/compare/9.3.1...9.4.0
 [9.3.1]: https://github.com/Automattic/wordpress-activitypub/compare/9.3.0...9.3.1
 [9.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/9.2.2...9.3.0
