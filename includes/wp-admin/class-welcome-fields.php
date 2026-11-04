@@ -125,10 +125,20 @@ class Welcome_Fields {
 			return;
 		}
 
+		$copy_label = \__( 'Copy', 'activitypub' );
 		?>
 		<div class="activitypub-welcome-handles">
 			<p class="activitypub-welcome-handles-description">
-				<?php \esc_html_e( 'This is your address in the Fediverse. Share it so people can follow you.', 'activitypub' ); ?>
+				<?php
+				echo \esc_html(
+					\_n(
+						'This is your address in the Fediverse. Share it so people can follow you.',
+						'These are your addresses in the Fediverse. Share them so people can follow you.',
+						\count( $handles ),
+						'activitypub'
+					)
+				);
+				?>
 			</p>
 			<?php foreach ( $handles as $handle ) : ?>
 				<div class="activitypub-welcome-handle">
@@ -142,13 +152,14 @@ class Welcome_Fields {
 						value="<?php echo \esc_attr( $handle['handle'] ); ?>"
 					/>
 					<button
-						aria-label="<?php \esc_attr_e( 'Copy handle to clipboard', 'activitypub' ); ?>"
+						aria-label="<?php echo \esc_attr( $handle['copy_label'] ); ?>"
 						class="button button-secondary activitypub-copy-to-clipboard"
 						data-clipboard-text="<?php echo \esc_attr( $handle['handle'] ); ?>"
 						data-copied-label="<?php \esc_attr_e( 'Copied!', 'activitypub' ); ?>"
+						data-copy-label="<?php echo \esc_attr( $copy_label ); ?>"
 						type="button"
 					>
-						<?php \esc_html_e( 'Copy', 'activitypub' ); ?>
+						<?php echo \esc_html( $copy_label ); ?>
 					</button>
 				</div>
 			<?php endforeach; ?>
@@ -164,7 +175,7 @@ class Welcome_Fields {
 	 *
 	 * @since unreleased
 	 *
-	 * @return array[] List of handles, each with an `id`, `label` and `handle` key.
+	 * @return array[] List of handles, each with an `id`, `label`, `handle` and `copy_label` key.
 	 */
 	private static function get_welcome_handles() {
 		$actors = array( 'blog' => Actors::BLOG_USER_ID );
@@ -192,10 +203,18 @@ class Welcome_Fields {
 				continue;
 			}
 
+			$handle = '@' . $actor->get_webfinger();
+
 			$handles[] = array(
-				'id'     => 'activitypub-welcome-handle-' . $type,
-				'label'  => $labels[ $type ],
-				'handle' => '@' . $actor->get_webfinger(),
+				'id'         => 'activitypub-welcome-handle-' . $type,
+				'label'      => $labels[ $type ],
+				'handle'     => $handle,
+				// Both handles can be on the page, so the button names have to tell them apart.
+				'copy_label' => \sprintf(
+					/* translators: %s: A Fediverse handle, for example "@blog@example.com". */
+					\__( 'Copy %s to clipboard', 'activitypub' ),
+					$handle
+				),
 			);
 		}
 

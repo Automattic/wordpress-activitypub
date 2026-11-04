@@ -13,62 +13,30 @@ jQuery( function( $ ) {
 	} );
 
 	/*
-	 * Copy buttons, e.g. for the Fediverse handle on the welcome page. The text to copy
-	 * comes from `data-clipboard-text`, the success label from `data-copied-label`.
+	 * Copy buttons, e.g. for the Fediverse handle on the welcome page. ClipboardJS
+	 * ships with WordPress, reads the text from `data-clipboard-text` and brings its
+	 * own fallback for browsers without the Clipboard API.
 	 */
-	$( document ).on( 'click', '.activitypub-copy-to-clipboard', function() {
-		var $button = $( this ),
-			text = $button.data( 'clipboard-text' ),
-			copiedLabel = $button.data( 'copied-label' ),
-			originalLabel = $button.data( 'originalLabel' );
+	new ClipboardJS( '.activitypub-copy-to-clipboard' ).on( 'success', function( event ) {
+		var $button = $( event.trigger ),
+			copiedLabel = $button.data( 'copied-label' );
+
+		event.clearSelection();
+
+		// A second click while the success label shows restarts the countdown.
+		clearTimeout( $button.data( 'resetTimeout' ) );
+
+		$button.text( copiedLabel );
 
 		/*
-		 * Remember the label from the first click only. Reading it again while the
-		 * success label is showing would make "Copied!" the label to restore.
+		 * The button keeps its `aria-label`, which wins over the text content, so
+		 * the new label alone would not reach a screen reader.
 		 */
-		if ( undefined === originalLabel ) {
-			originalLabel = $.trim( $button.text() );
-			$button.data( 'originalLabel', originalLabel );
-		}
+		window.wp.a11y.speak( copiedLabel );
 
-		function showSuccess() {
-			clearTimeout( $button.data( 'resetTimeout' ) );
-
-			$button.text( copiedLabel );
-
-			/*
-			 * The button keeps its `aria-label`, which wins over the text content, so
-			 * the new label alone would not reach a screen reader.
-			 */
-			window.wp.a11y.speak( copiedLabel );
-
-			$button.data( 'resetTimeout', setTimeout( function() {
-				$button.text( originalLabel );
-			}, 1000 ) );
-		}
-
-		// The Clipboard API needs a secure context, which self-hosted admins do not always have.
-		if ( window.navigator.clipboard && window.navigator.clipboard.writeText ) {
-			window.navigator.clipboard.writeText( text ).then( showSuccess, function( error ) {
-				// eslint-disable-next-line no-console -- Log error if copying fails.
-				console.error( 'Could not copy text: ', error );
-			} );
-
-			return;
-		}
-
-		// Fall back to selecting the field the button belongs to.
-		var field = $button.siblings( 'input' ).get( 0 );
-
-		if ( ! field ) {
-			return;
-		}
-
-		field.select();
-
-		if ( document.execCommand( 'copy' ) ) {
-			showSuccess();
-		}
+		$button.data( 'resetTimeout', setTimeout( function() {
+			$button.text( $button.data( 'copy-label' ) );
+		}, 1000 ) );
 	} );
 
 	$(document).on( 'wp-plugin-install-success', function( event, response ) {

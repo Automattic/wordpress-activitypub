@@ -192,6 +192,11 @@ class Test_Welcome_Fields extends \WP_UnitTestCase {
 		$this->assertSame( '@testblog@' . self::$host, $handles[0]['handle'] );
 		$this->assertSame( '@' . \get_userdata( self::$user_id )->user_login . '@' . self::$host, $handles[1]['handle'] );
 
+		// Both buttons are on the same page, so screen readers need to tell them apart.
+		$this->assertNotSame( $handles[0]['copy_label'], $handles[1]['copy_label'] );
+		$this->assertStringContainsString( $handles[0]['handle'], $handles[0]['copy_label'] );
+		$this->assertStringContainsString( $handles[1]['handle'], $handles[1]['copy_label'] );
+
 		\delete_option( 'activitypub_blog_identifier' );
 		\delete_option( 'activitypub_actor_mode' );
 	}
@@ -230,6 +235,13 @@ class Test_Welcome_Fields extends \WP_UnitTestCase {
 		$this->assertStringContainsString( 'value="' . \esc_attr( $handle ) . '"', $output );
 		$this->assertStringContainsString( 'data-clipboard-text="' . \esc_attr( $handle ) . '"', $output );
 		$this->assertStringContainsString( 'activitypub-copy-to-clipboard', $output );
+
+		// The label the button goes back to after showing the success message.
+		$this->assertStringContainsString( 'data-copy-label="Copy"', $output );
+
+		// A single handle gets the singular wording.
+		$this->assertStringContainsString( 'This is your address in the Fediverse.', $output );
+		$this->assertStringNotContainsString( 'These are your addresses', $output );
 
 		\delete_option( 'activitypub_blog_identifier' );
 		\delete_option( 'activitypub_actor_mode' );
