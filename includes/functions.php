@@ -394,7 +394,7 @@ function is_supported_taxonomy( $taxonomy ) {
  * Importers also fire `import_start` and `import_end`, which covers an import that
  * runs somewhere else, for example from WP-CLI.
  *
- * @since unreleased
+ * @since 9.4.1
  *
  * @return bool True while an import is running.
  */
@@ -404,7 +404,7 @@ function is_importing() {
 	/**
 	 * Filters whether an import is running.
 	 *
-	 * @since unreleased
+	 * @since 9.4.1
 	 *
 	 * @param bool $importing True while an import is running.
 	 */

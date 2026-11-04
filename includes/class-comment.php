@@ -978,7 +978,7 @@ class Comment {
 	/**
 	 * Restrict the history used for core's previous-author approval.
 	 *
-	 * @since unreleased
+	 * @since 9.4.1
 	 *
 	 * @param int|string|\WP_Error $approved     The approved comment status.
 	 * @param array                $comment_data The comment data.
