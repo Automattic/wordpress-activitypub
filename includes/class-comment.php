@@ -33,6 +33,8 @@ class Comment {
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 2 );
 		\add_action( 'pre_get_comments', array( static::class, 'comment_query' ) );
 		\add_filter( 'get_page_of_comment_query_args', array( static::class, 'get_page_of_comment_query_args' ) );
+		// First, so it sees core's verdict and leaves approvals from other filters alone.
+		\add_filter( 'pre_comment_approved', array( static::class, 'check_previous_comment_approval' ), PHP_INT_MIN, 2 );
 		\add_filter( 'pre_comment_approved', array( static::class, 'pre_comment_approved' ), 11, 2 );
 		\add_filter( 'get_avatar_comment_types', array( static::class, 'get_avatar_comment_types' ), 99 );
 		\add_action( 'update_option_activitypub_allow_likes', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
@@ -974,14 +976,16 @@ class Comment {
 	}
 
 	/**
-	 * Filter the comment status before it is set.
+	 * Restrict the history used for core's previous-author approval.
+	 *
+	 * @since unreleased
 	 *
 	 * @param int|string|\WP_Error $approved     The approved comment status.
 	 * @param array                $comment_data The comment data.
 	 *
 	 * @return int|string|\WP_Error The approval status. 1, 0, 'spam', 'trash', or WP_Error.
 	 */
-	public static function pre_comment_approved( $approved, $comment_data ) {
+	public static function check_previous_comment_approval( $approved, $comment_data ) {
 		/*
 		 * Core approves an author with a previously approved comment of the same name and email, of any type.
 		 * Only replies count, not likes or reposts. The email of a Fediverse comment is a public handle,
@@ -993,22 +997,26 @@ class Comment {
 			empty( $comment_data['user_id'] ) &&
 			'1' === \get_option( 'comment_previously_approved' )
 		) {
-			$approved = (int) (bool) \get_comments(
-				array(
-					'author_email' => $comment_data['comment_author_email'],
-					'status'       => 'approve',
-					'type'         => 'comment',
-					'meta_query'   => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-						array(
-							'key'     => 'protocol',
-							'compare' => empty( $comment_data['comment_meta']['protocol'] ) ? 'NOT EXISTS' : 'EXISTS',
-						),
-					),
-					'count'        => true,
-				)
-			);
+			global $wpdb;
+
+			// Core's query, plus the type and the origin.
+			$origin = empty( $comment_data['comment_meta']['protocol'] ) ? 'NOT EXISTS' : 'EXISTS';
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$approved = (int) $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author = %s AND comment_author_email = %s AND comment_approved = '1' AND comment_type = 'comment' AND $origin ( SELECT 1 FROM $wpdb->commentmeta WHERE $wpdb->commentmeta.comment_id = $wpdb->comments.comment_ID AND meta_key = 'protocol' ) LIMIT 1", \wp_unslash( $comment_data['comment_author'] ), \wp_unslash( $comment_data['comment_author_email'] ) ) );
 		}
 
+		return $approved;
+	}
+
+	/**
+	 * Filter the comment status before it is set.
+	 *
+	 * @param int|string|\WP_Error $approved     The approved comment status.
+	 * @param array                $comment_data The comment data.
+	 *
+	 * @return int|string|\WP_Error The approval status.
+	 */
+	public static function pre_comment_approved( $approved, $comment_data ) {
 		/*
 		 * Only return early for already-approved comments, trash, or errors.
 		 * Don't short-circuit on 'spam' - we may want to override Akismet.

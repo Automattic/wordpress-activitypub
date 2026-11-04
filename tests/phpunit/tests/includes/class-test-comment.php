@@ -680,6 +680,7 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * later normal reply from the same actor to be auto-approved.
 	 *
 	 * @covers ::pre_comment_approved
+	 * @covers ::check_previous_comment_approval
 	 */
 	public function test_pre_comment_approved_ignores_reactions() {
 		// Disable flood control.
@@ -743,6 +744,7 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * so another actor has another email.
 	 *
 	 * @covers ::pre_comment_approved
+	 * @covers ::check_previous_comment_approval
 	 */
 	public function test_pre_comment_approved_ignores_copied_name_and_url() {
 		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
@@ -768,6 +770,7 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * only comments that did not come from the Fediverse count as previously approved.
 	 *
 	 * @covers ::pre_comment_approved
+	 * @covers ::check_previous_comment_approval
 	 */
 	public function test_pre_comment_approved_ignores_federated_history_for_the_form() {
 		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
@@ -789,11 +792,27 @@ class Test_Comment extends \WP_UnitTestCase {
 		$spoof = \wp_new_comment( $form );
 		$this->assertSame( '0', \get_comment( $spoof )->comment_approved, 'Federated history must not approve a comment from the form.' );
 
+		// An approved comment from the form with the same email but another name does not count either.
+		$other = \wp_new_comment( \array_merge( $form, array( 'comment_author' => 'Other' ) ) );
+		\wp_set_comment_status( $other, 'approve' );
+		$form['comment_content'] = 'Under the approved name.';
+		$this->assertSame( '0', \get_comment( \wp_new_comment( $form ) )->comment_approved, 'The name has to match, as in core.' );
+
 		// A comment from the form that a moderator approved counts, as in core.
 		\wp_set_comment_status( $spoof, 'approve' );
 		$form['comment_content'] = 'Again from the comment form.';
 		$again                   = \wp_new_comment( $form );
 		$this->assertSame( '1', \get_comment( $again )->comment_approved );
+
+		// An approval from another filter stays, even without history.
+		$approve = static function () {
+			return 1;
+		};
+		\add_filter( 'pre_comment_approved', $approve, 5 );
+		\update_option( 'comment_moderation', '1' );
+		$form['comment_author_email'] = 'new@example.com';
+		$this->assertSame( '1', \get_comment( \wp_new_comment( $form ) )->comment_approved, 'Another filter decides on its own.' );
+		\remove_filter( 'pre_comment_approved', $approve, 5 );
 
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 	}
@@ -867,7 +886,6 @@ class Test_Comment extends \WP_UnitTestCase {
 		);
 
 		$this->assertSame( 'spam', Comment::pre_comment_approved( 'spam', $comment_data ) );
-		$this->assertSame( 1, Comment::pre_comment_approved( 1, $comment_data ) );
 
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 	}
