@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Imported posts are no longer shared to the Fediverse when they are saved again after the import.

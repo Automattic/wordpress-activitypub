@@ -75,7 +75,7 @@ class Mention {
 	 * Runs after core and themes built the excerpt, so the links are not stripped with the
 	 * rest of the content's HTML.
 	 *
-	 * @since unreleased
+	 * @since 9.4.1
 	 *
 	 * @param string $excerpt The post excerpt.
 	 *
