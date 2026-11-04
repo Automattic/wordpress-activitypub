@@ -12,6 +12,65 @@ jQuery( function( $ ) {
 		}
 	} );
 
+	/*
+	 * Copy buttons, e.g. for the Fediverse handle on the welcome page. The text to copy
+	 * comes from `data-clipboard-text`, the success label from `data-copied-label`.
+	 */
+	$( document ).on( 'click', '.activitypub-copy-to-clipboard', function() {
+		var $button = $( this ),
+			text = $button.data( 'clipboard-text' ),
+			copiedLabel = $button.data( 'copied-label' ),
+			originalLabel = $button.data( 'originalLabel' );
+
+		/*
+		 * Remember the label from the first click only. Reading it again while the
+		 * success label is showing would make "Copied!" the label to restore.
+		 */
+		if ( undefined === originalLabel ) {
+			originalLabel = $.trim( $button.text() );
+			$button.data( 'originalLabel', originalLabel );
+		}
+
+		function showSuccess() {
+			clearTimeout( $button.data( 'resetTimeout' ) );
+
+			$button.text( copiedLabel );
+
+			/*
+			 * The button keeps its `aria-label`, which wins over the text content, so
+			 * the new label alone would not reach a screen reader.
+			 */
+			window.wp.a11y.speak( copiedLabel );
+
+			$button.data( 'resetTimeout', setTimeout( function() {
+				$button.text( originalLabel );
+			}, 1000 ) );
+		}
+
+		// The Clipboard API needs a secure context, which self-hosted admins do not always have.
+		if ( window.navigator.clipboard && window.navigator.clipboard.writeText ) {
+			window.navigator.clipboard.writeText( text ).then( showSuccess, function( error ) {
+				// eslint-disable-next-line no-console -- Log error if copying fails.
+				console.error( 'Could not copy text: ', error );
+			} );
+
+			return;
+		}
+
+		// Fall back to selecting the field the button belongs to.
+		var field = $button.siblings( 'input' ).get( 0 );
+
+		if ( ! field ) {
+			return;
+		}
+
+		field.select();
+
+		if ( document.execCommand( 'copy' ) ) {
+			showSuccess();
+		}
+	} );
+
 	$(document).on( 'wp-plugin-install-success', function( event, response ) {
 		setTimeout( function() {
 			$( '.activate-now' ).removeClass( 'thickbox open-plugin-details-modal' );

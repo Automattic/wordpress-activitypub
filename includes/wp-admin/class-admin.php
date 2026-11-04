@@ -368,7 +368,7 @@ class Admin {
 					'assets/js/activitypub-admin.js',
 					ACTIVITYPUB_PLUGIN_FILE
 				),
-				array( 'jquery', 'wp-util' ),
+				array( 'jquery', 'wp-a11y', 'wp-util' ),
 				ACTIVITYPUB_PLUGIN_VERSION,
 				false
 			);

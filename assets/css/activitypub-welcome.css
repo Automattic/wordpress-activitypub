@@ -71,6 +71,49 @@
 	font-weight: 400;
 }
 
+/* Fediverse Handle */
+.activitypub-welcome-handles {
+	margin: 0 auto 10px;
+	max-width: 480px;
+	text-align: left;
+}
+
+.activitypub-welcome-handles-description {
+	font-size: 14px;
+	color: #646970;
+	margin: 0 0 10px;
+	text-align: center;
+}
+
+.activitypub-welcome-handle {
+	align-items: center;
+	display: flex;
+	gap: 10px;
+	margin-bottom: 10px;
+}
+
+.activitypub-welcome-handle:last-child {
+	margin-bottom: 0;
+}
+
+.activitypub-welcome-handle label {
+	color: #646970;
+	flex-shrink: 0;
+	font-size: 13px;
+	font-weight: 500;
+	width: 90px;
+}
+
+.activitypub-welcome-handle input {
+	background-color: #f6f7f7;
+	border: 1px solid #dcdcde;
+	border-radius: 3px;
+	flex-grow: 1;
+	font-size: 14px;
+	min-width: 0;
+	padding: 6px 8px;
+}
+
 /* Steps Styles */
 .activitypub-onboarding-step {
 	display: flex;
@@ -282,6 +325,16 @@
 	.activitypub-welcome-container {
 		margin: 20px;
 		padding: 20px;
+	}
+
+	.activitypub-welcome-handle {
+		align-items: stretch;
+		flex-direction: column;
+		gap: 5px;
+	}
+
+	.activitypub-welcome-handle label {
+		width: auto;
 	}
 
 	.step-content {
