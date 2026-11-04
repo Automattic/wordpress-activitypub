@@ -12,8 +12,9 @@ namespace Activitypub\Scheduler;
 use Activitypub\Collection\Actors;
 use Activitypub\Mailer;
 use Activitypub\Statistics as Statistics_Collector;
+use Activitypub\WP_Admin\Dashboard;
 
-use function Activitypub\user_can_activitypub;
+use function Activitypub\is_user_type_disabled;
 
 /**
  * Statistics scheduler class.
@@ -313,17 +314,23 @@ class Statistics {
 	/**
 	 * Get the URL of the Fediverse Stats dashboard widget for a report recipient.
 	 *
-	 * Mirrors the gate that registers the widget in `Activitypub\WP_Admin\Dashboard`, so the
-	 * link is only added when the recipient would actually see the widget on their dashboard.
-	 * For the blog actor the report goes to `admin_email`, which satisfies the widget's
-	 * `manage_options` requirement.
+	 * Defers to the gate that registers the widget, so the link is only added when the
+	 * recipient would actually see the widget on their dashboard. The blog actor is not a
+	 * WordPress user, so it cannot be passed to that gate: its report goes to `admin_email`,
+	 * which stands in for the `manage_options` branch.
 	 *
 	 * @param int $user_id The user ID, or `Actors::BLOG_USER_ID` for the blog actor.
 	 *
 	 * @return string The dashboard URL, or an empty string if the recipient cannot see the widget.
 	 */
 	private static function get_stats_url( $user_id ) {
-		if ( ! user_can_activitypub( $user_id ) ) {
+		if ( Actors::BLOG_USER_ID === $user_id ) {
+			$can_see_stats = ! is_user_type_disabled( 'blog' );
+		} else {
+			$can_see_stats = Dashboard::user_can_see_stats( $user_id );
+		}
+
+		if ( ! $can_see_stats ) {
 			return '';
 		}
 
