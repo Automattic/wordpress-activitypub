@@ -75,6 +75,13 @@ class Router {
 			'top'
 		);
 
+		// Client Configuration (FEP-65ca).
+		\add_rewrite_rule(
+			'^\.well-known/activitypub-client-config/?$',
+			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/client-config',
+			'top'
+		);
+
 		// Must precede the generic @username rule, which would otherwise match "application" as an actor username.
 		\add_rewrite_rule( '^@application\/?$', 'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/application', 'top' );
 		\add_rewrite_rule( '^@([\w\-\.]+)\/?$', 'index.php?actor=$matches[1]', 'top' );
