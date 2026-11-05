@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix two small wording mistakes: notification emails said "You are receiving this emails", and the dashboard widget said "can not" instead of "cannot".
