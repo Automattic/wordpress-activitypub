@@ -215,8 +215,15 @@ function is_ap_post( $post ) {
 		return false;
 	}
 
-	// Check for ap_post post type.
-	return Remote_Posts::POST_TYPE === $post->post_type;
+	if ( \post_type_supports( $post->post_type, Remote_Posts::SUPPORT_EXCLUSIVE ) ) {
+		return true;
+	}
+
+	if ( \post_type_supports( $post->post_type, Remote_Posts::SUPPORT_FEATURE ) ) {
+		return \metadata_exists( 'post', $post->ID, '_activitypub_remote_actor_id' );
+	}
+
+	return false;
 }
 
 /**

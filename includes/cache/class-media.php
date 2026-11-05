@@ -7,7 +7,7 @@
 
 namespace Activitypub\Cache;
 
-use Activitypub\Collection\Remote_Posts;
+use function Activitypub\is_ap_post;
 
 /**
  * Media cache class.
@@ -142,7 +142,7 @@ class Media extends File {
 	 * @return void
 	 */
 	public static function maybe_cleanup( $post_id ) {
-		if ( Remote_Posts::POST_TYPE !== \get_post_type( $post_id ) ) {
+		if ( ! is_ap_post( $post_id ) ) {
 			return;
 		}
 

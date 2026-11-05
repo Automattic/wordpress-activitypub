@@ -41,6 +41,8 @@ class Post_Types {
 		\add_action( 'init', array( self::class, 'register_oauth_post_types' ), 11 );
 		\add_action( 'init', array( self::class, 'register_tombstone_post_type' ), 11 );
 
+		\add_action( 'registered_post_type', array( self::class, 'register_remote_post_taxonomies' ), 10, 1 );
+
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_actor_rest_field' ) );
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_post_actor_rest_field' ) );
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_post_rest_params' ) );
@@ -383,17 +385,30 @@ class Post_Types {
 				'rest_controller_class' => Remote_Posts_Controller::class,
 				'rewrite'               => false,
 				'query_var'             => false,
-				'supports'              => array( 'title', 'editor', 'author', 'custom-fields', 'excerpt', 'comments' ),
+				'supports'              => array( 'title', 'editor', 'author', 'custom-fields', 'excerpt', 'comments', Remote_Posts::SUPPORT_FEATURE, Remote_Posts::SUPPORT_EXCLUSIVE ),
 				'delete_with_user'      => true,
 				'can_export'            => true,
 				'exclude_from_search'   => true,
 				'taxonomies'            => array( 'ap_tag', 'ap_object_type' ),
 			)
 		);
+	}
+
+	/**
+	 * Register taxonomies needed for remote post types.
+	 *
+	 * @param string $post_type Post type.
+	 *
+	 * @return void
+	 */
+	public static function register_remote_post_taxonomies( $post_type ) {
+		if ( ! \post_type_supports( $post_type, Remote_Posts::SUPPORT_FEATURE ) ) {
+			return;
+		}
 
 		\register_taxonomy(
 			'ap_tag',
-			array( Remote_Posts::POST_TYPE ),
+			array( $post_type ),
 			array(
 				'public'                => false,
 				'query_var'             => true,
@@ -404,7 +419,7 @@ class Post_Types {
 
 		\register_taxonomy(
 			'ap_object_type',
-			array( Remote_Posts::POST_TYPE ),
+			array( $post_type ),
 			array(
 				'public'                => false,
 				'query_var'             => true,
@@ -414,7 +429,7 @@ class Post_Types {
 		);
 
 		\register_post_meta(
-			Remote_Posts::POST_TYPE,
+			$post_type,
 			'_activitypub_remote_actor_id',
 			array(
 				'type'              => 'integer',
@@ -425,7 +440,7 @@ class Post_Types {
 		);
 
 		\register_post_meta(
-			Remote_Posts::POST_TYPE,
+			$post_type,
 			'_activitypub_user_id',
 			array(
 				'type'              => 'integer',
@@ -854,40 +869,42 @@ class Post_Types {
 	 * @return void
 	 */
 	public static function register_ap_post_actor_rest_field() {
-		\register_rest_field(
-			Remote_Posts::POST_TYPE,
-			'actor_info',
-			array(
-				/**
-				 * Get the remote actor data for an ap_post.
-				 *
-				 * @param array $response Prepared response array.
-				 * @return array|null The actor data or null if not found.
-				 */
-				'get_callback' => function ( $response ) {
-					$id    = \get_post_meta( $response['id'], '_activitypub_remote_actor_id', true );
-					$actor = Remote_Actors::get_actor( $id );
+		foreach ( Remote_Posts::get_supporting_post_types() as $post_type ) {
+			\register_rest_field(
+				$post_type,
+				'actor_info',
+				array(
+					/**
+					 * Get the remote actor data for an ap_post.
+					 *
+					 * @param array $response Prepared response array.
+					 * @return array|null The actor data or null if not found.
+					 */
+					'get_callback' => function ( $response ) {
+						$id    = \get_post_meta( $response['id'], '_activitypub_remote_actor_id', true );
+						$actor = Remote_Actors::get_actor( $id );
 
-					if ( \is_wp_error( $actor ) ) {
-						return null;
-					}
+						if ( \is_wp_error( $actor ) ) {
+							return null;
+						}
 
-					return array(
-						'username'   => $actor->get_preferred_username(),
-						'name'       => $actor->get_name() ?? $actor->get_preferred_username(),
-						'icon'       => \sanitize_url( object_to_uri( $actor->get_icon() ) ?? '' ),
-						'url'        => \sanitize_url( object_to_uri( $actor->get_url() ?? $actor->get_id() ) ?? '' ),
-						'webfinger'  => Remote_Actors::get_acct( $id ),
-						'identifier' => $actor->get_id(),
-					);
-				},
-				'schema'       => array(
-					'description' => 'Remote actor data',
-					'type'        => 'object',
-					'context'     => array( 'view', 'edit' ),
-				),
-			)
-		);
+						return array(
+							'username'   => $actor->get_preferred_username(),
+							'name'       => $actor->get_name() ?? $actor->get_preferred_username(),
+							'icon'       => \sanitize_url( object_to_uri( $actor->get_icon() ) ?? '' ),
+							'url'        => \sanitize_url( object_to_uri( $actor->get_url() ?? $actor->get_id() ) ?? '' ),
+							'webfinger'  => Remote_Actors::get_acct( $id ),
+							'identifier' => $actor->get_id(),
+						);
+					},
+					'schema'       => array(
+						'description' => 'Remote actor data',
+						'type'        => 'object',
+						'context'     => array( 'view', 'edit' ),
+					),
+				)
+			);
+		}
 	}
 
 	/**
