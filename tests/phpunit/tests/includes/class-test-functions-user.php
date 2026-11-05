@@ -185,7 +185,7 @@ class Test_Functions_User extends \WP_UnitTestCase {
 	/**
 	 * Test that the stats widget check defaults to the current user.
 	 *
-	 * @covers ::user_can_see_stats
+	 * @covers \Activitypub\user_can_see_stats
 	 */
 	public function test_user_can_see_stats_defaults_to_current_user() {
 		$author_id = self::factory()->user->create( array( 'role' => 'author' ) );
@@ -200,7 +200,7 @@ class Test_Functions_User extends \WP_UnitTestCase {
 	/**
 	 * Test that the stats widget check answers for the given user, not the current one.
 	 *
-	 * @covers ::user_can_see_stats
+	 * @covers \Activitypub\user_can_see_stats
 	 */
 	public function test_user_can_see_stats_for_a_given_user() {
 		$author_id = self::factory()->user->create( array( 'role' => 'author' ) );
@@ -217,7 +217,7 @@ class Test_Functions_User extends \WP_UnitTestCase {
 	 * actor rather than for a user. The stats widget belongs to a user's dashboard, so a
 	 * missing or non-user ID must not inherit that answer.
 	 *
-	 * @covers ::user_can_see_stats
+	 * @covers \Activitypub\user_can_see_stats
 	 */
 	public function test_user_can_see_stats_rejects_non_users() {
 		foreach ( array( ACTIVITYPUB_ACTOR_MODE, ACTIVITYPUB_BLOG_MODE, ACTIVITYPUB_ACTOR_AND_BLOG_MODE ) as $mode ) {
@@ -232,7 +232,7 @@ class Test_Functions_User extends \WP_UnitTestCase {
 	 * Test that an administrator sees the widget through the blog branch in blog-only mode,
 	 * while an author does not.
 	 *
-	 * @covers ::user_can_see_stats
+	 * @covers \Activitypub\user_can_see_stats
 	 */
 	public function test_user_can_see_stats_in_blog_mode() {
 		$author_id = self::factory()->user->create( array( 'role' => 'author' ) );
@@ -248,7 +248,7 @@ class Test_Functions_User extends \WP_UnitTestCase {
 	 * Test that a forced ActivityPub capability does not grant access while the user actor
 	 * type is disabled.
 	 *
-	 * @covers ::user_can_see_stats
+	 * @covers \Activitypub\user_can_see_stats
 	 */
 	public function test_user_can_see_stats_ignores_forced_capability_in_blog_mode() {
 		$author_id = self::factory()->user->create( array( 'role' => 'author' ) );
