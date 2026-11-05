@@ -620,7 +620,8 @@ class Test_Comment extends \WP_UnitTestCase {
 				'comment_post_ID'      => $post_id,
 				'comment_author_email' => 'approved@example.com',
 				'comment_meta'         => array(
-					'protocol' => 'activitypub',
+					'protocol'                     => 'activitypub',
+					'_activitypub_remote_actor_id' => 1,
 				),
 			)
 		);
@@ -641,7 +642,8 @@ class Test_Comment extends \WP_UnitTestCase {
 				'comment_post_ID'      => $post_id,
 				'comment_author_email' => 'approved@example.com',
 				'comment_meta'         => array(
-					'protocol' => 'activitypub',
+					'protocol'                     => 'activitypub',
+					'_activitypub_remote_actor_id' => 1,
 				),
 			)
 		);
@@ -660,7 +662,8 @@ class Test_Comment extends \WP_UnitTestCase {
 				'comment_post_ID'      => $post_id,
 				'comment_author_email' => 'approved@example.com',
 				'comment_meta'         => array(
-					'protocol' => 'activitypub',
+					'protocol'                     => 'activitypub',
+					'_activitypub_remote_actor_id' => 1,
 				),
 			)
 		);
@@ -709,7 +712,8 @@ class Test_Comment extends \WP_UnitTestCase {
 				'comment_post_ID'      => $post_id,
 				'comment_author_email' => 'approved@example.com',
 				'comment_meta'         => array(
-					'protocol' => 'activitypub',
+					'protocol'                     => 'activitypub',
+					'_activitypub_remote_actor_id' => 1,
 				),
 			)
 		);
@@ -724,7 +728,8 @@ class Test_Comment extends \WP_UnitTestCase {
 				'comment_post_ID'      => $post_id,
 				'comment_author_email' => 'approved@example.com',
 				'comment_meta'         => array(
-					'protocol' => 'activitypub',
+					'protocol'                     => 'activitypub',
+					'_activitypub_remote_actor_id' => 1,
 				),
 			)
 		);
@@ -766,8 +771,8 @@ class Test_Comment extends \WP_UnitTestCase {
 	/**
 	 * The name and handle of an approved Fediverse commenter do not approve a comment from the form.
 	 *
-	 * The handle is the email of a federated comment and it is public, so for the comment form
-	 * only comments that did not come from the Fediverse count as previously approved.
+	 * The handle is the email of a federated comment and it is public, so an email that is the
+	 * handle of an approved Fediverse comment approves no comment from the form.
 	 *
 	 * @covers ::pre_comment_approved
 	 * @covers ::check_previous_comment_approval
@@ -798,11 +803,11 @@ class Test_Comment extends \WP_UnitTestCase {
 		$form['comment_content'] = 'Under the approved name.';
 		$this->assertSame( '0', \get_comment( \wp_new_comment( $form ) )->comment_approved, 'The name has to match, as in core.' );
 
-		// A comment from the form that a moderator approved counts, as in core.
+		// The email is a Fediverse handle, so even a comment from the form that a moderator approved does not count.
 		\wp_set_comment_status( $spoof, 'approve' );
 		$form['comment_content'] = 'Again from the comment form.';
 		$again                   = \wp_new_comment( $form );
-		$this->assertSame( '1', \get_comment( $again )->comment_approved );
+		$this->assertSame( '0', \get_comment( $again )->comment_approved );
 
 		// An approval from another filter stays, even without history.
 		$approve = static function () {
@@ -815,6 +820,117 @@ class Test_Comment extends \WP_UnitTestCase {
 		\remove_filter( 'pre_comment_approved', $approve, 5 );
 
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	/**
+	 * Approved comments and new comments for core's previously approved check.
+	 *
+	 * @return array[] The approved comments, the new comment data and whether the new comment is approved.
+	 */
+	public function previously_approved_provider() {
+		$form = array(
+			'comment_type'         => 'comment',
+			'comment_author'       => 'Approved',
+			'comment_author_email' => 'approved@example.com',
+		);
+
+		$fediverse                 = $form;
+		$fediverse['comment_meta'] = array(
+			'protocol'                     => 'activitypub',
+			'_activitypub_remote_actor_id' => 101,
+		);
+
+		$other_actor = $fediverse;
+		$other_actor['comment_meta']['_activitypub_remote_actor_id'] = 202;
+
+		$unknown_actor = $fediverse;
+		unset( $unknown_actor['comment_meta']['_activitypub_remote_actor_id'] );
+
+		$other_handle                         = $fediverse;
+		$other_handle['comment_author_email'] = 'mallory@attacker.example';
+		$other_handle['comment_meta']['_activitypub_remote_actor_id'] = 303;
+
+		$mallory                   = $other_actor;
+		$mallory['comment_author'] = 'Mallory';
+
+		$webmention                 = $form;
+		$webmention['comment_meta'] = array( 'protocol' => 'webmention' );
+
+		return array(
+			'same actor'                         => array( array( $fediverse ), $fediverse, '1' ),
+			'other actor with the same handle'   => array( array( $fediverse ), $other_actor, '0' ),
+			'unknown actor'                      => array( array( $fediverse ), $unknown_actor, '0' ),
+			'other name'                         => array( array( $fediverse ), \array_merge( $fediverse, array( 'comment_author' => 'Other' ) ), '0' ),
+			'copied name with another handle'    => array( array( $fediverse ), $other_handle, '0' ),
+			'only a like'                        => array( array( \array_merge( $fediverse, array( 'comment_type' => 'like' ) ) ), $fediverse, '0' ),
+			'only a quote'                       => array( array( \array_merge( $fediverse, array( 'comment_type' => 'quote' ) ) ), $fediverse, '0' ),
+			'nothing approved'                   => array( array(), $fediverse, '0' ),
+			'form with the handle'               => array( array( $fediverse ), $form, '0' ),
+			'form with the handle in upper case' => array( array( $fediverse ), \array_merge( $form, array( 'comment_author_email' => 'Approved@Example.com' ) ), '0' ),
+			'review with the handle'             => array( array( $fediverse ), \array_merge( $form, array( 'comment_type' => 'review' ) ), '0' ),
+			'form after form'                    => array( array( $form ), $form, '1' ),
+			'review after form'                  => array( array( $form ), \array_merge( $form, array( 'comment_type' => 'review' ) ), '1' ),
+			'form after another name'            => array( array( $form ), \array_merge( $form, array( 'comment_author' => 'Other' ) ), '0' ),
+			'fediverse after form'               => array( array( $form ), $fediverse, '0' ),
+			'webmention after webmention'        => array( array( $webmention ), $webmention, '1' ),
+			'other actor renamed to the name'    => array( array( $fediverse, $mallory ), $other_actor, '0' ),
+		);
+	}
+
+	/**
+	 * Test core's previously approved check with Fediverse and other comments.
+	 *
+	 * @dataProvider previously_approved_provider
+	 * @covers ::check_previous_comment_approval
+	 *
+	 * @param array[] $approved The approved comments.
+	 * @param array   $comment  The new comment data.
+	 * @param string  $expected The approval status of the new comment.
+	 */
+	public function test_previously_approved( $approved, $comment, $expected ) {
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
+		\update_option( 'comment_previously_approved', '1' );
+
+		$fields = array(
+			'comment_post_ID'    => self::factory()->post->create(),
+			'comment_author_url' => '',
+		);
+
+		foreach ( $approved as $approved_comment ) {
+			\wp_insert_comment(
+				\array_merge(
+					$approved_comment,
+					$fields,
+					array(
+						'comment_content'  => 'Approved earlier.',
+						'comment_approved' => '1',
+					)
+				)
+			);
+		}
+
+		$comment_id = \wp_new_comment( \array_merge( $comment, $fields, array( 'comment_content' => 'New comment.' ) ) );
+
+		$this->assertSame( $expected, \get_comment( $comment_id )->comment_approved );
+
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	/**
+	 * Pingbacks have no email and are left to core.
+	 *
+	 * @covers ::check_previous_comment_approval
+	 */
+	public function test_previously_approved_leaves_pingbacks_to_core() {
+		\update_option( 'comment_previously_approved', '1' );
+
+		$pingback = array(
+			'comment_type'         => 'pingback',
+			'comment_author'       => 'Example',
+			'comment_author_email' => '',
+		);
+
+		$this->assertSame( 1, Comment::check_previous_comment_approval( 1, $pingback ) );
 	}
 
 	/**
@@ -839,7 +955,10 @@ class Test_Comment extends \WP_UnitTestCase {
 			'comment_type'         => '',
 			'comment_author'       => 'Approved',
 			'comment_author_email' => 'approved@example.com',
-			'comment_meta'         => array( 'protocol' => 'activitypub' ),
+			'comment_meta'         => array(
+				'protocol'                     => 'activitypub',
+				'_activitypub_remote_actor_id' => \get_comment_meta( $approved_id, '_activitypub_remote_actor_id', true ),
+			),
 		);
 
 		$this->assertSame( 1, Comment::check_previous_comment_approval( 1, $comment ), 'A stored reply with the type "" counts for a Fediverse reply.' );
@@ -943,7 +1062,8 @@ class Test_Comment extends \WP_UnitTestCase {
 				'comment_author_email' => $email,
 				'comment_post_ID'      => $post_id,
 				'comment_meta'         => array(
-					'protocol' => 'activitypub',
+					'protocol'                     => 'activitypub',
+					'_activitypub_remote_actor_id' => \absint( \crc32( $email ) ),
 				),
 			)
 		);
