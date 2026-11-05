@@ -268,16 +268,19 @@ function object_to_uri( $data ) {
  * Get the hash of an ID, to look the ID up by.
  *
  * A lookup by the ID itself is not exact: the database collation also matches IDs that
- * differ in case or accents. A lookup by its hash is exact and can use an index.
+ * differ in case or accents. A lookup by its hash is exact and can use an index. The ID is
+ * hashed as it is stored, sanitized by `esc_url_raw()`, and not normalized like the Tombstone key.
  *
  * @since unreleased
  *
  * @param string $id The ID.
  *
- * @return string The hash.
+ * @return string The hash, or an empty string if the ID is not a valid URL.
  */
 function get_id_hash( $id ) {
-	return \hash( 'sha256', \esc_url_raw( (string) $id ) );
+	$id = \esc_url_raw( (string) $id );
+
+	return '' === $id ? '' : \hash( 'sha256', $id );
 }
 
 /**

@@ -15,6 +15,7 @@ use Activitypub\Collection\Remote_Actors;
 use Activitypub\Proxy;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\get_meta_ids_by_value;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
@@ -229,8 +230,8 @@ class Quote_Request {
 			);
 		}
 
-		// Remove from _activitypub_quoted_by meta, by ID: delete_post_meta() matches the value through the collation.
-		foreach ( self::get_quoted_by_meta_ids( $post_id, $instrument_url ) as $meta_id ) {
+		// Remove exactly this instrument from _activitypub_quoted_by meta.
+		foreach ( get_meta_ids_by_value( 'post', $post_id, '_activitypub_quoted_by', $instrument_url ) as $meta_id ) {
 			\delete_metadata_by_mid( 'post', $meta_id );
 		}
 
@@ -273,12 +274,7 @@ class Quote_Request {
 
 		$activity_object['instrument'] = object_to_uri( $activity_object['instrument'] );
 
-		$post_meta = \get_post_meta( $post_id, '_activitypub_quoted_by', false );
-		if ( \in_array( $activity_object['instrument'], $post_meta, true ) ) {
-			$meta_id = self::get_quoted_by_meta_ids( $post_id, $activity_object['instrument'] )[0] ?? null;
-		} else {
-			$meta_id = \add_post_meta( $post_id, '_activitypub_quoted_by', $activity_object['instrument'] );
-		}
+		$meta_id = get_meta_ids_by_value( 'post', $post_id, '_activitypub_quoted_by', $activity_object['instrument'] )[0] ?? \add_post_meta( $post_id, '_activitypub_quoted_by', $activity_object['instrument'] );
 
 		// Only send minimal data.
 		$activity_object = \array_intersect_key(
@@ -386,30 +382,5 @@ class Quote_Request {
 		}
 
 		return $valid;
-	}
-
-	/**
-	 * Get the IDs of the `_activitypub_quoted_by` meta rows that hold an instrument.
-	 *
-	 * @param int    $post_id    The post ID.
-	 * @param string $instrument The instrument URL.
-	 *
-	 * @return int[] The meta IDs.
-	 */
-	private static function get_quoted_by_meta_ids( $post_id, $instrument ) {
-		global $wpdb;
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$meta_ids = $wpdb->get_col(
-			$wpdb->prepare(
-				// Byte for byte: the column's collation would also match IDs that differ in case or accents.
-				"SELECT meta_id FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = %s AND CAST(meta_value AS BINARY) = %s",
-				$post_id,
-				'_activitypub_quoted_by',
-				$instrument
-			)
-		);
-
-		return \array_map( 'intval', $meta_ids );
 	}
 }

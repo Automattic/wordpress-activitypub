@@ -467,7 +467,7 @@ class Inbox {
 					array(
 						'key'   => '_activitypub_object_id',
 						'value' => $object_id,
-						'type'  => 'BINARY', // Byte for byte: the column's collation would also match IDs that differ in case or accents.
+						'type'  => 'BINARY',
 					),
 				),
 			)

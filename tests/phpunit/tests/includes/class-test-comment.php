@@ -9,7 +9,6 @@ namespace Activitypub\Tests;
 
 use Activitypub\Collection\Remote_Posts;
 use Activitypub\Comment;
-use Activitypub\Tests\Uri_Test_Cases;
 
 use function Activitypub\generate_image_block;
 use function Activitypub\process_remote_images;

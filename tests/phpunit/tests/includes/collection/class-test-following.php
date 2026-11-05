@@ -22,7 +22,6 @@ use function Activitypub\follow;
 class Test_Following extends \WP_UnitTestCase {
 	use Uri_Test_Cases;
 
-
 	/**
 	 * Test the accept() method with a valid follow request.
 	 *

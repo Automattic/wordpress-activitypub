@@ -65,15 +65,14 @@ class Move {
 
 		// If the origin is followed but the target is not, update the origin to point to the target.
 		if ( \is_wp_error( $target_object ) && ! \is_wp_error( $origin_object ) ) {
+			$data = array( 'guid' => \sanitize_url( $target_uri ) );
+			$hash = get_id_hash( $target_uri );
+			if ( $hash ) {
+				$data['post_name'] = $hash;
+			}
+
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-			$wpdb->update(
-				$wpdb->posts,
-				array(
-					'guid'      => \sanitize_url( $target_uri ),
-					'post_name' => get_id_hash( $target_uri ),
-				),
-				array( 'ID' => (int) $origin_object->ID )
-			);
+			$wpdb->update( $wpdb->posts, $data, array( 'ID' => (int) $origin_object->ID ) );
 
 			// Clear the cache.
 			\wp_cache_delete( $origin_object->ID, 'posts' );

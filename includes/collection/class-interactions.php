@@ -267,7 +267,6 @@ class Interactions {
 					'key'   => 'protocol',
 					'value' => 'activitypub',
 				),
-				// Byte for byte: the column's collation would also match IDs that differ in case or accents.
 				array(
 					'relation' => 'OR',
 					array(

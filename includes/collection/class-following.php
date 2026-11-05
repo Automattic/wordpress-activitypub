@@ -87,7 +87,7 @@ class Following {
 						array(
 							'key'   => '_activitypub_object_id',
 							'value' => $post->guid,
-							'type'  => 'BINARY', // Byte for byte: the column's collation would also match IDs that differ in case or accents.
+							'type'  => 'BINARY',
 						),
 						array(
 							'key'   => '_activitypub_activity_type',
@@ -217,7 +217,7 @@ class Following {
 					array(
 						'key'   => '_activitypub_object_id',
 						'value' => $post->guid,
-						'type'  => 'BINARY', // Byte for byte: the column's collation would also match IDs that differ in case or accents.
+						'type'  => 'BINARY',
 					),
 					array(
 						'key'   => '_activitypub_activity_type',

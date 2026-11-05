@@ -2709,4 +2709,60 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		Remote_Actors::update( $post_id, $this->actor_for_uri( $uri ) );
 		$this->assertSame( get_id_hash( $uri ), \get_post_field( 'post_name', $post_id ) );
 	}
+
+	/**
+	 * An actor is only found by its exact handle.
+	 *
+	 * @covers ::fetch_by_acct
+	 * @dataProvider lookalike_acct_provider
+	 *
+	 * @param string $stored    The stored handle.
+	 * @param string $requested The requested handle.
+	 */
+	public function test_fetch_by_acct_matches_exact_handle( $stored, $requested ) {
+		$post_id = Remote_Actors::create( $this->actor_for_uri( 'https://example.com/uri-test/acct' ) );
+		\update_post_meta( $post_id, '_activitypub_acct', $stored );
+
+		// No WebFinger answer for the requested handle.
+		$no_webfinger = static function ( $preempt, $args, $url ) {
+			return false !== \strpos( $url, '.well-known/webfinger' ) ? new \WP_Error( 'http_request_failed', 'No WebFinger.' ) : $preempt;
+		};
+		\add_filter( 'pre_http_request', $no_webfinger, 10, 3 );
+
+		$found = Remote_Actors::fetch_by_acct( $requested );
+
+		\remove_filter( 'pre_http_request', $no_webfinger, 10 );
+
+		$this->assertWPError( $found );
+		$this->assertSame( $post_id, Remote_Actors::fetch_by_acct( $stored )->ID );
+	}
+
+	/**
+	 * An actor is found by its handle regardless of case, without asking WebFinger.
+	 *
+	 * @covers ::fetch_by_acct
+	 * @dataProvider same_acct_provider
+	 *
+	 * @param string $stored    The stored handle.
+	 * @param string $requested The requested handle.
+	 */
+	public function test_fetch_by_acct_ignores_case( $stored, $requested ) {
+		$post_id = Remote_Actors::create( $this->actor_for_uri( 'https://example.com/uri-test/acct' ) );
+		\update_post_meta( $post_id, '_activitypub_acct', $stored );
+
+		$requests = 0;
+		$count    = static function ( $preempt ) use ( &$requests ) {
+			++$requests;
+			return $preempt;
+		};
+		\add_filter( 'pre_http_request', $count );
+
+		$found = Remote_Actors::fetch_by_acct( $requested );
+
+		\remove_filter( 'pre_http_request', $count );
+
+		$this->assertSame( $post_id, $found->ID );
+		$this->assertSame( 0, $requests );
+		$this->assertSame( $stored, \get_post_meta( $post_id, '_activitypub_acct', true ), 'The stored handle must keep its case.' );
+	}
 }

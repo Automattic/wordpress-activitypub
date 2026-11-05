@@ -8,7 +8,6 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Activity\Base_Object;
-use Activitypub\Tests\Uri_Test_Cases;
 
 use function Activitypub\extract_recipients_from_activity;
 use function Activitypub\extract_recipients_from_activity_property;
@@ -20,7 +19,6 @@ use function Activitypub\get_id_hash;
  */
 class Test_Functions_Activity extends \WP_UnitTestCase {
 	use Uri_Test_Cases;
-
 
 	/**
 	 * Test object_to_uri.
@@ -1265,7 +1263,6 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 	 */
 	public function test_get_id_hash( $uri ) {
 		$this->assertMatchesRegularExpression( '/^[0-9a-f]{64}$/', get_id_hash( $uri ) );
-		$this->assertSame( get_id_hash( $uri ), get_id_hash( $uri ) );
 		$this->assertSame( get_id_hash( $uri ), get_id_hash( \esc_url_raw( $uri ) ), 'A sanitized ID must get the same hash.' );
 	}
 
@@ -1280,5 +1277,32 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 	 */
 	public function test_get_id_hash_differs_for_lookalikes( $stored, $requested ) {
 		$this->assertNotSame( get_id_hash( $stored ), get_id_hash( $requested ) );
+	}
+
+	/**
+	 * Test that an ID that is not a valid URL gets no hash.
+	 *
+	 * @covers \Activitypub\get_id_hash
+	 * @dataProvider invalid_id_provider
+	 *
+	 * @param string $id The ID.
+	 */
+	public function test_get_id_hash_of_invalid_id( $id ) {
+		$this->assertSame( '', get_id_hash( $id ) );
+	}
+
+	/**
+	 * IDs that `esc_url_raw()` empties.
+	 *
+	 * @return array<string, string[]> Test cases.
+	 */
+	public function invalid_id_provider() {
+		return array(
+			'empty'          => array( '' ),
+			'tag scheme'     => array( 'tag:example.com,2026:note-1' ),
+			'did scheme'     => array( 'did:plc:abc123' ),
+			'at scheme'      => array( 'at://did:plc:abc123/app.bsky.feed.post/1' ),
+			'javascript url' => array( 'javascript:alert(1)' ),
+		);
 	}
 }

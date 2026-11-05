@@ -45,6 +45,31 @@ trait Uri_Test_Cases {
 	}
 
 	/**
+	 * Pairs of a stored handle and a different handle that the database collation treats as equal.
+	 *
+	 * @return array<string, string[]> Test cases: stored handle, requested handle.
+	 */
+	public function lookalike_acct_provider() {
+		return array(
+			'accent in host' => array( 'alice@bücher.example', 'alice@bucher.example' ),
+			'accent in user' => array( 'älice@example.com', 'alice@example.com' ),
+		);
+	}
+
+	/**
+	 * Pairs of a stored handle and a handle that only differs in case, which is the same handle.
+	 *
+	 * @return array<string, string[]> Test cases: stored handle, requested handle.
+	 */
+	public function same_acct_provider() {
+		return array(
+			'case in user' => array( 'alice@example.com', 'Alice@example.com' ),
+			'case in host' => array( 'alice@example.com', 'alice@Example.COM' ),
+			'case of both' => array( 'Alice@Example.com', 'aLICE@example.COM' ),
+		);
+	}
+
+	/**
 	 * Build an actor fixture with the supplied identifier.
 	 *
 	 * @param string $uri Actor ID.

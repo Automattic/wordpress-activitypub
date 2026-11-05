@@ -377,7 +377,7 @@ class Remote_Actors {
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$found = $wpdb->get_col(
 				$wpdb->prepare(
-					"SELECT guid FROM $wpdb->posts WHERE post_type = %s AND guid IN ( $placeholders )",
+					"SELECT guid FROM $wpdb->posts WHERE post_type = %s AND CAST(guid AS BINARY) IN ( $placeholders )",
 					\array_merge( array( self::POST_TYPE ), \array_map( 'strval', \array_keys( $guids ) ) )
 				)
 			);
@@ -478,7 +478,7 @@ class Remote_Actors {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT post_id FROM $wpdb->postmeta WHERE meta_key='_activitypub_acct' AND meta_value=%s",
+				"SELECT post_id FROM $wpdb->postmeta WHERE meta_key='_activitypub_acct' AND CAST(LOWER(meta_value) AS BINARY)=LOWER(%s)",
 				$acct
 			)
 		);

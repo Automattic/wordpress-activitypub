@@ -2683,16 +2683,19 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		$comment_id = Interactions::add_comment( $object );
 		$this->assertIsInt( $comment_id );
-		$this->assertSame( get_id_hash( \get_comment_meta( $comment_id, 'source_id', true ) ), \get_comment_meta( $comment_id, '_activitypub_source_id_hash', true ) );
-		$this->assertSame( get_id_hash( \get_comment_meta( $comment_id, 'source_url', true ) ), \get_comment_meta( $comment_id, '_activitypub_source_url_hash', true ) );
 
-		// As for comments stored before the hash.
-		\delete_comment_meta( $comment_id, '_activitypub_source_id_hash' );
-		\delete_comment_meta( $comment_id, '_activitypub_source_url_hash' );
+		foreach ( array( 'source_id', 'source_url' ) as $key ) {
+			$this->assertSame( get_id_hash( \get_comment_meta( $comment_id, $key, true ) ), \get_comment_meta( $comment_id, "_activitypub_{$key}_hash", true ) );
+
+			// As for comments stored before the hash.
+			\delete_comment_meta( $comment_id, "_activitypub_{$key}_hash" );
+		}
 
 		Interactions::update_comment( $object );
-		$this->assertSame( get_id_hash( \get_comment_meta( $comment_id, 'source_id', true ) ), \get_comment_meta( $comment_id, '_activitypub_source_id_hash', true ) );
-		$this->assertSame( get_id_hash( \get_comment_meta( $comment_id, 'source_url', true ) ), \get_comment_meta( $comment_id, '_activitypub_source_url_hash', true ) );
+
+		foreach ( array( 'source_id', 'source_url' ) as $key ) {
+			$this->assertSame( get_id_hash( \get_comment_meta( $comment_id, $key, true ) ), \get_comment_meta( $comment_id, "_activitypub_{$key}_hash", true ) );
+		}
 	}
 
 	/**

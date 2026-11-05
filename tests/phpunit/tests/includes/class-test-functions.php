@@ -7,10 +7,13 @@
 
 namespace Activitypub\Tests;
 
+use function Activitypub\get_meta_ids_by_value;
+
 /**
  * Test class for Functions.
  */
 class Test_Functions extends \WP_UnitTestCase {
+	use Uri_Test_Cases;
 
 	/**
 	 * Test get_masked_wp_version function.
@@ -362,5 +365,35 @@ class Test_Functions extends \WP_UnitTestCase {
 		\add_filter( 'activitypub_is_importing', '__return_true' );
 		$this->assertTrue( \Activitypub\is_importing() );
 		\remove_filter( 'activitypub_is_importing', '__return_true' );
+	}
+
+	/**
+	 * Test that get_meta_ids_by_value only returns the rows with the exact value.
+	 *
+	 * @covers \Activitypub\get_meta_ids_by_value
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The value of another row.
+	 * @param string $requested The requested value.
+	 */
+	public function test_get_meta_ids_by_value( $stored, $requested ) {
+		$objects = array(
+			'post'    => self::factory()->post->create(),
+			'comment' => self::factory()->comment->create(),
+			'user'    => self::factory()->user->create(),
+		);
+
+		foreach ( $objects as $meta_type => $object_id ) {
+			$other_id = \add_metadata( $meta_type, $object_id, '_activitypub_test', $stored );
+			$meta_id  = \add_metadata( $meta_type, $object_id, '_activitypub_test', $requested );
+
+			$this->assertSame( array( $meta_id ), get_meta_ids_by_value( $meta_type, $object_id, '_activitypub_test', $requested ), $meta_type );
+			$this->assertSame( array( $other_id ), get_meta_ids_by_value( $meta_type, $object_id, '_activitypub_test', $stored ), $meta_type );
+			$this->assertSame( array(), get_meta_ids_by_value( $meta_type, $object_id, '_activitypub_other', $requested ), $meta_type );
+
+			// Values are stored unslashed, and looked up the same way.
+			$slashed_id = \add_metadata( $meta_type, $object_id, '_activitypub_slashed', 'https://example.com/a\\b' );
+			$this->assertSame( array( $slashed_id ), get_meta_ids_by_value( $meta_type, $object_id, '_activitypub_slashed', 'https://example.com/a\\b' ), $meta_type );
+		}
 	}
 }

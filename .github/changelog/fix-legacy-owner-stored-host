@@ -1,4 +1,4 @@
 Significance: patch
 Type: security
 
-Improve how replies and reactions from other servers are matched before they are changed or removed.
+Improve how content from other servers is matched by its address.
