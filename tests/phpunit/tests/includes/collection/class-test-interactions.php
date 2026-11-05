@@ -11,7 +11,9 @@ use Activitypub\Cache\Comment_Media;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Tests\Equal_Html;
+use Activitypub\Tests\Uri_Test_Cases;
 
+use function Activitypub\get_id_hash;
 use function Activitypub\object_id_to_comment;
 
 /**
@@ -21,6 +23,7 @@ use function Activitypub\object_id_to_comment;
  */
 class Test_Interactions extends \WP_UnitTestCase {
 	use Equal_Html;
+	use Uri_Test_Cases;
 
 	/**
 	 * Unsafe attachments never become blocks, including when caching is unavailable.
@@ -882,6 +885,32 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$interactions = Interactions::get_by_id( $url );
 		$this->assertIsArray( $interactions );
 		$this->assertEquals( $comment->comment_ID, $interactions[0]->comment_ID );
+	}
+
+	/**
+	 * Test that get_by_id only finds the exact ID or URL.
+	 *
+	 * @covers ::get_by_id
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The stored ID.
+	 * @param string $requested The requested ID.
+	 */
+	public function test_get_by_id_matches_exact_id( $stored, $requested ) {
+		$comment_id = self::factory()->comment->create( array( 'comment_post_ID' => self::$post_id ) );
+		\add_comment_meta( $comment_id, 'protocol', 'activitypub' );
+		\add_comment_meta( $comment_id, 'source_id', \esc_url_raw( $stored ) );
+		\add_comment_meta( $comment_id, 'source_url', \esc_url_raw( $stored ) );
+
+		$this->assertSame( array(), Interactions::get_by_id( \esc_url_raw( $requested ) ) );
+
+		// The other host's own comment.
+		$other_id = self::factory()->comment->create( array( 'comment_post_ID' => self::$post_id ) );
+		\add_comment_meta( $other_id, 'protocol', 'activitypub' );
+		\add_comment_meta( $other_id, 'source_id', \esc_url_raw( $requested ) );
+
+		$this->assertEquals( array( $other_id ), \wp_list_pluck( Interactions::get_by_id( \esc_url_raw( $requested ) ), 'comment_ID' ) );
+		$this->assertEquals( array( $comment_id ), \wp_list_pluck( Interactions::get_by_id( \esc_url_raw( $stored ) ), 'comment_ID' ) );
 	}
 
 	/**
@@ -2294,6 +2323,54 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a comment without a recorded owner is only updated through its exact ID.
+	 *
+	 * @covers ::update_comment
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The stored ID.
+	 * @param string $requested The requested ID.
+	 */
+	public function test_update_comment_without_owner_matches_exact_id( $stored, $requested ) {
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => self::$post_id,
+				'comment_content' => 'Original content',
+			)
+		);
+		\add_comment_meta( $comment_id, 'protocol', 'activitypub' );
+		\add_comment_meta( $comment_id, 'source_id', \esc_url_raw( $stored ) );
+
+		$host   = \wp_parse_url( $requested, PHP_URL_HOST );
+		$update = array(
+			'actor'  => \sprintf( 'https://%s/users/author', $host ),
+			'id'     => \sprintf( 'https://%s/activities/edit', $host ),
+			'object' => array(
+				'id'        => $requested,
+				'content'   => 'Edited content',
+				'inReplyTo' => self::$post_permalink,
+			),
+		);
+
+		$this->assertFalse( Interactions::update_comment( $update ) );
+		$this->assertSame( 'Original content', \get_comment( $comment_id )->comment_content );
+
+		// The other host's own comment is the one updated.
+		$other_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => self::$post_id,
+				'comment_content' => 'Other content',
+			)
+		);
+		\add_comment_meta( $other_id, 'protocol', 'activitypub' );
+		\add_comment_meta( $other_id, 'source_id', \esc_url_raw( $requested ) );
+
+		Interactions::update_comment( $update );
+		$this->assertStringContainsString( 'Edited content', \get_comment( $other_id )->comment_content );
+		$this->assertSame( 'Original content', \get_comment( $comment_id )->comment_content );
+	}
+
+	/**
 	 * Test that a media reply, stored under its url, can be updated by its author.
 	 *
 	 * @covers ::update_comment
@@ -2587,5 +2664,57 @@ class Test_Interactions extends \WP_UnitTestCase {
 		if ( false !== $flood_priority ) {
 			\add_action( 'check_comment_flood', 'check_comment_flood_db', $flood_priority, 4 );
 		}
+	}
+
+	/**
+	 * A comment stores the hash of its ID and URL, also when a comment stored without them is updated.
+	 *
+	 * @covers ::add_comment
+	 * @covers ::update_comment
+	 * @covers ::persist
+	 * @dataProvider uri_provider
+	 * @group uri-lookup
+	 *
+	 * @param string $uri The object ID.
+	 */
+	public function test_comment_stores_id_hash( $uri ) {
+		$object                  = $this->create_test_object( $uri );
+		$object['object']['url'] = $uri . '/url';
+
+		$comment_id = Interactions::add_comment( $object );
+		$this->assertIsInt( $comment_id );
+		$this->assertSame( get_id_hash( \get_comment_meta( $comment_id, 'source_id', true ) ), \get_comment_meta( $comment_id, '_activitypub_source_id_hash', true ) );
+		$this->assertSame( get_id_hash( \get_comment_meta( $comment_id, 'source_url', true ) ), \get_comment_meta( $comment_id, '_activitypub_source_url_hash', true ) );
+
+		// As for comments stored before the hash.
+		\delete_comment_meta( $comment_id, '_activitypub_source_id_hash' );
+		\delete_comment_meta( $comment_id, '_activitypub_source_url_hash' );
+
+		Interactions::update_comment( $object );
+		$this->assertSame( get_id_hash( \get_comment_meta( $comment_id, 'source_id', true ) ), \get_comment_meta( $comment_id, '_activitypub_source_id_hash', true ) );
+		$this->assertSame( get_id_hash( \get_comment_meta( $comment_id, 'source_url', true ) ), \get_comment_meta( $comment_id, '_activitypub_source_url_hash', true ) );
+	}
+
+	/**
+	 * A reaction stores the hash of its activity ID.
+	 *
+	 * @covers ::add_reaction
+	 * @covers ::persist
+	 * @dataProvider uri_provider
+	 * @group uri-lookup
+	 *
+	 * @param string $uri The activity ID.
+	 */
+	public function test_reaction_stores_id_hash( $uri ) {
+		$comment_id = Interactions::add_reaction(
+			array(
+				'type'   => 'Like',
+				'id'     => $uri,
+				'actor'  => 'https://example.com/users/test',
+				'object' => self::$post_permalink,
+			)
+		);
+		$this->assertIsInt( $comment_id );
+		$this->assertSame( get_id_hash( $uri ), \get_comment_meta( $comment_id, '_activitypub_source_id_hash', true ) );
 	}
 }

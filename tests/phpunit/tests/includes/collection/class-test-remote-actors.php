@@ -14,6 +14,8 @@ use Activitypub\Mention;
 use Activitypub\Tests\Remote_Request_Stub;
 use Activitypub\Tests\Uri_Test_Cases;
 
+use function Activitypub\get_id_hash;
+
 /**
  * Class Test_Remote_Actors
  *
@@ -2658,5 +2660,53 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$this->assertEquals( 'activitypub_actor_not_found', $result->get_error_code() );
 
 		\remove_filter( 'pre_http_request', $webfinger_callback );
+	}
+
+	/**
+	 * An actor is only found by its exact ID.
+	 *
+	 * @covers ::get_by_uri
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The stored ID.
+	 * @param string $requested The requested ID.
+	 */
+	public function test_get_by_uri_matches_exact_id( $stored, $requested ) {
+		$post_id = Remote_Actors::create( $this->actor_for_uri( $stored ) );
+		$this->assertIsInt( $post_id );
+
+		$this->assertWPError( Remote_Actors::get_by_uri( $requested ) );
+
+		// The other host's own actor is stored separately.
+		$other_id = Remote_Actors::upsert( $this->actor_for_uri( $requested ) );
+		$this->assertIsInt( $other_id );
+		$this->assertNotSame( $post_id, $other_id );
+
+		$this->assertSame( $other_id, Remote_Actors::get_by_uri( $requested )->ID );
+		$this->assertSame( $post_id, Remote_Actors::get_by_uri( $stored )->ID );
+	}
+
+	/**
+	 * An actor stores the hash of its ID, also when an actor stored without it is updated.
+	 *
+	 * @covers ::create
+	 * @covers ::update
+	 * @dataProvider uri_provider
+	 * @group uri-lookup
+	 *
+	 * @param string $uri The actor ID.
+	 */
+	public function test_stores_id_hash( $uri ) {
+		global $wpdb;
+
+		$post_id = Remote_Actors::create( $this->actor_for_uri( $uri ) );
+		$this->assertSame( get_id_hash( $uri ), \get_post_field( 'post_name', $post_id ) );
+
+		// As for actors stored before the hash.
+		$wpdb->update( $wpdb->posts, array( 'post_name' => 'uri-test' ), array( 'ID' => $post_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		\clean_post_cache( $post_id );
+
+		Remote_Actors::update( $post_id, $this->actor_for_uri( $uri ) );
+		$this->assertSame( get_id_hash( $uri ), \get_post_field( 'post_name', $post_id ) );
 	}
 }

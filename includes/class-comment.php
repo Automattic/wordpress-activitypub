@@ -371,6 +371,7 @@ class Comment {
 		$args['fields']     = 'all';
 		$args['meta_key']   = 'source_id'; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 		$args['meta_value'] = $id;         // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+		$args['meta_type']  = 'BINARY';    // Byte for byte: the column's collation would also match IDs that differ in case or accents.
 
 		$comment_query = new \WP_Comment_Query( $args );
 
@@ -415,13 +416,16 @@ class Comment {
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query' => array(
 				'relation' => 'OR',
+				// Byte for byte: the column's collation would also match IDs that differ in case or accents.
 				array(
 					'key'   => 'source_url',
 					'value' => $url,
+					'type'  => 'BINARY',
 				),
 				array(
 					'key'   => 'source_id',
 					'value' => $url,
+					'type'  => 'BINARY',
 				),
 			),
 		);

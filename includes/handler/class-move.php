@@ -11,6 +11,7 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Proxy;
 
+use function Activitypub\get_id_hash;
 use function Activitypub\object_to_uri;
 
 /**
@@ -67,7 +68,10 @@ class Move {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 			$wpdb->update(
 				$wpdb->posts,
-				array( 'guid' => \sanitize_url( $target_uri ) ),
+				array(
+					'guid'      => \sanitize_url( $target_uri ),
+					'post_name' => get_id_hash( $target_uri ),
+				),
 				array( 'ID' => (int) $origin_object->ID )
 			);
 

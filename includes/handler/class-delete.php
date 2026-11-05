@@ -145,6 +145,7 @@ class Delete {
 				'numberposts' => 1,
 				'meta_key'    => '_activitypub_quote_authorization', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 				'meta_value'  => $stamp_uri, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'meta_type'   => 'BINARY', // Byte for byte: the column's collation would also match IDs that differ in case or accents.
 			)
 		);
 

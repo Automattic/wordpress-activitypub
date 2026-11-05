@@ -265,6 +265,22 @@ function object_to_uri( $data ) {
 }
 
 /**
+ * Get the hash of an ID, to look the ID up by.
+ *
+ * A lookup by the ID itself is not exact: the database collation also matches IDs that
+ * differ in case or accents. A lookup by its hash is exact and can use an index.
+ *
+ * @since unreleased
+ *
+ * @param string $id The ID.
+ *
+ * @return string The hash.
+ */
+function get_id_hash( $id ) {
+	return \hash( 'sha256', \esc_url_raw( (string) $id ) );
+}
+
+/**
  * Check whether two references point at the same actor.
  *
  * Both values are resolved to their canonical URI via object_to_uri() before

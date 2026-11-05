@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Improve how replies and reactions from other servers are matched before they are changed or removed.

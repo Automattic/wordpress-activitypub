@@ -13,6 +13,8 @@ use Activitypub\Collection\Inbox;
 use Activitypub\Post_Types;
 use Activitypub\Tests\Uri_Test_Cases;
 
+use function Activitypub\get_id_hash;
+
 /**
  * Test class for Inbox collection.
  *
@@ -182,6 +184,82 @@ class Test_Inbox extends \WP_UnitTestCase {
 
 		$this->assertNotWPError( Inbox::undo( $activity_id, 'https://remote.example.com/users/testuser' ) );
 		$this->assertNull( \get_comment( $comment_id ), 'The comment should be deleted.' );
+	}
+
+	/**
+	 * An inbox item is only found by its exact ID.
+	 *
+	 * @covers ::get_by_guid
+	 * @covers ::deduplicate
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The stored ID.
+	 * @param string $requested The requested ID.
+	 */
+	public function test_get_by_guid_matches_exact_id( $stored, $requested ) {
+		$inbox_id = Inbox::add( $this->like_activity( $stored, 'https://remote.example.com/users/testuser' ), 1 );
+		$this->assertIsInt( $inbox_id );
+
+		$this->assertWPError( Inbox::get_by_guid( $requested ) );
+		$this->assertFalse( Inbox::deduplicate( $requested ) );
+
+		// The other host's own activity is stored separately and both stay.
+		$other_id = Inbox::add( $this->like_activity( $requested, 'https://remote.example.com/users/testuser' ), 1 );
+		$this->assertIsInt( $other_id );
+		$this->assertNotSame( $inbox_id, $other_id );
+
+		$this->assertSame( $other_id, Inbox::get_by_guid( $requested )->ID );
+		$this->assertSame( $other_id, Inbox::deduplicate( $requested )->ID );
+		$this->assertSame( $inbox_id, Inbox::get_by_guid( $stored )->ID );
+		$this->assertNotNull( \get_post( $inbox_id ), 'Deduplication must not delete the item of the other host.' );
+	}
+
+	/**
+	 * Undoing an activity only removes the comment stored under its exact ID.
+	 *
+	 * @covers ::undo
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The stored ID.
+	 * @param string $requested The requested ID.
+	 */
+	public function test_undo_removes_comment_with_exact_id( $stored, $requested ) {
+		$comment_id = self::factory()->comment->create( array( 'comment_post_ID' => self::factory()->post->create() ) );
+		\add_comment_meta( $comment_id, 'source_id', \esc_url_raw( $stored ) );
+
+		$actor = \sprintf( 'https://%s/users/testuser', \wp_parse_url( $requested, PHP_URL_HOST ) );
+		$this->assertIsInt( Inbox::add( $this->like_activity( $requested, $actor ), 1 ) );
+
+		$result = Inbox::undo( $requested, $actor );
+		$this->assertWPError( $result );
+		$this->assertSame( 'activitypub_inbox_undo_comment_not_found', $result->get_error_code() );
+		$this->assertNotNull( \get_comment( $comment_id ) );
+
+		// The other host's own comment is the one removed.
+		$other_id = self::factory()->comment->create( array( 'comment_post_ID' => self::factory()->post->create() ) );
+		\add_comment_meta( $other_id, 'source_id', \esc_url_raw( $requested ) );
+
+		$this->assertNotWPError( Inbox::undo( $requested, $actor ) );
+		$this->assertNull( \get_comment( $other_id ) );
+		$this->assertNotNull( \get_comment( $comment_id ) );
+	}
+
+	/**
+	 * Build a Like activity.
+	 *
+	 * @param string $id    The activity ID.
+	 * @param string $actor The actor.
+	 *
+	 * @return Activity The activity.
+	 */
+	private function like_activity( $id, $actor ) {
+		$activity = new Activity();
+		$activity->set_id( $id );
+		$activity->set_type( 'Like' );
+		$activity->set_actor( $actor );
+		$activity->set_object( 'https://remote.example.com/objects/456' );
+
+		return $activity;
 	}
 
 	/**
@@ -1439,5 +1517,45 @@ class Test_Inbox extends \WP_UnitTestCase {
 
 		// Should return exact count of deleted posts.
 		$this->assertEquals( 15, $deleted );
+	}
+
+	/**
+	 * An inbox item is only found by its exact object ID.
+	 *
+	 * @covers ::get_by_type_and_object
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The stored ID.
+	 * @param string $requested The requested ID.
+	 */
+	public function test_get_by_type_and_object_matches_exact_id( $stored, $requested ) {
+		$inbox_id = Inbox::add( $this->like_activity( 'https://remote.example.com/activities/quote-1', 'https://remote.example.com/users/testuser' ), 1 );
+		\update_post_meta( $inbox_id, '_activitypub_activity_type', 'QuoteRequest' );
+		\update_post_meta( $inbox_id, '_activitypub_object_id', $stored );
+
+		$this->assertWPError( Inbox::get_by_type_and_object( 'QuoteRequest', $requested ) );
+
+		// The other host's own item.
+		$other_id = Inbox::add( $this->like_activity( 'https://remote.example.com/activities/quote-2', 'https://remote.example.com/users/testuser' ), 1 );
+		\update_post_meta( $other_id, '_activitypub_activity_type', 'QuoteRequest' );
+		\update_post_meta( $other_id, '_activitypub_object_id', $requested );
+
+		$this->assertSame( $other_id, Inbox::get_by_type_and_object( 'QuoteRequest', $requested )->ID );
+		$this->assertSame( $inbox_id, Inbox::get_by_type_and_object( 'QuoteRequest', $stored )->ID );
+	}
+
+	/**
+	 * An inbox item stores the hash of its ID.
+	 *
+	 * @covers ::add
+	 * @dataProvider uri_provider
+	 * @group uri-lookup
+	 *
+	 * @param string $uri The activity ID.
+	 */
+	public function test_add_stores_id_hash( $uri ) {
+		$inbox_id = Inbox::add( $this->like_activity( $uri, 'https://remote.example.com/users/testuser' ), 1 );
+
+		$this->assertSame( get_id_hash( $uri ), \get_post_field( 'post_name', $inbox_id ) );
 	}
 }

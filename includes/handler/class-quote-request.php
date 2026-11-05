@@ -229,8 +229,10 @@ class Quote_Request {
 			);
 		}
 
-		// Remove from _activitypub_quoted_by meta.
-		\delete_post_meta( $post_id, '_activitypub_quoted_by', $instrument_url );
+		// Remove from _activitypub_quoted_by meta, by ID: delete_post_meta() matches the value through the collation.
+		foreach ( self::get_quoted_by_meta_ids( $post_id, $instrument_url ) as $meta_id ) {
+			\delete_metadata_by_mid( 'post', $meta_id );
+		}
 
 		// Send Reject activity to revoke the quote permission.
 		self::queue_reject( $activity_object, (int) $post->post_author );
@@ -273,17 +275,7 @@ class Quote_Request {
 
 		$post_meta = \get_post_meta( $post_id, '_activitypub_quoted_by', false );
 		if ( \in_array( $activity_object['instrument'], $post_meta, true ) ) {
-			global $wpdb;
-
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$meta_id = $wpdb->get_var(
-				$wpdb->prepare(
-					"SELECT meta_id FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = %s AND meta_value = %s LIMIT 1",
-					$post_id,
-					'_activitypub_quoted_by',
-					$activity_object['instrument']
-				)
-			);
+			$meta_id = self::get_quoted_by_meta_ids( $post_id, $activity_object['instrument'] )[0] ?? null;
 		} else {
 			$meta_id = \add_post_meta( $post_id, '_activitypub_quoted_by', $activity_object['instrument'] );
 		}
@@ -394,5 +386,30 @@ class Quote_Request {
 		}
 
 		return $valid;
+	}
+
+	/**
+	 * Get the IDs of the `_activitypub_quoted_by` meta rows that hold an instrument.
+	 *
+	 * @param int    $post_id    The post ID.
+	 * @param string $instrument The instrument URL.
+	 *
+	 * @return int[] The meta IDs.
+	 */
+	private static function get_quoted_by_meta_ids( $post_id, $instrument ) {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$meta_ids = $wpdb->get_col(
+			$wpdb->prepare(
+				// Byte for byte: the column's collation would also match IDs that differ in case or accents.
+				"SELECT meta_id FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = %s AND CAST(meta_value AS BINARY) = %s",
+				$post_id,
+				'_activitypub_quoted_by',
+				$instrument
+			)
+		);
+
+		return \array_map( 'intval', $meta_ids );
 	}
 }

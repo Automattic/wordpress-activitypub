@@ -10,6 +10,7 @@ namespace Activitypub\WP_Admin\Import;
 use Activitypub\Attachments;
 use Activitypub\Sanitize;
 
+use function Activitypub\get_id_hash;
 use function Activitypub\is_activity_public;
 
 /**
@@ -626,6 +627,7 @@ class Mastodon {
 
 		if ( $comment_id ) {
 			\update_comment_meta( $comment_id, 'source_id', $post['object']['id'] );
+			\update_comment_meta( $comment_id, '_activitypub_source_id_hash', get_id_hash( $post['object']['id'] ) );
 
 			$source_to_comment_id[ $post['object']['id'] ] = $comment_id;
 		}

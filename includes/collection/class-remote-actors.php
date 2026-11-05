@@ -13,6 +13,7 @@ use Activitypub\Proxy;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
+use function Activitypub\get_id_hash;
 use function Activitypub\is_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
@@ -263,7 +264,7 @@ class Remote_Actors {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
+				"SELECT ID FROM $wpdb->posts WHERE CAST(guid AS BINARY)=%s AND post_type=%s",
 				// What `pre_post_guid` stores on this WordPress version; prepare() handles the SQL escaping.
 				\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $actor_uri ), 0, 'db' ) ),
 				self::POST_TYPE
@@ -727,6 +728,7 @@ class Remote_Actors {
 
 		return array(
 			'guid'         => \esc_url_raw( $actor->get_id() ),
+			'post_name'    => get_id_hash( $actor->get_id() ),
 			'post_title'   => \wp_slash( \wp_strip_all_tags( $actor->get_name() ?: $actor->get_preferred_username() ) ),
 			'post_author'  => 0,
 			'post_type'    => self::POST_TYPE,

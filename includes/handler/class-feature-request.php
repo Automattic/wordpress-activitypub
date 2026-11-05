@@ -245,7 +245,7 @@ class Feature_Request {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			return (int) $wpdb->get_var(
 				$wpdb->prepare(
-					"SELECT umeta_id FROM {$wpdb->usermeta} WHERE user_id = %d AND meta_key = %s AND meta_value = %s LIMIT 1",
+					"SELECT umeta_id FROM {$wpdb->usermeta} WHERE user_id = %d AND meta_key = %s AND CAST(meta_value AS BINARY) = %s LIMIT 1",
 					$user_id,
 					'_activitypub_featured_by',
 					$instrument
