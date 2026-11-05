@@ -771,8 +771,8 @@ class Test_Comment extends \WP_UnitTestCase {
 	/**
 	 * The name and handle of an approved Fediverse commenter do not approve a comment from the form.
 	 *
-	 * The handle is the email of a federated comment and it is public, so for the comment form
-	 * only comments that did not come from the Fediverse count as previously approved.
+	 * The handle is the email of a federated comment and it is public, so an email that is the
+	 * handle of an approved Fediverse comment approves no comment from the form.
 	 *
 	 * @covers ::pre_comment_approved
 	 * @covers ::check_previous_comment_approval
@@ -828,52 +828,33 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * @return array[] The approved comments, the new comment data and whether the new comment is approved.
 	 */
 	public function previously_approved_provider() {
-		$fediverse = array(
-			'comment_type'         => 'comment',
-			'comment_author'       => 'Approved',
-			'comment_author_email' => 'approved@example.com',
-			'comment_meta'         => array(
-				'protocol'                     => 'activitypub',
-				'_activitypub_remote_actor_id' => 101,
-			),
-		);
-		$form      = array(
+		$form = array(
 			'comment_type'         => 'comment',
 			'comment_author'       => 'Approved',
 			'comment_author_email' => 'approved@example.com',
 		);
 
-		$other_actor   = \array_merge(
-			$fediverse,
-			array(
-				'comment_meta' => array(
-					'protocol'                     => 'activitypub',
-					'_activitypub_remote_actor_id' => 202,
-				),
-			)
-		);
-		$unknown_actor = \array_merge( $fediverse, array( 'comment_meta' => array( 'protocol' => 'activitypub' ) ) );
-		$other_handle  = \array_merge(
-			$fediverse,
-			array(
-				'comment_author_email' => 'mallory@attacker.example',
-				'comment_meta'         => array(
-					'protocol'                     => 'activitypub',
-					'_activitypub_remote_actor_id' => 303,
-				),
-			)
+		$fediverse                 = $form;
+		$fediverse['comment_meta'] = array(
+			'protocol'                     => 'activitypub',
+			'_activitypub_remote_actor_id' => 101,
 		);
 
-		$webmention = array(
-			'comment_type'         => 'comment',
-			'comment_author'       => 'Webmention',
-			'comment_author_email' => 'webmention@example.com',
-			'comment_meta'         => array( 'protocol' => 'webmention' ),
-		);
-		$mallory    = \array_merge(
-			$other_actor,
-			array( 'comment_author' => 'Mallory' )
-		);
+		$other_actor = $fediverse;
+		$other_actor['comment_meta']['_activitypub_remote_actor_id'] = 202;
+
+		$unknown_actor = $fediverse;
+		unset( $unknown_actor['comment_meta']['_activitypub_remote_actor_id'] );
+
+		$other_handle                         = $fediverse;
+		$other_handle['comment_author_email'] = 'mallory@attacker.example';
+		$other_handle['comment_meta']['_activitypub_remote_actor_id'] = 303;
+
+		$mallory                   = $other_actor;
+		$mallory['comment_author'] = 'Mallory';
+
+		$webmention                 = $form;
+		$webmention['comment_meta'] = array( 'protocol' => 'webmention' );
 
 		return array(
 			'same actor'                         => array( array( $fediverse ), $fediverse, '1' ),
@@ -882,6 +863,7 @@ class Test_Comment extends \WP_UnitTestCase {
 			'other name'                         => array( array( $fediverse ), \array_merge( $fediverse, array( 'comment_author' => 'Other' ) ), '0' ),
 			'copied name with another handle'    => array( array( $fediverse ), $other_handle, '0' ),
 			'only a like'                        => array( array( \array_merge( $fediverse, array( 'comment_type' => 'like' ) ) ), $fediverse, '0' ),
+			'only a quote'                       => array( array( \array_merge( $fediverse, array( 'comment_type' => 'quote' ) ) ), $fediverse, '0' ),
 			'nothing approved'                   => array( array(), $fediverse, '0' ),
 			'form with the handle'               => array( array( $fediverse ), $form, '0' ),
 			'form with the handle in upper case' => array( array( $fediverse ), \array_merge( $form, array( 'comment_author_email' => 'Approved@Example.com' ) ), '0' ),

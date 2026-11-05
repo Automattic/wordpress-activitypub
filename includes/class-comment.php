@@ -1006,12 +1006,10 @@ class Comment {
 		// Not from the Fediverse (comment form, reviews, Webmentions, any plugin): an email that is a Fediverse handle proves nothing.
 		if ( 'activitypub' !== ( $comment_data['comment_meta']['protocol'] ?? '' ) ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$handle = $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM $wpdb->comments c INNER JOIN $wpdb->commentmeta m ON m.comment_id = c.comment_ID AND m.meta_key = 'protocol' AND m.meta_value = 'activitypub' WHERE c.comment_author_email = %s AND c.comment_approved = '1' LIMIT 1", \wp_unslash( $comment_data['comment_author_email'] ) ) );
-
-			return $handle ? 0 : $approved;
+			return $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM $wpdb->comments c INNER JOIN $wpdb->commentmeta m ON m.comment_id = c.comment_ID AND m.meta_key = 'protocol' AND m.meta_value = 'activitypub' WHERE c.comment_author_email = %s AND c.comment_approved = '1' LIMIT 1", \wp_unslash( $comment_data['comment_author_email'] ) ) ) ? 0 : $approved;
 		}
 
-		// Likes and reposts are left to core. A reply has the type `comment`, or `''` where core does not set that default (WordPress.com).
+		// Likes, reposts and quotes are left to core. A reply has the type `comment`, or `''` where core does not set that default (WordPress.com).
 		if ( ! \in_array( $comment_data['comment_type'], array( 'comment', '' ), true ) ) {
 			return $approved;
 		}
@@ -1026,11 +1024,9 @@ class Comment {
 			return 0;
 		}
 
-		// The same row as core's match, name and email (indexed), plus the actor.
+		// Core's match, name and email (indexed), plus the actor.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$same_actor = $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM $wpdb->comments c INNER JOIN $wpdb->commentmeta m ON m.comment_id = c.comment_ID AND m.meta_key = '_activitypub_remote_actor_id' AND m.meta_value = %s WHERE c.comment_author = %s AND c.comment_author_email = %s AND c.comment_approved = '1' AND c.comment_type IN ( 'comment', '' ) LIMIT 1", $actor_id, \wp_unslash( $comment_data['comment_author'] ), \wp_unslash( $comment_data['comment_author_email'] ) ) );
-
-		return $same_actor ? $approved : 0;
+		return $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM $wpdb->comments c INNER JOIN $wpdb->commentmeta m ON m.comment_id = c.comment_ID AND m.meta_key = '_activitypub_remote_actor_id' AND m.meta_value = %s WHERE c.comment_author = %s AND c.comment_author_email = %s AND c.comment_approved = '1' AND c.comment_type IN ( 'comment', '' ) LIMIT 1", $actor_id, \wp_unslash( $comment_data['comment_author'] ), \wp_unslash( $comment_data['comment_author_email'] ) ) ) ? $approved : 0;
 	}
 
 	/**
