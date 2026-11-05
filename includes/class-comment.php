@@ -987,26 +987,48 @@ class Comment {
 	 */
 	public static function check_previous_comment_approval( $approved, $comment_data ) {
 		/*
-		 * Core approves an author with a previously approved comment of the same name and email, of any type.
-		 * Only replies count, not likes or reposts. The email of a Fediverse comment is a public handle,
-		 * so Fediverse replies count only for Fediverse replies, and form comments only for form comments.
-		 * A reply has the type `comment`, or `''` where core does not set that default (WordPress.com).
+		 * Core approves an author with a previously approved comment of the same name and email. The email of a
+		 * Fediverse comment is its public handle, not a secret, so core's approval only holds under two more rules.
+		 * Both can only hold a comment, never approve one. Core decides everything else.
 		 */
 		if (
-			( 1 === $approved || '1' === $approved ) &&
-			\in_array( $comment_data['comment_type'], array( 'comment', '' ), true ) &&
-			empty( $comment_data['user_id'] ) &&
-			'1' === \get_option( 'comment_previously_approved' )
+			( 1 !== $approved && '1' !== $approved ) ||
+			! empty( $comment_data['user_id'] ) ||
+			empty( $comment_data['comment_author_email'] ) ||
+			'1' !== \get_option( 'comment_previously_approved' )
 		) {
-			global $wpdb;
-
-			// Core's query, plus the type and the origin.
-			$origin = empty( $comment_data['comment_meta']['protocol'] ) ? 'NOT EXISTS' : 'EXISTS';
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			$approved = (int) $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author = %s AND comment_author_email = %s AND comment_approved = '1' AND comment_type IN ( 'comment', '' ) AND $origin ( SELECT 1 FROM $wpdb->commentmeta WHERE $wpdb->commentmeta.comment_id = $wpdb->comments.comment_ID AND meta_key = 'protocol' ) LIMIT 1", \wp_unslash( $comment_data['comment_author'] ), \wp_unslash( $comment_data['comment_author_email'] ) ) );
+			return $approved;
 		}
 
-		return $approved;
+		global $wpdb;
+
+		// Not from the Fediverse (comment form, reviews, any plugin): an email that is a Fediverse handle proves nothing.
+		if ( empty( $comment_data['comment_meta']['protocol'] ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$handle = $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM $wpdb->comments c INNER JOIN $wpdb->commentmeta m ON m.comment_id = c.comment_ID AND m.meta_key = 'protocol' WHERE c.comment_author_email = %s AND c.comment_approved = '1' LIMIT 1", \wp_unslash( $comment_data['comment_author_email'] ) ) );
+
+			return $handle ? 0 : $approved;
+		}
+
+		// Likes and reposts are left to core. A reply has the type `comment`, or `''` where core does not set that default (WordPress.com).
+		if ( ! \in_array( $comment_data['comment_type'], array( 'comment', '' ), true ) ) {
+			return $approved;
+		}
+
+		/*
+		 * A Fediverse reply: a handle can move to another account, so only an approved reply of the same actor counts.
+		 *
+		 * @todo The remote actor post ID stands in for the actor. Compare the actor URI once remote actor posts are removed.
+		 */
+		$actor_id = (int) ( $comment_data['comment_meta']['_activitypub_remote_actor_id'] ?? 0 );
+		if ( ! $actor_id ) {
+			return 0;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$same_actor = $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM $wpdb->comments c INNER JOIN $wpdb->commentmeta m ON m.comment_id = c.comment_ID AND m.meta_key = '_activitypub_remote_actor_id' AND m.meta_value = %s WHERE c.comment_approved = '1' AND c.comment_type IN ( 'comment', '' ) LIMIT 1", (string) $actor_id ) );
+
+		return $same_actor ? $approved : 0;
 	}
 
 	/**
