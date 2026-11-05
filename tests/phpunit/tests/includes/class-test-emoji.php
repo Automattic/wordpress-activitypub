@@ -332,6 +332,82 @@ class Test_Emoji extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A blobcat emoji tag for the colon tests.
+	 *
+	 * @return array The emoji tags.
+	 */
+	private function get_blobcat_tags() {
+		return array(
+			array(
+				'type' => 'Emoji',
+				'name' => ':blobcat:',
+				'icon' => array(
+					'type' => 'Image',
+					'url'  => 'https://example.com/emoji/blobcat.png',
+				),
+			),
+		);
+	}
+
+	/**
+	 * Texts with the blobcat shortcode, and whether it has a boundary on both sides.
+	 *
+	 * @return array[] The text and whether the shortcode is replaced.
+	 */
+	public function boundary_provider() {
+		return array(
+			'alone'                  => array( ':blobcat:', true ),
+			'between words'          => array( 'Hi :blobcat: there', true ),
+			'other case'             => array( 'Hi :Blobcat: there', true ),
+			'in parentheses'         => array( '(:blobcat:)', true ),
+			'before punctuation'     => array( ':blobcat:!', true ),
+			'in a paragraph'         => array( '<p>:blobcat:</p>', true ),
+			'after a line break'     => array( "Hi\n:blobcat:", true ),
+			'twice with a space'     => array( ':blobcat: :blobcat:', true ),
+			'after a digit'          => array( 'At 12:30:blobcat:', false ),
+			'after a letter'         => array( 'cat:blobcat:', false ),
+			'after another code'     => array( ':aa:blobcat:', false ),
+			'before a letter'        => array( ':blobcat:s', false ),
+			'twice without a space'  => array( ':blobcat::blobcat:', false ),
+			'after a unicode letter' => array( 'über:blobcat:', false ),
+			'before a unicode digit' => array( ':blobcat:٣', false ),
+			'missing colon'          => array( ':blobcat', false ),
+		);
+	}
+
+	/**
+	 * Test replace_from_json only replaces a shortcode with a boundary on both sides.
+	 *
+	 * @dataProvider boundary_provider
+	 * @covers ::replace_from_json
+	 *
+	 * @param string $text     The text.
+	 * @param bool   $replaced Whether the shortcode is replaced.
+	 */
+	public function test_replace_from_json_needs_boundaries( $text, $replaced ) {
+		$img      = Emoji::get_img_tag( 'http://example.org/wp-content/uploads/activitypub/emoji/example.com/blobcat.png', 'blobcat' );
+		$expected = $replaced ? \str_ireplace( ':blobcat:', $img, $text ) : $text;
+
+		$this->assertSame( $expected, Emoji::replace_from_json( $text, \wp_json_encode( $this->get_blobcat_tags() ) ) );
+	}
+
+	/**
+	 * Test wrap_in_content only wraps a shortcode with a boundary on both sides.
+	 *
+	 * @dataProvider boundary_provider
+	 * @covers ::wrap_in_content
+	 *
+	 * @param string $text    The text.
+	 * @param bool   $wrapped Whether the shortcode is wrapped.
+	 */
+	public function test_wrap_needs_boundaries( $text, $wrapped ) {
+		$block    = '<!-- wp:activitypub/emoji {"url":"https://example.com/emoji/blobcat.png"} -->:blobcat:<!-- /wp:activitypub/emoji -->';
+		$expected = $wrapped ? \str_ireplace( ':blobcat:', $block, $text ) : $text;
+
+		$this->assertSame( $expected, Emoji::wrap_in_content( $text, array( 'tag' => $this->get_blobcat_tags() ) ) );
+	}
+
+	/**
 	 * Test replace_from_json matches names case-insensitively.
 	 *
 	 * @covers ::replace_from_json

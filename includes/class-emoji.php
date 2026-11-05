@@ -301,8 +301,9 @@ class Emoji {
 			return $text;
 		}
 
+		// A shortcode needs a boundary on both sides: no letter, digit or colon next to it.
 		return \preg_replace_callback(
-			\sprintf( '/:(%s):/', self::SHORTCODE ),
+			\sprintf( '/(?<![\p{L}\p{N}:]):(%s):(?![\p{L}\p{N}:])/u', self::SHORTCODE ),
 			function ( $matches ) use ( $replacements ) {
 				return $replacements[ \strtolower( $matches[1] ) ] ?? $matches[0];
 			},
