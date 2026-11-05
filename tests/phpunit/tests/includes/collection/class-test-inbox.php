@@ -1558,4 +1558,62 @@ class Test_Inbox extends \WP_UnitTestCase {
 
 		$this->assertSame( get_id_hash( $uri ), \get_post_field( 'post_name', $inbox_id ) );
 	}
+
+	/**
+	 * Race duplicates of an inbox item: the post names the rows have before deduplication.
+	 *
+	 * @return array<string, array> Test cases: post name of the primary, post name of the duplicate ('hash' is the ID hash).
+	 */
+	public function duplicate_post_name_provider() {
+		return array(
+			'duplicate with suffix'  => array( 'hash', 'hash-2' ),
+			'both with the hash'     => array( 'hash', 'hash' ),
+			'primary with suffix'    => array( 'hash-2', 'hash' ),
+			'primary without a hash' => array( 'legacy-item', 'hash' ),
+		);
+	}
+
+	/**
+	 * After deduplication the remaining inbox item has the plain hash of its ID.
+	 *
+	 * @covers ::deduplicate
+	 * @dataProvider duplicate_post_name_provider
+	 *
+	 * @param string $primary_name   The post name of the primary.
+	 * @param string $duplicate_name The post name of the duplicate.
+	 */
+	public function test_deduplicate_keeps_id_hash( $primary_name, $duplicate_name ) {
+		global $wpdb;
+
+		$id   = 'https://remote.example.com/activities/race';
+		$hash = get_id_hash( $id );
+
+		$primary_id   = Inbox::add( $this->like_activity( $id, 'https://remote.example.com/users/testuser' ), 1 );
+		$duplicate_id = \wp_insert_post(
+			array(
+				'post_type'   => Inbox::POST_TYPE,
+				'post_status' => 'publish',
+				'guid'        => \esc_url_raw( $id ),
+			)
+		);
+		\add_post_meta( $duplicate_id, '_activitypub_user_id', 2 );
+
+		// The post names a race leaves, set directly as wp_unique_post_slug() would not give them.
+		$names = array(
+			$primary_id   => $primary_name,
+			$duplicate_id => $duplicate_name,
+		);
+		foreach ( $names as $post_id => $name ) {
+			$wpdb->update( $wpdb->posts, array( 'post_name' => \str_replace( 'hash', $hash, $name ) ), array( 'ID' => $post_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			\clean_post_cache( $post_id );
+		}
+
+		$primary = Inbox::deduplicate( $id );
+
+		$this->assertSame( $primary_id, $primary->ID );
+		$this->assertSame( $hash, $primary->post_name );
+		$this->assertSame( $hash, \get_post_field( 'post_name', $primary_id, 'raw' ) );
+		$this->assertNull( \get_post( $duplicate_id ) );
+		$this->assertEqualsCanonicalizing( array( 1, 2 ), Inbox::get_recipients( $primary_id ) );
+	}
 }

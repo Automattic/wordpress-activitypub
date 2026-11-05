@@ -523,6 +523,14 @@ class Inbox {
 			\wp_delete_post( $duplicate_id, true );
 		}
 
+		// A duplicate's hash gets a suffix from wp_unique_post_slug(), so the primary keeps the plain hash.
+		$hash = get_id_hash( $guid );
+		if ( $primary && $hash && $hash !== $primary->post_name ) {
+			$wpdb->update( $wpdb->posts, array( 'post_name' => $hash ), array( 'ID' => $primary_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			\clean_post_cache( $primary_id );
+			$primary = \get_post( $primary_id );
+		}
+
 		return $primary;
 	}
 
