@@ -321,6 +321,17 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 			);
 		}
 
+		if ( 'https://example.com/groups/events' === object_to_uri( $url_or_object ) ) {
+			return array(
+				'id'                => 'https://example.com/groups/events',
+				'type'              => 'Group',
+				'name'              => 'Test Group',
+				'preferredUsername' => 'events',
+				'inbox'             => 'https://example.com/groups/events/inbox',
+				'outbox'            => 'https://example.com/groups/events/outbox',
+			);
+		}
+
 		return $response;
 	}
 
@@ -572,6 +583,121 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 		$updated_post = Remote_Posts::update( $owner_update, 1 );
 		$this->assertInstanceOf( '\WP_Post', $updated_post );
 		$this->assertEquals( 'Owner Updated Title', $updated_post->post_title, 'The post author should still be able to update.' );
+	}
+
+	/**
+	 * Test that a member on the same host can update a post of a Group.
+	 *
+	 * @covers ::update
+	 * @covers ::actor_can_update
+	 */
+	public function test_update_by_group_member_on_same_host() {
+		$activity = array(
+			'actor'  => 'https://example.com/groups/events',
+			'object' => array(
+				'id'           => 'https://example.com/events/1',
+				'type'         => 'Event',
+				'name'         => 'Original Event',
+				'content'      => '<p>Original content</p>',
+				'attributedTo' => 'https://example.com/groups/events',
+			),
+		);
+
+		$original_post = Remote_Posts::add( $activity, 1 );
+		$this->assertInstanceOf( '\WP_Post', $original_post );
+
+		$member_update = array(
+			'actor'  => 'https://example.com/users/member',
+			'object' => array(
+				'id'           => 'https://example.com/events/1',
+				'type'         => 'Event',
+				'name'         => 'Updated Event',
+				'content'      => '<p>Updated content</p>',
+				'attributedTo' => 'https://example.com/groups/events',
+			),
+		);
+
+		$updated_post = Remote_Posts::update( $member_update, 1 );
+
+		$this->assertInstanceOf( '\WP_Post', $updated_post );
+		$this->assertEquals( 'Updated Event', $updated_post->post_title );
+	}
+
+	/**
+	 * Test that an actor on another host can not update a post of a Group.
+	 *
+	 * @covers ::update
+	 * @covers ::actor_can_update
+	 */
+	public function test_update_rejects_group_post_from_other_host() {
+		$activity = array(
+			'actor'  => 'https://example.com/groups/events',
+			'object' => array(
+				'id'           => 'https://example.com/events/2',
+				'type'         => 'Event',
+				'name'         => 'Original Event',
+				'content'      => '<p>Original content</p>',
+				'attributedTo' => 'https://example.com/groups/events',
+			),
+		);
+
+		$original_post = Remote_Posts::add( $activity, 1 );
+		$this->assertInstanceOf( '\WP_Post', $original_post );
+
+		$foreign_update = array(
+			'actor'  => 'https://attacker.example/users/evil',
+			'object' => array(
+				'id'           => 'https://example.com/events/2',
+				'type'         => 'Event',
+				'name'         => 'Hacked Event',
+				'content'      => '<p>Hacked content</p>',
+				'attributedTo' => 'https://example.com/groups/events',
+			),
+		);
+
+		$result = Remote_Posts::update( $foreign_update, 1 );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_update_forbidden', $result->get_error_code() );
+		$this->assertEquals( 'Original Event', \get_post( $original_post->ID )->post_title );
+	}
+
+	/**
+	 * Test that an actor on the same host can not update a post of a person.
+	 *
+	 * @covers ::update
+	 * @covers ::actor_can_update
+	 */
+	public function test_update_rejects_person_post_from_same_host() {
+		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
+			'object' => array(
+				'id'           => 'https://example.com/objects/person-owned',
+				'type'         => 'Note',
+				'name'         => 'Original Title',
+				'content'      => '<p>Original content</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+			),
+		);
+
+		$original_post = Remote_Posts::add( $activity, 1 );
+		$this->assertInstanceOf( '\WP_Post', $original_post );
+
+		$neighbor_update = array(
+			'actor'  => 'https://example.com/users/neighbor',
+			'object' => array(
+				'id'      => 'https://example.com/objects/person-owned',
+				'type'    => 'Note',
+				'name'    => 'Hacked Title',
+				'content' => '<p>Hacked content</p>',
+			),
+		);
+
+		$result = Remote_Posts::update( $neighbor_update, 1 );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_update_forbidden', $result->get_error_code() );
+		$this->assertEquals( 'Original Title', \get_post( $original_post->ID )->post_title );
 	}
 
 	/**

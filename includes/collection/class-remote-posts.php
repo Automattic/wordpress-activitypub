@@ -189,7 +189,7 @@ class Remote_Posts {
 		 */
 		if ( isset( $activity['actor'] ) ) {
 			$owner = \get_post( (int) \get_post_meta( $post->ID, '_activitypub_remote_actor_id', true ) );
-			if ( ! $owner instanceof \WP_Post || object_to_uri( $activity['actor'] ) !== $owner->guid ) {
+			if ( ! $owner instanceof \WP_Post || ! self::actor_can_update( $activity['actor'], $owner ) ) {
 				return new \WP_Error(
 					'activitypub_update_forbidden',
 					\__( 'Update failed: the actor does not own this post.', 'activitypub' ),
@@ -214,6 +214,37 @@ class Remote_Posts {
 		self::add_taxonomies( $post_id, $activity['object'] );
 
 		return \get_post( $post_id );
+	}
+
+	/**
+	 * Whether an actor may update a stored post of the given owner.
+	 *
+	 * Some Group implementations (like Mobilizon) let a member send the Update
+	 * for an object of the Group. Like Mastodon, a member is trusted for a Group
+	 * on its own host. This only covers posts that are already stored, new posts
+	 * of a Group still come in through the Announce of the Group.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array|string $actor The activity actor.
+	 * @param \WP_Post     $owner The remote actor post of the stored owner.
+	 *
+	 * @return bool True if the actor may update the post.
+	 */
+	private static function actor_can_update( $actor, $owner ) {
+		$actor = object_to_uri( $actor );
+
+		if ( $actor === $owner->guid ) {
+			return true;
+		}
+
+		if ( ! is_same_host( $actor, $owner->guid ) ) {
+			return false;
+		}
+
+		$group = Remote_Actors::get_actor( $owner );
+
+		return ! \is_wp_error( $group ) && 'Group' === $group->get_type();
 	}
 
 	/**
