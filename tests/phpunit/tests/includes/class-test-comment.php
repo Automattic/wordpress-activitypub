@@ -712,7 +712,8 @@ class Test_Comment extends \WP_UnitTestCase {
 				'comment_post_ID'      => $post_id,
 				'comment_author_email' => 'approved@example.com',
 				'comment_meta'         => array(
-					'protocol' => 'activitypub',
+					'protocol'                     => 'activitypub',
+					'_activitypub_remote_actor_id' => 1,
 				),
 			)
 		);
@@ -727,7 +728,8 @@ class Test_Comment extends \WP_UnitTestCase {
 				'comment_post_ID'      => $post_id,
 				'comment_author_email' => 'approved@example.com',
 				'comment_meta'         => array(
-					'protocol' => 'activitypub',
+					'protocol'                     => 'activitypub',
+					'_activitypub_remote_actor_id' => 1,
 				),
 			)
 		);
@@ -823,51 +825,73 @@ class Test_Comment extends \WP_UnitTestCase {
 	/**
 	 * Approved comments and new comments for core's previously approved check.
 	 *
-	 * A comment is described by its origin (`fediverse` or `form`), type, name, email and remote actor post ID.
-	 *
-	 * @return array[] The approved comment, the new comment and whether the new comment is approved.
+	 * @return array[] The approved comments, the new comment data and whether the new comment is approved.
 	 */
 	public function previously_approved_provider() {
 		$fediverse = array(
-			'origin' => 'fediverse',
-			'type'   => 'comment',
-			'name'   => 'Approved',
-			'email'  => 'approved@example.com',
-			'actor'  => 101,
+			'comment_type'         => 'comment',
+			'comment_author'       => 'Approved',
+			'comment_author_email' => 'approved@example.com',
+			'comment_meta'         => array(
+				'protocol'                     => 'activitypub',
+				'_activitypub_remote_actor_id' => 101,
+			),
 		);
 		$form      = array(
-			'origin' => 'form',
-			'type'   => 'comment',
-			'name'   => 'Approved',
-			'email'  => 'approved@example.com',
-			'actor'  => 0,
+			'comment_type'         => 'comment',
+			'comment_author'       => 'Approved',
+			'comment_author_email' => 'approved@example.com',
+		);
+
+		$other_actor   = \array_merge(
+			$fediverse,
+			array(
+				'comment_meta' => array(
+					'protocol'                     => 'activitypub',
+					'_activitypub_remote_actor_id' => 202,
+				),
+			)
+		);
+		$unknown_actor = \array_merge( $fediverse, array( 'comment_meta' => array( 'protocol' => 'activitypub' ) ) );
+		$other_handle  = \array_merge(
+			$fediverse,
+			array(
+				'comment_author_email' => 'mallory@attacker.example',
+				'comment_meta'         => array(
+					'protocol'                     => 'activitypub',
+					'_activitypub_remote_actor_id' => 303,
+				),
+			)
+		);
+
+		$webmention = array(
+			'comment_type'         => 'comment',
+			'comment_author'       => 'Webmention',
+			'comment_author_email' => 'webmention@example.com',
+			'comment_meta'         => array( 'protocol' => 'webmention' ),
+		);
+		$mallory    = \array_merge(
+			$other_actor,
+			array( 'comment_author' => 'Mallory' )
 		);
 
 		return array(
-			'same actor'                         => array( $fediverse, $fediverse, '1' ),
-			'other actor with the same handle'   => array( $fediverse, \array_merge( $fediverse, array( 'actor' => 202 ) ), '0' ),
-			'unknown actor'                      => array( $fediverse, \array_merge( $fediverse, array( 'actor' => 0 ) ), '0' ),
-			'other name'                         => array( $fediverse, \array_merge( $fediverse, array( 'name' => 'Other' ) ), '0' ),
-			'copied name with another handle'    => array(
-				$fediverse,
-				\array_merge(
-					$fediverse,
-					array(
-						'email' => 'mallory@attacker.example',
-						'actor' => 303,
-					)
-				),
-				'0',
-			),
-			'only a like'                        => array( \array_merge( $fediverse, array( 'type' => 'like' ) ), $fediverse, '0' ),
-			'nothing approved'                   => array( null, $fediverse, '0' ),
-			'form with the handle'               => array( $fediverse, $form, '0' ),
-			'form with the handle in upper case' => array( $fediverse, \array_merge( $form, array( 'email' => 'Approved@Example.com' ) ), '0' ),
-			'review with the handle'             => array( $fediverse, \array_merge( $form, array( 'type' => 'review' ) ), '0' ),
-			'form after form'                    => array( $form, $form, '1' ),
-			'review after form'                  => array( $form, \array_merge( $form, array( 'type' => 'review' ) ), '1' ),
-			'form after another name'            => array( $form, \array_merge( $form, array( 'name' => 'Other' ) ), '0' ),
-			'fediverse after form'               => array( $form, $fediverse, '0' ),
+			'same actor'                         => array( array( $fediverse ), $fediverse, '1' ),
+			'other actor with the same handle'   => array( array( $fediverse ), $other_actor, '0' ),
+			'unknown actor'                      => array( array( $fediverse ), $unknown_actor, '0' ),
+			'other name'                         => array( array( $fediverse ), \array_merge( $fediverse, array( 'comment_author' => 'Other' ) ), '0' ),
+			'copied name with another handle'    => array( array( $fediverse ), $other_handle, '0' ),
+			'only a like'                        => array( array( \array_merge( $fediverse, array( 'comment_type' => 'like' ) ) ), $fediverse, '0' ),
+			'nothing approved'                   => array( array(), $fediverse, '0' ),
+			'form with the handle'               => array( array( $fediverse ), $form, '0' ),
+			'form with the handle in upper case' => array( array( $fediverse ), \array_merge( $form, array( 'comment_author_email' => 'Approved@Example.com' ) ), '0' ),
+			'review with the handle'             => array( array( $fediverse ), \array_merge( $form, array( 'comment_type' => 'review' ) ), '0' ),
+			'form after form'                    => array( array( $form ), $form, '1' ),
+			'review after form'                  => array( array( $form ), \array_merge( $form, array( 'comment_type' => 'review' ) ), '1' ),
+			'form after another name'            => array( array( $form ), \array_merge( $form, array( 'comment_author' => 'Other' ) ), '0' ),
+			'fediverse after form'               => array( array( $form ), $fediverse, '0' ),
+			'webmention after webmention'        => array( array( $webmention ), $webmention, '1' ),
+			'other actor renamed to the name'    => array( array( $fediverse, $mallory ), $other_actor, '0' ),
 		);
 	}
 
@@ -877,54 +901,37 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * @dataProvider previously_approved_provider
 	 * @covers ::check_previous_comment_approval
 	 *
-	 * @param array|null $approved The approved comment, or null for none.
-	 * @param array      $comment  The new comment.
-	 * @param string     $expected The approval status of the new comment.
+	 * @param array[] $approved The approved comments.
+	 * @param array   $comment  The new comment data.
+	 * @param string  $expected The approval status of the new comment.
 	 */
 	public function test_previously_approved( $approved, $comment, $expected ) {
 		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
 		\update_option( 'comment_previously_approved', '1' );
 
-		$post_id = self::factory()->post->create();
+		$fields = array(
+			'comment_post_ID'    => self::factory()->post->create(),
+			'comment_author_url' => '',
+		);
 
-		if ( $approved ) {
-			\wp_insert_comment( \array_merge( $this->get_comment_data( $approved, $post_id, 'Approved earlier.' ), array( 'comment_approved' => '1' ) ) );
+		foreach ( $approved as $approved_comment ) {
+			\wp_insert_comment(
+				\array_merge(
+					$approved_comment,
+					$fields,
+					array(
+						'comment_content'  => 'Approved earlier.',
+						'comment_approved' => '1',
+					)
+				)
+			);
 		}
 
-		$comment_id = \wp_new_comment( $this->get_comment_data( $comment, $post_id, 'New comment.' ) );
+		$comment_id = \wp_new_comment( \array_merge( $comment, $fields, array( 'comment_content' => 'New comment.' ) ) );
 
 		$this->assertSame( $expected, \get_comment( $comment_id )->comment_approved );
 
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
-	}
-
-	/**
-	 * Build comment data from a provider description.
-	 *
-	 * @param array  $comment The comment description.
-	 * @param int    $post_id The post ID.
-	 * @param string $content The comment content.
-	 *
-	 * @return array The comment data.
-	 */
-	private function get_comment_data( $comment, $post_id, $content ) {
-		$data = array(
-			'comment_type'         => $comment['type'],
-			'comment_content'      => $content,
-			'comment_author'       => $comment['name'],
-			'comment_author_email' => $comment['email'],
-			'comment_author_url'   => '',
-			'comment_post_ID'      => $post_id,
-		);
-
-		if ( 'fediverse' === $comment['origin'] ) {
-			$data['comment_meta'] = array( 'protocol' => 'activitypub' );
-			if ( $comment['actor'] ) {
-				$data['comment_meta']['_activitypub_remote_actor_id'] = $comment['actor'];
-			}
-		}
-
-		return $data;
 	}
 
 	/**
@@ -968,7 +975,7 @@ class Test_Comment extends \WP_UnitTestCase {
 			'comment_author_email' => 'approved@example.com',
 			'comment_meta'         => array(
 				'protocol'                     => 'activitypub',
-				'_activitypub_remote_actor_id' => \absint( \crc32( 'approved@example.com' ) ),
+				'_activitypub_remote_actor_id' => \get_comment_meta( $approved_id, '_activitypub_remote_actor_id', true ),
 			),
 		);
 
@@ -1059,12 +1066,11 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * @param int    $post_id The post ID.
 	 * @param string $email   The comment author email, the WebFinger handle.
 	 * @param string $content The comment content.
-	 * @param bool   $approve  Optional. Whether to approve the comment after it was added. Default false.
-	 * @param int    $actor_id Optional. The remote actor post ID. Default one per email.
+	 * @param bool   $approve Optional. Whether to approve the comment after it was added. Default false.
 	 *
 	 * @return int The comment ID.
 	 */
-	private function new_remote_comment( $post_id, $email, $content, $approve = false, $actor_id = 0 ) {
+	private function new_remote_comment( $post_id, $email, $content, $approve = false ) {
 		$comment_id = \wp_new_comment(
 			array(
 				'comment_type'         => 'comment',
@@ -1075,7 +1081,7 @@ class Test_Comment extends \WP_UnitTestCase {
 				'comment_post_ID'      => $post_id,
 				'comment_meta'         => array(
 					'protocol'                     => 'activitypub',
-					'_activitypub_remote_actor_id' => $actor_id ? $actor_id : \absint( \crc32( $email ) ),
+					'_activitypub_remote_actor_id' => \absint( \crc32( $email ) ),
 				),
 			)
 		);

@@ -989,7 +989,8 @@ class Comment {
 		/*
 		 * Core approves an author with a previously approved comment of the same name and email. The email of a
 		 * Fediverse comment is its public handle, not a secret, so core's approval only holds under two more rules.
-		 * Both can only hold a comment, never approve one. Core decides everything else.
+		 * Both can only hold a comment, never approve one. Core decides everything else. The rules query directly,
+		 * not with get_comments(): `pre_get_comments` filters (this plugin's included) change comment queries by context.
 		 */
 		if (
 			( 1 !== $approved && '1' !== $approved ) ||
@@ -1002,10 +1003,10 @@ class Comment {
 
 		global $wpdb;
 
-		// Not from the Fediverse (comment form, reviews, any plugin): an email that is a Fediverse handle proves nothing.
-		if ( empty( $comment_data['comment_meta']['protocol'] ) ) {
+		// Not from the Fediverse (comment form, reviews, Webmentions, any plugin): an email that is a Fediverse handle proves nothing.
+		if ( 'activitypub' !== ( $comment_data['comment_meta']['protocol'] ?? '' ) ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$handle = $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM $wpdb->comments c INNER JOIN $wpdb->commentmeta m ON m.comment_id = c.comment_ID AND m.meta_key = 'protocol' WHERE c.comment_author_email = %s AND c.comment_approved = '1' LIMIT 1", \wp_unslash( $comment_data['comment_author_email'] ) ) );
+			$handle = $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM $wpdb->comments c INNER JOIN $wpdb->commentmeta m ON m.comment_id = c.comment_ID AND m.meta_key = 'protocol' AND m.meta_value = 'activitypub' WHERE c.comment_author_email = %s AND c.comment_approved = '1' LIMIT 1", \wp_unslash( $comment_data['comment_author_email'] ) ) );
 
 			return $handle ? 0 : $approved;
 		}
@@ -1020,13 +1021,14 @@ class Comment {
 		 *
 		 * @todo The remote actor post ID stands in for the actor. Compare the actor URI once remote actor posts are removed.
 		 */
-		$actor_id = (int) ( $comment_data['comment_meta']['_activitypub_remote_actor_id'] ?? 0 );
+		$actor_id = (string) ( $comment_data['comment_meta']['_activitypub_remote_actor_id'] ?? '' );
 		if ( ! $actor_id ) {
 			return 0;
 		}
 
+		// The same row as core's match, name and email (indexed), plus the actor.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$same_actor = $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM $wpdb->comments c INNER JOIN $wpdb->commentmeta m ON m.comment_id = c.comment_ID AND m.meta_key = '_activitypub_remote_actor_id' AND m.meta_value = %s WHERE c.comment_approved = '1' AND c.comment_type IN ( 'comment', '' ) LIMIT 1", (string) $actor_id ) );
+		$same_actor = $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM $wpdb->comments c INNER JOIN $wpdb->commentmeta m ON m.comment_id = c.comment_ID AND m.meta_key = '_activitypub_remote_actor_id' AND m.meta_value = %s WHERE c.comment_author = %s AND c.comment_author_email = %s AND c.comment_approved = '1' AND c.comment_type IN ( 'comment', '' ) LIMIT 1", $actor_id, \wp_unslash( $comment_data['comment_author'] ), \wp_unslash( $comment_data['comment_author_email'] ) ) );
 
 		return $same_actor ? $approved : 0;
 	}
