@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 7.1
-Stable tag: 9.4.2
+Stable tag: 9.4.3
 Requires PHP: 7.4
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -116,6 +116,14 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 9.4.3 - 2026-11-05
+#### Security
+- Improve how custom emoji are shown in names and replies.
+- Improve the check for commenters with a previously approved comment.
+
+#### Fixed
+- Fix two small wording mistakes: notification emails said "You are receiving this emails", and the dashboard widget said "can not" instead of "cannot".
 
 ### 9.4.2 - 2026-11-04
 #### Security
