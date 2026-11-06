@@ -9,6 +9,7 @@ Applies to: `includes/rest/**`, `includes/oauth/**`, `includes/wp-admin/**`
 - **Ownership checks written by hand** (2026): endpoints decided ownership themselves instead of using `verify_owner()` / `maybe_verify_owner()` (`includes/rest/trait-verification.php`). The Outbox controller treated `current_user_can('activitypub')` as owning every user's outbox, and the SSE outbox stream checked the owner but queried by the actor type meta (`_activitypub_activity_actor` = `'user'`), so it sent every user's items.
 - **User ID 0** (2026): `Actors::BLOG_USER_ID` is `0`, and so is `get_current_user_id()` when logged out. `user_can_activitypub( get_current_user_id() )` or `get_current_user_id() === $user_id` without a login check let anonymous callers act as the blog actor.
 - **OAuth scope missing next to identity** (2026): a bearer token proves who the caller is, not what it may do. Read paths that only checked the user served data to tokens without the `read` scope.
+- **Uncounted discovery trigger** (2026): the consent form on `wp-login.php` fetched the Client ID Metadata Document of unknown clients, outside the REST routes that count callers. Now discovery runs only during a REST request.
 
 ## Ownership
 
@@ -30,6 +31,7 @@ Files: `includes/oauth/`, `includes/rest/oauth/`.
 - Tokens are stored hashed, expire, and users cannot revoke other users' tokens.
 - The consent screen has CSRF protection.
 - The Client ID Metadata Document fetch is checked for SSRF (see `remote-fetch.md`).
+- Client discovery runs only where the caller was counted: `Client::is_discoverable_url()` requires a REST request. A new screen or route that resolves a `client_id` shows known clients only, or counts its callers first.
 
 ## Admin and capabilities
 
