@@ -540,6 +540,23 @@ class Test_Server extends \WP_Test_REST_TestCase {
 	}
 
 	/**
+	 * Error data that is an object is sent as about:blank and kept in the metadata.
+	 *
+	 * @covers ::filter_output
+	 */
+	public function test_filter_output_object_error_data() {
+		$error_data = (object) array( 'type' => 'https://w3id.org/fep/c180#unsupported-type' );
+		$wp_error   = new \WP_Error( 'test_error', 'Test error message', $error_data );
+		$request    = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+
+		$result = Server::filter_output( new \WP_REST_Response( $wp_error, 500 ), new \WP_REST_Server(), $request );
+
+		$this->assertSame( 'about:blank', $result->get_data()['type'] );
+		$this->assertSame( 'test_error', $result->get_data()['title'] );
+		$this->assertSame( $error_data, $result->get_data()['metadata']['data'] );
+	}
+
+	/**
 	 * Data provider for missing error data scenarios.
 	 *
 	 * @return array

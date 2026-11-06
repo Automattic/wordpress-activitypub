@@ -315,12 +315,13 @@ class Server {
 			$data     = $response->get_data();
 		}
 
-		$type = $data['data']['type'] ?? null;
-		$type = \is_string( $type ) ? $type : 'about:blank';
+		// Error data can be anything, an object included; only an array carries a problem type.
+		$error_data = \is_array( $data['data'] ?? null ) ? $data['data'] : array();
+		$type       = \is_string( $error_data['type'] ?? null ) ? $error_data['type'] : 'about:blank';
 
 		$error = array(
 			'type'     => $type,
-			'title'    => $data['data']['title'] ?? $data['code'] ?? '',
+			'title'    => $error_data['title'] ?? $data['code'] ?? '',
 			'detail'   => $data['message'] ?? '',
 			'status'   => $response->get_status(),
 
