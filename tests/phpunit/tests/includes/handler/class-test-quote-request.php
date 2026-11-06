@@ -14,6 +14,7 @@ use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Handler\Quote_Request;
 use Activitypub\Tests\ActivityPub_Outbox_TestCase;
+use Activitypub\Tests\Uri_Test_Cases;
 
 /**
  * Test class for Quote Request Handler.
@@ -21,6 +22,8 @@ use Activitypub\Tests\ActivityPub_Outbox_TestCase;
  * @coversDefaultClass \Activitypub\Handler\Quote_Request
  */
 class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
+	use Uri_Test_Cases;
+
 	/**
 	 * Test post ID.
 	 *
@@ -1042,5 +1045,38 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 
 		// Clean up action.
 		\remove_action( 'post_activitypub_add_to_outbox', $track_outbox_for_inbox_callback );
+	}
+
+	/**
+	 * Test that deleting a quote comment only removes its own instrument from the quoted post.
+	 *
+	 * @covers ::handle_quote_delete
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The instrument of another quote.
+	 * @param string $requested The instrument of the deleted quote.
+	 */
+	public function test_delete_quote_comment_removes_exact_instrument( $stored, $requested ) {
+		\add_post_meta( self::$post_id, '_activitypub_quoted_by', $stored );
+		\add_post_meta( self::$post_id, '_activitypub_quoted_by', $requested );
+
+		$comment_id = \wp_insert_comment(
+			array(
+				'comment_post_ID'    => self::$post_id,
+				'comment_author'     => 'Alice',
+				'comment_author_url' => 'https://mastodon.example/users/alice',
+				'comment_content'    => 'Quote comment content',
+				'comment_type'       => 'quote',
+				'comment_approved'   => 1,
+			)
+		);
+		\add_comment_meta( $comment_id, 'source_url', $requested );
+		\add_comment_meta( $comment_id, 'source_id', $requested );
+
+		\wp_delete_comment( $comment_id, true );
+
+		$this->assertSame( array( $stored ), \get_post_meta( self::$post_id, '_activitypub_quoted_by', false ) );
+
+		\delete_post_meta( self::$post_id, '_activitypub_quoted_by' );
 	}
 }
