@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Comment;
 
 /**
@@ -23,7 +24,7 @@ class Mailer {
 		\add_filter( 'comment_notification_subject', array( self::class, 'comment_notification_subject' ), 10, 2 );
 		\add_filter( 'comment_notification_text', array( self::class, 'comment_notification_text' ), 10, 2 );
 
-		\add_action( 'activitypub_handled_follow', array( self::class, 'new_follower' ), 10, 3 );
+		\add_action( 'activitypub_handled_follow', array( self::class, 'new_follower' ), 10, 4 );
 
 		\add_action( 'activitypub_handled_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
 		// Priority 20 keeps this after @see \Activitypub\Handler\Create::handle_create(), whose comment the reply check reads.
@@ -148,13 +149,14 @@ class Mailer {
 	/**
 	 * Send a notification email for every new follower.
 	 *
-	 * @param array     $activity The activity object.
-	 * @param int|int[] $user_ids The id(s) of the local blog-user(s).
-	 * @param bool      $success  True on success, false otherwise.
+	 * @param array                   $activity     The activity object.
+	 * @param int|int[]               $user_ids     The id(s) of the local blog-user(s).
+	 * @param bool                    $success      True on success, false otherwise.
+	 * @param \WP_Post|\WP_Error|null $remote_actor Optional. The remote actor post object.
 	 *
 	 * @return void
 	 */
-	public static function new_follower( $activity, $user_ids, $success ) {
+	public static function new_follower( $activity, $user_ids, $success, $remote_actor = null ) {
 		// Only send notification if the follow was successful.
 		if ( ! $success ) {
 			return;
@@ -177,6 +179,28 @@ class Mailer {
 
 			$email     = \get_option( 'admin_email' );
 			$admin_url = '/options-general.php?page=activitypub&tab=followers';
+		}
+
+		if ( ! $remote_actor instanceof \WP_Post && ! empty( $activity['actor'] ) ) {
+			$remote_actor = Remote_Actors::get_by_uri( $activity['actor'] );
+		}
+
+		// Prevent repeated notification spam if an actor cycles Follow and Undo.
+		if ( $remote_actor instanceof \WP_Post ) {
+			$last_sent = (int) \get_post_meta( $remote_actor->ID, \sprintf( '_activitypub_last_follower_email_sent_%d', $user_id ), true );
+
+			/**
+			 * Filter the cooldown period for new follower notification emails.
+			 *
+			 * @param int $cooldown The cooldown period in seconds. Default DAY_IN_SECONDS.
+			 * @param int $user_id  The ID of the local user being followed.
+			 * @param int $actor_id The ID of the remote actor post.
+			 */
+			$cooldown = \apply_filters( 'activitypub_new_follower_email_cooldown', DAY_IN_SECONDS, $user_id, $remote_actor->ID );
+
+			if ( $last_sent && ( \time() - $last_sent ) < $cooldown ) {
+				return;
+			}
 		}
 
 		$actor = get_remote_metadata_by_actor( $activity['actor'] );
@@ -240,6 +264,14 @@ class Mailer {
 		\add_action( 'phpmailer_init', $alt_function );
 
 		\wp_mail( $email, $subject, $html_message, array( 'Content-type: text/html' ) );
+
+		if ( ! $remote_actor instanceof \WP_Post && ! empty( $activity['actor'] ) ) {
+			$remote_actor = Remote_Actors::get_by_uri( $activity['actor'] );
+		}
+
+		if ( $remote_actor instanceof \WP_Post ) {
+			\update_post_meta( $remote_actor->ID, \sprintf( '_activitypub_last_follower_email_sent_%d', $user_id ), \time() );
+		}
 
 		\remove_action( 'phpmailer_init', $alt_function );
 	}
