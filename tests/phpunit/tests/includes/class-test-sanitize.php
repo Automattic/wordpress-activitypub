@@ -863,15 +863,18 @@ class Test_Sanitize extends \WP_UnitTestCase {
 		$content = '<form action="https://example.org/webmention" method="post" data-wp-interactive="activitypub/reactions">'
 			. '<input type="url" name="source" class="field" required data-wp-bind--value="context.postUrl" onfocus="alert(1)" />'
 			. '<button type="submit" data-wp-on--click="actions.submitIntent">Send</button>'
-			. '</form><script>alert(1)</script>';
+			. '</form>';
 
-		$this->assertSame(
-			'<form action="https://example.org/webmention" method="post"><input type="url" name="source" class="field" required /><button type="submit">Send</button></form>alert(1)',
+		$this->assert_equal_html(
+			'<form action="https://example.org/webmention" method="post"><input type="url" name="source" class="field" required /><button type="submit">Send</button></form>',
 			Sanitize::form_html( $content )
 		);
 
+		// Scripts are removed. Whether their text stays depends on the WordPress version.
+		$this->assertStringNotContainsString( '<script', Sanitize::form_html( '<form></form><script>alert(1)</script>' ) );
+
 		// Unsafe protocols in the form action are removed.
-		$this->assertSame( '<form action="alert(1)"></form>', Sanitize::form_html( '<form action="javascript:alert(1)"></form>' ) );
+		$this->assert_equal_html( '<form action="alert(1)"></form>', Sanitize::form_html( '<form action="javascript:alert(1)"></form>' ) );
 
 		// Anything but a string gives an empty string.
 		$this->assertSame( '', Sanitize::form_html( array( '<p>Hi</p>' ) ) );

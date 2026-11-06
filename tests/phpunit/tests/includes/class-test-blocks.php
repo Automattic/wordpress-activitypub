@@ -924,7 +924,14 @@ class Test_Blocks extends \WP_UnitTestCase {
 		$this->assertStringNotContainsString( 'Numeric key.', $output );
 
 		// The content is rendered in the modal, with form fields but without scripts.
-		$this->assertStringContainsString( '<form action="https://example.org/webmention" method="post"><input type="url" name="source" required />', $output );
+		$form = new \WP_HTML_Tag_Processor( $output );
+		$this->assertTrue( $form->next_tag( 'form' ) );
+		$this->assertSame( 'https://example.org/webmention', $form->get_attribute( 'action' ) );
+		$this->assertSame( 'post', $form->get_attribute( 'method' ) );
+		$this->assertTrue( $form->next_tag( 'input' ) );
+		$this->assertSame( 'url', $form->get_attribute( 'type' ) );
+		$this->assertSame( 'source', $form->get_attribute( 'name' ) );
+		$this->assertTrue( $form->get_attribute( 'required' ) );
 		$this->assertStringNotContainsString( '<script>', $output );
 		$this->assertStringContainsString( 'data-wp-bind--hidden="state.isActionHidden"', $output );
 
