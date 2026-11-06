@@ -234,6 +234,75 @@ class Test_Delete extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test outgoing Delete of a post that is already in the trash is refused as an object that does not exist.
+	 *
+	 * @covers ::handle_delete
+	 */
+	public function test_handle_delete_trashed_post() {
+		$post_id = self::factory()->post->create( array( 'post_author' => $this->user_id ) );
+		\wp_trash_post( $post_id );
+
+		$data = array(
+			'type'   => 'Delete',
+			'object' => \add_query_arg( 'p', $post_id, \trailingslashit( \home_url() ) ),
+		);
+
+		$result = Delete::handle_delete( $data, $this->user_id );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 400, $result->get_error_data()['status'] );
+		$this->assertSame( 'https://w3id.org/fep/c180#object-does-not-exist', $result->get_error_data()['type'] );
+	}
+
+	/**
+	 * Test outgoing Delete of a comment that is already in the trash is refused as an object that does not exist.
+	 *
+	 * @covers ::handle_delete
+	 */
+	public function test_handle_delete_trashed_comment() {
+		$post_id    = self::factory()->post->create( array( 'post_author' => $this->user_id ) );
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'user_id'         => $this->user_id,
+			)
+		);
+		\wp_trash_comment( $comment_id );
+
+		$data = array(
+			'type'   => 'Delete',
+			'object' => \add_query_arg( 'c', $comment_id, \trailingslashit( \home_url() ) ),
+		);
+
+		$result = Delete::handle_delete( $data, $this->user_id );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'https://w3id.org/fep/c180#object-does-not-exist', $result->get_error_data()['type'] );
+	}
+
+	/**
+	 * Test outgoing Delete that WordPress could not trash answers with a server error.
+	 *
+	 * @covers ::handle_delete
+	 */
+	public function test_handle_delete_trash_failure() {
+		$post_id = self::factory()->post->create( array( 'post_author' => $this->user_id ) );
+
+		$data = array(
+			'type'   => 'Delete',
+			'object' => \get_permalink( $post_id ),
+		);
+
+		\add_filter( 'pre_trash_post', '__return_false' );
+		$result = Delete::handle_delete( $data, $this->user_id );
+		\remove_filter( 'pre_trash_post', '__return_false' );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 500, $result->get_error_data()['status'] );
+		$this->assertArrayNotHasKey( 'type', $result->get_error_data() );
+	}
+
+	/**
 	 * Test outgoing Delete skips comments not owned by user.
 	 *
 	 * @covers ::handle_delete

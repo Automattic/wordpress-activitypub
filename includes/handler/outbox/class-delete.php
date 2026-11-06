@@ -33,7 +33,7 @@ class Delete {
 	 * @param array $data    The activity data array.
 	 * @param int   $user_id The user ID.
 	 *
-	 * @return \WP_Post|\WP_Comment|\WP_Error|false The deleted object, an error if it may not be deleted, or false on failure.
+	 * @return \WP_Post|\WP_Comment|\WP_Error|false The deleted object, an error if it may not or could not be deleted, or false without an object.
 	 */
 	public static function handle_delete( $data, $user_id = null ) {
 		$object_id = object_to_uri( $data['object'] ?? '' );
@@ -69,7 +69,7 @@ class Delete {
 	 * @param string $object_id The ActivityPub object ID (URL).
 	 * @param int    $user_id   The user ID.
 	 *
-	 * @return \WP_Comment|\WP_Error|false The deleted comment, an error if it is not the user's, or false if there is no such comment or it could not be trashed.
+	 * @return \WP_Comment|\WP_Error|false The deleted comment, an error if it may not or could not be deleted, or false if there is no such comment.
 	 */
 	private static function maybe_delete_comment( $object_id, $user_id ) {
 		$comment_id = url_to_commentid( $object_id );
@@ -100,11 +100,27 @@ class Delete {
 			);
 		}
 
+		if ( 'trash' === \wp_get_comment_status( $comment ) ) {
+			return new \WP_Error(
+				'activitypub_object_not_found',
+				\__( 'The referenced object was not found.', 'activitypub' ),
+				array(
+					'status' => 400,
+					'type'   => 'https://w3id.org/fep/c180#object-does-not-exist',
+					'title'  => 'Object does not exist',
+				)
+			);
+		}
+
 		if ( \wp_trash_comment( $comment ) ) {
 			return $comment;
 		}
 
-		return false;
+		return new \WP_Error(
+			'activitypub_delete_failed',
+			\__( 'The object could not be deleted.', 'activitypub' ),
+			array( 'status' => 500 )
+		);
 	}
 
 	/**
@@ -113,7 +129,7 @@ class Delete {
 	 * @param string $object_id The ActivityPub object ID (URL).
 	 * @param int    $user_id   The user ID.
 	 *
-	 * @return \WP_Post|\WP_Error|false The deleted post, an error if there is no such post or it may not be deleted, or false if it could not be trashed.
+	 * @return \WP_Post|\WP_Error The deleted post, or an error if there is no such post or it may not or could not be deleted.
 	 */
 	private static function maybe_delete_post( $object_id, $user_id ) {
 		// Try to find a local post by permalink.
@@ -150,10 +166,26 @@ class Delete {
 			);
 		}
 
+		if ( 'trash' === $post->post_status ) {
+			return new \WP_Error(
+				'activitypub_object_not_found',
+				\__( 'The referenced object was not found.', 'activitypub' ),
+				array(
+					'status' => 400,
+					'type'   => 'https://w3id.org/fep/c180#object-does-not-exist',
+					'title'  => 'Object does not exist',
+				)
+			);
+		}
+
 		if ( \wp_trash_post( $post->ID ) ) {
 			return $post;
 		}
 
-		return false;
+		return new \WP_Error(
+			'activitypub_delete_failed',
+			\__( 'The object could not be deleted.', 'activitypub' ),
+			array( 'status' => 500 )
+		);
 	}
 }
