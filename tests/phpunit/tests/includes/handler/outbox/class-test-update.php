@@ -177,10 +177,37 @@ class Test_Update extends \WP_UnitTestCase {
 			),
 		);
 
-		Update::handle_update( $data, $this->user_id );
+		$result = Update::handle_update( $data, $this->user_id );
 
 		$post = \get_post( $post_id );
 		$this->assertEquals( 'Other User Post', $post->post_title );
+		$this->assertWPError( $result );
+		$this->assertSame( 403, $result->get_error_data()['status'] );
+		$this->assertSame( 'https://w3id.org/fep/c180#actor-not-authorized', $result->get_error_data()['type'] );
+	}
+
+	/**
+	 * Test outgoing Update of an object that does not exist is refused as such.
+	 *
+	 * @covers ::handle_update
+	 */
+	public function test_outgoing_update_of_missing_object() {
+		$data = array(
+			'type'   => 'Update',
+			'actor'  => 'https://example.com/users/test',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'id'      => 'https://example.com/nonexistent-post',
+				'type'    => 'Note',
+				'content' => 'Nothing to update',
+			),
+		);
+
+		$result = Update::handle_update( $data, $this->user_id );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 400, $result->get_error_data()['status'] );
+		$this->assertSame( 'https://w3id.org/fep/c180#object-does-not-exist', $result->get_error_data()['type'] );
 	}
 
 	/**

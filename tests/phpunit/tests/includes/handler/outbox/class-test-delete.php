@@ -132,10 +132,13 @@ class Test_Delete extends \WP_UnitTestCase {
 			'object' => $permalink,
 		);
 
-		Delete::handle_delete( $data, $editor );
+		$result = Delete::handle_delete( $data, $editor );
 
 		$post = \get_post( $post_id );
 		$this->assertEquals( 'publish', $post->post_status, 'Post should not be trashed by non-owner.' );
+		$this->assertWPError( $result );
+		$this->assertSame( 403, $result->get_error_data()['status'] );
+		$this->assertSame( 'https://w3id.org/fep/c180#actor-not-authorized', $result->get_error_data()['type'] );
 	}
 
 	/**
@@ -154,7 +157,7 @@ class Test_Delete extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test outgoing Delete with non-existent object does nothing.
+	 * Test outgoing Delete with non-existent object is refused as an object that does not exist.
 	 *
 	 * @covers ::handle_delete
 	 */
@@ -165,7 +168,9 @@ class Test_Delete extends \WP_UnitTestCase {
 		);
 
 		$result = Delete::handle_delete( $data, $this->user_id );
-		$this->assertFalse( $result );
+		$this->assertWPError( $result );
+		$this->assertSame( 400, $result->get_error_data()['status'] );
+		$this->assertSame( 'https://w3id.org/fep/c180#object-does-not-exist', $result->get_error_data()['type'] );
 	}
 
 	/**
@@ -250,10 +255,12 @@ class Test_Delete extends \WP_UnitTestCase {
 			'object' => $comment_url,
 		);
 
-		Delete::handle_delete( $data, $this->user_id );
+		$result = Delete::handle_delete( $data, $this->user_id );
 
 		$comment = \get_comment( $comment_id );
 		$this->assertEquals( '1', $comment->comment_approved, 'Comment should not be trashed by non-owner.' );
+		$this->assertWPError( $result );
+		$this->assertSame( 'https://w3id.org/fep/c180#actor-not-authorized', $result->get_error_data()['type'] );
 	}
 
 	/**

@@ -265,7 +265,7 @@ Posts and author pages serve ActivityPub JSON-LD when the request includes an ap
 
 Errors are sent as [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem details with the `application/problem+json` media type (see FEP-c180). These FEP-c180 problem types are used: `unsupported-type`, `object-does-not-exist`, `principal-actor-mismatch`, `actor-not-authorized`, `principal-not-authorized`, `client-not-authorized` and `rate-limit-exceeded`. Other errors use `about:blank` with the error code as `title`. The OAuth endpoints answer with RFC 6749 errors instead.
 
-Inbox deliveries are answered with an empty `202 Accepted`, whether the activity was processed or not.
+Inbox deliveries are answered with an empty `202 Accepted`, also when a filter or a block stopped the activity. With `ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS`, incoming `Create`, `Like` and `Announce` activities are refused with a `202` that says so.
 
 ### OAuth 2.0 for Client-to-Server
 

@@ -200,8 +200,9 @@ class Server {
 	/**
 	 * The answer to an inbox delivery.
 	 *
-	 * Processed, filtered and blocked deliveries get the same empty `202 Accepted`, so the
-	 * answer does not tell the sender what happened to the activity.
+	 * Accepted deliveries get an empty `202 Accepted`, also when a filter or a block stopped
+	 * the activity. A site that turns off incoming interactions refuses those with a `202`
+	 * of its own, see validate_requests().
 	 *
 	 * @since unreleased
 	 *

@@ -75,7 +75,15 @@ class Update {
 		}
 
 		if ( ! $post instanceof \WP_Post ) {
-			return false;
+			return new \WP_Error(
+				'activitypub_object_not_found',
+				\__( 'The referenced object was not found.', 'activitypub' ),
+				array(
+					'status' => 400,
+					'type'   => 'https://w3id.org/fep/c180#object-does-not-exist',
+					'title'  => 'Object does not exist',
+				)
+			);
 		}
 
 		/*
@@ -84,7 +92,15 @@ class Update {
 		 * capability check below decides.
 		 */
 		if ( (int) $post->post_author !== $user_id && $user_id > 0 ) {
-			return false;
+			return new \WP_Error(
+				'activitypub_forbidden',
+				\__( 'You do not have permission to edit this post.', 'activitypub' ),
+				array(
+					'status' => 403,
+					'type'   => 'https://w3id.org/fep/c180#actor-not-authorized',
+					'title'  => 'Actor not authorized',
+				)
+			);
 		}
 
 		// Verify the user has permission to edit this post.
