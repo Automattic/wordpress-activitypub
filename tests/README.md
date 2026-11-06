@@ -144,6 +144,30 @@ $this->expectException( Exception::class );
 $this->expectExceptionMessage( 'Error message' );
 ```
 
+### HTML Assertions
+
+Since WordPress 7.2, `wp_kses()` runs on the HTML API. It sorts attributes, drops the slash of void elements (`<input />` becomes `<input>`), re-escapes character references and removes the text inside `<script>`. CI runs one job against WordPress trunk, so an exact string compare on kses output fails there while it passes locally.
+
+- Compare whole HTML with `assert_equal_html()` from the `Equal_Html` trait (`tests/phpunit/includes/trait-equal-html.php`). It compares the parsed trees and falls back to `assertSame()` before WordPress 6.9.
+- Check a fragment inside a larger output (a block render) with `WP_HTML_Tag_Processor`: find the tag with `next_tag()` and assert `get_attribute()`. Not `assertStringContainsString()` with several attributes.
+- Test what differs between versions as the property that matters, for example `assertStringNotContainsString( '<script', … )` instead of the text that is left.
+
+```php
+use Activitypub\Tests\Equal_Html;
+
+class Test_Example extends \WP_UnitTestCase {
+	use Equal_Html;
+
+	public function test_markup() {
+		$this->assert_equal_html( '<p><a href="https://example.org" rel="nofollow">Link</a></p>', $content );
+
+		$form = new \WP_HTML_Tag_Processor( $output );
+		$this->assertTrue( $form->next_tag( 'form' ) );
+		$this->assertSame( 'post', $form->get_attribute( 'method' ) );
+	}
+}
+```
+
 ## Debugging Tests
 
 ### Debugging Techniques

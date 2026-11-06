@@ -2,13 +2,29 @@
 
 Inbound activities: binding every reference to the signing actor, relayed activities, ownership checks.
 
-Applies to: `includes/handler/**`, `includes/collection/**`, `includes/rest/class-inbox-controller.php`, `includes/rest/class-actors-inbox-controller.php`, `includes/functions-activity.php`
+Applies to: `includes/handler/**`, `includes/collection/**`, `includes/rest/class-inbox-controller.php`, `includes/rest/class-actors-inbox-controller.php`, `includes/functions-activity.php`, `includes/class-moderation.php`, `includes/class-comment.php`
 
 ## Past issues
 
 - **Actor↔object binding gaps** (2026): Update, Undo and Accept handlers and remote upserts (`Remote_Actors`, `Remote_Posts`, `Interactions::update_comment`, `Inbox::undo`) changed or deleted records found by the sender's `object.id`, without checking the `actor` owns it. The Delete handler did check: `object_to_uri($activity['object']) === $activity['actor']`.
 - **Relayed activity not re-authenticated** (2026): `Announce::handle_announce()` passed the inner activity to its handler as it came. The announcer is not necessarily its author, so an inner `Undo` or `Delete` could name another actor. The inner activity now has to be fetched from its own `id` with `host(id) === host(actor)`.
 - **Ownership check fallbacks** (2026): the Update and Undo owner checks let records through when no owner was recorded, when the recorded owner was deleted or merged, or when the lookup and the check read different identifiers.
+- **Alias matched on the actor's own claims** (2026): the Move handler accepted a target whose `alsoKnownAs` listed the origin's `url` or `webfinger`, values the origin declares about itself. Now only the origin's `id`, which the fetch confirmed, counts.
+- **Content owner's block skipped** (2026): blocks were checked for the inbox's recipients only. A reply, reaction or quote reached a post or comment whose owner had blocked the sender whenever the owner was not a recipient.
+- **Previously approved commenter matched on public values** (2026): core's "previously approved" rule matches name and email. The email of a Fediverse comment is its public handle, so a form comment, a reaction or another account behind the same handle got the approval of an earlier reply.
+
+## Identity is the confirmed id
+
+A decision that links two actors or trusts a remote author (an alias, a Move, auto-approval, an allow list) compares the `id` the fetch or the signature confirmed. Never `url`, `webfinger`, `preferredUsername`, a display name or a handle: an actor declares them about itself, anyone can type them into a form, and a server can give a handle to another account.
+
+- Comment approval for Fediverse replies matches the earlier reply of the same actor (`Comment::check_previous_comment_approval()`; today through the remote actor post ID, see the `@todo`; the actor URI once actor posts are removed), and a comment from another source whose email matches a Fediverse commenter's handle is held. Such a rule can only hold a comment, never approve one that core would hold.
+- It queries directly: `pre_get_comments` filters, this plugin's included, change `get_comments()` by context. A reply has the type `comment`, or `''` where core does not set that default (WordPress.com).
+
+## Owner blocks
+
+Read the "owner's block" pitfall in `AGENTS.md`. `Moderation::activity_is_blocked()` checks the owner of the content an activity targets, resolved with `get_target_post_id()`, before any handler runs.
+
+- A block check inside one handler or in `Interactions` is a finding: every other handler and plugin bypasses it.
 
 ## Every reference is bound to the signing actor
 

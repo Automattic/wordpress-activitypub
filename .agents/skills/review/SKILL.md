@@ -26,9 +26,9 @@ Repo knowledge lives in `guidelines/`, one file per area: past issues first, the
 | [content-exposure](guidelines/content-exposure.md) | non-public posts, content negotiation, per-post routes, signed GETs | `includes/rest/`, `class-router.php`, `class-query.php`, `functions-post.php`, scheduler, `includes/transformer/`, outbox, `templates/`, block renders |
 | [authorization](guidelines/authorization.md) | ownership, user ID 0, OAuth scopes, capabilities | `includes/rest/`, `includes/oauth/`, `includes/wp-admin/` |
 | [signatures](guidelines/signatures.md) | both verifiers, keyId binding, host canonicalization | `class-signature.php`, `includes/signature/`, `trait-verification.php`, `functions-url.php`, `class-webfinger.php` |
-| [inbox](guidelines/inbox.md) | binding references to the actor, relayed activities, ownership fallbacks | `includes/handler/`, `includes/collection/`, the inbox controllers, `functions-activity.php` |
+| [inbox](guidelines/inbox.md) | binding references to the actor, relayed activities, ownership fallbacks | `includes/handler/`, `includes/collection/`, the inbox controllers, `functions-activity.php`, `class-moderation.php`, `class-comment.php` |
 | [remote-fetch](guidelines/remote-fetch.md) | SSRF, the remote cache | `class-http.php`, `class-proxy.php`, `functions-request.php`, the remote collections, the proxy, interaction and event stream controllers, `class-webfinger.php`, the OAuth client |
-| [output](guidelines/output.md) | escaping, remote URLs in links | `includes/wp-admin/`, `includes/transformer/`, `templates/`, `src/`, `class-comment.php` |
+| [output](guidelines/output.md) | escaping, remote URLs in links | `includes/wp-admin/`, `includes/transformer/`, `templates/`, `src/`, `class-comment.php`, `class-emoji.php` |
 | [integrations](guidelines/integrations.md) | handoffs to other plugins | `integration/` |
 | [supply-chain](guidelines/supply-chain.md) | dependencies | `package.json`, `composer.json` and their lock files |
 | [cron](guidelines/cron.md) | callbacks that must not run twice | `includes/scheduler/`, `class-scheduler.php`, any new `wp_schedule_*` call |

@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.4.3] - 2026-11-05
+### Security
+- Improve how custom emoji are shown in names and replies. [#4017]
+- Improve the check for commenters with a previously approved comment. [#4018]
+
+### Fixed
+- Fix two small wording mistakes: notification emails said "You are receiving this emails", and the dashboard widget said "can not" instead of "cannot". [#4016]
+
 ## [9.4.2] - 2026-11-04
 ### Security
 - The app authorization screen only shows apps that are already known to your site and no longer fetches unknown ones. [#4011]
@@ -2169,6 +2177,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[9.4.3]: https://github.com/Automattic/wordpress-activitypub/compare/9.4.2...9.4.3
 [9.4.2]: https://github.com/Automattic/wordpress-activitypub/compare/9.4.1...9.4.2
 [9.4.1]: https://github.com/Automattic/wordpress-activitypub/compare/9.4.0...9.4.1
 [9.4.0]: https://github.com/Automattic/wordpress-activitypub/compare/9.3.1...9.4.0
