@@ -181,4 +181,85 @@ class Test_Functions_User extends \WP_UnitTestCase {
 			$cleanup();
 		}
 	}
+
+	/**
+	 * Test that the stats widget check defaults to the current user.
+	 *
+	 * @covers \Activitypub\user_can_see_stats
+	 */
+	public function test_user_can_see_stats_defaults_to_current_user() {
+		$author_id = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		\wp_set_current_user( $author_id );
+		$this->assertTrue( \Activitypub\user_can_see_stats(), 'An ActivityPub-enabled author sees the widget.' );
+
+		\wp_set_current_user( 0 );
+		$this->assertFalse( \Activitypub\user_can_see_stats(), 'A logged out visitor does not see the widget.' );
+	}
+
+	/**
+	 * Test that the stats widget check answers for the given user, not the current one.
+	 *
+	 * @covers \Activitypub\user_can_see_stats
+	 */
+	public function test_user_can_see_stats_for_a_given_user() {
+		$author_id = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		\wp_set_current_user( 0 );
+
+		$this->assertTrue( \Activitypub\user_can_see_stats( $author_id ), 'The author sees the widget regardless of who is logged in.' );
+	}
+
+	/**
+	 * Test that no user ID is rejected in every actor mode.
+	 *
+	 * The blog actor's own ID is zero, so `user_can_activitypub( 0 )` answers for the blog
+	 * actor rather than for a user. The stats widget belongs to a user's dashboard, so a
+	 * missing or non-user ID must not inherit that answer.
+	 *
+	 * @covers \Activitypub\user_can_see_stats
+	 */
+	public function test_user_can_see_stats_rejects_non_users() {
+		foreach ( array( ACTIVITYPUB_ACTOR_MODE, ACTIVITYPUB_BLOG_MODE, ACTIVITYPUB_ACTOR_AND_BLOG_MODE ) as $mode ) {
+			\update_option( 'activitypub_actor_mode', $mode );
+
+			$this->assertFalse( \Activitypub\user_can_see_stats( 0 ), "User 0 is nobody and sees nothing in $mode." );
+			$this->assertFalse( \Activitypub\user_can_see_stats( \Activitypub\Collection\Actors::APPLICATION_USER_ID ), "The application actor has no dashboard in $mode." );
+		}
+	}
+
+	/**
+	 * Test that an administrator sees the widget through the blog branch in blog-only mode,
+	 * while an author does not.
+	 *
+	 * @covers \Activitypub\user_can_see_stats
+	 */
+	public function test_user_can_see_stats_in_blog_mode() {
+		$author_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$admin_id  = self::factory()->user->create( array( 'role' => 'administrator' ) );
+
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+
+		$this->assertTrue( \Activitypub\user_can_see_stats( $admin_id ), 'An administrator sees the widget through the blog branch.' );
+		$this->assertFalse( \Activitypub\user_can_see_stats( $author_id ), 'An author has no blog access and no user actor in blog mode.' );
+	}
+
+	/**
+	 * Test that a forced ActivityPub capability does not grant access while the user actor
+	 * type is disabled.
+	 *
+	 * @covers \Activitypub\user_can_see_stats
+	 */
+	public function test_user_can_see_stats_ignores_forced_capability_in_blog_mode() {
+		$author_id = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		\add_filter( 'activitypub_user_can_activitypub', '__return_true' );
+
+		$can_see = \Activitypub\user_can_see_stats( $author_id );
+
+		\remove_filter( 'activitypub_user_can_activitypub', '__return_true' );
+
+		$this->assertFalse( $can_see, 'The actor type check runs after the capability filter.' );
+	}
 }
