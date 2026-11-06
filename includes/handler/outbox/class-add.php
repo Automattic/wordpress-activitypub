@@ -66,7 +66,11 @@ class Add {
 			return new \WP_Error(
 				'activitypub_object_not_found',
 				\__( 'The referenced object was not found.', 'activitypub' ),
-				array( 'status' => 404 )
+				array(
+					'status' => 400,
+					'type'   => 'https://w3id.org/fep/c180#object-does-not-exist',
+					'title'  => 'Object does not exist',
+				)
 			);
 		}
 
@@ -76,7 +80,11 @@ class Add {
 			return new \WP_Error(
 				'activitypub_object_not_found',
 				\__( 'The referenced object was not found.', 'activitypub' ),
-				array( 'status' => 404 )
+				array(
+					'status' => 400,
+					'type'   => 'https://w3id.org/fep/c180#object-does-not-exist',
+					'title'  => 'Object does not exist',
+				)
 			);
 		}
 
@@ -85,7 +93,11 @@ class Add {
 			return new \WP_Error(
 				'activitypub_forbidden',
 				\__( 'You can only feature your own posts.', 'activitypub' ),
-				array( 'status' => 403 )
+				array(
+					'status' => 403,
+					'type'   => 'https://w3id.org/fep/c180#actor-not-authorized',
+					'title'  => 'Actor not authorized',
+				)
 			);
 		}
 

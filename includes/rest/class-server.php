@@ -170,7 +170,7 @@ class Server {
 	 * @param \WP_REST_Server  $server  Server instance.
 	 * @param \WP_REST_Request $request Request used to generate the response.
 	 *
-	 * @return mixed The response, or a WP_Error for a blocked sender.
+	 * @return mixed The response, the accepted answer for a blocked sender's delivery, or a WP_Error for its other requests.
 	 */
 	public static function reject_blocked_sender( $result, $server, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		if ( null !== $result || ! \str_starts_with( $request->get_route(), '/' . ACTIVITYPUB_REST_NAMESPACE ) ) {
@@ -189,10 +189,26 @@ class Server {
 			return $result;
 		}
 
-		// A 2XX for deliveries, as for other refused activities, so the sender does not keep retrying.
-		$status = \WP_REST_Server::CREATABLE === $request->get_method() ? 202 : 403;
+		// Deliveries get the answer of an accepted delivery, so the sender does not keep retrying.
+		if ( \WP_REST_Server::CREATABLE === $request->get_method() ) {
+			return self::accepted_response();
+		}
 
-		return new \WP_Error( 'activitypub_sender_blocked', \__( 'The sender is blocked.', 'activitypub' ), array( 'status' => $status ) );
+		return new \WP_Error( 'activitypub_sender_blocked', \__( 'The sender is blocked.', 'activitypub' ), array( 'status' => 403 ) );
+	}
+
+	/**
+	 * The answer to an inbox delivery.
+	 *
+	 * Processed, filtered and blocked deliveries get the same empty `202 Accepted`, so the
+	 * answer does not tell the sender what happened to the activity.
+	 *
+	 * @since unreleased
+	 *
+	 * @return \WP_REST_Response The response.
+	 */
+	public static function accepted_response() {
+		return new \WP_REST_Response( null, 202 );
 	}
 
 	/**
@@ -259,6 +275,11 @@ class Server {
 	/**
 	 * Filters the REST API response to properly handle the ActivityPub error formatting.
 	 *
+	 * Errors are sent as RFC 9457 problem details. An error sets its FEP-c180 problem type and
+	 * title as `type` and `title` in its error data; without them, the type is `about:blank` and
+	 * the title is the error code.
+	 *
+	 * @see https://www.rfc-editor.org/rfc/rfc9457
 	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/c180/fep-c180.md
 	 *
 	 * @param \WP_HTTP_Response $response Result to send to the client. Usually a `WP_REST_Response`.
@@ -293,9 +314,12 @@ class Server {
 			$data     = $response->get_data();
 		}
 
+		$type = $data['data']['type'] ?? null;
+		$type = \is_string( $type ) ? $type : 'about:blank';
+
 		$error = array(
-			'type'     => 'about:blank',
-			'title'    => $data['code'] ?? '',
+			'type'     => $type,
+			'title'    => $data['data']['title'] ?? $data['code'] ?? '',
 			'detail'   => $data['message'] ?? '',
 			'status'   => $response->get_status(),
 
@@ -308,6 +332,7 @@ class Server {
 		);
 
 		$response->set_data( $error );
+		$response->header( 'Content-Type', 'application/problem+json; charset=' . \get_option( 'blog_charset' ) );
 
 		return $response;
 	}

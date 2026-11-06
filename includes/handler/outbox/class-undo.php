@@ -59,7 +59,11 @@ class Undo {
 					return new \WP_Error(
 						'activitypub_forbidden',
 						\__( 'You can only undo your own activities.', 'activitypub' ),
-						array( 'status' => 403 )
+						array(
+							'status' => 403,
+							'type'   => 'https://w3id.org/fep/c180#actor-not-authorized',
+							'title'  => 'Actor not authorized',
+						)
 					);
 				}
 
@@ -84,7 +88,11 @@ class Undo {
 			return new \WP_Error(
 				'activitypub_forbidden',
 				\__( 'You can only undo your own activities.', 'activitypub' ),
-				array( 'status' => 403 )
+				array(
+					'status' => 403,
+					'type'   => 'https://w3id.org/fep/c180#actor-not-authorized',
+					'title'  => 'Actor not authorized',
+				)
 			);
 		}
 

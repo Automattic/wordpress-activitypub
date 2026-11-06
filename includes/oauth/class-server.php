@@ -314,7 +314,11 @@ class Server {
 				'activitypub_insufficient_scope',
 				/* translators: %s: The required scope */
 				\sprintf( \__( 'This action requires the "%s" scope.', 'activitypub' ), $scope ),
-				array( 'status' => 403 )
+				array(
+					'status' => 403,
+					'type'   => 'https://w3id.org/fep/c180#client-not-authorized',
+					'title'  => 'Client not authorized',
+				)
 			);
 		}
 

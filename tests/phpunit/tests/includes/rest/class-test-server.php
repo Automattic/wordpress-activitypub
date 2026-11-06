@@ -499,6 +499,47 @@ class Test_Server extends \WP_Test_REST_TestCase {
 	}
 
 	/**
+	 * An error with a problem type in its data is sent with that type and title, as problem details.
+	 *
+	 * @covers ::filter_output
+	 */
+	public function test_filter_output_problem_type() {
+		$wp_error = new \WP_Error(
+			'test_error',
+			'Test error message',
+			array(
+				'status' => 400,
+				'type'   => 'https://w3id.org/fep/c180#principal-actor-mismatch',
+				'title'  => 'Principal-actor mismatch',
+			)
+		);
+		$request  = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+
+		$result = Server::filter_output( new \WP_REST_Response( $wp_error, 400 ), new \WP_REST_Server(), $request );
+
+		$data = $result->get_data();
+		$this->assertSame( 'https://w3id.org/fep/c180#principal-actor-mismatch', $data['type'] );
+		$this->assertSame( 'Principal-actor mismatch', $data['title'] );
+		$this->assertSame( 'test_error', $data['metadata']['code'], 'The error code stays in the metadata.' );
+		$this->assertStringStartsWith( 'application/problem+json', $result->get_headers()['Content-Type'] );
+	}
+
+	/**
+	 * A problem type that is not a string falls back to about:blank.
+	 *
+	 * @covers ::filter_output
+	 */
+	public function test_filter_output_invalid_problem_type() {
+		$wp_error = new \WP_Error( 'test_error', 'Test error message', array( 'type' => array( 'Note' ) ) );
+		$request  = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+
+		$result = Server::filter_output( new \WP_REST_Response( $wp_error, 400 ), new \WP_REST_Server(), $request );
+
+		$this->assertSame( 'about:blank', $result->get_data()['type'] );
+		$this->assertSame( 'test_error', $result->get_data()['title'] );
+	}
+
+	/**
 	 * Data provider for missing error data scenarios.
 	 *
 	 * @return array
@@ -1049,9 +1090,39 @@ class Test_Server extends \WP_Test_REST_TestCase {
 		if ( null === $status ) {
 			$this->assertNull( $result );
 		} else {
-			$this->assertWPError( $result );
-			$this->assertSame( $status, $result->get_error_data()['status'] );
+			$this->assertEquals( Server::accepted_response(), $result, 'A blocked delivery gets the answer of an accepted one.' );
+			$this->assertSame( $status, $result->get_status() );
 		}
+	}
+
+	/**
+	 * A blocked sender's other requests are refused.
+	 *
+	 * @covers ::reject_blocked_sender
+	 */
+	public function test_reject_blocked_sender_get() {
+		\update_option( Moderation::OPTION_KEYS[ Moderation::TYPE_DOMAIN ], array( 'blocked.example' ) );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1/outbox' );
+		$request->set_header( 'signature', 'keyId="https://blocked.example/users/test#main-key",headers="(request-target)",signature="x"' );
+		$result = Server::reject_blocked_sender( null, new \WP_REST_Server(), $request );
+
+		\delete_option( Moderation::OPTION_KEYS[ Moderation::TYPE_DOMAIN ] );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 403, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Inbox deliveries are answered with an empty 202.
+	 *
+	 * @covers ::accepted_response
+	 */
+	public function test_accepted_response() {
+		$response = Server::accepted_response();
+
+		$this->assertSame( 202, $response->get_status() );
+		$this->assertNull( $response->get_data() );
 	}
 
 	/**
