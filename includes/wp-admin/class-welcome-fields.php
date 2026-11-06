@@ -144,7 +144,6 @@ class Welcome_Fields {
 				<div class="activitypub-welcome-handle">
 					<label for="<?php echo \esc_attr( $handle['id'] ); ?>"><?php echo \esc_html( $handle['label'] ); ?></label>
 					<input
-						aria-readonly="true"
 						class="code"
 						id="<?php echo \esc_attr( $handle['id'] ); ?>"
 						readonly
