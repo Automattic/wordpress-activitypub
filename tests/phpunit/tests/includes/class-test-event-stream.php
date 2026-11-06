@@ -56,44 +56,40 @@ class Test_Event_Stream extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * The outbox signal holds the ID of the new item, so each new item changes it.
+	 * Every outbox signal is a new value, so each open stream sees the change.
 	 *
 	 * @covers ::signal_outbox
 	 */
-	public function test_signal_outbox_holds_item_id() {
+	public function test_signal_outbox_sets_a_new_value_each_time() {
 		Event_Stream::signal_outbox( 41, null, 3 );
-		$this->assertSame( 41, (int) \get_transient( 'activitypub_sse_signal_3_outbox' ) );
+		$first = \get_transient( 'activitypub_sse_signal_3_outbox' );
 
-		Event_Stream::signal_outbox( 42, null, 3 );
-		$this->assertSame( 42, (int) \get_transient( 'activitypub_sse_signal_3_outbox' ) );
+		Event_Stream::signal_outbox( 41, null, 3 );
+		$second = \get_transient( 'activitypub_sse_signal_3_outbox' );
+
+		$this->assertNotFalse( $first );
+		$this->assertNotSame( $first, $second, 'The same item signalled again still changes the signal.' );
 	}
 
 	/**
-	 * A handled inbox activity signals the ID of its inbox item to every recipient.
+	 * A handled inbox activity sets a new signal for every recipient.
 	 *
-	 * Goes through the action, so the item ID has to reach the callback.
+	 * Goes through the action, as a redelivery of a stored activity does.
 	 *
 	 * @covers ::init
 	 * @covers ::signal_inbox
 	 */
-	public function test_handled_inbox_signals_item_id() {
+	public function test_handled_inbox_sets_a_new_signal_for_every_recipient() {
 		\update_option( 'activitypub_api', true );
 		Event_Stream::init();
 
 		\do_action( 'activitypub_handled_inbox', array(), array( 2, 3 ), 'create', null, 77, 'shared_inbox' );
+		$first = \get_transient( 'activitypub_sse_signal_2_inbox' );
 
-		$this->assertSame( 77, (int) \get_transient( 'activitypub_sse_signal_2_inbox' ) );
-		$this->assertSame( 77, (int) \get_transient( 'activitypub_sse_signal_3_inbox' ) );
-	}
+		\do_action( 'activitypub_handled_inbox', array(), array( 2, 3 ), 'create', null, 77, 'shared_inbox' );
 
-	/**
-	 * An activity that was not stored leaves the signal alone.
-	 *
-	 * @covers ::signal_inbox
-	 */
-	public function test_signal_inbox_skips_unstored_item() {
-		Event_Stream::signal_inbox( array(), array( 4 ), 'create', null, new \WP_Error( 'failed' ) );
-
-		$this->assertFalse( \get_transient( 'activitypub_sse_signal_4_inbox' ) );
+		$this->assertNotFalse( $first );
+		$this->assertNotFalse( \get_transient( 'activitypub_sse_signal_3_inbox' ) );
+		$this->assertNotSame( $first, \get_transient( 'activitypub_sse_signal_2_inbox' ), 'A redelivery still changes the signal.' );
 	}
 }

@@ -166,9 +166,17 @@ trait Event_Stream {
 			}
 
 			/*
-			 * The signal holds the ID of the last item added, so query the DB only when it changed since
-			 * this stream last looked, or when the last query filled a page. It is never cleared here:
-			 * other streams of the same user read it too.
+			 * This request runs for minutes, so drop what it cached: the signal and the new items are
+			 * written by other requests, and both would otherwise be read from this request's cache.
+			 */
+			if ( \wp_cache_supports( 'flush_runtime' ) ) {
+				\wp_cache_flush_runtime();
+			}
+
+			/*
+			 * Every new item sets a new signal, so query the DB only when it changed since this stream
+			 * last looked, or when the last query filled a page. It is never cleared here: other
+			 * streams of the same user read it too.
 			 */
 			$signal = \get_transient( \sprintf( 'activitypub_sse_signal_%s_%s', $user_id, $collection ) );
 
