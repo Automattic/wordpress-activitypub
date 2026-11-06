@@ -153,8 +153,10 @@ trait Event_Stream {
 			: 0;
 
 		// Use Last-Event-ID if provided, otherwise start from the latest item.
-		$since_id = $last_event_id ? $last_event_id : $this->get_latest_item_id( $user_id, $collection );
-		$start    = \time();
+		$since_id    = $last_event_id ? $last_event_id : $this->get_latest_item_id( $user_id, $collection );
+		$start       = \time();
+		$last_signal = null;
+		$has_more    = false;
 
 		$this->send_sse_comment( 'connected' );
 
@@ -163,14 +165,17 @@ trait Event_Stream {
 				break;
 			}
 
-			// Check for signal transient before querying the DB.
-			$signal_key = \sprintf( 'activitypub_sse_signal_%s_%s', $user_id, $collection );
-			$signal     = \get_transient( $signal_key );
+			/*
+			 * The signal holds the ID of the last item added, so query the DB only when it changed since
+			 * this stream last looked, or when the last query filled a page. It is never cleared here:
+			 * other streams of the same user read it too.
+			 */
+			$signal = \get_transient( \sprintf( 'activitypub_sse_signal_%s_%s', $user_id, $collection ) );
 
-			if ( $signal ) {
-				\delete_transient( $signal_key );
-
-				$new_items = $this->get_new_items( $user_id, $collection, $since_id );
+			if ( $has_more || ( false !== $signal && $signal !== $last_signal ) ) {
+				$last_signal = $signal;
+				$new_items   = $this->get_new_items( $user_id, $collection, $since_id );
+				$has_more    = \count( $new_items ) >= 20;
 
 				foreach ( $new_items as $item ) {
 					$this->send_sse_event( $item, $collection );
@@ -178,11 +183,6 @@ trait Event_Stream {
 					if ( $item->ID > $since_id ) {
 						$since_id = $item->ID;
 					}
-				}
-
-				// Re-set signal if we hit the limit, so remaining items are fetched next iteration.
-				if ( \count( $new_items ) >= 20 ) {
-					\set_transient( $signal_key, \time(), 5 * MINUTE_IN_SECONDS );
 				}
 			}
 
