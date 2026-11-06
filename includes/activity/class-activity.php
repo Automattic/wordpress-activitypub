@@ -24,15 +24,15 @@ use Activitypub\Activity\Extended_Object\Place;
  * @method Base_Object|string|array|null get_object()     Gets the direct object of the activity.
  * @method string|string[]|null          get_origin()     Gets the origin property of the activity.
  * @method array|null                    get_replies()    Gets the collection of responses to this activity.
- * @method string|null                   get_result()     Gets the result property of the activity.
+ * @method string|array|null             get_result()     Gets the result property of the activity.
  * @method string|string[]|null          get_target()     Gets the target property of the activity.
  *
- * @method Activity set_actor( string|array $actor )           Sets one or more entities that performed the activity.
- * @method Activity set_instrument( string|array $instrument ) Sets one or more objects used in the completion of an Activity.
- * @method Activity set_origin( string|array|null $origin )    Sets the origin property of the activity.
- * @method Activity set_replies( array $replies )              Sets the collection of responses to this activity.
- * @method Activity set_result( string|null $result )          Sets the result property of the activity.
- * @method Activity set_target( string|array|null $target )    Sets the target property of the activity.
+ * @method Activity set_actor( string|array $actor )                    Sets one or more entities that performed the activity.
+ * @method Activity set_instrument( string|array $instrument )          Sets one or more objects used in the completion of an Activity.
+ * @method Activity set_origin( string|array|null $origin )             Sets the origin property of the activity.
+ * @method Activity set_replies( array $replies )                       Sets the collection of responses to this activity.
+ * @method Activity set_result( string|array|null $result )             Sets the result property of the activity.
+ * @method Activity set_target( string|array|Base_Object|null $target ) Sets the target property of the activity.
  */
 class Activity extends Base_Object {
 	const JSON_LD_CONTEXT = array(
@@ -137,7 +137,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-result
 	 *
-	 * @var string|Base_Object|null
+	 * @var string|array|Base_Object|null
 	 */
 	protected $result;
 

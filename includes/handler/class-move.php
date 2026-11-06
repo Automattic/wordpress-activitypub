@@ -60,9 +60,10 @@ class Move {
 		$result        = null;
 		$success       = false;
 
+		global $wpdb;
+
 		// If the origin is followed but the target is not, update the origin to point to the target.
 		if ( \is_wp_error( $target_object ) && ! \is_wp_error( $origin_object ) ) {
-			global $wpdb;
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 			$wpdb->update(
 				$wpdb->posts,
@@ -90,6 +91,31 @@ class Move {
 			foreach ( $users as $follower_user_id ) {
 				\add_post_meta( $target_object->ID, Followers::FOLLOWER_META_KEY, $follower_user_id );
 			}
+
+			// Comments and Reader posts of the origin belong to the target now.
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+			$where = array(
+				'meta_key'   => '_activitypub_remote_actor_id',
+				'meta_value' => (string) $origin_object->ID,
+			);
+
+			// The meta type and the cache group of its queries, which core names differently.
+			$types = array(
+				'comment' => 'comment',
+				'post'    => 'posts',
+			);
+
+			foreach ( $types as $type => $cache_group ) {
+				$table = $wpdb->{ \sprintf( '%smeta', $type ) };
+				$ids   = $wpdb->get_col( $wpdb->prepare( 'SELECT %i FROM %i WHERE meta_key = %s AND meta_value = %s', \sprintf( '%s_id', $type ), $table, $where['meta_key'], $where['meta_value'] ) );
+
+				if ( $ids ) {
+					$wpdb->update( $table, array( 'meta_value' => (string) $target_object->ID ), $where );
+					\wp_cache_delete_multiple( $ids, \sprintf( '%s_meta', $type ) );
+					\wp_cache_set_last_changed( $cache_group );
+				}
+			}
+			// phpcs:enable
 
 			$success = true;
 			$result  = Remote_Actors::delete( $origin_object->ID );
@@ -176,23 +202,18 @@ class Move {
 			return false;
 		}
 
-		// Normalize alsoKnownAs to an array (some JSON-LD payloads may use a string).
-		$also_known_as = (array) ( $target_object['alsoKnownAs'] ?? array() );
+		// Normalize alsoKnownAs to a list of ids (some JSON-LD payloads use a string or objects).
+		$also_known_as = \array_map( '\Activitypub\object_to_uri', (array) ( $target_object['alsoKnownAs'] ?? array() ) );
 		if ( empty( $also_known_as ) ) {
 			return false;
 		}
 
-		// Collect all possible origin identifiers (id, url, webfinger).
-		$origin_ids = \array_filter(
-			array(
-				$origin_object['id'] ?? null,
-				$origin_object['url'] ?? null,
-				$origin_object['webfinger'] ?? null,
-			)
-		);
-
-		// Check if any origin identifier is in the alsoKnownAs property of the target.
-		if ( ! \array_intersect( $origin_ids, $also_known_as ) ) {
+		/*
+		 * The target must list the origin by its id, which the fetch confirmed. The origin's url and
+		 * webfinger are its own claims: matching them would let an actor claim an alias of the
+		 * account it pretends to move to. Mastodon compares the id only as well.
+		 */
+		if ( ! \in_array( $origin_object['id'], $also_known_as, true ) ) {
 			return false;
 		}
 

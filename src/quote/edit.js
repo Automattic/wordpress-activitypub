@@ -6,6 +6,7 @@ import { useSelect } from '@wordpress/data';
 import apiFetch from '@wordpress/api-fetch';
 import { isSafeUrl } from '../shared/safe-url';
 import { useEmbedUrl } from '../shared/use-embed-url';
+import { useOptions } from '../shared/use-options';
 
 /**
  * Help text messages for different quote states.
@@ -31,14 +32,15 @@ const HELP_TEXT = {
  * Advisory only (FEP-044f): the policy must not be used for verification, it only
  * tells the writer up front that the request is unlikely to be accepted.
  *
- * @param {string} url The quoted URL.
+ * @param {string} url       The quoted URL.
+ * @param {string} namespace The plugin's REST namespace.
  *
  * @return {Promise<boolean>} Whether quotes are disallowed.
  */
-async function quotesDisallowedFor( url ) {
+async function quotesDisallowedFor( url, namespace ) {
 	try {
 		const object = await apiFetch( {
-			path: '/activitypub/1.0/proxy',
+			path: `/${ namespace }/proxy`,
 			method: 'POST',
 			data: { id: url },
 		} );
@@ -69,6 +71,7 @@ async function quotesDisallowedFor( url ) {
 export default function Edit( { attributes, setAttributes, clientId, isSelected } ) {
 	const { url = '', embedPost = false } = attributes;
 	const [ quotesDisallowed, setQuotesDisallowed ] = useState( false );
+	const { namespace = 'activitypub/1.0' } = useOptions();
 	const quoteState = useSelect( ( select ) => {
 		// The block is insertable in editors that do not register `core/editor`, the widget screen for one.
 		const editorStore = select( 'core/editor' );
@@ -85,14 +88,17 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 	}, [ url ] );
 
 	// The policy is worth a look only once the URL is known to be an ActivityPub object.
-	const onChecked = useCallback( async ( checkedUrl, isStale ) => {
-		const disallowed = checkedUrl ? await quotesDisallowedFor( checkedUrl ) : false;
+	const onChecked = useCallback(
+		async ( checkedUrl, isStale ) => {
+			const disallowed = checkedUrl ? await quotesDisallowedFor( checkedUrl, namespace ) : false;
 
-		// The policy lookup is slower than the check around it, so the URL may have moved on.
-		if ( ! isStale?.() ) {
-			setQuotesDisallowed( disallowed );
-		}
-	}, [] );
+			// The policy lookup is slower than the check around it, so the URL may have moved on.
+			if ( ! isStale?.() ) {
+				setQuotesDisallowed( disallowed );
+			}
+		},
+		[ namespace ]
+	);
 
 	const { isValidEmbed, isCheckingEmbed, showEmbed, innerBlocksProps, urlInputRef, focusInput, onKeyDown } =
 		useEmbedUrl( { url, clientId, embedPost, setAttributes, onChecked } );

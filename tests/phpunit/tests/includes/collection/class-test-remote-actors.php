@@ -121,6 +121,164 @@ class Test_Remote_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The key's owner is the actor the key was taken from: stored, fetched, or a standalone key's owner.
+	 *
+	 * @covers ::get_public_key
+	 */
+	public function test_get_public_key_sets_owner() {
+		$stored = 'https://example.com/users/stored';
+		Remote_Actors::upsert(
+			array(
+				'id'                => $stored,
+				'type'              => 'Person',
+				'inbox'             => $stored . '/inbox',
+				'preferredUsername' => 'stored',
+				'publicKey'         => array(
+					'id'           => $stored . '#main-key',
+					'owner'        => $stored,
+					'publicKeyPem' => $this->x509_key,
+				),
+			)
+		);
+
+		$this->stub_remote_requests();
+		$fetched                                       = 'https://example.com/users/fetched';
+		$this->responses[ $fetched ]                   = array(
+			'id'        => $fetched,
+			'type'      => 'Person',
+			'publicKey' => array(
+				'id'           => $fetched . '#main-key',
+				'owner'        => $fetched,
+				'publicKeyPem' => $this->x509_key,
+			),
+		);
+		$this->responses['https://example.com/keys/1'] = array(
+			'id'           => 'https://example.com/keys/1',
+			'owner'        => $fetched,
+			'publicKeyPem' => $this->x509_key,
+		);
+
+		$owners = array();
+		foreach ( array( $stored . '#main-key', $fetched . '#main-key', 'https://example.com/keys/1' ) as $key_id ) {
+			$owner = null;
+			$this->assertNotWPError( Remote_Actors::get_public_key( $key_id, $owner ) );
+			$owners[] = $owner;
+		}
+		$this->unstub_remote_requests();
+
+		$this->assertSame( array( $stored, $fetched, $fetched ), $owners );
+	}
+
+	/**
+	 * A keyId without a host cannot name the actor it belongs to, so it gets no key and no owner.
+	 *
+	 * @covers ::get_public_key
+	 */
+	public function test_get_public_key_rejects_a_key_id_without_host() {
+		$actor = array(
+			'id'        => 'https://attacker.example/users/mallory',
+			'type'      => 'Person',
+			'publicKey' => array(
+				'id'           => 'https://attacker.example/users/mallory#main-key',
+				'owner'        => 'https://attacker.example/users/mallory',
+				'publicKeyPem' => $this->x509_key,
+			),
+		);
+		$mock  = static function () use ( $actor ) {
+			return $actor;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock );
+
+		$owner  = null;
+		$result = Remote_Actors::get_public_key( 'acct:mallory@attacker.example', $owner );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'activitypub_no_remote_key_found', $result->get_error_code() );
+		$this->assertNull( $owner );
+	}
+
+	/**
+	 * A stored actor whose key failed is refreshed from its host, at most once every few minutes.
+	 *
+	 * @covers ::refresh_public_key
+	 */
+	public function test_refresh_public_key() {
+		global $wpdb;
+
+		$id      = 'https://example.com/users/rotated';
+		$actor   = array(
+			'id'                => $id,
+			'type'              => 'Person',
+			'inbox'             => $id . '/inbox',
+			'preferredUsername' => 'rotated',
+			'publicKey'         => array(
+				'id'           => $id . '#main-key',
+				'owner'        => $id,
+				'publicKeyPem' => $this->x509_key,
+			),
+		);
+		$post_id = Remote_Actors::upsert( $actor );
+
+		$fetches = 0;
+		$served  = $actor;
+
+		$served['publicKey']['publicKeyPem'] = $this->pkcs1_key;
+
+		$mock = static function ( $pre, $url ) use ( &$fetches, &$served, $id ) {
+			if ( $url !== $id ) {
+				return $pre;
+			}
+			++$fetches;
+			return $served;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock, 10, 2 );
+
+		// Let the next refresh through, as if the throttle had expired.
+		$expire = static function () use ( $id ) {
+			\delete_transient( 'activitypub_key_refresh_' . \md5( $id ) );
+		};
+
+		// A new key is stored, and a second failing signature right after does not fetch again.
+		$this->assertTrue( Remote_Actors::refresh_public_key( $id . '#main-key' ) );
+		$this->assertFalse( Remote_Actors::refresh_public_key( $id . '#main-key' ) );
+		$this->assertSame( 1, $fetches, 'A refreshed actor is not fetched again at once.' );
+		$this->assertSame( $this->pkcs1_key, \json_decode( \get_post( $post_id )->post_content, true )['publicKey']['publicKeyPem'] );
+
+		// The same document again is no change, and leaves the record's modified date to the scheduler.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->update( $wpdb->posts, array( 'post_modified_gmt' => '2020-01-01 00:00:00' ), array( 'ID' => $post_id ) );
+		\clean_post_cache( $post_id );
+		$expire();
+		$this->assertFalse( Remote_Actors::refresh_public_key( $id . '#main-key' ) );
+		$this->assertSame( 2, $fetches );
+		$this->assertSame( '2020-01-01 00:00:00', \get_post( $post_id )->post_modified_gmt, 'An unchanged document is not written.' );
+
+		// A changed profile with the same key is stored.
+		$served['name'] = 'Renamed';
+		$expire();
+		$this->assertTrue( Remote_Actors::refresh_public_key( $id . '#main-key' ) );
+		$this->assertSame( 3, $fetches );
+		$this->assertSame( 'Renamed', \json_decode( \get_post( $post_id )->post_content, true )['name'] );
+
+		// A failed fetch changes nothing and is not retried at once.
+		$served = new \WP_Error( 'activitypub_not_found', 'Not found' );
+		$expire();
+		$this->assertFalse( Remote_Actors::refresh_public_key( $id . '#main-key' ) );
+		$this->assertFalse( Remote_Actors::refresh_public_key( $id . '#main-key' ) );
+		$this->assertSame( 4, $fetches, 'A failed fetch is not retried at once.' );
+		$this->assertSame( $this->pkcs1_key, \json_decode( \get_post( $post_id )->post_content, true )['publicKey']['publicKeyPem'] );
+
+		// An actor that is not stored is left to the proxy cache.
+		$this->assertFalse( Remote_Actors::refresh_public_key( 'https://example.com/users/unknown#main-key' ) );
+		$this->assertSame( 4, $fetches );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock, 10 );
+		$expire();
+	}
+
+	/**
 	 * Key and owner reference redirects.
 	 *
 	 * @return array Test cases.

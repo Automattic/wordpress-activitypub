@@ -153,6 +153,38 @@ class Test_Inbox extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An item without a recorded actor can only be undone from the host of its activity id.
+	 *
+	 * @covers ::undo
+	 */
+	public function test_undo_without_stored_actor_requires_same_host() {
+		$activity_id = 'https://remote.example.com/activities/legacy-like';
+
+		$comment_id = self::factory()->comment->create( array( 'comment_post_ID' => self::factory()->post->create() ) );
+		\add_comment_meta( $comment_id, 'source_id', $activity_id );
+
+		$activity = new Activity();
+		$activity->set_id( $activity_id );
+		$activity->set_type( 'Like' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+		$activity->set_object( 'https://remote.example.com/objects/456' );
+
+		$inbox_id = Inbox::add( $activity, 1 );
+		$this->assertIsInt( $inbox_id );
+
+		// As for items stored before the actor was recorded.
+		\delete_post_meta( $inbox_id, '_activitypub_activity_remote_actor' );
+
+		$result = Inbox::undo( $activity_id, 'https://attacker.example/users/evil' );
+		$this->assertWPError( $result );
+		$this->assertSame( 'activitypub_inbox_undo_forbidden', $result->get_error_code() );
+		$this->assertNotNull( \get_comment( $comment_id ), 'The comment should survive a foreign Undo.' );
+
+		$this->assertNotWPError( Inbox::undo( $activity_id, 'https://remote.example.com/users/testuser' ) );
+		$this->assertNull( \get_comment( $comment_id ), 'The comment should be deleted.' );
+	}
+
+	/**
 	 * Test adding an activity to the inbox and verify post meta is set correctly.
 	 *
 	 * @covers ::add

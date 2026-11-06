@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-A queued activity that cannot be read no longer stops the ones queued behind it from being sent.

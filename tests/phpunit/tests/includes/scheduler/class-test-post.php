@@ -12,6 +12,7 @@ use Activitypub\Collection\Outbox;
 use Activitypub\Scheduler\Post;
 
 use function Activitypub\get_object_id;
+use function Activitypub\get_post_id;
 
 /**
  * Test Post scheduler class.
@@ -76,6 +77,90 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$this->assertSame( 'Delete', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
 
 		remove_post_type_support( 'attachment', 'activitypub' );
+	}
+
+	/**
+	 * Test that attachments and sticky posts queue nothing during an import.
+	 *
+	 * @covers ::transition_attachment_status
+	 * @covers ::schedule_featured_update
+	 */
+	public function test_no_activity_during_import() {
+		\add_post_type_support( 'attachment', 'activitypub' );
+		\wp_set_current_user( self::$user_id );
+
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox  = \wp_count_posts( Outbox::POST_TYPE );
+
+		\do_action( 'import_start' );
+
+		self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		\stick_post( $post_id );
+
+		\do_action( 'import_end' );
+
+		\wp_cache_delete( \_count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+		$this->assertEquals( $outbox, \wp_count_posts( Outbox::POST_TYPE ) );
+
+		\remove_post_type_support( 'attachment', 'activitypub' );
+	}
+
+	/**
+	 * Test that imported posts are marked "Do not federate" and queue nothing.
+	 *
+	 * @covers ::triage
+	 * @covers ::skip_imported_federation_state
+	 */
+	public function test_triage_marks_imported_posts_local() {
+		$existing_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox      = \wp_count_posts( Outbox::POST_TYPE );
+
+		\do_action( 'import_start' );
+
+		// The federation state and the visibility of the source site do not come along.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'meta_input'  => array(
+					'activitypub_status'             => 'federated',
+					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC,
+				),
+			)
+		);
+		$this->assertSame( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, \get_post_meta( $post_id, 'activitypub_content_visibility', true ) );
+		\add_post_meta( $post_id, 'activitypub_status', 'federated' );
+		$this->assertSame( '', \get_post_meta( $post_id, 'activitypub_status', true ) );
+
+		// A draft or scheduled post is new content once it goes live.
+		$draft_id = self::factory()->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'post_status' => 'draft',
+			)
+		);
+		$this->assertSame( '', \get_post_meta( $draft_id, 'activitypub_content_visibility', true ) );
+
+		// An update during an import leaves a post that may already be federated alone.
+		\wp_update_post(
+			array(
+				'ID'           => $existing_id,
+				'post_content' => 'Updated during import.',
+			)
+		);
+		$this->assertSame( '', \get_post_meta( $existing_id, 'activitypub_content_visibility', true ) );
+
+		\do_action( 'import_end' );
+
+		// A save after the import, for example by a link checker, does not federate the imported post.
+		\wp_update_post(
+			array(
+				'ID'           => $post_id,
+				'post_content' => 'Fixed a broken link.',
+			)
+		);
+
+		\wp_cache_delete( \_count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+		$this->assertEquals( $outbox, \wp_count_posts( Outbox::POST_TYPE ) );
 	}
 
 	/**
@@ -869,6 +954,79 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		$this->assertSame( 0, $this->count_pending_outbox_items( $activitypub_id, 'Delete' ), 'No pending Delete should survive three publish/draft/publish cycles.' );
 		$this->assertSame( 1, $this->count_pending_outbox_items( $activitypub_id, 'Create' ), 'Exactly one pending Create should remain after the cycles.' );
+	}
+
+	/**
+	 * Test that saving an old post that was never federated only federates it from an editor.
+	 *
+	 * @covers ::triage
+	 */
+	public function test_old_unfederated_post_federates_only_from_an_editor() {
+		$date    = \gmdate( 'Y-m-d H:i:s', \time() - 2 * MONTH_IN_SECONDS );
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author'   => self::$user_id,
+				'post_date'     => $date,
+				'post_date_gmt' => $date,
+			)
+		);
+
+		// The newest outbox item for a post. A new Create deletes the pending one it supersedes, so compare IDs, not counts.
+		$latest = function ( $id ) {
+			$items = \get_posts(
+				array(
+					'post_type'   => Outbox::POST_TYPE,
+					'post_status' => 'any',
+					'fields'      => 'ids',
+					'orderby'     => 'ID',
+					'order'       => 'DESC',
+					'numberposts' => 1,
+					'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						array(
+							'key'   => '_activitypub_object_id',
+							'value' => get_post_id( $id ),
+						),
+					),
+				)
+			);
+
+			return $items ? $items[0] : 0;
+		};
+
+		// Save the post as one that was never federated.
+		$resave = function ( $id ) {
+			\delete_post_meta( $id, 'activitypub_status' );
+			\wp_update_post(
+				array(
+					'ID'           => $id,
+					'post_content' => \uniqid( 'content ', true ),
+				)
+			);
+		};
+
+		// A link checker, cron or WP-CLI: no visibility in the request.
+		$item = $latest( $post_id );
+		$resave( $post_id );
+		$this->assertSame( $item, $latest( $post_id ), 'A save without a visibility must not federate an old post.' );
+
+		// The classic editor sends the field with every save, "Public" as an empty value.
+		$_POST['activitypub_content_visibility'] = '';
+		$resave( $post_id );
+		unset( $_POST['activitypub_content_visibility'] );
+		$this->assertGreaterThan( $item, $latest( $post_id ), 'A save from the classic editor federates the post.' );
+
+		// The block editor sends the meta in the JSON body, which core reads through WP_REST_Server::get_raw_data().
+		$item                          = $latest( $post_id );
+		$GLOBALS['HTTP_RAW_POST_DATA'] = \wp_json_encode( array( 'meta' => array( 'activitypub_content_visibility' => 'public' ) ) ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The raw body get_raw_data() reads.
+		$resave( $post_id );
+		unset( $GLOBALS['HTTP_RAW_POST_DATA'] );
+		$this->assertGreaterThan( $item, $latest( $post_id ), 'A save from the block editor federates the post.' );
+
+		// A recent post federates without a visibility, as before.
+		$recent_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$item      = $latest( $recent_id );
+		$resave( $recent_id );
+		$this->assertGreaterThan( $item, $latest( $recent_id ), 'A recent post federates on save.' );
 	}
 
 	/**

@@ -22,7 +22,7 @@ use function Activitypub\maybe_set_no_store;
  * be identified at all is refused: without a key there is nothing to count, so letting it through
  * would be the same as having no limit.
  *
- * @since unreleased
+ * @since 9.4.0
  */
 trait Rate_Limit {
 	/**
@@ -44,7 +44,7 @@ trait Rate_Limit {
 	 * answer is therefore remembered per request object, so one request spends one unit however
 	 * often it is asked, and forgotten once its response has been stamped.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param string           $bucket  What is being limited, for example `interactions`.
 	 * @param int              $limit   How many requests a caller may make per minute.
@@ -85,7 +85,7 @@ trait Rate_Limit {
 		/**
 		 * Filters how many requests a caller may make per minute.
 		 *
-		 * @since unreleased
+		 * @since 9.4.0
 		 *
 		 * @param int    $limit  The allowance the endpoint asks for.
 		 * @param string $bucket What is being limited, for example `interactions`.

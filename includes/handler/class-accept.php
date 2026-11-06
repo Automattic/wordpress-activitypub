@@ -103,7 +103,7 @@ class Accept {
 	 * Accept a "QuoteRequest" of ours: verify and store the QuoteAuthorization stamp.
 	 *
 	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md#quoteauthorization
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param array     $accept      The activity-object.
 	 * @param \WP_Post  $outbox_post Our QuoteRequest outbox item.

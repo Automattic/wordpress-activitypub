@@ -20,6 +20,284 @@ use Activitypub\Tombstone;
  * @coversDefaultClass \Activitypub\Handler\Create
  */
 class Test_Create extends \WP_UnitTestCase {
+	/**
+	 * Image-only validation runs before the signature check, so it does not check any host.
+	 *
+	 * @covers ::validate_object
+	 */
+	public function test_image_only_validation_checks_no_hosts() {
+		$object  = array(
+			'id'         => 'https://example.com/image-reply',
+			'inReplyTo'  => 'https://example.org/post',
+			'attachment' => array(
+				'type' => 'Image',
+				'url'  => 'https://8.8.4.4:22/photo.jpg',
+			),
+		);
+		$request = new \WP_REST_Request( 'POST' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'   => 'Create',
+					'object' => $object,
+				)
+			)
+		);
+		$count = 0;
+		$track = static function ( $ports ) use ( &$count ) {
+			++$count;
+			return $ports;
+		};
+		\add_filter( 'http_allowed_safe_ports', $track );
+		$valid = Create::validate_object( true, $object, $request );
+		\remove_filter( 'http_allowed_safe_ports', $track );
+
+		$this->assertTrue( $valid );
+		$this->assertSame( 0, $count );
+	}
+
+	/**
+	 * Missing text is allowed only when there is an image the import path can use.
+	 *
+	 * @dataProvider image_only_object_provider
+	 * @covers ::validate_object
+	 *
+	 * @param array $fields   The object fields in addition to its id.
+	 * @param bool  $expected Whether the object is valid.
+	 */
+	public function test_validate_image_only_objects( $fields, $expected ) {
+		$object  = \array_merge(
+			array(
+				'id'        => 'https://example.com/note',
+				'inReplyTo' => 'https://example.org/post',
+			),
+			$fields
+		);
+		$request = new \WP_REST_Request( 'POST' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'   => 'Create',
+					'object' => $object,
+				)
+			)
+		);
+		$this->assertSame( $expected, Create::validate_object( true, $object, $request ) );
+		$this->assertFalse( Create::validate_object( false, $object, $request ), 'Earlier validators retain their veto.' );
+		unset( $object['id'] );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'   => 'Create',
+					'object' => $object,
+				)
+			)
+		);
+		$this->assertFalse( Create::validate_object( true, $object, $request ), 'Images cannot replace the required object id.' );
+	}
+
+	/**
+	 * Image-only replies are rejected while comment images are disabled.
+	 *
+	 * @covers ::validate_object
+	 */
+	public function test_image_only_object_rejected_without_comment_images() {
+		\delete_option( 'activitypub_allow_comment_images' );
+
+		$object  = array(
+			'id'        => 'https://example.com/note',
+			'inReplyTo' => 'https://example.org/post',
+			'image'     => 'https://example.com/photo.jpg',
+		);
+		$request = new \WP_REST_Request( 'POST' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'   => 'Create',
+					'object' => $object,
+				)
+			)
+		);
+
+		$this->assertFalse( Create::validate_object( true, $object, $request ) );
+	}
+
+	/**
+	 * Image-only posts that are not replies still need text, even with comment images enabled.
+	 *
+	 * @covers ::validate_object
+	 */
+	public function test_image_only_object_rejected_when_not_a_reply() {
+		$object  = array(
+			'id'    => 'https://example.com/note',
+			'image' => 'https://example.com/photo.jpg',
+		);
+		$request = new \WP_REST_Request( 'POST' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'   => 'Create',
+					'object' => $object,
+				)
+			)
+		);
+
+		$this->assertFalse( Create::validate_object( true, $object, $request ) );
+	}
+
+	/**
+	 * Image-only quotes are allowed like image-only replies.
+	 *
+	 * @covers ::validate_object
+	 */
+	public function test_image_only_quote_is_valid() {
+		$object  = array(
+			'id'    => 'https://example.com/quote',
+			'quote' => 'https://example.org/post',
+			'image' => 'https://example.com/photo.jpg',
+		);
+		$request = new \WP_REST_Request( 'POST' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'   => 'Create',
+					'object' => $object,
+				)
+			)
+		);
+
+		$this->assertTrue( Create::validate_object( true, $object, $request ) );
+	}
+
+	/**
+	 * Text, supported images, and unsupported or malformed media.
+	 *
+	 * @return array The object fields and validation result.
+	 */
+	public function image_only_object_provider() {
+		$cases = array(
+			'empty text'             => array( array( 'content' => '' ), true ),
+			'missing text and image' => array( array(), false ),
+			'Image object'           => array(
+				array(
+					'attachment' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/photo.jpg',
+					),
+				),
+				true,
+			),
+			'image Document'         => array(
+				array(
+					'attachment' => array(
+						array(
+							'type'      => 'Document',
+							'mediaType' => 'IMAGE/JPEG',
+							'url'       => 'https://example.com/photo.jpg',
+						),
+					),
+				),
+				true,
+			),
+			'image fallback'         => array( array( 'image' => 'https://example.com/photo.jpg' ), true ),
+			'single attachment URL'  => array( array( 'attachment' => 'https://example.com/photo.jpg' ), true ),
+			// The host is checked when the comment is stored.
+			'unsafe attachment URL'  => array( array( 'attachment' => 'http://127.0.0.1/photo.jpg' ), true ),
+			'Unicode image URL'      => array(
+				array(
+					'attachment' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/uploads/写真.jpg',
+					),
+				),
+				true,
+			),
+			'Unicode image fallback' => array( array( 'image' => 'https://example.com/uploads/写真.jpg' ), true ),
+			'Audio object'           => array(
+				array(
+					'attachment' => array(
+						'type' => 'Audio',
+						'url'  => 'https://example.com/audio.mp3',
+					),
+				),
+				false,
+			),
+			'Video object'           => array(
+				array(
+					'attachment' => array(
+						'type' => 'Video',
+						'url'  => 'https://example.com/video.mp4',
+					),
+				),
+				false,
+			),
+			'missing image URL'      => array( array( 'attachment' => array( 'type' => 'Image' ) ), false ),
+			'unsafe protocol'        => array(
+				array(
+					'attachment' => array(
+						'type' => 'Image',
+						'url'  => 'javascript:alert(1)',
+					),
+				),
+				false,
+			),
+		);
+		foreach ( array(
+			42,
+			true,
+			array(
+				'type' => 'Image',
+				'url'  => 42,
+			),
+			'/photo.jpg',
+			'//remote.example/photo.jpg',
+			'ftp://remote.example/photo.jpg',
+			'https://',
+		) as $url ) {
+			$cases[] = array(
+				array(
+					'attachment' => array(
+						'type' => 'Image',
+						'url'  => $url,
+					),
+				),
+				false,
+			);
+		}
+		// Hosts are checked when the comment is stored, not before the signature check.
+		foreach ( array(
+			'http://192.168.1.1/photo.jpg',
+			'https://user:pass@example.com/photo.jpg',
+		) as $url ) {
+			$cases[] = array(
+				array(
+					'attachment' => array(
+						'type' => 'Image',
+						'url'  => $url,
+					),
+				),
+				true,
+			);
+		}
+		// Without a media type, anything but Audio and Video is read as an image.
+		foreach ( array( 42, true, null, array( 'Image' ) ) as $type ) {
+			$cases[] = array(
+				array(
+					'attachment' => array(
+						'type' => $type,
+						'url'  => 'https://example.com/photo.jpg',
+					),
+				),
+				true,
+			);
+		}
+		return $cases;
+	}
 
 	/**
 	 * User ID.
@@ -73,6 +351,7 @@ class Test_Create extends \WP_UnitTestCase {
 		$this->post_permalink = \get_permalink( $this->post_id );
 
 		\add_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'get_remote_metadata_by_actor' ), 0, 2 );
+		\update_option( 'activitypub_allow_comment_images', '1' );
 	}
 
 	/**
@@ -80,6 +359,7 @@ class Test_Create extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		\remove_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'get_remote_metadata_by_actor' ) );
+		\delete_option( 'activitypub_allow_comment_images' );
 		parent::tear_down();
 	}
 

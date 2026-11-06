@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Cache;
 
 use Activitypub\Cache\Avatar;
 use Activitypub\Tests\Cache_Directory_Stream;
+use Activitypub\Tests\Remote_Request_Stub;
 use WP_UnitTestCase;
 
 /**
@@ -18,6 +19,33 @@ use WP_UnitTestCase;
  * since the File class is abstract.
  */
 class Test_File extends WP_UnitTestCase {
+	use Remote_Request_Stub;
+
+	/**
+	 * A failed download is not tried again for a while, so page views do not wait for it again.
+	 * Caching a file directly still downloads it.
+	 *
+	 * @covers \Activitypub\Cache\File::get_or_cache
+	 */
+	public function test_failed_download_is_remembered() {
+		$url = 'https://slow.example.com/photo.jpg';
+
+		\add_filter( 'activitypub_cache_is_safe_url', '__return_true' );
+		$this->stub_remote_requests();
+		$this->responses[ $url ] = new \WP_Error( 'http_request_failed', 'The remote host timed out.' );
+
+		Avatar::get_or_cache( $url, 1 );
+		$remembered = Avatar::get_or_cache( $url, 1 );
+		$requests   = $this->requests;
+		Avatar::cache( $url, 1 );
+
+		$this->unstub_remote_requests();
+		\remove_filter( 'activitypub_cache_is_safe_url', '__return_true' );
+
+		$this->assertFalse( $remembered );
+		$this->assertSame( 1, $requests );
+		$this->assertSame( 2, $this->requests );
+	}
 
 	/**
 	 * Test that is_enabled returns true by default.

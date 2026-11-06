@@ -49,6 +49,8 @@ For transformer and handler testing patterns, see [Testing Reference - Writing E
 
 For mocking HTTP requests and other utilities, see [Testing Reference - Test Utilities](tests/README.md#test-utilities).
 
+Never compare kses output (sanitized or rendered HTML) as an exact string: WordPress trunk serializes it differently. Use `assert_equal_html()` or `WP_HTML_Tag_Processor`, see [Testing Reference - HTML Assertions](tests/README.md#html-assertions).
+
 ### Test Groups
 
 Use `@group` annotations:

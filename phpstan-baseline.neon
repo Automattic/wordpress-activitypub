@@ -475,12 +475,6 @@ parameters:
 			path: includes/scheduler/class-comment.php
 
 		-
-			message: '#^Method Activitypub\\Signature\\Http_Signature_Draft\:\:get_signed_data\(\) should return string but returns false\.$#'
-			identifier: return.type
-			count: 8
-			path: includes/signature/class-http-signature-draft.php
-
-		-
 			message: '#^Method Activitypub\\Transformer\\Activity_Object\:\:get_content_map\(\) should return array but returns null\.$#'
 			identifier: return.type
 			count: 1

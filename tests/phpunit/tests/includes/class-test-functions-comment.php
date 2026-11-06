@@ -236,4 +236,28 @@ class Test_Functions_Comment extends \WP_UnitTestCase {
 		$this->assertStringNotContainsString( '<img', $name );
 		$this->assertSame( 'friends', $name );
 	}
+
+	/**
+	 * A comment type registered with only some arguments gets defaults for the others.
+	 *
+	 * @covers \Activitypub\register_comment_type
+	 */
+	public function test_register_comment_type_fills_defaults() {
+		global $activitypub_comment_types;
+
+		$args = \Activitypub\register_comment_type( 'bookmark', array( 'label' => 'Bookmarks' ) );
+
+		$this->assertSame( 'Bookmarks', $args['label'] );
+		$this->assertSame( 'bookmark', $args['singular'] );
+		$this->assertSame( 'bookmark', $args['type'] );
+		$this->assertSame( 'bookmark', $args['collection'] );
+		$this->assertSame( array(), $args['activity_types'] );
+		$this->assertSame( '%d', $args['count_single'] );
+		$this->assertSame( $args, $activitypub_comment_types['bookmark'] );
+
+		// The other types are still found by their activity type, without warnings from this one.
+		$this->assertSame( 'like', \Activitypub\Comment::get_comment_type_by_activity_type( 'Like' )['type'] );
+
+		unset( $activitypub_comment_types['bookmark'] );
+	}
 }

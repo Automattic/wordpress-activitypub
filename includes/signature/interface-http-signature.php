@@ -32,7 +32,7 @@ interface Http_Signature {
 	 *
 	 * @param array       $headers The HTTP headers.
 	 * @param string|null $body    The request body, if applicable.
-	 * @return string|\WP_Error The verified keyId on success, WP_Error on failure.
+	 * @return string|\WP_Error The id of the actor that owns the verified key on success, WP_Error on failure.
 	 */
 	public function verify( array $headers, $body = null );
 

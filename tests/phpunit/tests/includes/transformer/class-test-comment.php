@@ -57,6 +57,51 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The content map must contain the same visitor-visible text as the comment content.
+	 *
+	 * @dataProvider data_per_viewer_content_filters
+	 * @covers ::to_object
+	 *
+	 * @param string $hook The filter that renders different text for members.
+	 */
+	public function test_content_map_renders_as_visitor( $hook ) {
+		$user_id    = self::factory()->user->create( array( 'role' => 'author' ) );
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => self::$post_id,
+				'comment_content' => 'Hello',
+				'user_id'         => $user_id,
+			)
+		);
+
+		$per_viewer = static function ( $content ) {
+			return $content . ( \is_user_logged_in() ? ' members only' : ' teaser' );
+		};
+		\add_filter( $hook, $per_viewer );
+		\wp_set_current_user( $user_id );
+
+		$object = ( new Comment( \get_comment( $comment_id ) ) )->to_object();
+
+		\remove_filter( $hook, $per_viewer );
+
+		$this->assertStringContainsString( 'teaser', $object->get_content() );
+		$this->assertSame( array( $object->get_content() ), \array_values( $object->get_content_map() ), 'The content map must not render the member-only version.' );
+		$this->assertSame( $user_id, \get_current_user_id(), 'The current user is restored afterwards.' );
+	}
+
+	/**
+	 * Content filters that can vary their output by viewer.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function data_per_viewer_content_filters() {
+		return array(
+			'comment text'      => array( 'comment_text' ),
+			'federated content' => array( 'activitypub_the_content' ),
+		);
+	}
+
+	/**
 	 * Test content generation with reply context.
 	 *
 	 * @covers ::to_object

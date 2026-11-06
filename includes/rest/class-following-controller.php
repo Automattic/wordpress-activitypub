@@ -152,7 +152,7 @@ class Following_Controller extends Actors_Controller {
 	/**
 	 * Get the position of a followed actor in the collection, under the collection's own query rules.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param string           $item    The ActivityPub actor ID of the followed actor.
 	 * @param \WP_REST_Request $request Full details about the request.

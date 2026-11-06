@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Federated posts and comments now always show what a logged-out visitor sees, not the version shown to the logged-in author.

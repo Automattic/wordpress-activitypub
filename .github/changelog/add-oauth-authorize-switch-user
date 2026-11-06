@@ -1,4 +1,0 @@
-Significance: minor
-Type: added
-
-You can now log in as a different WordPress user while authorizing an ActivityPub app without losing the authorization request.

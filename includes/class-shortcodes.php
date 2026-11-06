@@ -159,7 +159,7 @@ class Shortcodes {
 		}
 
 		if ( isset( $attributes['apply_filters'] ) && 'no' === $attributes['apply_filters'] ) {
-			\_doing_it_wrong( __METHOD__, \esc_html__( 'The apply_filters attribute was removed. To keep a filter out of federated content, remove it in the activitypub_before_get_content action instead.', 'activitypub' ), 'unreleased' );
+			\_doing_it_wrong( __METHOD__, \esc_html__( 'The apply_filters attribute was removed. To keep a filter out of federated content, remove it in the activitypub_before_get_content action instead.', 'activitypub' ), '9.4.0' );
 		}
 
 		// Prevent inception.

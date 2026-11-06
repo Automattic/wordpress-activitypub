@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Links to the pages of a collection no longer pass on unknown query arguments, which could point them at the wrong address.

@@ -256,8 +256,8 @@ function custom_large_numbers( $formatted, $number ) {
  */
 function esc_hashtag( $input ) {
 	$hashtag = \wp_specialchars_decode( $input, ENT_QUOTES );
-	// Remove all characters that are not letters, numbers, or hyphens.
-	$hashtag = \preg_replace( '/[^\p{L}\p{Nd}-]+/u', '-', $hashtag );
+	// Remove all characters that are not letters, numbers, underscores, or hyphens.
+	$hashtag = \preg_replace( '/[^\p{L}\p{Nd}_-]+/u', '-', $hashtag );
 
 	// Capitalize every letter that is preceded by a hyphen.
 	$hashtag = \preg_replace_callback(
@@ -366,7 +366,7 @@ function get_embed_html( $url, $inline_css = true ) {
 /**
  * Check whether terms of a taxonomy are federated.
  *
- * @since unreleased
+ * @since 9.4.0
  *
  * @param string $taxonomy The taxonomy name.
  *
@@ -385,4 +385,28 @@ function is_supported_taxonomy( $taxonomy ) {
 	$supported_taxonomies = \apply_filters( 'activitypub_supported_taxonomies', array( 'category', 'post_tag' ) );
 
 	return \in_array( $taxonomy, $supported_taxonomies, true );
+}
+
+/**
+ * Check whether an import is running.
+ *
+ * Core defines `WP_IMPORTING` for importers that run from the Tools → Import screen.
+ * Importers also fire `import_start` and `import_end`, which covers an import that
+ * runs somewhere else, for example from WP-CLI.
+ *
+ * @since 9.4.1
+ *
+ * @return bool True while an import is running.
+ */
+function is_importing() {
+	$importing = ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) || \did_action( 'import_start' ) > \did_action( 'import_end' );
+
+	/**
+	 * Filters whether an import is running.
+	 *
+	 * @since 9.4.1
+	 *
+	 * @param bool $importing True while an import is running.
+	 */
+	return (bool) \apply_filters( 'activitypub_is_importing', $importing );
 }

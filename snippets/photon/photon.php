@@ -36,26 +36,23 @@ if ( ! class_exists( '\Automattic\Jetpack\Image_CDN\Image_CDN_Core' ) ) {
  * so that remote media is served via Photon instead of being downloaded locally.
  *
  * @param string          $url       The remote media URL.
- * @param string          $context   The media context (avatar, media, emoji, audio, video).
+ * @param string          $context   The media context (avatar, media, comment_media, emoji, audio, video).
  * @param int|string|null $entity_id The entity ID.
  * @param array           $options   Additional options.
  *
  * @return string The (potentially) Photon-rewritten URL.
  */
 function photon_cdn_url( $url, $context, $entity_id, $options ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-	// Only rewrite image-like contexts through Jetpack's Image CDN.
-	$image_contexts = array( 'avatar', 'media', 'emoji' );
-
-	if ( in_array( $context, $image_contexts, true ) ) {
-		return \Automattic\Jetpack\Image_CDN\Image_CDN_Core::cdn_url( $url );
+	// Jetpack's Image CDN only serves images, so leave audio and video unchanged.
+	if ( in_array( $context, array( 'audio', 'video' ), true ) ) {
+		return $url;
 	}
 
-	// For non-image contexts (e.g., audio, video), leave the URL unchanged.
-	return $url;
+	return \Automattic\Jetpack\Image_CDN\Image_CDN_Core::cdn_url( $url );
 }
 
 // Rewrite remote media URLs through Photon.
-\add_filter( 'activitypub_remote_media_url', __NAMESPACE__ . '\photon_cdn_url', 5 );
+\add_filter( 'activitypub_remote_media_url', __NAMESPACE__ . '\photon_cdn_url', 5, 4 );
 
 // Disable local file caching since Photon handles CDN proxying.
 \add_filter( 'activitypub_remote_cache_enabled', '__return_false' );

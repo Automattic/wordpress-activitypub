@@ -15,6 +15,8 @@ use Activitypub\Collection\Remote_Actors;
  * @coversDefaultClass \Activitypub\Hashtag
  */
 class Test_Hashtag extends \WP_UnitTestCase {
+	use Equal_Html;
+
 	/**
 	 * Test the content.
 	 *
@@ -369,5 +371,98 @@ ENDPRE;
 		\remove_filter( 'the_content', array( \Activitypub\Hashtag::class, 'the_content' ) );
 		\remove_filter( 'activitypub_activity_object_array', array( \Activitypub\Hashtag::class, 'filter_activity_object' ), 99 );
 		\delete_option( 'activitypub_use_hashtags' );
+	}
+
+	/**
+	 * Core's excerpt strips the hashtag link and keeps the hashtag as text, like before.
+	 *
+	 * @covers ::the_content
+	 */
+	public function test_core_excerpt_keeps_hashtag_as_text() {
+		$post = $this->create_hashtag_post();
+
+		$this->enable_hashtags();
+		$excerpt = \get_the_excerpt( $post );
+		$this->disable_hashtags();
+
+		$this->assertSame( 'hallo #object test', $excerpt );
+	}
+
+	/**
+	 * An excerpt that keeps its HTML, like a theme builds it from the content, keeps the hashtag link.
+	 *
+	 * @covers ::the_content
+	 */
+	public function test_html_excerpt_keeps_hashtag_link() {
+		$post = $this->create_hashtag_post();
+		$link = \get_term_link( \get_term_by( 'name', 'object', 'post_tag' ), 'post_tag' );
+
+		$html_excerpt = static function ( $text, $post ) {
+			return \strip_tags( \apply_filters( 'the_content', $post->post_content ), '<a>,<p>' );
+		};
+		\remove_filter( 'get_the_excerpt', 'wp_trim_excerpt' );
+		\add_filter( 'get_the_excerpt', $html_excerpt, 10, 2 );
+		$this->enable_hashtags();
+
+		$excerpt = \get_the_excerpt( $post );
+
+		$this->disable_hashtags();
+		\remove_filter( 'get_the_excerpt', $html_excerpt );
+		\add_filter( 'get_the_excerpt', 'wp_trim_excerpt', 10, 2 );
+
+		$this->assert_equal_html( \sprintf( "<p>hallo <a rel=\"tag\" class=\"hashtag u-tag u-category\" href=\"%s\">#object</a> test</p>\n", \esc_url( $link ) ), $excerpt );
+	}
+
+	/**
+	 * The summary of a post keeps hashtags as text, the content links them, like before.
+	 *
+	 * @covers ::filter_activity_object
+	 */
+	public function test_post_summary_keeps_hashtag_as_text() {
+		$post = $this->create_hashtag_post();
+		$link = \get_term_link( \get_term_by( 'name', 'object', 'post_tag' ), 'post_tag' );
+
+		$this->enable_hashtags();
+		$object = \Activitypub\Transformer\Factory::get_transformer( $post )->to_object()->to_array();
+		$this->disable_hashtags();
+
+		$this->assertSame( 'hallo #object test', $object['summary'] );
+		$this->assert_equal_html( \sprintf( '<p>hallo <a rel="tag" class="hashtag u-tag u-category" href="%s">#object</a> test</p>', \esc_url( $link ) ), $object['content'] );
+	}
+
+	/**
+	 * Create a post with a hashtag of an existing tag.
+	 *
+	 * @return \WP_Post The post.
+	 */
+	private function create_hashtag_post() {
+		\wp_create_term( 'object', 'post_tag' );
+
+		return \get_post(
+			self::factory()->post->create(
+				array(
+					'post_author'  => self::factory()->user->create( array( 'role' => 'author' ) ),
+					'post_title'   => 'Title',
+					'post_excerpt' => '',
+					'post_content' => 'hallo #object test',
+				)
+			)
+		);
+	}
+
+	/**
+	 * Register the hashtag filters, like the enabled setting does.
+	 */
+	private function enable_hashtags() {
+		\add_filter( 'the_content', array( \Activitypub\Hashtag::class, 'the_content' ) );
+		\add_filter( 'activitypub_activity_object_array', array( \Activitypub\Hashtag::class, 'filter_activity_object' ), 99 );
+	}
+
+	/**
+	 * Remove the hashtag filters again.
+	 */
+	private function disable_hashtags() {
+		\remove_filter( 'the_content', array( \Activitypub\Hashtag::class, 'the_content' ) );
+		\remove_filter( 'activitypub_activity_object_array', array( \Activitypub\Hashtag::class, 'filter_activity_object' ), 99 );
 	}
 }

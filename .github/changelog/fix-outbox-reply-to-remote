@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Replies sent through the ActivityPub API to posts on other servers are now delivered instead of being rejected.

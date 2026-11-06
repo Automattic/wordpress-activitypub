@@ -425,6 +425,46 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An unknown client is not discovered outside a REST request, a discovered one still loads.
+	 *
+	 * The consent form on wp-login.php is not rate-limited, so it must not fetch client metadata.
+	 * It shows clients that the REST authorize route already discovered.
+	 *
+	 * @covers ::get
+	 */
+	public function test_get_outside_rest_makes_no_request() {
+		$requests = 0;
+		$count    = static function ( $response ) use ( &$requests ) {
+			++$requests;
+			return $response;
+		};
+		\add_filter( 'pre_http_request', $count );
+
+		$unknown = Client::get( 'https://app.example.com/client.json' );
+
+		\wp_insert_post(
+			array(
+				'post_type'   => Client::POST_TYPE,
+				'post_status' => 'publish',
+				'post_title'  => 'Discovered App',
+				'meta_input'  => array(
+					'_activitypub_client_id'     => 'https://discovered.example.com/client.json',
+					'_activitypub_redirect_uris' => array( 'https://discovered.example.com/callback' ),
+					'_activitypub_discovered'    => true,
+				),
+			)
+		);
+		$discovered = Client::get( 'https://discovered.example.com/client.json' );
+
+		\remove_filter( 'pre_http_request', $count );
+
+		$this->assertSame( 'activitypub_client_not_found', $unknown->get_error_code() );
+		$this->assertInstanceOf( Client::class, $discovered );
+		$this->assertSame( 'Discovered App', $discovered->get_name() );
+		$this->assertSame( 0, $requests );
+	}
+
+	/**
 	 * Test validate method for public client.
 	 *
 	 * @covers ::validate

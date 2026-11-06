@@ -656,7 +656,7 @@ class Admin {
 	 * Only the browsable `source_url` is linked, not the ActivityPub ID: reactions like Likes
 	 * and Announces store only that, and it is not always a page.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param int $comment_id The comment id.
 	 *

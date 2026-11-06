@@ -33,6 +33,8 @@ class Comment {
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 2 );
 		\add_action( 'pre_get_comments', array( static::class, 'comment_query' ) );
 		\add_filter( 'get_page_of_comment_query_args', array( static::class, 'get_page_of_comment_query_args' ) );
+		// First, so it sees core's verdict and leaves approvals from other filters alone.
+		\add_filter( 'pre_comment_approved', array( static::class, 'check_previous_comment_approval' ), PHP_INT_MIN, 2 );
 		\add_filter( 'pre_comment_approved', array( static::class, 'pre_comment_approved' ), 11, 2 );
 		\add_filter( 'get_avatar_comment_types', array( static::class, 'get_avatar_comment_types' ), 99 );
 		\add_action( 'update_option_activitypub_allow_likes', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
@@ -41,34 +43,53 @@ class Comment {
 		\add_filter( 'get_comment_author', array( static::class, 'render_emoji' ), 10, 2 );
 		\add_filter( 'comment_author', array( static::class, 'unescape_emoji' ), 20, 2 ); // After esc_html().
 		\add_filter( 'rest_comment_query', array( static::class, 'rest_comment_query' ) );
-		\add_filter( 'comment_text', array( static::class, 'render_blocks' ), 5 ); // Before other filters.
+		\add_filter( 'comment_text', array( static::class, 'render_blocks' ), 5, 2 ); // Before other filters.
 	}
 
 	/**
 	 * Render blocks in comment content.
 	 *
 	 * Comments don't automatically parse blocks like posts do.
-	 * This filter applies do_blocks() to render activitypub/emoji
-	 * and activitypub/image blocks in comment content.
+	 * This filter renders only leaf activitypub/emoji and activitypub/image blocks.
 	 *
-	 * @param string $content The comment content.
+	 * @param string           $content The comment content.
+	 * @param \WP_Comment|null $comment Optional. The comment being rendered.
 	 *
 	 * @return string The content with blocks rendered.
 	 */
-	public static function render_blocks( $content ) {
+	public static function render_blocks( $content, $comment = null ) {
 		if ( empty( $content ) || ! \str_contains( $content, '<!-- wp:activitypub/' ) ) {
 			return $content;
 		}
 
-		$blocks = \parse_blocks( $content );
-		$output = '';
+		$blocks         = \parse_blocks( $content );
+		$output         = '';
+		$allowed_blocks = array( 'activitypub/emoji' );
+		$context_filter = null;
+		if ( \get_option( 'activitypub_allow_comment_images' ) && $comment instanceof \WP_Comment && 'approved' === \wp_get_comment_status( $comment ) && self::was_received( $comment ) ) {
+			$allowed_blocks[] = 'activitypub/image';
+
+			// Images are cached per comment, so removing the comment removes them.
+			$context_filter = static function ( $context ) use ( $comment ) {
+				$context['commentId'] = (int) $comment->comment_ID;
+				return $context;
+			};
+			\add_filter( 'render_block_context', $context_filter );
+		}
 
 		foreach ( $blocks as $block ) {
-			if ( ! empty( $block['blockName'] ) && \str_starts_with( $block['blockName'], 'activitypub/' ) ) {
+			// Rendering a parent also invokes its children's callbacks, so reject nested blocks.
+			if ( \in_array( $block['blockName'], $allowed_blocks, true ) && empty( $block['innerBlocks'] ) ) {
 				$output .= \render_block( $block );
+			} elseif ( 'activitypub/image' === $block['blockName'] ) {
+				// A hidden image is replaced by its description, so a stored img cannot show the remote image.
+				$output .= Blocks::render_image_description( $block['attrs'] );
 			} else {
 				$output .= \serialize_block( $block );
 			}
+		}
+		if ( $context_filter ) {
+			\remove_filter( 'render_block_context', $context_filter );
 		}
 
 		return $output;
@@ -476,7 +497,7 @@ class Comment {
 	/**
 	 * Keeps replies to remote posts out of the Recent Comments widget and the Latest Comments block.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param array $args The comment query arguments.
 	 *
@@ -955,12 +976,66 @@ class Comment {
 	}
 
 	/**
-	 * Filter the comment status before it is set.
+	 * Restrict the history used for core's previous-author approval.
+	 *
+	 * @since 9.4.1
 	 *
 	 * @param int|string|\WP_Error $approved     The approved comment status.
 	 * @param array                $comment_data The comment data.
 	 *
 	 * @return int|string|\WP_Error The approval status. 1, 0, 'spam', 'trash', or WP_Error.
+	 */
+	public static function check_previous_comment_approval( $approved, $comment_data ) {
+		/*
+		 * Core approves an author with a previously approved comment of the same name and email. The email of a
+		 * Fediverse comment is its public handle, not a secret, so core's approval only holds under two more rules.
+		 * Both can only hold a comment, never approve one. Core decides everything else. The rules query directly,
+		 * not with get_comments(): `pre_get_comments` filters (this plugin's included) change comment queries by context.
+		 */
+		if (
+			( 1 !== $approved && '1' !== $approved ) ||
+			! empty( $comment_data['user_id'] ) ||
+			empty( $comment_data['comment_author_email'] ) ||
+			'1' !== \get_option( 'comment_previously_approved' )
+		) {
+			return $approved;
+		}
+
+		global $wpdb;
+
+		// Not from the Fediverse (comment form, reviews, Webmentions, any plugin): an email that is a Fediverse handle proves nothing.
+		if ( 'activitypub' !== ( $comment_data['comment_meta']['protocol'] ?? '' ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			return $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM $wpdb->comments c INNER JOIN $wpdb->commentmeta m ON m.comment_id = c.comment_ID AND m.meta_key = 'protocol' AND m.meta_value = 'activitypub' WHERE c.comment_author_email = %s AND c.comment_approved = '1' LIMIT 1", \wp_unslash( $comment_data['comment_author_email'] ) ) ) ? 0 : $approved;
+		}
+
+		// Likes, reposts and quotes are left to core. A reply has the type `comment`, or `''` where core does not set that default (WordPress.com).
+		if ( ! \in_array( $comment_data['comment_type'], array( 'comment', '' ), true ) ) {
+			return $approved;
+		}
+
+		/*
+		 * A Fediverse reply: a handle can move to another account, so only an approved reply of the same actor counts.
+		 *
+		 * @todo The remote actor post ID stands in for the actor. Compare the actor URI once remote actor posts are removed.
+		 */
+		$actor_id = (string) ( $comment_data['comment_meta']['_activitypub_remote_actor_id'] ?? '' );
+		if ( ! $actor_id ) {
+			return 0;
+		}
+
+		// Core's match, name and email (indexed), plus the actor.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		return $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM $wpdb->comments c INNER JOIN $wpdb->commentmeta m ON m.comment_id = c.comment_ID AND m.meta_key = '_activitypub_remote_actor_id' AND m.meta_value = %s WHERE c.comment_author = %s AND c.comment_author_email = %s AND c.comment_approved = '1' AND c.comment_type IN ( 'comment', '' ) LIMIT 1", $actor_id, \wp_unslash( $comment_data['comment_author'] ), \wp_unslash( $comment_data['comment_author_email'] ) ) ) ? $approved : 0;
+	}
+
+	/**
+	 * Filter the comment status before it is set.
+	 *
+	 * @param int|string|\WP_Error $approved     The approved comment status.
+	 * @param array                $comment_data The comment data.
+	 *
+	 * @return int|string|\WP_Error The approval status.
 	 */
 	public static function pre_comment_approved( $approved, $comment_data ) {
 		/*
@@ -988,29 +1063,6 @@ class Comment {
 		$post    = \get_post( $post_id );
 
 		if ( $post && \in_array( $post->post_type, self::hide_for(), true ) ) {
-			return 1;
-		}
-
-		if ( '1' !== \get_option( 'comment_previously_approved' ) ) {
-			return $approved;
-		}
-
-		if (
-			empty( $comment_data['comment_meta']['protocol'] ) ||
-			'activitypub' !== $comment_data['comment_meta']['protocol']
-		) {
-			return $approved;
-		}
-
-		global $wpdb;
-
-		$author     = $comment_data['comment_author'];
-		$author_url = $comment_data['comment_author_url'];
-		// Only previously approved normal comments count, not approved likes or reposts.
-		// phpcs:ignore
-		$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author = %s AND comment_author_url = %s AND comment_approved = '1' AND comment_type = 'comment' LIMIT 1", $author, $author_url ) );
-
-		if ( 1 === (int) $ok_to_comment ) {
 			return 1;
 		}
 

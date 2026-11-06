@@ -102,7 +102,7 @@ class Reject {
 	/**
 	 * Reject a "QuoteRequest" of ours: the quote part is dropped from the post.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param array     $reject      The activity-object.
 	 * @param \WP_Post  $outbox_post Our QuoteRequest outbox item.
@@ -148,7 +148,7 @@ class Reject {
 	/**
 	 * Only the quoted object's author may answer our QuoteRequest.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param array  $reject     The activity-object.
 	 * @param string $quoted_uri The quoted object URI.

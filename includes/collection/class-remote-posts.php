@@ -387,7 +387,7 @@ class Remote_Posts {
 	 * @param int    $limit           Maximum number of attachments. Default 20.
 	 * @param string $attachment_type Optional media type to include, such as 'image'.
 	 *
-	 * @return array Array of attachments with 'url', 'alt', and 'type' keys.
+	 * @return array<int, array{url: string, alt: string, type: string}> Array of attachments with 'url', 'alt', and 'type' keys.
 	 */
 	public static function extract_attachments( $activity_object, $limit = 20, $attachment_type = '' ) {
 		$limit = (int) $limit;

@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Restore spam-protection checks for regular comments after a comment arrives from the fediverse.

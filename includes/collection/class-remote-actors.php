@@ -162,7 +162,7 @@ class Remote_Actors {
 	/**
 	 * Persist prepared remote actor post data.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param array $args Prepared post data. An ID indicates an update.
 	 *
@@ -212,7 +212,7 @@ class Remote_Actors {
 	/**
 	 * Get the IDs of the local users a remote actor follows.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param int $post_id The remote actor post ID.
 	 *
@@ -234,7 +234,7 @@ class Remote_Actors {
 	 * Every write to an actor post or its follower meta has to end up here; a bare
 	 * `wp_delete_post()` or `add_post_meta()` elsewhere leaves a stale inbox list behind.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param int[] $user_ids The local users whose follower inbox lists include the actor.
 	 *
@@ -745,7 +745,7 @@ class Remote_Actors {
 	 * stopgap for a missing incoming/outgoing serialization-context split; until that exists, every
 	 * storage path (see also Inbox storage) needs the same treatment.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param Actor $actor The actor to serialize.
 	 *
@@ -809,11 +809,14 @@ class Remote_Actors {
 	/**
 	 * Get public key from key_id.
 	 *
-	 * @param string $key_id The URL to the public key.
+	 * @since 9.4.0 Added the `$owner` parameter.
+	 *
+	 * @param string      $key_id The URL to the public key.
+	 * @param string|null $owner  Optional. Set to the id of the actor the key was taken from.
 	 *
 	 * @return resource|\WP_Error The public key resource or WP_Error.
 	 */
-	public static function get_public_key( $key_id ) {
+	public static function get_public_key( $key_id, &$owner = null ) {
 		$no_profile_error = new \WP_Error( 'activitypub_no_remote_profile_found', 'No Profile found or Profile not accessible', array( 'status' => 401 ) );
 		$no_key_error     = new \WP_Error( 'activitypub_no_remote_key_found', 'No Public-Key found', array( 'status' => 401 ) );
 
@@ -862,7 +865,62 @@ class Remote_Actors {
 			return $no_key_error;
 		}
 
+		// The actor this key belongs to, so the caller can bind it to the activity's actor.
+		$owner = $actor['id'];
+
 		return $key_resource;
+	}
+
+	/**
+	 * Refresh a stored actor from its own host after its key failed to verify.
+	 *
+	 * The key of a stored actor is read from the stored record first, so an actor that rotates its
+	 * key would stay locked out until something refreshes that record. A key taken from the proxy
+	 * is at most as old as the proxy's cache, so only stored actors are refreshed.
+	 *
+	 * Each actor is refreshed at most once every few minutes, so failing signatures cannot cause a
+	 * fetch every time. The throttle is a transient, not the record's modified date, so the
+	 * scheduler still refreshes, counts errors for and cleans up this actor as before.
+	 *
+	 * @since 9.4.0
+	 *
+	 * @param string $key_id The keyId whose key did not verify.
+	 *
+	 * @return bool True if the stored actor changed, false otherwise.
+	 */
+	public static function refresh_public_key( $key_id ) {
+		$post = self::get_by_uri( \strip_fragment_from_url( $key_id ) );
+		if ( \is_wp_error( $post ) ) {
+			return false;
+		}
+
+		// The stored document's id, not the post's guid, which core may rewrite on save.
+		$stored = \json_decode( $post->post_content, true );
+		$id     = $stored['id'] ?? null;
+		if ( ! \is_string( $id ) ) {
+			return false;
+		}
+
+		$throttle = 'activitypub_key_refresh_' . \md5( $id );
+		if ( \get_transient( $throttle ) ) {
+			return false;
+		}
+		\set_transient( $throttle, 1, 5 * MINUTE_IN_SECONDS );
+
+		// Proxy::get() only answers with the document its own host serves under this id.
+		$actor = Proxy::get( $id, array( 'cached' => false ) );
+		if ( ! \is_array( $actor ) || ( $actor['id'] ?? null ) !== $id ) {
+			return false;
+		}
+
+		$fresh = Actor::init_from_array( $actor );
+
+		// Only a changed document is worth a write, compared the way it would be stored.
+		if ( ! $fresh instanceof Actor || \json_decode( self::serialize_for_storage( $fresh )[0], true ) === $stored ) {
+			return false;
+		}
+
+		return ! \is_wp_error( self::update( $post, $fresh ) );
 	}
 
 	/**

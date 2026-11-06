@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Rest;
 
 use Activitypub\Application;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox as Inbox_Collection;
 use Activitypub\Collection\Outbox;
 use Activitypub\Handler\Feature_Request;
@@ -234,6 +235,45 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	}
 
 	/**
+	 * A Follow of another server's actor, delivered to a local inbox, adds no follower.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_follow_of_other_actor_adds_no_follower() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$actor_url              = 'https://example.com/users/alice';
+		$mock_metadata_callback = function () use ( $actor_url ) {
+			return array(
+				'id'                => $actor_url,
+				'type'              => 'Person',
+				'preferredUsername' => 'alice',
+				'inbox'             => 'https://example.com/inbox',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $mock_metadata_callback );
+
+		$json = array(
+			'id'     => 'https://example.com/activities/follow-bob',
+			'type'   => 'Follow',
+			'actor'  => $actor_url,
+			'object' => 'https://remote.example/actors/1',
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $json ) );
+
+		$response = \rest_do_request( $request );
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_metadata_callback );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$this->assertEquals( 202, $response->get_status() );
+		$this->assertCount( 0, Followers::get_many( self::$user_id ), 'A Follow of another actor should not add a follower.' );
+	}
+
+	/**
 	 * Test that deliveries to the retired Application actor's inbox are handled by the shared inbox.
 	 *
 	 * Remote servers that cached the pre-extraction Application actor document still
@@ -335,6 +375,35 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$response = \rest_do_request( $request );
 		$this->assertEquals( 202, $response->get_status() );
 
+		// Image-only replies must pass the same REST validation as text replies.
+		\update_option( 'activitypub_allow_comment_images', '1' );
+		unset( $json['object']['content'] );
+		$json['id']                  .= '/image';
+		$json['object']['id']        .= '/image';
+		$json['object']['attachment'] = array(
+			'type' => 'Image',
+			'url'  => 'https://example.com/photo.jpg',
+		);
+		$request                      = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/1/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $json ) );
+		$this->assertSame( 202, \rest_do_request( $request )->get_status() );
+		foreach ( array(
+			42,
+			true,
+			array(
+				'type' => 'Image',
+				'url'  => 42,
+			),
+			'/photo.jpg',
+			'//remote.example/photo.jpg',
+		) as $url ) {
+			$json['object']['attachment']['url'] = $url;
+			$request->set_body( \wp_json_encode( $json ) );
+			$this->assertSame( 400, \rest_do_request( $request )->get_status() );
+		}
+		\delete_option( 'activitypub_allow_comment_images' );
+
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
 	}
 
@@ -425,6 +494,9 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$remote_object_filter = function ( $json, $actor ) {
 			$public_key = Actors::get_public_key( self::$user_id );
 
+			// The key is fetched by its keyId; like a real server, answer with the actor's id without the fragment.
+			$actor = \strip_fragment_from_url( $actor );
+
 			// Return ActivityPub Profile with signature.
 			return array(
 				'id'        => $actor,
@@ -485,7 +557,11 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$request->set_body( $args['body'] );
 		$request->set_headers( $args['headers'] );
 
-		$response = \rest_do_request( $request );
+		// Signature verification reads the query string from the actual HTTP request URI.
+		$server                 = $_SERVER;
+		$_SERVER['REQUEST_URI'] = $route;
+		$response               = \rest_do_request( $request );
+		$_SERVER                = $server;
 		$this->assertEquals( 202, $response->get_status() );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
