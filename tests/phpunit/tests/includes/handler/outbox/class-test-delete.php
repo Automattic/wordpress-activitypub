@@ -268,6 +268,7 @@ class Test_Delete extends \WP_UnitTestCase {
 			)
 		);
 		\wp_trash_comment( $comment_id );
+		$trash_calls = \did_action( 'trash_comment' );
 
 		$data = array(
 			'type'   => 'Delete',
@@ -278,6 +279,7 @@ class Test_Delete extends \WP_UnitTestCase {
 
 		$this->assertWPError( $result );
 		$this->assertSame( 'https://w3id.org/fep/c180#object-does-not-exist', $result->get_error_data()['type'] );
+		$this->assertSame( $trash_calls, \did_action( 'trash_comment' ), 'A comment already in the trash is not trashed again.' );
 	}
 
 	/**
