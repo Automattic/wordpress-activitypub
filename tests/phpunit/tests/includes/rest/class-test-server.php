@@ -557,6 +557,54 @@ class Test_Server extends \WP_Test_REST_TestCase {
 	}
 
 	/**
+	 * Error data for test_filter_output_problem_title.
+	 *
+	 * @return array[] Error data, expected type and expected title.
+	 */
+	public function data_problem_titles() {
+		return array(
+			'title that is not a string' => array(
+				array(
+					'type'  => 'https://w3id.org/fep/c180#unsupported-type',
+					'title' => array( 'Note' ),
+				),
+				'https://w3id.org/fep/c180#unsupported-type',
+				'test_error',
+			),
+			'title without a type'       => array(
+				array( 'title' => 'Unsupported type' ),
+				'about:blank',
+				'test_error',
+			),
+			'type without a title'       => array(
+				array( 'type' => 'https://w3id.org/fep/c180#unsupported-type' ),
+				'https://w3id.org/fep/c180#unsupported-type',
+				'test_error',
+			),
+		);
+	}
+
+	/**
+	 * The title of the error data is used only as a string and only with a problem type.
+	 *
+	 * @dataProvider data_problem_titles
+	 * @covers ::filter_output
+	 *
+	 * @param array  $error_data     The error data.
+	 * @param string $expected_type  The expected problem type.
+	 * @param string $expected_title The expected title.
+	 */
+	public function test_filter_output_problem_title( $error_data, $expected_type, $expected_title ) {
+		$wp_error = new \WP_Error( 'test_error', 'Test error message', $error_data );
+		$request  = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+
+		$result = Server::filter_output( new \WP_REST_Response( $wp_error, 400 ), new \WP_REST_Server(), $request );
+
+		$this->assertSame( $expected_type, $result->get_data()['type'] );
+		$this->assertSame( $expected_title, $result->get_data()['title'] );
+	}
+
+	/**
 	 * Data provider for missing error data scenarios.
 	 *
 	 * @return array
