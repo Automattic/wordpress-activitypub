@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Plugins can now add their own buttons to the Fediverse Reactions block, for example to send a Webmention.
