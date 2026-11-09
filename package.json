@@ -46,7 +46,7 @@
 		"@wordpress/babel-preset-default": "^10.0.0",
 		"@wordpress/block-editor": "^19.0.0",
 		"@wordpress/blocks": "^17.0.0",
-		"@wordpress/commands": "^2.0.0",
+		"@wordpress/commands": "^2.1.0",
 		"@wordpress/components": "^43.0.0",
 		"@wordpress/compose": "^9.0.0",
 		"@wordpress/core-data": "^9.0.0",
