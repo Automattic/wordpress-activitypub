@@ -14,6 +14,7 @@ use Activitypub\Handler\Delete;
 use Activitypub\Proxy;
 use Activitypub\Tests\Quote_Post_Fixtures;
 use Activitypub\Tests\Remote_Request_Stub;
+use Activitypub\Tests\Uri_Test_Cases;
 use Activitypub\Tombstone;
 
 use function Activitypub\get_object_id;
@@ -27,6 +28,7 @@ use function Activitypub\object_to_uri;
 class Test_Delete extends \WP_UnitTestCase {
 	use Quote_Post_Fixtures;
 	use Remote_Request_Stub;
+	use Uri_Test_Cases;
 
 	/**
 	 * Test user ID.
@@ -329,6 +331,68 @@ class Test_Delete extends \WP_UnitTestCase {
 
 		// Verify comment was deleted.
 		$this->assertNull( \get_comment( $comment_id ), 'Comment should be deleted after delete_object' );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test that a Tombstone only deletes interactions stored under its exact ID.
+	 *
+	 * @covers ::maybe_delete_interaction
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The stored ID.
+	 * @param string $requested The requested ID.
+	 */
+	public function test_maybe_delete_interaction_matches_exact_id( $stored, $requested ) {
+		$post_id    = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'comment_type'    => 'like',
+				'comment_meta'    => array(
+					'protocol'  => 'activitypub',
+					'source_id' => \esc_url_raw( $stored ),
+				),
+			)
+		);
+
+		$filter = function ( $preempt, $args, $url ) use ( $requested ) {
+			if ( $url === $requested ) {
+				return array(
+					'headers'  => array(),
+					'body'     => '',
+					'response' => array( 'code' => 410 ),
+				);
+			}
+			return $preempt;
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		$delete = array(
+			'type'   => 'Delete',
+			'actor'  => \sprintf( 'https://%s/users/author', \wp_parse_url( $requested, PHP_URL_HOST ) ),
+			'object' => $requested,
+		);
+
+		$this->assertFalse( Delete::maybe_delete_interaction( $delete ) );
+		$this->assertInstanceOf( 'WP_Comment', \get_comment( $comment_id ) );
+
+		// The other host's own interaction is the one deleted.
+		$other_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'comment_type'    => 'like',
+				'comment_meta'    => array(
+					'protocol'  => 'activitypub',
+					'source_id' => \esc_url_raw( $requested ),
+				),
+			)
+		);
+
+		$this->assertTrue( Delete::maybe_delete_interaction( $delete ) );
+		$this->assertNull( \get_comment( $other_id ) );
+		$this->assertInstanceOf( 'WP_Comment', \get_comment( $comment_id ) );
 
 		\remove_filter( 'pre_http_request', $filter );
 	}
@@ -1156,5 +1220,46 @@ class Test_Delete extends \WP_UnitTestCase {
 
 		$this->assertSame( 'https://remote.example/stamps/1', \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
 		$this->assertSame( $before, $this->count_updates( $post_id ) );
+	}
+
+	/**
+	 * Stamps whose ID only differs in case or accents from the deleted one.
+	 *
+	 * @return array<string, string[]> Test cases: stored stamp ID.
+	 */
+	public function lookalike_stamp_provider() {
+		return array(
+			'case in host'   => array( 'https://REMOTE.example/stamps/1' ),
+			'case in path'   => array( 'https://remote.example/STAMPS/1' ),
+			'accent in path' => array( 'https://remote.example/stämps/1' ),
+		);
+	}
+
+	/**
+	 * A Delete for a stamp leaves stamps with another ID alone.
+	 *
+	 * @covers ::revoke_quote_authorization
+	 * @dataProvider lookalike_stamp_provider
+	 *
+	 * @param string $stored The stamp ID of the other post.
+	 */
+	public function test_stamp_delete_matches_exact_id( $stored ) {
+		$other_id = $this->create_quote_post();
+		\update_post_meta( $other_id, '_activitypub_quote_authorization', $stored );
+
+		$gone = $this->mock_stamp_response( 404 );
+		Delete::handle_delete( $this->build_stamp_delete(), self::$user_id );
+
+		$this->assertSame( $stored, \get_post_meta( $other_id, '_activitypub_quote_authorization', true ) );
+
+		// The post with the exact stamp is the one cleared.
+		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+
+		Delete::handle_delete( $this->build_stamp_delete(), self::$user_id );
+		\remove_filter( 'pre_http_request', $gone );
+
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( $stored, \get_post_meta( $other_id, '_activitypub_quote_authorization', true ) );
 	}
 }

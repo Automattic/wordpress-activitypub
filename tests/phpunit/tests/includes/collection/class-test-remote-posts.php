@@ -12,6 +12,7 @@ use Activitypub\Collection\Remote_Posts;
 use Activitypub\Post_Types;
 use Activitypub\Tests\Uri_Test_Cases;
 
+use function Activitypub\get_id_hash;
 use function Activitypub\object_to_uri;
 
 /**
@@ -655,6 +656,36 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 
 		$this->assertInstanceOf( '\WP_Post', $retrieved_post, 'The original object ID must find the saved remote post.' );
 		$this->assertEquals( $post->ID, $retrieved_post->ID );
+	}
+
+	/**
+	 * A remote post is only found by its exact ID.
+	 *
+	 * @covers ::get_by_guid
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The stored ID.
+	 * @param string $requested The requested ID.
+	 */
+	public function test_get_by_guid_matches_exact_id( $stored, $requested ) {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type' => Remote_Posts::POST_TYPE,
+				'guid'      => $stored,
+			)
+		);
+
+		$this->assertWPError( Remote_Posts::get_by_guid( $requested ) );
+
+		// The other host's own post, stored after the first one.
+		$other_id = self::factory()->post->create(
+			array(
+				'post_type' => Remote_Posts::POST_TYPE,
+				'guid'      => $requested,
+			)
+		);
+		$this->assertSame( $other_id, Remote_Posts::get_by_guid( $requested )->ID );
+		$this->assertSame( $post_id, Remote_Posts::get_by_guid( $stored )->ID );
 	}
 
 	/**
@@ -2556,5 +2587,41 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 
 		// Should return exact count of deleted posts.
 		$this->assertEquals( 15, $deleted );
+	}
+
+	/**
+	 * A remote post stores the hash of its ID, also when a post stored without it is updated.
+	 *
+	 * @covers ::add
+	 * @covers ::update
+	 * @dataProvider uri_provider
+	 * @group uri-lookup
+	 *
+	 * @param string $object_id The object ID.
+	 */
+	public function test_stores_id_hash( $object_id ) {
+		global $wpdb;
+
+		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
+			'object' => array(
+				'id'           => $object_id,
+				'type'         => 'Note',
+				'name'         => 'Hash Object',
+				'content'      => '<p>Test content</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+			),
+		);
+
+		$post = Remote_Posts::add( $activity, 1 );
+		$this->assertInstanceOf( '\WP_Post', $post );
+		$this->assertSame( get_id_hash( $object_id ), $post->post_name );
+
+		// As for posts stored before the hash.
+		$wpdb->update( $wpdb->posts, array( 'post_name' => 'hash-object' ), array( 'ID' => $post->ID ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		\clean_post_cache( $post->ID );
+
+		$this->assertInstanceOf( '\WP_Post', Remote_Posts::update( $activity, 1 ) );
+		$this->assertSame( get_id_hash( $object_id ), \get_post_field( 'post_name', $post->ID ) );
 	}
 }
