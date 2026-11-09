@@ -1789,6 +1789,32 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Admin queries name posts in every format core parses, so a hidden post is found in each.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_ap_post_comments_hidden_for_every_post_id_format() {
+		$post_id       = self::factory()->post->create();
+		$ap_post_id    = self::factory()->post->create( array( 'post_type' => 'ap_post' ) );
+		$ap_comment_id = \wp_insert_comment(
+			array(
+				'comment_post_ID' => $ap_post_id,
+				'comment_content' => 'Comment on ap_post',
+			)
+		);
+
+		\set_current_screen( 'edit-comments' );
+
+		$by_post_in_string = ( new \WP_Comment_Query() )->query( array( 'post__in' => \sprintf( '%d,%d', $post_id, $ap_post_id ) ) );
+		$by_negative_id    = ( new \WP_Comment_Query() )->query( array( 'post_id' => -$ap_post_id ) );
+
+		\set_current_screen( 'front' );
+
+		$this->assertNotContains( (string) $ap_comment_id, \wp_list_pluck( $by_post_in_string, 'comment_ID' ), 'A hidden post in a comma-separated post__in should be found.' );
+		$this->assertNotContains( (string) $ap_comment_id, \wp_list_pluck( $by_negative_id, 'comment_ID' ), 'A negative post_id should be read as core reads it.' );
+	}
+
+	/**
 	 * Admin queries for named posts of other types keep their comments, as WooCommerce order notes.
 	 *
 	 * @covers ::comment_query

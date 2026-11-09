@@ -867,9 +867,9 @@ class Comment {
 			 * WooCommerce orders stored in their own tables, whose notes are comments.
 			 */
 			$named = \array_filter(
-				\array_map(
-					'intval',
-					\array_merge( (array) ( $query->query_vars['post_id'] ?? 0 ), (array) ( $query->query_vars['post__in'] ?? array() ) )
+				\array_merge(
+					array( \absint( $query->query_vars['post_id'] ?? 0 ) ),
+					\wp_parse_id_list( $query->query_vars['post__in'] ?? array() )
 				)
 			);
 
