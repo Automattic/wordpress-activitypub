@@ -65,6 +65,9 @@ class Test_Webfinger extends \WP_UnitTestCase {
 		\remove_filter( 'webfinger_user_data', array( Webfinger::class, 'add_interaction_links' ), 1 );
 		\remove_filter( 'webfinger_data', array( Webfinger::class, 'add_interaction_links' ), 1 );
 		\remove_filter( 'webfinger_data', array( Application::class, 'add_webfinger_discovery' ), 2 );
+		\remove_filter( 'webfinger_user_query', array( Webfinger::class, 'skip_blog_handle' ) );
+		\delete_option( 'activitypub_actor_mode' );
+		\delete_option( 'activitypub_blog_identifier' );
 
 		parent::tear_down();
 	}
@@ -82,6 +85,48 @@ class Test_Webfinger extends \WP_UnitTestCase {
 		$this->assertNotFalse( has_filter( 'webfinger_user_data', array( Webfinger::class, 'add_user_discovery' ) ) );
 		$this->assertNotFalse( has_filter( 'webfinger_data', array( Webfinger::class, 'add_pseudo_user_discovery' ) ) );
 		$this->assertNotFalse( has_filter( 'webfinger_data', array( Webfinger::class, 'add_interaction_links' ) ) );
+		$this->assertNotFalse( has_filter( 'webfinger_user_query', array( Webfinger::class, 'skip_blog_handle' ) ) );
+	}
+
+	/**
+	 * Data for test_skip_blog_handle.
+	 *
+	 * @return array[] Actor mode, resource, scheme and whether the user query is kept.
+	 */
+	public function data_skip_blog_handle() {
+		$host = \wp_parse_url( \home_url(), PHP_URL_HOST );
+
+		return array(
+			'blog handle in blog mode'        => array( ACTIVITYPUB_BLOG_MODE, 'acct:kitchen@' . $host, 'acct', false ),
+			'blog handle with user actors'    => array( ACTIVITYPUB_ACTOR_AND_BLOG_MODE, 'acct:kitchen@' . $host, 'acct', false ),
+			'user handle'                     => array( ACTIVITYPUB_ACTOR_AND_BLOG_MODE, 'acct:testauthor@' . $host, 'acct', true ),
+			'blog handle with blog actor off' => array( ACTIVITYPUB_ACTOR_MODE, 'acct:kitchen@' . $host, 'acct', true ),
+			'blog URL, not an acct handle'    => array( ACTIVITYPUB_BLOG_MODE, \home_url( '/@kitchen' ), 'https', true ),
+		);
+	}
+
+	/**
+	 * A user the WebFinger plugin would find by the blog handle, through a custom WebFinger name,
+	 * login or nicename, does not take the handle over: the blog profile answers for it.
+	 *
+	 * @dataProvider data_skip_blog_handle
+	 * @covers ::skip_blog_handle
+	 *
+	 * @param string $mode   The actor mode.
+	 * @param string $uri    The WebFinger resource.
+	 * @param string $scheme The scheme of the resource.
+	 * @param bool   $kept   Whether the user query is kept.
+	 */
+	public function test_skip_blog_handle( $mode, $uri, $scheme, $kept ) {
+		\update_option( 'activitypub_actor_mode', $mode );
+		\update_option( 'activitypub_blog_identifier', 'kitchen' );
+
+		$args = array(
+			'search'         => 'kitchen',
+			'search_columns' => array( 'user_nicename', 'user_login' ),
+		);
+
+		$this->assertSame( $kept ? $args : array(), Webfinger::skip_blog_handle( $args, $uri, $scheme ) );
 	}
 
 	/**

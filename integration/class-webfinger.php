@@ -28,6 +28,35 @@ class Webfinger {
 		\add_filter( 'webfinger_data', array( self::class, 'add_pseudo_user_discovery' ), 1, 2 );
 
 		\add_filter( 'webfinger_data', array( self::class, 'add_interaction_links' ), 11 );
+		\add_filter( 'webfinger_user_query', array( self::class, 'skip_blog_handle' ), 10, 3 );
+	}
+
+	/**
+	 * Leave the blog profile's handle to the blog profile.
+	 *
+	 * The WebFinger plugin finds users by login, nicename and a custom WebFinger name. A user
+	 * found that way takes over the handle, and when the blog profile uses the same handle it
+	 * can no longer be found. The blog handle comes first, as in Actors::get_id_by_username(),
+	 * so no user is looked up for it and the blog profile answers.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array  $args   The arguments of the user query.
+	 * @param string $uri    The WebFinger resource.
+	 * @param string $scheme The scheme of the resource.
+	 *
+	 * @return array The arguments of the user query, empty for the blog handle.
+	 */
+	public static function skip_blog_handle( $args, $uri, $scheme ) {
+		if ( 'acct' !== $scheme ) {
+			return $args;
+		}
+
+		if ( Actors::BLOG_USER_ID === Actors::get_id_by_resource( $uri ) ) {
+			return array();
+		}
+
+		return $args;
 	}
 
 	/**
