@@ -170,7 +170,28 @@ Review and fix rounds move the code after it was tested. Before you report:
 2. **Trunk has not moved under it.** `git log $(git merge-base origin/trunk HEAD)..origin/trunk -- <changed files>` is empty. If trunk changed those files, rebase, run the tests again and push.
 3. **The words match the code.** Title, description and changelog are still true for the head commit.
 
-Then stop your wp-env (`npm run env-stop` with the same ports). Leave the worktree in place for follow-ups and give its path in the report.
+Then clean up. **After a green PR**, remove your wp-env and the worktree; the branch, its commits and the PR stay:
+
+```bash
+npm run env -- destroy --force   # with the same WP_ENV_PORT and WP_ENV_TESTS_PORT
+cd -
+git worktree remove ../wordpress-activitypub-<short-description>
+```
+
+**Without a PR** (confidence below 90%, red CI, a stop after two strikes), only stop the wp-env (`npm run env-stop`) and leave the worktree in place, so the work is not lost. Give its path in the report.
+
+## Follow-ups
+
+When asked to fix an existing PR later (a review comment, a late Copilot thread), do not create a new branch. Build the worktree again from the PR's branch and follow the same rules:
+
+```bash
+git fetch origin <branch-name>
+git worktree add ../wordpress-activitypub-<short-description> <branch-name>
+cd ../wordpress-activitypub-<short-description>
+composer install
+```
+
+Start wp-env on the same ports as in Step 4, fix, test, push, and run Steps 10 to 12 again, including the cleanup.
 
 ## Report
 
@@ -180,7 +201,7 @@ End with:
 - **PR:** URL and head commit.
 - **History:** the earlier issues and PRs you found and what they mean for the fix.
 - **Copilot:** each thread, what you did, and the suggested reply.
-- **For the maintainer:** issues you skipped with the suggested triage comments, anything you could not verify, and the worktree path.
+- **For the maintainer:** issues you skipped with the suggested triage comments, anything you could not verify, and the worktree path if it is still there.
 
 ## Guidelines
 
