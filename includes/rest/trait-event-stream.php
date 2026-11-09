@@ -176,9 +176,11 @@ trait Event_Stream {
 			/*
 			 * Every new item sets a new signal, so query the DB only when it changed since this stream
 			 * last looked, or when the last query filled a page. It is never cleared here: other
-			 * streams of the same user read it too.
+			 * streams of the same user read it too. A persistent object cache is asked directly, so
+			 * a drop-in without runtime flushing does not serve the first signal forever.
 			 */
-			$signal = \get_transient( \sprintf( 'activitypub_sse_signal_%s_%s', $user_id, $collection ) );
+			$signal_key = \sprintf( 'activitypub_sse_signal_%s_%s', $user_id, $collection );
+			$signal     = \wp_using_ext_object_cache() ? \wp_cache_get( $signal_key, 'transient', true ) : \get_transient( $signal_key );
 
 			if ( $has_more || ( false !== $signal && $signal !== $last_signal ) ) {
 				$last_signal = $signal;
@@ -579,6 +581,8 @@ trait Event_Stream {
 			'orderby'        => 'ID',
 			'order'          => 'ASC',
 			'no_found_rows'  => true,
+			// The stream runs for minutes; a cached result of this request would hide new items.
+			'cache_results'  => false,
 		);
 
 		if ( 'outbox' === $collection ) {
