@@ -1789,6 +1789,78 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Admin queries for named posts of other types keep their comments, as WooCommerce order notes.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_admin_query_for_named_post_of_other_type_keeps_comments() {
+		\register_post_type( 'shop_order', array( 'public' => false ) );
+
+		$order_id = self::factory()->post->create( array( 'post_type' => 'shop_order' ) );
+		$note_id  = \wp_insert_comment(
+			array(
+				'comment_post_ID'  => $order_id,
+				'comment_content'  => 'Order status changed.',
+				'comment_type'     => 'order_note',
+				'comment_approved' => 1,
+			)
+		);
+
+		\set_current_screen( 'edit-comments' );
+
+		$by_post_id = ( new \WP_Comment_Query() )->query(
+			array(
+				'post_id' => $order_id,
+				'type'    => 'order_note',
+			)
+		);
+		$by_post_in = ( new \WP_Comment_Query() )->query(
+			array(
+				'post__in' => array( $order_id ),
+				'type'     => 'order_note',
+			)
+		);
+
+		\set_current_screen( 'front' );
+		\unregister_post_type( 'shop_order' );
+
+		$this->assertContains( (string) $note_id, \wp_list_pluck( $by_post_id, 'comment_ID' ), 'Notes of a named order should be found by post_id.' );
+		$this->assertContains( (string) $note_id, \wp_list_pluck( $by_post_in, 'comment_ID' ), 'Notes of a named order should be found by post__in.' );
+	}
+
+	/**
+	 * Admin queries for named objects that are not posts keep their comments, as orders stored outside wp_posts.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_admin_query_for_named_object_outside_posts_keeps_comments() {
+		$order_id = 987654;
+		$this->assertNull( \get_post( $order_id ), 'The order must not exist as a post.' );
+
+		$note_id = \wp_insert_comment(
+			array(
+				'comment_post_ID'  => $order_id,
+				'comment_content'  => 'Payment received.',
+				'comment_type'     => 'order_note',
+				'comment_approved' => 1,
+			)
+		);
+
+		\set_current_screen( 'edit-comments' );
+
+		$notes = ( new \WP_Comment_Query() )->query(
+			array(
+				'post_id' => $order_id,
+				'type'    => 'order_note',
+			)
+		);
+
+		\set_current_screen( 'front' );
+
+		$this->assertContains( (string) $note_id, \wp_list_pluck( $notes, 'comment_ID' ) );
+	}
+
+	/**
 	 * Test that post comments are still being filtered by `type__not_in`.
 	 *
 	 * @covers ::comment_query

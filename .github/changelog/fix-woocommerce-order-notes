@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+WooCommerce order notes and other comments of single items show in the admin again while ActivityPub is active.
