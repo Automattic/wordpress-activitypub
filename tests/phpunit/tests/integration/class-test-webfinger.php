@@ -101,6 +101,8 @@ class Test_Webfinger extends \WP_UnitTestCase {
 			'blog handle with user actors'    => array( ACTIVITYPUB_ACTOR_AND_BLOG_MODE, 'acct:kitchen@' . $host, 'acct', false ),
 			'user handle'                     => array( ACTIVITYPUB_ACTOR_AND_BLOG_MODE, 'acct:testauthor@' . $host, 'acct', true ),
 			'blog handle with blog actor off' => array( ACTIVITYPUB_ACTOR_MODE, 'acct:kitchen@' . $host, 'acct', true ),
+			'_ handle with blog actor off'    => array( ACTIVITYPUB_ACTOR_MODE, 'acct:_@' . $host, 'acct', true ),
+			'_ handle in blog mode'           => array( ACTIVITYPUB_BLOG_MODE, 'acct:_@' . $host, 'acct', false ),
 			'blog URL, not an acct handle'    => array( ACTIVITYPUB_BLOG_MODE, \home_url( '/@kitchen' ), 'https', true ),
 		);
 	}

@@ -11,6 +11,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Webfinger as Webfinger_Util;
 
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_user_type_disabled;
 
 /**
  * Compatibility with the WebFinger plugin
@@ -48,7 +49,8 @@ class Webfinger {
 	 * @return array The arguments of the user query, empty for the blog handle.
 	 */
 	public static function skip_blog_handle( $args, $uri, $scheme ) {
-		if ( 'acct' !== $scheme ) {
+		// Without the blog profile there is nothing to answer for it, so users keep every handle.
+		if ( 'acct' !== $scheme || is_user_type_disabled( 'blog' ) ) {
 			return $args;
 		}
 
