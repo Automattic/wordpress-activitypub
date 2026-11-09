@@ -153,8 +153,10 @@ trait Event_Stream {
 			: 0;
 
 		// Use Last-Event-ID if provided, otherwise start from the latest item.
-		$since_id = $last_event_id ? $last_event_id : $this->get_latest_item_id( $user_id, $collection );
-		$start    = \time();
+		$since_id    = $last_event_id ? $last_event_id : $this->get_latest_item_id( $user_id, $collection );
+		$start       = \time();
+		$last_signal = null;
+		$has_more    = false;
 
 		$this->send_sse_comment( 'connected' );
 
@@ -163,14 +165,27 @@ trait Event_Stream {
 				break;
 			}
 
-			// Check for signal transient before querying the DB.
+			/*
+			 * This request runs for minutes, so drop what it cached: the signal and the new items are
+			 * written by other requests, and both would otherwise be read from this request's cache.
+			 */
+			if ( \wp_cache_supports( 'flush_runtime' ) ) {
+				\wp_cache_flush_runtime();
+			}
+
+			/*
+			 * Every new item sets a new signal, so query the DB only when it changed since this stream
+			 * last looked, or when the last query filled a page. It is never cleared here: other
+			 * streams of the same user read it too. A persistent object cache is asked directly, so
+			 * a drop-in without runtime flushing does not serve the first signal forever.
+			 */
 			$signal_key = \sprintf( 'activitypub_sse_signal_%s_%s', $user_id, $collection );
-			$signal     = \get_transient( $signal_key );
+			$signal     = \wp_using_ext_object_cache() ? \wp_cache_get( $signal_key, 'transient', true ) : \get_transient( $signal_key );
 
-			if ( $signal ) {
-				\delete_transient( $signal_key );
-
-				$new_items = $this->get_new_items( $user_id, $collection, $since_id );
+			if ( $has_more || ( false !== $signal && $signal !== $last_signal ) ) {
+				$last_signal = $signal;
+				$new_items   = $this->get_new_items( $user_id, $collection, $since_id );
+				$has_more    = \count( $new_items ) >= 20;
 
 				foreach ( $new_items as $item ) {
 					$this->send_sse_event( $item, $collection );
@@ -178,11 +193,6 @@ trait Event_Stream {
 					if ( $item->ID > $since_id ) {
 						$since_id = $item->ID;
 					}
-				}
-
-				// Re-set signal if we hit the limit, so remaining items are fetched next iteration.
-				if ( \count( $new_items ) >= 20 ) {
-					\set_transient( $signal_key, \time(), 5 * MINUTE_IN_SECONDS );
 				}
 			}
 
@@ -571,6 +581,8 @@ trait Event_Stream {
 			'orderby'        => 'ID',
 			'order'          => 'ASC',
 			'no_found_rows'  => true,
+			// The stream runs for minutes; a cached result of this request would hide new items.
+			'cache_results'  => false,
 		);
 
 		if ( 'outbox' === $collection ) {

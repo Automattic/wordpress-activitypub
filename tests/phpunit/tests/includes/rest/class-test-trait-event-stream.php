@@ -312,6 +312,42 @@ class Test_Trait_Event_Stream extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_new_items sees an item another request wrote after the same query ran in this one.
+	 *
+	 * The stream request runs for minutes, so the query must not come from its own cache.
+	 *
+	 * @covers ::get_new_items
+	 */
+	public function test_get_new_items_sees_items_written_by_another_request() {
+		global $wpdb;
+
+		$post_id   = self::factory()->post->create( array( 'post_author' => $this->user_id ) );
+		$outbox_id = add_to_outbox( \get_post( $post_id ), 'Create', $this->user_id );
+		$this->assertIsInt( $outbox_id );
+
+		$this->assertEmpty( $this->instance->test_get_new_items( $this->user_id, 'outbox', $outbox_id ) );
+
+		// Another request adds an outbox item, behind this request's cache.
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->posts} WHERE ID = %d", $outbox_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		unset( $row['ID'] );
+		$row['guid'] .= '-another-request';
+		$wpdb->insert( $wpdb->posts, $row ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$new_id = (int) $wpdb->insert_id;
+		$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->postmeta,
+			array(
+				'post_id'    => $new_id,
+				'meta_key'   => '_activitypub_activity_actor', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_value' => 'user', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+			)
+		);
+
+		$items = $this->instance->test_get_new_items( $this->user_id, 'outbox', $outbox_id );
+
+		$this->assertSame( array( $new_id ), \wp_list_pluck( $items, 'ID' ) );
+	}
+
+	/**
 	 * Test get_latest_item_id returns correct ID.
 	 *
 	 * @covers ::get_latest_item_id

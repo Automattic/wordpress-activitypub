@@ -41,6 +41,10 @@ class Event_Stream {
 	/**
 	 * Set a transient signal when a new item is added to the outbox.
 	 *
+	 * Every signal is a new value, so each open stream sees the change by comparing it with the
+	 * value it read last, and none of them has to clear it. A counter or an item ID could come
+	 * back to a value a stream already saw.
+	 *
 	 * @param int                            $outbox_activity_id The outbox post ID.
 	 * @param \Activitypub\Activity\Activity $activity           The activity object.
 	 * @param int                            $user_id            The user ID.
@@ -49,11 +53,13 @@ class Event_Stream {
 	 */
 	public static function signal_outbox( $outbox_activity_id, $activity, $user_id ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$signal_key = \sprintf( 'activitypub_sse_signal_%s_outbox', $user_id );
-		\set_transient( $signal_key, \time(), HOUR_IN_SECONDS );
+		\set_transient( $signal_key, \wp_generate_uuid4(), HOUR_IN_SECONDS );
 	}
 
 	/**
 	 * Set transient signals when a new item is added to the inbox.
+	 *
+	 * See signal_outbox() for why each signal is a new value.
 	 *
 	 * @param array $data     The activity data array.
 	 * @param array $user_ids The user IDs that received the activity.
@@ -67,7 +73,7 @@ class Event_Stream {
 
 		foreach ( $user_ids as $user_id ) {
 			$signal_key = \sprintf( 'activitypub_sse_signal_%s_inbox', $user_id );
-			\set_transient( $signal_key, \time(), HOUR_IN_SECONDS );
+			\set_transient( $signal_key, \wp_generate_uuid4(), HOUR_IN_SECONDS );
 		}
 	}
 }

@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Live updates in apps connected through the ActivityPub API now reach every open app or browser tab, not only the first one.
