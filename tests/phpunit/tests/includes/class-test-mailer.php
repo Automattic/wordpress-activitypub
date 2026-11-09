@@ -407,16 +407,75 @@ class Test_Mailer extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that the new follower notification cooldown is filterable.
+	 * Test that new follower notification falls back to looking up the remote actor by URI.
+	 *
+	 * When the action "activitypub_handled_follow" fires without an actor post object,
+	 * Mailer::new_follower should retrieve the actor by URI and apply rate limiting.
 	 *
 	 * @covers ::new_follower
 	 */
-	public function test_new_follower_cooldown_filter() {
-		$actor_uri = 'https://example.com/filtered-follower';
+	public function test_new_follower_fallback_remote_actor_lookup_via_action() {
+		$actor_uri = 'https://example.com/fallback-follower';
 		$activity  = array(
 			'type'   => 'Follow',
 			'actor'  => $actor_uri,
-			'object' => 'https://example.com/follow/filtered-1',
+			'object' => 'https://example.com/follow/fallback-1',
+		);
+
+		$remote_actor_id = self::factory()->post->create(
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'guid'        => $actor_uri,
+				'post_status' => 'publish',
+			)
+		);
+
+		$remote_metadata_callback = function () use ( $actor_uri ) {
+			return array(
+				'name'              => 'Fallback Follower',
+				'url'               => $actor_uri,
+				'preferredUsername' => 'fallback',
+			);
+		};
+		add_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
+
+		$mail_count       = 0;
+		$wp_mail_callback = function ( $args ) use ( &$mail_count ) {
+			++$mail_count;
+			return $args;
+		};
+		add_filter( 'wp_mail', $wp_mail_callback );
+
+		try {
+			// Trigger via action hook with null remote_actor to exercise fallback lookup.
+			do_action( 'activitypub_handled_follow', $activity, array( self::$user_id ), true, null );
+			$this->assertSame( 1, $mail_count, 'First follow via action should send an email notification.' );
+
+			$meta_key  = sprintf( '_activitypub_last_follower_email_sent_%d', self::$user_id );
+			$last_sent = (int) get_post_meta( $remote_actor_id, $meta_key, true );
+			$this->assertGreaterThan( 0, $last_sent, 'Cooldown timestamp marker must be recorded via fallback lookup.' );
+
+			// Trigger a second follow via action within cooldown: should be suppressed.
+			do_action( 'activitypub_handled_follow', $activity, array( self::$user_id ), true, null );
+			$this->assertSame( 1, $mail_count, 'Subsequent follow via action within cooldown must be suppressed.' );
+		} finally {
+			remove_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
+			remove_filter( 'wp_mail', $wp_mail_callback );
+			wp_delete_post( $remote_actor_id, true );
+		}
+	}
+
+	/**
+	 * Test that the cooldown claim is released if sending the notification email fails.
+	 *
+	 * @covers ::new_follower
+	 */
+	public function test_new_follower_releases_cooldown_claim_when_mail_fails() {
+		$actor_uri = 'https://example.com/failing-mail-actor';
+		$activity  = array(
+			'type'   => 'Follow',
+			'actor'  => $actor_uri,
+			'object' => 'https://example.com/follow/failing-1',
 		);
 
 		$remote_actor_id = self::factory()->post->create(
@@ -430,36 +489,36 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		$remote_metadata_callback = function () use ( $actor_uri ) {
 			return array(
-				'name'              => 'Filtered Follower',
+				'name'              => 'Failing Mail Actor',
 				'url'               => $actor_uri,
-				'preferredUsername' => 'filtered',
+				'preferredUsername' => 'failingmail',
 			);
 		};
 		add_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
 
-		$mail_count       = 0;
-		$wp_mail_callback = function ( $args ) use ( &$mail_count ) {
-			++$mail_count;
+		// Simulate wp_mail failure by clearing recipient.
+		$fail_wp_mail = function ( $args ) {
+			$args['to'] = '';
 			return $args;
 		};
-		add_filter( 'wp_mail', $wp_mail_callback );
+		add_filter( 'wp_mail', $fail_wp_mail );
 
-		$cooldown_filter = function () {
-			return 0;
-		};
-		add_filter( 'activitypub_new_follower_email_cooldown', $cooldown_filter );
+		$meta_key = sprintf( '_activitypub_last_follower_email_sent_%d', self::$user_id );
 
 		try {
+			// Scenario A: First email attempt fails (no previous marker).
 			Mailer::new_follower( $activity, self::$user_id, true, $remote_actor );
-			$this->assertSame( 1, $mail_count );
+			$this->assertEmpty( get_post_meta( $remote_actor_id, $meta_key, true ), 'Marker should be removed if mail fails on initial send.' );
 
-			// With cooldown = 0, second follow is sent.
+			// Scenario B: Previous marker existed, but renewed send fails after cooldown expired.
+			$previous_timestamp = time() - DAY_IN_SECONDS - 100;
+			update_post_meta( $remote_actor_id, $meta_key, $previous_timestamp );
+
 			Mailer::new_follower( $activity, self::$user_id, true, $remote_actor );
-			$this->assertSame( 2, $mail_count );
+			$this->assertSame( $previous_timestamp, (int) get_post_meta( $remote_actor_id, $meta_key, true ), 'Original marker timestamp should be restored if send fails.' );
 		} finally {
 			remove_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
-			remove_filter( 'wp_mail', $wp_mail_callback );
-			remove_filter( 'activitypub_new_follower_email_cooldown', $cooldown_filter );
+			remove_filter( 'wp_mail', $fail_wp_mail );
 			wp_delete_post( $remote_actor_id, true );
 		}
 	}

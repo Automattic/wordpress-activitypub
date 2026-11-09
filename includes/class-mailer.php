@@ -185,26 +185,36 @@ class Mailer {
 			$remote_actor = Remote_Actors::get_by_uri( $activity['actor'] );
 		}
 
+		$meta_key  = null;
+		$last_sent = 0;
+
 		// Prevent repeated notification spam if an actor cycles Follow and Undo.
 		if ( $remote_actor instanceof \WP_Post ) {
-			$last_sent = (int) \get_post_meta( $remote_actor->ID, \sprintf( '_activitypub_last_follower_email_sent_%d', $user_id ), true );
+			$meta_key  = \sprintf( '_activitypub_last_follower_email_sent_%d', $user_id );
+			$last_sent = (int) \get_post_meta( $remote_actor->ID, $meta_key, true );
 
-			/**
-			 * Filter the cooldown period for new follower notification emails.
-			 *
-			 * @param int $cooldown The cooldown period in seconds. Default DAY_IN_SECONDS.
-			 * @param int $user_id  The ID of the local user being followed.
-			 * @param int $actor_id The ID of the remote actor post.
-			 */
-			$cooldown = \apply_filters( 'activitypub_new_follower_email_cooldown', DAY_IN_SECONDS, $user_id, $remote_actor->ID );
+			if ( $last_sent && ( \time() - $last_sent ) < DAY_IN_SECONDS ) {
+				return;
+			}
 
-			if ( $last_sent && ( \time() - $last_sent ) < $cooldown ) {
+			$claimed = $last_sent
+				? \update_post_meta( $remote_actor->ID, $meta_key, \time(), $last_sent )
+				: \add_post_meta( $remote_actor->ID, $meta_key, \time(), true );
+
+			if ( ! $claimed ) {
 				return;
 			}
 		}
 
 		$actor = get_remote_metadata_by_actor( $activity['actor'] );
 		if ( ! $actor || \is_wp_error( $actor ) ) {
+			if ( $remote_actor instanceof \WP_Post && $meta_key ) {
+				if ( $last_sent ) {
+					\update_post_meta( $remote_actor->ID, $meta_key, $last_sent );
+				} else {
+					\delete_post_meta( $remote_actor->ID, $meta_key );
+				}
+			}
 			return;
 		}
 
@@ -263,17 +273,17 @@ class Mailer {
 		};
 		\add_action( 'phpmailer_init', $alt_function );
 
-		\wp_mail( $email, $subject, $html_message, array( 'Content-type: text/html' ) );
-
-		if ( ! $remote_actor instanceof \WP_Post && ! empty( $activity['actor'] ) ) {
-			$remote_actor = Remote_Actors::get_by_uri( $activity['actor'] );
-		}
-
-		if ( $remote_actor instanceof \WP_Post ) {
-			\update_post_meta( $remote_actor->ID, \sprintf( '_activitypub_last_follower_email_sent_%d', $user_id ), \time() );
-		}
+		$sent = \wp_mail( $email, $subject, $html_message, array( 'Content-type: text/html' ) );
 
 		\remove_action( 'phpmailer_init', $alt_function );
+
+		if ( ! $sent && $remote_actor instanceof \WP_Post && $meta_key ) {
+			if ( $last_sent ) {
+				\update_post_meta( $remote_actor->ID, $meta_key, $last_sent );
+			} else {
+				\delete_post_meta( $remote_actor->ID, $meta_key );
+			}
+		}
 	}
 
 	/**
