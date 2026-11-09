@@ -563,7 +563,11 @@ class Outbox_Controller extends \WP_REST_Controller {
 			return new \WP_Error(
 				'activitypub_activity_not_allowed',
 				\__( 'This activity type is not allowed.', 'activitypub' ),
-				array( 'status' => 403 )
+				array(
+					'status' => 400,
+					'type'   => 'https://w3id.org/fep/c180#unsupported-type',
+					'title'  => 'Unsupported type',
+				)
 			);
 		}
 
@@ -662,7 +666,11 @@ class Outbox_Controller extends \WP_REST_Controller {
 				return new \WP_Error(
 					'activitypub_actor_mismatch',
 					\__( 'Activity actor does not match authenticated user.', 'activitypub' ),
-					array( 'status' => 403 )
+					array(
+						'status' => 400,
+						'type'   => 'https://w3id.org/fep/c180#principal-actor-mismatch',
+						'title'  => 'Principal-actor mismatch',
+					)
 				);
 			}
 		}
@@ -675,7 +683,11 @@ class Outbox_Controller extends \WP_REST_Controller {
 				return new \WP_Error(
 					'activitypub_attribution_mismatch',
 					\__( 'Object attributedTo does not match authenticated user.', 'activitypub' ),
-					array( 'status' => 403 )
+					array(
+						'status' => 400,
+						'type'   => 'https://w3id.org/fep/c180#principal-actor-mismatch',
+						'title'  => 'Principal-actor mismatch',
+					)
 				);
 			}
 		}

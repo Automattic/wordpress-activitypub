@@ -39,6 +39,7 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 ### Partially supported FEPs
 
 - [FEP-1b12: Group federation](https://codeberg.org/fediverse/fep/src/branch/main/fep/1b12/fep-1b12.md)
+- [FEP-7aa9: Featuring recommendations using a dedicated collection](https://codeberg.org/fediverse/fep/src/branch/main/fep/7aa9/fep-7aa9.md) (answers `FeatureRequest` with a `FeatureAuthorization`; the plugin does not publish featured collections of its own)
 - [FEP-ae0c: Fediverse Relay Protocols](https://codeberg.org/fediverse/fep/src/branch/main/fep/ae0c/fep-ae0c.md)
 - [FEP-dc88: MathML in ActivityPub](https://codeberg.org/fediverse/fep/src/branch/main/fep/dc88/fep-dc88.md)
 
@@ -65,7 +66,8 @@ The plugin supports the following actor types:
 - `Follow` - Following remote actors
 - `Move` - Actor migration (see FEP-7628)
 - `Undo` - Reversing previous activities (unfollow, unlike, etc.)
-- `Accept` / `Reject` - Responding to follow requests
+- `Block` - Blocking a remote actor. The `Block` is sent to the blocked actor only, although ActivityPub §6.9 says a server should not deliver it to its object
+- `Accept` / `Reject` - Responding to follow, quote and feature requests
 
 **Incoming activities:**
 
@@ -76,8 +78,10 @@ The plugin supports the following actor types:
 - `Like` - Like notifications
 - `Follow` - Follow requests
 - `Move` - Actor migration notifications (see FEP-7628)
+- `QuoteRequest` - Requests to quote a local post (see FEP-044f)
+- `FeatureRequest` - Requests to feature a local actor in a remote collection (see FEP-7aa9)
 - `Undo` - Reversal of activities
-- `Accept` / `Reject` - Follow request responses
+- `Accept` / `Reject` - Responses to follow and quote requests
 
 ### Object Types
 
@@ -214,27 +218,40 @@ All REST API endpoints use the `activitypub/1.0` namespace.
 
 - `/.well-known/webfinger` - Actor discovery
 - `/.well-known/nodeinfo` - Server capability discovery
+- `/.well-known/oauth-authorization-server` - OAuth server metadata (when the ActivityPub API option is enabled)
 
 **Actor endpoints:**
 
 - `/activitypub/1.0/actors/{user_id}` - Actor profile
-- `/activitypub/1.0/actors/{user_id}/inbox` - User inbox
-- `/activitypub/1.0/actors/{user_id}/outbox` - Published activities
+- `/activitypub/1.0/actors/{user_id}/inbox` - User inbox (`POST` for deliveries, `GET` for the owner)
+- `/activitypub/1.0/actors/{user_id}/inbox/stream` - Inbox event stream
+- `/activitypub/1.0/actors/{user_id}/outbox` - Published activities (`POST` for Client-to-Server)
+- `/activitypub/1.0/actors/{user_id}/outbox/stream` - Outbox event stream
 - `/activitypub/1.0/actors/{user_id}/followers` - Followers collection
+- `/activitypub/1.0/actors/{user_id}/followers/sync` - Partial followers collection (see FEP-8fcf)
 - `/activitypub/1.0/actors/{user_id}/following` - Following collection
+- `/activitypub/1.0/actors/{user_id}/liked` - Liked collection
 - `/activitypub/1.0/actors/{user_id}/collections/{type}` - Featured posts or tags
+- `/activitypub/1.0/actors/{user_id}/remote-follow` - Follow an actor from another server
+- `/activitypub/1.0/actors/autocomplete` - Actor autocomplete (when the ActivityPub API option is enabled)
 
 **Server endpoints:**
 
-- `/activitypub/1.0/inbox` - Shared inbox
+- `/activitypub/1.0/inbox` - Shared inbox (`POST` only)
 - `/activitypub/1.0/application` - Application actor
+- `/activitypub/1.0/application/outbox` - Application actor outbox
+- `/activitypub/1.0/collections/moderators` - Moderators collection
+- `/activitypub/1.0/interactions` - Interaction intents (see FEP-3b86)
+- `/activitypub/1.0/seek` - Seek an item in any of the plugin's collections (see Seek Item)
 - `/activitypub/1.0/proxy` - Proxy endpoint for fetching remote objects
+- `/activitypub/1.0/proxy/stream` - Proxy for remote event streams
 
 **Object endpoints:**
 
 - `/activitypub/1.0/posts/{id}/replies` - Replies collection
 - `/activitypub/1.0/posts/{id}/likes` - Likes collection
 - `/activitypub/1.0/posts/{id}/shares` - Shares collection
+- `/activitypub/1.0/posts/{id}/context` - Conversation context (see FEP-7888)
 
 **Rate limits:**
 
@@ -243,6 +260,12 @@ Endpoints that fetch a resource the caller names, or that create something, answ
 **Content negotiation:**
 
 Posts and author pages serve ActivityPub JSON-LD when the request includes an appropriate `Accept` header (`application/activity+json` or `application/ld+json`).
+
+**Errors:**
+
+Errors are sent as [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem details with the `application/problem+json` media type (see FEP-c180). These FEP-c180 problem types are used: `unsupported-type`, `object-does-not-exist`, `principal-actor-mismatch`, `actor-not-authorized`, `principal-not-authorized`, `client-not-authorized` and `rate-limit-exceeded`. Other errors use `about:blank` with the error code as `title`. The OAuth endpoints answer with RFC 6749 errors instead.
+
+Inbox deliveries are answered with an empty `202 Accepted`, also when a filter or a block stopped the activity. With `ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS`, incoming `Create`, `Like` and `Announce` activities are refused with a `202` that says so.
 
 ### OAuth 2.0 for Client-to-Server
 
@@ -253,9 +276,25 @@ When the ActivityPub API option is enabled, the plugin exposes OAuth 2.0 endpoin
 - [SWICG ActivityPub API: Basic Profile](https://swicg.github.io/activitypub-api/basicprofile) - C2S baseline. The token response includes `activitypub_actor_id` alongside the IndieAuth `me` URI. Two generations of Basic Profile scope identifiers are accepted and advertised in `scopes_supported`: the `activitypub:read:*` / `activitypub:write:*` aliases the draft used before 2026-08-04, and the `https://swicg.github.io/activitypub-api/scopes#…` identifiers that replaced them. Each is mapped to the scope the plugin grants, so the per-collection read identifiers resolve to `read` and the per-action write identifiers to `write`. There is no per-activity access control, so `follow` and `updateprofile` resolve to `write` like every other write identifier. Seven identifiers are not offered: `readown` and `reactown` describe data on the client's own server, `uploadfiles` needs a MediaUpload endpoint the plugin does not implement, and the four `address*` identifiers restrict who an activity may be addressed to rather than granting anything.
 - [RFC 8252](https://datatracker.ietf.org/doc/html/rfc8252) - OAuth 2.0 for Native Apps. Loopback redirect URIs (`http://127.0.0.1:{port}` and `http://[::1]:{port}`) are accepted with port flexibility per §7.3/§8.3. `localhost` is also accepted for compatibility; §8.3 marks this "NOT RECOMMENDED" but it remains common practice.
 - [RFC 7591](https://datatracker.ietf.org/doc/html/rfc7591) - Dynamic Client Registration.
+- [RFC 7009](https://datatracker.ietf.org/doc/html/rfc7009) - Token Revocation at `oauth/revoke`.
+- [RFC 7662](https://datatracker.ietf.org/doc/html/rfc7662) - Token Introspection at `oauth/introspect`.
+- [RFC 8414](https://datatracker.ietf.org/doc/html/rfc8414) - Authorization Server Metadata at `/.well-known/oauth-authorization-server`.
 - [RFC 7636](https://datatracker.ietf.org/doc/html/rfc7636) - PKCE. Required by default for public clients; only `S256` is accepted.
 - [RFC 6585](https://datatracker.ietf.org/doc/html/rfc6585) - Additional HTTP Status Codes. OAuth rate-limit responses use `429 Too Many Requests` and include a `Retry-After` header.
 - [`draft-ietf-oauth-client-id-metadata-document`](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document) - Client Identifier Metadata Document (CIMD). When `client_id` is an `https://` URL, the plugin fetches the metadata document and auto-registers the client. Cleartext (`http://`) `client_id` URLs are rejected.
+
+**Client-to-Server activities:**
+
+A `POST` to the outbox accepts ActivityStreams activities; a bare object is wrapped in a `Create`. These activities also change the site:
+
+- `Create` and `Update` of `Note` and `Article` objects create or edit a post or comment
+- `Delete` removes the actor's own post or comment
+- `Follow` follows the remote actor, `Block` blocks it
+- `Arrive` creates a check-in post when it is public
+- `Undo` reverses the actor's own activities, including unfollowing and unblocking
+- `Add` and `Remove` on the actor's featured collection pin or unpin a post
+
+Other activities are stored in the outbox and delivered as sent. `Create` and `Update` are only accepted for public `Note` and `Article` objects; private and direct messages, other object types and quote posts are refused with `400` and the `unsupported-type` problem. Media uploads are not supported.
 
 **Loopback scope:**
 

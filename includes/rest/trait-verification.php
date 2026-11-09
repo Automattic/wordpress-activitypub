@@ -202,7 +202,11 @@ trait Verification {
 			return new \WP_Error(
 				'activitypub_key_actor_mismatch',
 				\__( 'Signing key does not belong to the activity actor.', 'activitypub' ),
-				array( 'status' => 403 )
+				array(
+					'status' => 400,
+					'type'   => 'https://w3id.org/fep/c180#principal-actor-mismatch',
+					'title'  => 'Principal-actor mismatch',
+				)
 			);
 		}
 
@@ -295,7 +299,11 @@ trait Verification {
 			return new \WP_Error(
 				'activitypub_forbidden',
 				\__( 'You can only access your own resources.', 'activitypub' ),
-				array( 'status' => 403 )
+				array(
+					'status' => 403,
+					'type'   => 'https://w3id.org/fep/c180#principal-not-authorized',
+					'title'  => 'Principal not authorized',
+				)
 			);
 		}
 
@@ -312,7 +320,11 @@ trait Verification {
 		return new \WP_Error(
 			'activitypub_forbidden',
 			\__( 'You can only access your own resources.', 'activitypub' ),
-			array( 'status' => 403 )
+			array(
+				'status' => 403,
+				'type'   => 'https://w3id.org/fep/c180#principal-not-authorized',
+				'title'  => 'Principal not authorized',
+			)
 		);
 	}
 
