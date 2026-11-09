@@ -261,6 +261,12 @@ Endpoints that fetch a resource the caller names, or that create something, answ
 
 Posts and author pages serve ActivityPub JSON-LD when the request includes an appropriate `Accept` header (`application/activity+json` or `application/ld+json`).
 
+**Errors:**
+
+Errors are sent as [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem details with the `application/problem+json` media type (see FEP-c180). These FEP-c180 problem types are used: `unsupported-type`, `object-does-not-exist`, `principal-actor-mismatch`, `actor-not-authorized`, `principal-not-authorized`, `client-not-authorized` and `rate-limit-exceeded`. Other errors use `about:blank` with the error code as `title`. The OAuth endpoints answer with RFC 6749 errors instead.
+
+Inbox deliveries are answered with an empty `202 Accepted`, also when a filter or a block stopped the activity. With `ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS`, incoming `Create`, `Like` and `Announce` activities are refused with a `202` that says so.
+
 ### OAuth 2.0 for Client-to-Server
 
 When the ActivityPub API option is enabled, the plugin exposes OAuth 2.0 endpoints under the `activitypub/1.0/oauth/` namespace for third-party clients (Mastodon-compatible apps, native apps, browser apps).
@@ -288,7 +294,7 @@ A `POST` to the outbox accepts ActivityStreams activities; a bare object is wrap
 - `Undo` reverses the actor's own activities, including unfollowing and unblocking
 - `Add` and `Remove` on the actor's featured collection pin or unpin a post
 
-Other activities are stored in the outbox and delivered as sent. `Create` and `Update` are only accepted for public `Note` and `Article` objects; private and direct messages, other object types and quote posts are refused with `403`. Media uploads are not supported.
+Other activities are stored in the outbox and delivered as sent. `Create` and `Update` are only accepted for public `Note` and `Article` objects; private and direct messages, other object types and quote posts are refused with `400` and the `unsupported-type` problem. Media uploads are not supported.
 
 **Loopback scope:**
 

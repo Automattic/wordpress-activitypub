@@ -50,7 +50,8 @@ class Test_Interaction_Controller extends Test_REST_Controller_Testcase {
 			$headers  = $response->get_headers();
 
 			$this->assertSame( 429, $response->get_status() );
-			$this->assertSame( 'activitypub_rate_limited', $response->get_data()['title'] );
+			$this->assertSame( 'activitypub_rate_limited', $response->get_data()['metadata']['code'] );
+			$this->assertSame( 'https://w3id.org/fep/c180#rate-limit-exceeded', $response->get_data()['type'] );
 			$this->assertSame( '0', $headers['RateLimit-Limit'], 'The answer states the allowance it was measured against.' );
 			$this->assertSame( '0', $headers['RateLimit-Remaining'] );
 			$this->assertArrayHasKey( 'Retry-After', $headers, 'The refusal says when to come back.' );

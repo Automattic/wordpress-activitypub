@@ -191,7 +191,8 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 			// The eleventh request is rate limited, with a Retry-After header for back-off.
 			$response = $dispatch();
 			$this->assertEquals( 429, $response->get_status() );
-			$this->assertEquals( 'activitypub_rate_limited', $response->get_data()['title'] );
+			$this->assertEquals( 'activitypub_rate_limited', $response->get_data()['metadata']['code'] );
+			$this->assertEquals( 'https://w3id.org/fep/c180#rate-limit-exceeded', $response->get_data()['type'] );
 			$this->assertArrayHasKey( 'Retry-After', $response->get_headers() );
 			$this->assertSame( '10', $response->get_headers()['RateLimit-Limit'], 'The answer states the allowance.' );
 		} finally {
@@ -214,7 +215,8 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 			$response = apply_filters( 'rest_post_dispatch', rest_get_server()->dispatch( $request ), rest_get_server(), $request );
 
 			$this->assertEquals( 429, $response->get_status(), 'Without a determinable IP the endpoint must fail closed.' );
-			$this->assertEquals( 'activitypub_rate_limited', $response->get_data()['title'] );
+			$this->assertEquals( 'activitypub_rate_limited', $response->get_data()['metadata']['code'] );
+			$this->assertEquals( 'https://w3id.org/fep/c180#rate-limit-exceeded', $response->get_data()['type'] );
 			$this->assertArrayHasKey( 'Retry-After', $response->get_headers(), 'The fail-closed response must also say when to come back.' );
 		} finally {
 			remove_filter( 'activitypub_client_ip', $no_ip );
