@@ -720,4 +720,27 @@ class Test_Followers extends \WP_UnitTestCase {
 			array( 'https://example.com', 'https://example.com' ),
 		);
 	}
+
+	/**
+	 * A follower is only found by the exact actor ID.
+	 *
+	 * @covers ::get_by_uri
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The stored ID.
+	 * @param string $requested The requested ID.
+	 */
+	public function test_get_by_uri_matches_exact_id( $stored, $requested ) {
+		$post_id = Remote_Actors::create( $this->actor_for_uri( $stored ) );
+		\add_post_meta( $post_id, Followers::FOLLOWER_META_KEY, 1 );
+
+		$this->assertWPError( Followers::get_by_uri( 1, $requested ) );
+
+		// The other host's own actor, following the same user.
+		$other_id = Remote_Actors::create( $this->actor_for_uri( $requested ) );
+		\add_post_meta( $other_id, Followers::FOLLOWER_META_KEY, 1 );
+
+		$this->assertSame( $other_id, Followers::get_by_uri( 1, $requested )->ID );
+		$this->assertSame( $post_id, Followers::get_by_uri( 1, $stored )->ID );
+	}
 }

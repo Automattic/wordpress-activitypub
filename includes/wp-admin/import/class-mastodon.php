@@ -10,6 +10,7 @@ namespace Activitypub\WP_Admin\Import;
 use Activitypub\Attachments;
 use Activitypub\Sanitize;
 
+use function Activitypub\get_id_hash;
 use function Activitypub\is_activity_public;
 
 /**
@@ -543,6 +544,7 @@ class Mastodon {
 				'fields'      => 'ids',
 				'meta_key'    => '_source_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 				'meta_value'  => $source_id, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'meta_type'   => 'BINARY',
 			)
 		);
 
@@ -589,6 +591,7 @@ class Mastodon {
 				'post_id'    => $parent_post_id,
 				'meta_key'   => 'source_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 				'meta_value' => $post['object']['id'], // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'meta_type'  => 'BINARY',
 				'number'     => 1,
 			)
 		);
@@ -626,6 +629,10 @@ class Mastodon {
 
 		if ( $comment_id ) {
 			\update_comment_meta( $comment_id, 'source_id', $post['object']['id'] );
+			$hash = get_id_hash( $post['object']['id'] );
+			if ( $hash ) {
+				\update_comment_meta( $comment_id, '_activitypub_source_id_hash', $hash );
+			}
 
 			$source_to_comment_id[ $post['object']['id'] ] = $comment_id;
 		}

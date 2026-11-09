@@ -13,6 +13,7 @@ use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
 use Activitypub\Handler\Move;
 
+use function Activitypub\get_id_hash;
 use function Activitypub\object_to_uri;
 
 /**
@@ -107,6 +108,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$this->assertWPError( $old_follower );
 		$this->assertNotNull( $updated_follower );
 		$this->assertEquals( $target, $updated_follower->guid );
+		$this->assertSame( get_id_hash( $target ), $updated_follower->post_name );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 	}

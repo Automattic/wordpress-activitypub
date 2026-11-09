@@ -371,6 +371,7 @@ class Comment {
 		$args['fields']     = 'all';
 		$args['meta_key']   = 'source_id'; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 		$args['meta_value'] = $id;         // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+		$args['meta_type']  = 'BINARY';
 
 		$comment_query = new \WP_Comment_Query( $args );
 
@@ -418,10 +419,12 @@ class Comment {
 				array(
 					'key'   => 'source_url',
 					'value' => $url,
+					'type'  => 'BINARY',
 				),
 				array(
 					'key'   => 'source_id',
 					'value' => $url,
+					'type'  => 'BINARY',
 				),
 			),
 		);

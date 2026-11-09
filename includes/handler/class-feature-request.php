@@ -15,6 +15,7 @@ use Activitypub\Collection\Remote_Actors;
 use Activitypub\Proxy;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\get_meta_ids_by_value;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
@@ -239,21 +240,7 @@ class Feature_Request {
 			return self::add_blog_stamp( $instrument );
 		}
 
-		$existing = \get_user_meta( $user_id, '_activitypub_featured_by', false );
-		if ( \in_array( $instrument, (array) $existing, true ) ) {
-			global $wpdb;
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			return (int) $wpdb->get_var(
-				$wpdb->prepare(
-					"SELECT umeta_id FROM {$wpdb->usermeta} WHERE user_id = %d AND meta_key = %s AND meta_value = %s LIMIT 1",
-					$user_id,
-					'_activitypub_featured_by',
-					$instrument
-				)
-			);
-		}
-
-		return \add_user_meta( $user_id, '_activitypub_featured_by', $instrument );
+		return get_meta_ids_by_value( 'user', $user_id, '_activitypub_featured_by', $instrument )[0] ?? \add_user_meta( $user_id, '_activitypub_featured_by', $instrument );
 	}
 
 	/**

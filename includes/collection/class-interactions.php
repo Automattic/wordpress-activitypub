@@ -12,6 +12,7 @@ use Activitypub\Emoji;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
+use function Activitypub\get_id_hash;
 use function Activitypub\get_quote_url;
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\get_target_post_id;
@@ -271,10 +272,12 @@ class Interactions {
 					array(
 						'key'   => 'source_url',
 						'value' => $url,
+						'type'  => 'BINARY',
 					),
 					array(
 						'key'   => 'source_id',
 						'value' => $url,
+						'type'  => 'BINARY',
 					),
 				),
 			),
@@ -616,7 +619,16 @@ class Interactions {
 			return false;
 		}
 
-		$is_insert        = self::INSERT === $action;
+		$is_insert = self::INSERT === $action;
+
+		// The hash of the IDs, to look comments up by, see get_id_hash(). An update carries no meta, so the stored IDs are hashed.
+		foreach ( array( 'source_id', 'source_url' ) as $key ) {
+			$id = $comment_data['comment_meta'][ $key ] ?? ( $is_insert ? '' : \get_comment_meta( $comment_data['comment_ID'], $key, true ) );
+			if ( $id ) {
+				$comment_data['comment_meta'][ "_activitypub_{$key}_hash" ] = get_id_hash( $id );
+			}
+		}
+
 		$flood_priority   = \has_action( 'check_comment_flood', 'check_comment_flood_db' );
 		$akismet_callback = array( self::class, 'akismet_comment_nonce_inactive' );
 		$kses_callback    = array( self::class, 'allowed_comment_html' );

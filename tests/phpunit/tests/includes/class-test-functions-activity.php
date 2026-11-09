@@ -12,11 +12,13 @@ use Activitypub\Activity\Base_Object;
 use function Activitypub\extract_recipients_from_activity;
 use function Activitypub\extract_recipients_from_activity_property;
 use function Activitypub\get_activity_visibility;
+use function Activitypub\get_id_hash;
 
 /**
  * Test class for Activity Functions.
  */
 class Test_Functions_Activity extends \WP_UnitTestCase {
+	use Uri_Test_Cases;
 
 	/**
 	 * Test object_to_uri.
@@ -1248,6 +1250,59 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			'scheme relative'          => array( '//example.com/users/alice', '//example.com/users/alice' ),
 			'unlisted scheme port'     => array( 'web3://example.com:0/x', 'web3://example.com:0/x' ),
 			'empty'                    => array( '', '' ),
+		);
+	}
+
+	/**
+	 * Test that an ID always gets the same hash.
+	 *
+	 * @covers \Activitypub\get_id_hash
+	 * @dataProvider uri_provider
+	 *
+	 * @param string $uri The ID.
+	 */
+	public function test_get_id_hash( $uri ) {
+		$this->assertMatchesRegularExpression( '/^[0-9a-f]{64}$/', get_id_hash( $uri ) );
+		$this->assertSame( get_id_hash( $uri ), get_id_hash( \esc_url_raw( $uri ) ), 'A sanitized ID must get the same hash.' );
+	}
+
+	/**
+	 * Test that IDs the database collation treats as equal get different hashes.
+	 *
+	 * @covers \Activitypub\get_id_hash
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The stored ID.
+	 * @param string $requested The requested ID.
+	 */
+	public function test_get_id_hash_differs_for_lookalikes( $stored, $requested ) {
+		$this->assertNotSame( get_id_hash( $stored ), get_id_hash( $requested ) );
+	}
+
+	/**
+	 * Test that an ID that is not a valid URL gets no hash.
+	 *
+	 * @covers \Activitypub\get_id_hash
+	 * @dataProvider invalid_id_provider
+	 *
+	 * @param string $id The ID.
+	 */
+	public function test_get_id_hash_of_invalid_id( $id ) {
+		$this->assertSame( '', get_id_hash( $id ) );
+	}
+
+	/**
+	 * IDs that `esc_url_raw()` empties.
+	 *
+	 * @return array<string, string[]> Test cases.
+	 */
+	public function invalid_id_provider() {
+		return array(
+			'empty'          => array( '' ),
+			'tag scheme'     => array( 'tag:example.com,2026:note-1' ),
+			'did scheme'     => array( 'did:plc:abc123' ),
+			'at scheme'      => array( 'at://did:plc:abc123/app.bsky.feed.post/1' ),
+			'javascript url' => array( 'javascript:alert(1)' ),
 		);
 	}
 }

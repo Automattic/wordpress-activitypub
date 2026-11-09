@@ -218,6 +218,7 @@ class Outbox {
 			array(
 				'key'   => '_activitypub_object_id',
 				'value' => $object_id,
+				'type'  => 'BINARY',
 			),
 		);
 
@@ -323,6 +324,7 @@ class Outbox {
 					array(
 						'key'   => '_activitypub_object_id',
 						'value' => $object_id,
+						'type'  => 'BINARY',
 					),
 					array(
 						'key'   => '_activitypub_activity_type',
@@ -347,7 +349,7 @@ class Outbox {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
+				"SELECT ID FROM $wpdb->posts WHERE CAST(guid AS BINARY)=%s AND post_type=%s",
 				\esc_url( $guid ),
 				self::POST_TYPE
 			)

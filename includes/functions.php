@@ -410,3 +410,43 @@ function is_importing() {
 	 */
 	return (bool) \apply_filters( 'activitypub_is_importing', $importing );
 }
+
+/**
+ * Get the IDs of the meta rows that hold exactly a value.
+ *
+ * Unlike a lookup by value through the metadata API, the value is matched byte for byte.
+ *
+ * @since unreleased
+ *
+ * @param string $meta_type  The object type: 'post', 'comment' or 'user'.
+ * @param int    $object_id  The object ID.
+ * @param string $meta_key   The meta key.
+ * @param string $meta_value The meta value.
+ *
+ * @return int[] The meta IDs.
+ */
+function get_meta_ids_by_value( $meta_type, $object_id, $meta_key, $meta_value ) {
+	global $wpdb;
+
+	$table = \_get_meta_table( $meta_type );
+
+	if ( ! $table ) {
+		return array();
+	}
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	$meta_ids = $wpdb->get_col(
+		$wpdb->prepare(
+			'SELECT %i FROM %i WHERE %i = %d AND meta_key = %s AND CAST(meta_value AS BINARY) = %s',
+			'user' === $meta_type ? 'umeta_id' : 'meta_id',
+			$table,
+			$meta_type . '_id',
+			$object_id,
+			$meta_key,
+			// Stored unslashed, see add_metadata().
+			\wp_unslash( $meta_value )
+		)
+	);
+
+	return \array_map( 'intval', $meta_ids );
+}

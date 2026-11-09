@@ -87,6 +87,7 @@ class Following {
 						array(
 							'key'   => '_activitypub_object_id',
 							'value' => $post->guid,
+							'type'  => 'BINARY',
 						),
 						array(
 							'key'   => '_activitypub_activity_type',
@@ -216,6 +217,7 @@ class Following {
 					array(
 						'key'   => '_activitypub_object_id',
 						'value' => $post->guid,
+						'type'  => 'BINARY',
 					),
 					array(
 						'key'   => '_activitypub_activity_type',
