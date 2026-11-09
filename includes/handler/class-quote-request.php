@@ -15,6 +15,7 @@ use Activitypub\Collection\Remote_Actors;
 use Activitypub\Proxy;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\get_meta_ids_by_value;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
@@ -229,8 +230,10 @@ class Quote_Request {
 			);
 		}
 
-		// Remove from _activitypub_quoted_by meta.
-		\delete_post_meta( $post_id, '_activitypub_quoted_by', $instrument_url );
+		// Remove exactly this instrument from _activitypub_quoted_by meta.
+		foreach ( get_meta_ids_by_value( 'post', $post_id, '_activitypub_quoted_by', $instrument_url ) as $meta_id ) {
+			\delete_metadata_by_mid( 'post', $meta_id );
+		}
 
 		// Send Reject activity to revoke the quote permission.
 		self::queue_reject( $activity_object, (int) $post->post_author );
@@ -271,22 +274,7 @@ class Quote_Request {
 
 		$activity_object['instrument'] = object_to_uri( $activity_object['instrument'] );
 
-		$post_meta = \get_post_meta( $post_id, '_activitypub_quoted_by', false );
-		if ( \in_array( $activity_object['instrument'], $post_meta, true ) ) {
-			global $wpdb;
-
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$meta_id = $wpdb->get_var(
-				$wpdb->prepare(
-					"SELECT meta_id FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = %s AND meta_value = %s LIMIT 1",
-					$post_id,
-					'_activitypub_quoted_by',
-					$activity_object['instrument']
-				)
-			);
-		} else {
-			$meta_id = \add_post_meta( $post_id, '_activitypub_quoted_by', $activity_object['instrument'] );
-		}
+		$meta_id = get_meta_ids_by_value( 'post', $post_id, '_activitypub_quoted_by', $activity_object['instrument'] )[0] ?? \add_post_meta( $post_id, '_activitypub_quoted_by', $activity_object['instrument'] );
 
 		// Only send minimal data.
 		$activity_object = \array_intersect_key(

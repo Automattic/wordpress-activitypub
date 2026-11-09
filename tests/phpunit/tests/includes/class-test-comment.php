@@ -19,6 +19,8 @@ use function Activitypub\process_remote_images;
  * @coversDefaultClass \Activitypub\Comment
  */
 class Test_Comment extends \WP_UnitTestCase {
+	use Uri_Test_Cases;
+
 	/**
 	 * Set up the test.
 	 */
@@ -1506,6 +1508,36 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that object_id_to_comment only finds the exact ID.
+	 *
+	 * @covers ::object_id_to_comment
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The stored ID.
+	 * @param string $requested The requested ID.
+	 */
+	public function test_object_id_to_comment_matches_exact_id( $stored, $requested ) {
+		$comment_id = self::factory()->comment->create( array( 'comment_date' => '2024-01-01 00:00:00' ) );
+		\add_comment_meta( $comment_id, 'source_id', \esc_url_raw( $stored ) );
+
+		$this->assertFalse( Comment::object_id_to_comment( \esc_url_raw( $requested ), array( 'status' => 'any' ) ) );
+
+		// The other host's own comment, older and newer than the first one.
+		$other_id = self::factory()->comment->create( array( 'comment_date' => '2023-01-01 00:00:00' ) );
+		\add_comment_meta( $other_id, 'source_id', \esc_url_raw( $requested ) );
+		$this->assertEquals( $other_id, Comment::object_id_to_comment( \esc_url_raw( $requested ) )->comment_ID );
+
+		\wp_update_comment(
+			array(
+				'comment_ID'   => $other_id,
+				'comment_date' => '2025-01-01 00:00:00',
+			)
+		);
+		$this->assertEquals( $other_id, Comment::object_id_to_comment( \esc_url_raw( $requested ) )->comment_ID );
+		$this->assertEquals( $comment_id, Comment::object_id_to_comment( \esc_url_raw( $stored ) )->comment_ID );
+	}
+
+	/**
 	 * Test pre_comment_approved filter.
 	 *
 	 * @covers ::pre_comment_approved
@@ -1786,6 +1818,104 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		// Clean up.
 		\set_current_screen( 'front' );
+	}
+
+	/**
+	 * Admin queries name posts in every format core parses, so a hidden post is found in each.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_ap_post_comments_hidden_for_every_post_id_format() {
+		$post_id       = self::factory()->post->create();
+		$ap_post_id    = self::factory()->post->create( array( 'post_type' => 'ap_post' ) );
+		$ap_comment_id = \wp_insert_comment(
+			array(
+				'comment_post_ID' => $ap_post_id,
+				'comment_content' => 'Comment on ap_post',
+			)
+		);
+
+		\set_current_screen( 'edit-comments' );
+
+		$by_post_in_string = ( new \WP_Comment_Query() )->query( array( 'post__in' => \sprintf( '%d,%d', $post_id, $ap_post_id ) ) );
+		$by_negative_id    = ( new \WP_Comment_Query() )->query( array( 'post_id' => -$ap_post_id ) );
+
+		\set_current_screen( 'front' );
+
+		$this->assertNotContains( (string) $ap_comment_id, \wp_list_pluck( $by_post_in_string, 'comment_ID' ), 'A hidden post in a comma-separated post__in should be found.' );
+		$this->assertNotContains( (string) $ap_comment_id, \wp_list_pluck( $by_negative_id, 'comment_ID' ), 'A negative post_id should be read as core reads it.' );
+	}
+
+	/**
+	 * Admin queries for named posts of other types keep their comments, as WooCommerce order notes.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_admin_query_for_named_post_of_other_type_keeps_comments() {
+		\register_post_type( 'shop_order', array( 'public' => false ) );
+
+		$order_id = self::factory()->post->create( array( 'post_type' => 'shop_order' ) );
+		$note_id  = \wp_insert_comment(
+			array(
+				'comment_post_ID'  => $order_id,
+				'comment_content'  => 'Order status changed.',
+				'comment_type'     => 'order_note',
+				'comment_approved' => 1,
+			)
+		);
+
+		\set_current_screen( 'edit-comments' );
+
+		$by_post_id = ( new \WP_Comment_Query() )->query(
+			array(
+				'post_id' => $order_id,
+				'type'    => 'order_note',
+			)
+		);
+		$by_post_in = ( new \WP_Comment_Query() )->query(
+			array(
+				'post__in' => array( $order_id ),
+				'type'     => 'order_note',
+			)
+		);
+
+		\set_current_screen( 'front' );
+		\unregister_post_type( 'shop_order' );
+
+		$this->assertContains( (string) $note_id, \wp_list_pluck( $by_post_id, 'comment_ID' ), 'Notes of a named order should be found by post_id.' );
+		$this->assertContains( (string) $note_id, \wp_list_pluck( $by_post_in, 'comment_ID' ), 'Notes of a named order should be found by post__in.' );
+	}
+
+	/**
+	 * Admin queries for named objects that are not posts keep their comments, as orders stored outside wp_posts.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_admin_query_for_named_object_outside_posts_keeps_comments() {
+		$order_id = 987654;
+		$this->assertNull( \get_post( $order_id ), 'The order must not exist as a post.' );
+
+		$note_id = \wp_insert_comment(
+			array(
+				'comment_post_ID'  => $order_id,
+				'comment_content'  => 'Payment received.',
+				'comment_type'     => 'order_note',
+				'comment_approved' => 1,
+			)
+		);
+
+		\set_current_screen( 'edit-comments' );
+
+		$notes = ( new \WP_Comment_Query() )->query(
+			array(
+				'post_id' => $order_id,
+				'type'    => 'order_note',
+			)
+		);
+
+		\set_current_screen( 'front' );
+
+		$this->assertContains( (string) $note_id, \wp_list_pluck( $notes, 'comment_ID' ) );
 	}
 
 	/**
@@ -2927,5 +3057,28 @@ class Test_Comment extends \WP_UnitTestCase {
 		);
 
 		return array( $src, $img );
+	}
+
+	/**
+	 * Test that url_to_commentid only finds the exact ID or URL.
+	 *
+	 * @covers ::url_to_commentid
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The stored ID.
+	 * @param string $requested The requested ID.
+	 */
+	public function test_url_to_commentid_matches_exact_id( $stored, $requested ) {
+		$comment_id = self::factory()->comment->create();
+		\add_comment_meta( $comment_id, 'source_id', \esc_url_raw( $stored ) );
+		\add_comment_meta( $comment_id, 'source_url', \esc_url_raw( $stored ) );
+
+		$this->assertNull( Comment::url_to_commentid( $requested ) );
+
+		// The other host's own comment.
+		$other_id = self::factory()->comment->create();
+		\add_comment_meta( $other_id, 'source_id', \esc_url_raw( $requested ) );
+
+		$this->assertSame( $other_id, Comment::url_to_commentid( $requested ) );
 	}
 }

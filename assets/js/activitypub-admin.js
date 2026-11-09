@@ -12,6 +12,33 @@ jQuery( function( $ ) {
 		}
 	} );
 
+	/*
+	 * Copy buttons, e.g. for the Fediverse handle on the welcome page. ClipboardJS
+	 * ships with WordPress, reads the text from `data-clipboard-text` and brings its
+	 * own fallback for browsers without the Clipboard API.
+	 */
+	new ClipboardJS( '.activitypub-copy-to-clipboard' ).on( 'success', function( event ) {
+		var $button = $( event.trigger ),
+			copiedLabel = $button.data( 'copied-label' );
+
+		event.clearSelection();
+
+		// A second click while the success label shows restarts the countdown.
+		clearTimeout( $button.data( 'resetTimeout' ) );
+
+		$button.text( copiedLabel );
+
+		/*
+		 * The button keeps its `aria-label`, which wins over the text content, so
+		 * the new label alone would not reach a screen reader.
+		 */
+		window.wp.a11y.speak( copiedLabel );
+
+		$button.data( 'resetTimeout', setTimeout( function() {
+			$button.text( $button.data( 'copy-label' ) );
+		}, 1000 ) );
+	} );
+
 	$(document).on( 'wp-plugin-install-success', function( event, response ) {
 		setTimeout( function() {
 			$( '.activate-now' ).removeClass( 'thickbox open-plugin-details-modal' );

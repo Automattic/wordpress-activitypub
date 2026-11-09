@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Improve how content from other servers is matched by its address.

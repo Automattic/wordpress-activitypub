@@ -14,6 +14,7 @@ use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Handler\Feature_Request;
 use Activitypub\Tests\ActivityPub_Outbox_TestCase;
+use Activitypub\Tests\Uri_Test_Cases;
 
 /**
  * Test class for Feature Request Handler.
@@ -23,6 +24,8 @@ use Activitypub\Tests\ActivityPub_Outbox_TestCase;
  * @group activitypub
  */
 class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
+	use Uri_Test_Cases;
+
 	/**
 	 * Set up each test.
 	 */
@@ -781,5 +784,24 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 			)
 		);
 		$this->assertEmpty( $accepts, 'The Application actor must never accept FeatureRequests, regardless of policy.' );
+	}
+
+	/**
+	 * Test that a stamp is reused only for its exact instrument.
+	 *
+	 * @covers ::add_stamp
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The instrument of another stamp.
+	 * @param string $requested The instrument of this stamp.
+	 */
+	public function test_add_stamp_reuses_exact_instrument( $stored, $requested ) {
+		$other_id = \add_user_meta( self::$user_id, '_activitypub_featured_by', $stored );
+		$stamp_id = \add_user_meta( self::$user_id, '_activitypub_featured_by', $requested );
+
+		$this->assertSame( $stamp_id, Feature_Request::add_stamp( self::$user_id, $requested ) );
+		$this->assertSame( $other_id, Feature_Request::add_stamp( self::$user_id, $stored ) );
+
+		\delete_user_meta( self::$user_id, '_activitypub_featured_by' );
 	}
 }

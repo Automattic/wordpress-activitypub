@@ -371,6 +371,7 @@ class Comment {
 		$args['fields']     = 'all';
 		$args['meta_key']   = 'source_id'; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 		$args['meta_value'] = $id;         // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+		$args['meta_type']  = 'BINARY';
 
 		$comment_query = new \WP_Comment_Query( $args );
 
@@ -418,10 +419,12 @@ class Comment {
 				array(
 					'key'   => 'source_url',
 					'value' => $url,
+					'type'  => 'BINARY',
 				),
 				array(
 					'key'   => 'source_id',
 					'value' => $url,
+					'type'  => 'BINARY',
 				),
 			),
 		);
@@ -861,6 +864,22 @@ class Comment {
 
 		// Filter post types for admin requests.
 		if ( \is_admin() ) {
+			/*
+			 * A query for named posts is only restricted when one of them has a hidden post type.
+			 * Other posts keep their comments, also objects that are not posts at all, like
+			 * WooCommerce orders stored in their own tables, whose notes are comments.
+			 */
+			$named = \array_filter(
+				\array_merge(
+					array( \absint( $query->query_vars['post_id'] ?? 0 ) ),
+					\wp_parse_id_list( $query->query_vars['post__in'] ?? array() )
+				)
+			);
+
+			if ( $named && ! \array_intersect( \array_map( 'get_post_type', $named ), self::hide_for() ) ) {
+				return;
+			}
+
 			$query->query_vars['post_type'] = self::get_allowed_comment_post_types();
 			return;
 		}
