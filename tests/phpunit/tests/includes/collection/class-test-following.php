@@ -10,6 +10,7 @@ namespace Activitypub\Tests\Collection;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Accept;
+use Activitypub\Tests\Uri_Test_Cases;
 
 use function Activitypub\follow;
 
@@ -19,6 +20,7 @@ use function Activitypub\follow;
  * @coversDefaultClass \Activitypub\Collection\Following
  */
 class Test_Following extends \WP_UnitTestCase {
+	use Uri_Test_Cases;
 
 	/**
 	 * Test the accept() method with a valid follow request.
@@ -544,5 +546,46 @@ class Test_Following extends \WP_UnitTestCase {
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Test that follow and unfollow only use the Follow of the exact actor.
+	 *
+	 * @covers ::follow
+	 * @covers ::unfollow
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The ID of another followed actor.
+	 * @param string $requested The ID of this actor.
+	 */
+	public function test_follow_and_unfollow_match_exact_actor( $stored, $requested ) {
+		$user_id = self::factory()->user->create();
+		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
+
+		$actor_id = Remote_Actors::create( $this->actor_for_uri( $requested ) );
+		$other_id = Remote_Actors::create( $this->actor_for_uri( 'https://example.com/uri-test/other' ) );
+
+		// The Follow of the other actor is the newer one, and it is stored under the lookalike ID.
+		$follow_id = Following::follow( $actor_id, $user_id );
+		$this->assertIsInt( $follow_id );
+		$other_follow_id = Following::follow( $other_id, $user_id );
+		$this->assertIsInt( $other_follow_id );
+		\update_post_meta( $other_follow_id, '_activitypub_object_id', $stored );
+		\wp_update_post(
+			array(
+				'ID'            => $other_follow_id,
+				'post_date'     => \gmdate( 'Y-m-d H:i:s', \time() + HOUR_IN_SECONDS ),
+				'post_date_gmt' => \gmdate( 'Y-m-d H:i:s', \time() + HOUR_IN_SECONDS ),
+			)
+		);
+
+		// Following again returns the existing Follow.
+		$this->assertSame( $follow_id, Following::follow( $actor_id, $user_id ) );
+
+		// Unfollowing undoes that Follow.
+		$undo_id = Following::unfollow( $actor_id, $user_id );
+		$this->assertIsInt( $undo_id );
+		$undo = \json_decode( \get_post( $undo_id )->post_content, true );
+		$this->assertStringEndsWith( 'p=' . $follow_id, $undo['object']['id'] );
 	}
 }

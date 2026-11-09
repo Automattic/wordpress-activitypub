@@ -1138,6 +1138,37 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 	}
 
 	/**
+	 * Test C2S POST with another actor is answered with a principal-actor mismatch.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_actor_mismatch_problem_details() {
+		$data = array(
+			'type'   => 'Create',
+			'actor'  => 'https://remote.example/users/someone',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'    => 'Note',
+				'content' => 'Not my note.',
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$server   = \rest_get_server();
+		$response = \apply_filters( 'rest_post_dispatch', \rest_ensure_response( $server->dispatch( $request ) ), $server, $request );
+
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( 'https://w3id.org/fep/c180#principal-actor-mismatch', $response->get_data()['type'] );
+		$this->assertSame( 'Principal-actor mismatch', $response->get_data()['title'] );
+		$this->assertStringStartsWith( 'application/problem+json', $response->get_headers()['Content-Type'] );
+	}
+
+	/**
 	 * Test C2S POST creates Article without post format.
 	 *
 	 * When a client submits an Article via C2S, the created WordPress post

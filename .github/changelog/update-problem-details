@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Error responses now tell apps and other Fediverse servers more precisely what went wrong, so they can handle refused requests better.

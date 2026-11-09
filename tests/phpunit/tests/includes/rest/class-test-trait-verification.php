@@ -302,7 +302,8 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		} else {
 			$this->assertWPError( $result );
 			$this->assertSame( 'activitypub_key_actor_mismatch', $result->get_error_code() );
-			$this->assertSame( 403, $result->get_error_data()['status'] );
+			$this->assertSame( 400, $result->get_error_data()['status'] );
+			$this->assertSame( 'https://w3id.org/fep/c180#principal-actor-mismatch', $result->get_error_data()['type'] );
 		}
 	}
 
@@ -849,7 +850,7 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		} else {
 			$this->assertWPError( $result );
 			$this->assertEquals( 'activitypub_key_actor_mismatch', $result->get_error_code() );
-			$this->assertEquals( 403, $result->get_error_data()['status'] );
+			$this->assertEquals( 400, $result->get_error_data()['status'] );
 		}
 	}
 

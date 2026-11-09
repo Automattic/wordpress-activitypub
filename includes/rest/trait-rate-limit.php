@@ -118,7 +118,11 @@ trait Rate_Limit {
 			$entry['answer'] = new \WP_Error(
 				'activitypub_rate_limited',
 				\__( 'Too many requests. Please try again later.', 'activitypub' ),
-				array( 'status' => 429 )
+				array(
+					'status' => 429,
+					'type'   => 'https://w3id.org/fep/c180#rate-limit-exceeded',
+					'title'  => 'Rate limit exceeded',
+				)
 			);
 
 			return $entry;

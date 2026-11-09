@@ -75,24 +75,31 @@ class Update {
 		}
 
 		if ( ! $post instanceof \WP_Post ) {
-			return false;
+			return new \WP_Error(
+				'activitypub_object_not_found',
+				\__( 'The referenced object was not found.', 'activitypub' ),
+				array(
+					'status' => 400,
+					'type'   => 'https://w3id.org/fep/c180#object-does-not-exist',
+					'title'  => 'Object does not exist',
+				)
+			);
 		}
 
 		/*
-		 * Verify the user owns this post.
+		 * Verify the user owns this post and may edit it.
 		 * The blog actor ($user_id === 0) owns no posts, so for it only the
-		 * capability check below decides.
+		 * capability check decides.
 		 */
-		if ( (int) $post->post_author !== $user_id && $user_id > 0 ) {
-			return false;
-		}
-
-		// Verify the user has permission to edit this post.
-		if ( ! \current_user_can( 'edit_post', $post->ID ) ) {
+		if ( ( (int) $post->post_author !== $user_id && $user_id > 0 ) || ! \current_user_can( 'edit_post', $post->ID ) ) {
 			return new \WP_Error(
 				'activitypub_forbidden',
 				\__( 'You do not have permission to edit this post.', 'activitypub' ),
-				array( 'status' => 403 )
+				array(
+					'status' => 403,
+					'type'   => 'https://w3id.org/fep/c180#actor-not-authorized',
+					'title'  => 'Actor not authorized',
+				)
 			);
 		}
 

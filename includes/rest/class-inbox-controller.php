@@ -285,18 +285,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 			}
 		}
 
-		$response = \rest_ensure_response(
-			array(
-				'type'   => 'https://w3id.org/fep/c180#approval-required',
-				'title'  => 'Approval Required',
-				'status' => '202',
-				'detail' => 'This activity requires approval before it can be processed.',
-			)
-		);
-		$response->set_status( 202 );
-		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
-
-		return $response;
+		return Server::accepted_response();
 	}
 
 	/**

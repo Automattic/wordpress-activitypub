@@ -19,6 +19,8 @@ use function Activitypub\process_remote_images;
  * @coversDefaultClass \Activitypub\Comment
  */
 class Test_Comment extends \WP_UnitTestCase {
+	use Uri_Test_Cases;
+
 	/**
 	 * Set up the test.
 	 */
@@ -1506,6 +1508,36 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that object_id_to_comment only finds the exact ID.
+	 *
+	 * @covers ::object_id_to_comment
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The stored ID.
+	 * @param string $requested The requested ID.
+	 */
+	public function test_object_id_to_comment_matches_exact_id( $stored, $requested ) {
+		$comment_id = self::factory()->comment->create( array( 'comment_date' => '2024-01-01 00:00:00' ) );
+		\add_comment_meta( $comment_id, 'source_id', \esc_url_raw( $stored ) );
+
+		$this->assertFalse( Comment::object_id_to_comment( \esc_url_raw( $requested ), array( 'status' => 'any' ) ) );
+
+		// The other host's own comment, older and newer than the first one.
+		$other_id = self::factory()->comment->create( array( 'comment_date' => '2023-01-01 00:00:00' ) );
+		\add_comment_meta( $other_id, 'source_id', \esc_url_raw( $requested ) );
+		$this->assertEquals( $other_id, Comment::object_id_to_comment( \esc_url_raw( $requested ) )->comment_ID );
+
+		\wp_update_comment(
+			array(
+				'comment_ID'   => $other_id,
+				'comment_date' => '2025-01-01 00:00:00',
+			)
+		);
+		$this->assertEquals( $other_id, Comment::object_id_to_comment( \esc_url_raw( $requested ) )->comment_ID );
+		$this->assertEquals( $comment_id, Comment::object_id_to_comment( \esc_url_raw( $stored ) )->comment_ID );
+	}
+
+	/**
 	 * Test pre_comment_approved filter.
 	 *
 	 * @covers ::pre_comment_approved
@@ -2927,5 +2959,28 @@ class Test_Comment extends \WP_UnitTestCase {
 		);
 
 		return array( $src, $img );
+	}
+
+	/**
+	 * Test that url_to_commentid only finds the exact ID or URL.
+	 *
+	 * @covers ::url_to_commentid
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The stored ID.
+	 * @param string $requested The requested ID.
+	 */
+	public function test_url_to_commentid_matches_exact_id( $stored, $requested ) {
+		$comment_id = self::factory()->comment->create();
+		\add_comment_meta( $comment_id, 'source_id', \esc_url_raw( $stored ) );
+		\add_comment_meta( $comment_id, 'source_url', \esc_url_raw( $stored ) );
+
+		$this->assertNull( Comment::url_to_commentid( $requested ) );
+
+		// The other host's own comment.
+		$other_id = self::factory()->comment->create();
+		\add_comment_meta( $other_id, 'source_id', \esc_url_raw( $requested ) );
+
+		$this->assertSame( $other_id, Comment::url_to_commentid( $requested ) );
 	}
 }
