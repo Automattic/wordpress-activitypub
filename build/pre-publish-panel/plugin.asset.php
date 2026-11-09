@@ -3,12 +3,14 @@
 		'react-jsx-runtime',
 		'wp-block-editor',
 		'wp-components',
+		'wp-core-data',
 		'wp-data',
 		'wp-dom',
 		'wp-editor',
 		'wp-element',
+		'wp-hooks',
 		'wp-i18n',
 		'wp-plugins'
 	),
-	'version' => '8bf8219b700555911ae5'
+	'version' => 'afb244db83f09a5dcb3c'
 );

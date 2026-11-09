@@ -5,7 +5,58 @@
 // Set up the global options before importing utils, so NOTE_LENGTH picks up the value.
 window._activityPubOptions = { noteLength: 500 };
 
+import { render, screen } from '@testing-library/react';
+import { registerPlugin } from '@wordpress/plugins';
+import { applyFilters } from '@wordpress/hooks';
+import { __, sprintf } from '@wordpress/i18n';
 import { analyzeBlocks, getSuggestedPostFormat } from '../utils';
+import '../plugin';
+
+// The editor state the panels read, changed per test.
+let mockEditorState;
+
+jest.mock( '@wordpress/plugins', () => ( { registerPlugin: jest.fn() } ) );
+
+jest.mock( '@wordpress/editor', () => ( {
+	PluginPrePublishPanel: ( { title, children } ) => (
+		<div data-testid="pre-publish-panel">
+			<h2>{ title }</h2>
+			{ children }
+		</div>
+	),
+	PostTaxonomiesFlatTermSelector: ( { slug } ) => <div data-testid="term-selector" data-slug={ slug } />,
+	store: 'core/editor',
+} ) );
+
+jest.mock( '@wordpress/components', () => ( {
+	Button: ( { children, onClick } ) => <button onClick={ onClick }>{ children }</button>,
+} ) );
+
+jest.mock( '@wordpress/core-data', () => ( { store: 'core' } ) );
+jest.mock( '@wordpress/block-editor', () => ( { store: 'core/block-editor' } ) );
+
+jest.mock( '@wordpress/data', () => ( {
+	useDispatch: () => ( { editPost: jest.fn() } ),
+	useSelect: ( callback ) =>
+		callback( ( store ) => {
+			if ( 'core' === store ) {
+				return {
+					getTaxonomy: () => mockEditorState.taxonomy,
+					getEntityRecords: () => mockEditorState.siteTags,
+				};
+			}
+
+			if ( 'core/block-editor' === store ) {
+				return { getBlocks: () => mockEditorState.blocks ?? [] };
+			}
+
+			return {
+				isPublishSidebarOpened: () => mockEditorState.isOpened,
+				getCurrentPostType: () => mockEditorState.postType,
+				getEditedPostAttribute: ( attribute ) => mockEditorState.attributes[ attribute ],
+			};
+		} ),
+} ) );
 
 describe( 'analyzeBlocks', () => {
 	test( 'returns all zeros for empty blocks', () => {
@@ -395,5 +446,159 @@ describe( 'getSuggestedPostFormat', () => {
 		// Multiple images should suggest gallery, not image.
 		const result = getSuggestedPostFormat( blocks, '' );
 		expect( result.format ).toBe( 'gallery' );
+	} );
+} );
+
+describe( 'Tags suggestion', () => {
+	const Panels = () => {
+		const { render: Render } = registerPlugin.mock.calls[ 0 ][ 1 ];
+		return <Render />;
+	};
+
+	const coreText =
+		'%s help users and search engines navigate your site and find your content. Add a few keywords to describe your post.';
+
+	/**
+	 * Renders core's tags suggestion as core does, a panel titled by the taxonomy label.
+	 *
+	 * @param {string} expanded The panel's aria-expanded value.
+	 *
+	 * @return {jest.Mock} A click spy on the panel toggle.
+	 */
+	const renderCorePanel = ( expanded = 'false' ) => {
+		document.body.innerHTML = `<div class="editor-post-publish-panel__prepublish"><button aria-expanded="${ expanded }">Suggestion:<span class="editor-post-publish-panel__link">Add Tag</span></button></div>`;
+		const click = jest.fn();
+		document.querySelector( 'button' ).addEventListener( 'click', click );
+		return click;
+	};
+
+	beforeEach( () => {
+		window._activityPubOptions = { noteLength: 500 };
+		mockEditorState = {
+			isOpened: true,
+			taxonomy: { types: [ 'post' ], rest_base: 'tags', labels: { add_new_item: 'Add Tag' } },
+			siteTags: [ { id: 3 } ],
+			postType: 'post',
+			attributes: {},
+		};
+		jest.spyOn( window, 'requestAnimationFrame' ).mockImplementation( ( callback ) => callback() );
+	} );
+
+	afterEach( () => {
+		window.requestAnimationFrame.mockRestore();
+		document.body.innerHTML = '';
+	} );
+
+	test( 'opens core suggestion when the sidebar opens', () => {
+		const click = renderCorePanel();
+		render( <Panels /> );
+
+		expect( click ).toHaveBeenCalledTimes( 1 );
+	} );
+
+	test( 'leaves core suggestion alone when it is open already', () => {
+		const click = renderCorePanel( 'true' );
+		render( <Panels /> );
+
+		expect( click ).not.toHaveBeenCalled();
+	} );
+
+	test( 'leaves other suggestions alone', () => {
+		mockEditorState.taxonomy.labels.add_new_item = 'Add Category';
+		const click = renderCorePanel();
+		render( <Panels /> );
+
+		expect( click ).not.toHaveBeenCalled();
+	} );
+
+	test( 'waits for the sidebar to open', () => {
+		mockEditorState.isOpened = false;
+		const click = renderCorePanel();
+		render( <Panels /> );
+
+		expect( click ).not.toHaveBeenCalled();
+	} );
+
+	test( 'opens core suggestion once the site tags have loaded', () => {
+		mockEditorState.siteTags = undefined;
+		const click = renderCorePanel();
+		const { rerender } = render( <Panels /> );
+
+		expect( click ).not.toHaveBeenCalled();
+
+		mockEditorState.siteTags = [ { id: 3 } ];
+		rerender( <Panels /> );
+
+		expect( click ).toHaveBeenCalledTimes( 1 );
+	} );
+
+	test( 'marks the panels with the asterism icon', () => {
+		const { container } = render( registerPlugin.mock.calls[ 0 ][ 1 ].icon );
+
+		expect( container.querySelector( 'svg text' ) ).toHaveTextContent( '⁂' );
+	} );
+
+	test( 'renders no panel of its own', () => {
+		render( <Panels /> );
+
+		expect( screen.queryByTestId( 'pre-publish-panel' ) ).toBeNull();
+	} );
+
+	test( 'adds a note on hashtags to core suggestion text', () => {
+		// Core's call, through the default i18n instance.
+		expect(
+			sprintf(
+				/* translators: %s: The taxonomy name. */
+				__(
+					'%s help users and search engines navigate your site and find your content. Add a few keywords to describe your post.'
+				),
+				'Tags'
+			)
+		).toBe(
+			'Tags help users and search engines navigate your site and find your content. Add a few keywords to describe your post. Tags are also shared as hashtags, which help people on the Fediverse find your post.'
+		);
+	} );
+
+	test( 'mentions hashtags in the content when they are enabled', () => {
+		window._activityPubOptions.useHashtags = true;
+
+		expect( sprintf( applyFilters( 'i18n.gettext_default', coreText, coreText, undefined ), 'Tags' ) ).toMatch(
+			/You can also write #hashtags in your post\.$/
+		);
+	} );
+
+	test( 'leaves other core strings alone', () => {
+		expect( __( 'Add a few keywords to describe your post.' ) ).toBe( 'Add a few keywords to describe your post.' );
+	} );
+} );
+
+describe( 'Post format panel', () => {
+	const Panels = () => {
+		const { render: Render } = registerPlugin.mock.calls[ 0 ][ 1 ];
+		return <Render />;
+	};
+
+	beforeEach( () => {
+		window._activityPubOptions = { noteLength: 500, objectType: 'wordpress-post-format' };
+		// A post type without tags, so only the post format panel renders.
+		mockEditorState = {
+			taxonomy: { types: [], rest_base: 'tags' },
+			postType: 'post',
+			attributes: { format: 'standard' },
+			blocks: [ { name: 'core/image', attributes: {}, innerBlocks: [] } ],
+		};
+	} );
+
+	test( 'titles a format suggestion as a suggestion', () => {
+		render( <Panels /> );
+
+		expect( screen.getByRole( 'heading' ) ).toHaveTextContent( 'Suggestion:Change format' );
+	} );
+
+	test( 'titles the confirmation of a set format as the post format', () => {
+		mockEditorState.attributes.format = 'image';
+		render( <Panels /> );
+
+		expect( screen.getByRole( 'heading' ) ).toHaveTextContent( /^Post format$/ );
 	} );
 } );
