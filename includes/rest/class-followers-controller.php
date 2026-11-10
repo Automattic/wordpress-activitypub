@@ -352,7 +352,7 @@ class Followers_Controller extends Actors_Controller {
 		}
 
 		$followers = Followers::get_by_authority( $user_id, $authority );
-		$followers = \wp_list_pluck( $followers, 'guid' );
+		$followers = \array_map( '\Activitypub\unescape_guid', \wp_list_pluck( $followers, 'guid' ) );
 
 		$response = array(
 			'id'           => get_rest_url_by_path(

@@ -463,7 +463,7 @@ class Followers {
 	public static function compute_partial_digest( $user_id, $authority ) {
 		// Get followers filtered by authority.
 		$followers    = self::get_by_authority( $user_id, $authority );
-		$follower_ids = \wp_list_pluck( $followers, 'guid' );
+		$follower_ids = \array_map( '\Activitypub\unescape_guid', \wp_list_pluck( $followers, 'guid' ) );
 
 		// Delegate to the core digest computation algorithm.
 		return Signature::get_collection_digest( $follower_ids );
@@ -516,7 +516,7 @@ class Followers {
 	 */
 	public static function generate_sync_header( $user_id, $authority ) {
 		$followers = self::get_by_authority( $user_id, $authority );
-		$followers = \wp_list_pluck( $followers, 'guid' );
+		$followers = \array_map( '\Activitypub\unescape_guid', \wp_list_pluck( $followers, 'guid' ) );
 
 		// Compute the digest for this specific authority.
 		$digest = Signature::get_collection_digest( $followers );
