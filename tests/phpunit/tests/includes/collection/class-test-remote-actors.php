@@ -423,6 +423,23 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 ';
 
 	/**
+	 * Test that search finds an actor by a URL with `&` after the actor was updated.
+	 *
+	 * @covers ::search
+	 */
+	public function test_search_matches_updated_uri() {
+		$uri     = 'https://remote.example.com/actor/?id=1&type=person';
+		$actor   = $this->actor_for_uri( $uri );
+		$post_id = Remote_Actors::create( $actor );
+		Remote_Actors::update( $post_id, $actor );
+
+		$results = Remote_Actors::search( 'https://remote.example.com/actor/?id=1&type' );
+
+		$this->assertCount( 1, $results );
+		$this->assertSame( $post_id, $results[0]->ID );
+	}
+
+	/**
 	 * Test that search finds an actor whose stored name is entity-escaped.
 	 *
 	 * @covers ::search

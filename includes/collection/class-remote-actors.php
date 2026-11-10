@@ -322,8 +322,10 @@ class Remote_Actors {
 
 		// Match the actor URI only for URL-like queries, so short terms don't match every https:// guid.
 		if ( \str_contains( $query, '://' ) ) {
-			$conditions .= ' OR p.guid LIKE %s';
-			$params[]    = $like;
+			foreach ( \array_unique( get_stored_id_forms( $query ) ) as $form ) {
+				$conditions .= ' OR p.guid LIKE %s';
+				$params[]    = '%' . $wpdb->esc_like( $form ) . '%';
+			}
 		}
 
 		$params[] = $number;

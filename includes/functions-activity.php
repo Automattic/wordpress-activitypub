@@ -322,7 +322,15 @@ function get_stored_id_forms( $id ) {
  * @return string The ID.
  */
 function unescape_guid( $guid ) {
-	return \str_replace( array( '&#038;', '&amp;', '&#039;' ), array( '&', '&', "'" ), (string) $guid );
+	// One pass, so a decoded `&` never starts another escape.
+	return \strtr(
+		(string) $guid,
+		array(
+			'&#038;' => '&',
+			'&amp;'  => '&',
+			'&#039;' => "'",
+		)
+	);
 }
 
 /**

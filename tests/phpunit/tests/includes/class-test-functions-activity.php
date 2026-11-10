@@ -1354,5 +1354,6 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 
 		$this->assertSame( $id, unescape_guid( \get_post_field( 'guid', $post_id, 'raw' ) ), 'The update form must give the ID back.' );
 		$this->assertSame( 'https://example.com/a&lt;b', unescape_guid( 'https://example.com/a&lt;b' ), 'Only the escapes core adds are reversed.' );
+		$this->assertSame( 'https://example.com/a&#039;b', unescape_guid( 'https://example.com/a&amp;#039;b' ), 'Each escape is reversed once.' );
 	}
 }
