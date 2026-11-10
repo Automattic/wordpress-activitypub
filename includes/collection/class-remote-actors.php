@@ -18,6 +18,7 @@ use function Activitypub\get_id_hash;
 use function Activitypub\is_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
+use function Activitypub\unescape_guid;
 
 /**
  * Remote Actors collection class.
@@ -639,6 +640,33 @@ class Remote_Actors {
 	}
 
 	/**
+	 * Get the URI (the ActivityPub `id`) of a stored remote actor.
+	 *
+	 * The `guid` holds the ID escaped (see get_guid_forms()), so anything that sends, fetches or
+	 * compares the ID reads it from the stored actor instead. A row without a stored actor falls
+	 * back to the decoded `guid`.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int|\WP_Post $post The post ID or object.
+	 *
+	 * @return string The actor ID, or an empty string if the post does not exist.
+	 */
+	public static function get_uri( $post ) {
+		$post = \get_post( $post );
+		if ( ! $post instanceof \WP_Post ) {
+			return '';
+		}
+
+		$actor = \json_decode( $post->post_content, true );
+		if ( \is_array( $actor ) && \is_string( $actor['id'] ?? null ) ) {
+			return $actor['id'];
+		}
+
+		return unescape_guid( $post->guid );
+	}
+
+	/**
 	 * Convert a custom post type input to an Activitypub\Activity\Actor.
 	 *
 	 * @param int|\WP_Post $post The post ID or object.
@@ -1003,7 +1031,7 @@ class Remote_Actors {
 			return '';
 		}
 
-		$acct = Webfinger::uri_to_acct( $post->guid );
+		$acct = Webfinger::uri_to_acct( self::get_uri( $post ) );
 
 		if ( \is_wp_error( $acct ) ) {
 			$actor = Actor::init_from_json( $post->post_content );

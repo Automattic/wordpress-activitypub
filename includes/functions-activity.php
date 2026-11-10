@@ -305,6 +305,23 @@ function get_guid_forms( $id ) {
 }
 
 /**
+ * Undo the escaping core applies to a post `guid`, to get the ID back.
+ *
+ * Reverses only the escapes core adds to a `guid` (`&#038;` and `&#039;` on update, `&amp;` on insert).
+ * Decoding the full entity set would also rewrite a `&lt;` or `&quot;` that an ID contains as literal
+ * text, which escaping never put there.
+ *
+ * @since unreleased
+ *
+ * @param string $guid The stored `guid`.
+ *
+ * @return string The ID.
+ */
+function unescape_guid( $guid ) {
+	return \str_replace( array( '&#038;', '&amp;', '&#039;' ), array( '&', '&', "'" ), (string) $guid );
+}
+
+/**
  * Check whether two references point at the same actor.
  *
  * Both values are resolved to their canonical URI via object_to_uri() before

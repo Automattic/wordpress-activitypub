@@ -16,6 +16,7 @@ use function Activitypub\get_id_hash;
 use function Activitypub\is_activity_public;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
+use function Activitypub\unescape_guid;
 
 /**
  * ActivityPub Inbox Collection
@@ -293,15 +294,8 @@ class Inbox {
 					);
 				}
 
-				/*
-				 * The comment stores the activity ID as it arrived, so undo the escaping applied
-				 * to the GUID before comparing the two. Only the sequences that escaping can
-				 * produce are reversed, plus the `&amp;` that rows written before it carry:
-				 * decoding the full entity set would also rewrite a `&lt;` or `&quot;` that an ID
-				 * happens to contain as literal text, which escaping never put there.
-				 */
-				$decoded = \str_replace( array( '&#038;', '&amp;', '&#039;' ), array( '&', '&', "'" ), $inbox_item->guid );
-				$result  = Comment::object_id_to_comment( \esc_url_raw( $decoded ) );
+				// The comment stores the activity ID as it arrived, so undo the escaping applied to the GUID first.
+				$result = Comment::object_id_to_comment( \esc_url_raw( unescape_guid( $inbox_item->guid ) ) );
 
 				if ( empty( $result ) ) {
 					return new \WP_Error(

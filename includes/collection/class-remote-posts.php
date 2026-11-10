@@ -191,7 +191,7 @@ class Remote_Posts {
 		 */
 		if ( isset( $activity['actor'] ) ) {
 			$owner = \get_post( (int) \get_post_meta( $post->ID, '_activitypub_remote_actor_id', true ) );
-			if ( ! $owner instanceof \WP_Post || object_to_uri( $activity['actor'] ) !== $owner->guid ) {
+			if ( ! $owner instanceof \WP_Post || object_to_uri( $activity['actor'] ) !== Remote_Actors::get_uri( $owner ) ) {
 				return new \WP_Error(
 					'activitypub_update_forbidden',
 					\__( 'Update failed: the actor does not own this post.', 'activitypub' ),

@@ -86,7 +86,7 @@ class Following {
 					'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 						array(
 							'key'   => '_activitypub_object_id',
-							'value' => $post->guid,
+							'value' => Remote_Actors::get_uri( $post ),
 							'type'  => 'BINARY',
 						),
 						array(
@@ -115,8 +115,9 @@ class Following {
 		$follow = new Activity();
 		$follow->set_type( 'Follow' );
 		$follow->set_actor( $actor->get_id() );
-		$follow->set_object( $post->guid );
-		$follow->set_to( array( $post->guid ) );
+		$actor_uri = Remote_Actors::get_uri( $post );
+		$follow->set_object( $actor_uri );
+		$follow->set_to( array( $actor_uri ) );
 
 		$result = add_to_outbox( $follow, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
 
@@ -216,7 +217,7 @@ class Following {
 				'meta_query'     => array(
 					array(
 						'key'   => '_activitypub_object_id',
-						'value' => $post->guid,
+						'value' => Remote_Actors::get_uri( $post ),
 						'type'  => 'BINARY',
 					),
 					array(

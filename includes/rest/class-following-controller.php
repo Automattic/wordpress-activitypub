@@ -131,7 +131,7 @@ class Following_Controller extends Actors_Controller {
 							}
 							return $actor->to_array( false );
 						}
-						return $item->guid;
+						return Remote_Actors::get_uri( $item );
 					},
 					$data['following']
 				)

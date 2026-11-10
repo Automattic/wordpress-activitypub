@@ -302,7 +302,8 @@ class Scheduler {
 			 * upsert would just rewrite the same stale data and this refresh
 			 * would be a no-op. The Update handler documents the same trap.
 			 */
-			$meta = Proxy::get( $actor->guid, array( 'cached' => false ) );
+			$actor_uri = Remote_Actors::get_uri( $actor );
+			$meta      = Proxy::get( $actor_uri, array( 'cached' => false ) );
 
 			if ( empty( $meta ) || ! \is_array( $meta ) || \is_wp_error( $meta ) ) {
 				Remote_Actors::add_error( $actor->ID, 'Failed to fetch or parse metadata' );
@@ -316,7 +317,7 @@ class Scheduler {
 				 * redundant get_by_uri() lookup upsert() would do.
 				 */
 				$fetched_id = isset( $meta['id'] ) && \is_string( $meta['id'] ) ? \esc_url_raw( $meta['id'] ) : '';
-				if ( $fetched_id !== $actor->guid ) {
+				if ( \esc_url_raw( $actor_uri ) !== $fetched_id ) {
 					/*
 					 * Bump only the modified date, directly, so the skipped actor
 					 * drops out of the outdated queue and is not re-fetched every
@@ -367,7 +368,7 @@ class Scheduler {
 		$actors = Remote_Actors::get_faulty( $number );
 
 		foreach ( $actors as $actor ) {
-			$meta = get_remote_metadata_by_actor( $actor->guid, false );
+			$meta = get_remote_metadata_by_actor( Remote_Actors::get_uri( $actor ), false );
 
 			if ( Tombstone::exists( $meta ) ) {
 				Remote_Actors::delete( $actor->ID );

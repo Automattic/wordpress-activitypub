@@ -37,7 +37,7 @@ class Blocked_Actors {
 			 * @param string $type    The block type (actor, domain, keyword).
 			 * @param int    $user_id The user ID.
 			 */
-			\do_action( 'activitypub_add_user_block', $actor_post->guid, Moderation::TYPE_ACTOR, $user_id );
+			\do_action( 'activitypub_add_user_block', Remote_Actors::get_uri( $actor_post ), Moderation::TYPE_ACTOR, $user_id );
 
 			$result = (bool) \add_post_meta( $actor_post->ID, Moderation::BLOCKED_ACTORS_META_KEY, (string) $user_id );
 			\clean_post_cache( $actor_post->ID );
@@ -74,7 +74,7 @@ class Blocked_Actors {
 		 * @param string $type     The block type (actor, domain, keyword).
 		 * @param int    $user_id  The user ID.
 		 */
-		\do_action( 'activitypub_remove_user_block', $actor_post->guid, Moderation::TYPE_ACTOR, $user_id );
+		\do_action( 'activitypub_remove_user_block', Remote_Actors::get_uri( $actor_post ), Moderation::TYPE_ACTOR, $user_id );
 
 		$result = \delete_post_meta( $actor_post->ID, Moderation::BLOCKED_ACTORS_META_KEY, $user_id );
 		\clean_post_cache( $actor_post->ID );
