@@ -139,7 +139,10 @@ class Move {
 		} else {
 			// If both the target and origin are stored, merge them.
 			// The new Follows go to the inbox of the fresh copy, not to a stale stored one.
-			Remote_Actors::update( $target_object->ID, $target_json );
+			$result = Remote_Actors::update( $target_object->ID, $target_json );
+			if ( ! $result || \is_wp_error( $result ) ) {
+				return;
+			}
 
 			// Followers and blocks of the origin carry over; our own follows are sent again below.
 			$origin_users = \get_post_meta( $origin_object->ID, Followers::FOLLOWER_META_KEY, false );

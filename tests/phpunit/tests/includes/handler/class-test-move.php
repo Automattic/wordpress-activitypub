@@ -1329,6 +1329,46 @@ class Test_Move extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A merge into a new actor whose fresh copy can not be stored (no inbox) keeps the old actor.
+	 *
+	 * @covers ::handle_move
+	 */
+	public function test_handle_move_merge_keeps_origin_when_target_can_not_be_stored() {
+		$origin = 'https://old.example/users/wes';
+		$target = 'https://new.example/users/wes';
+
+		$origin_id = Remote_Actors::upsert( $this->actor( $origin ) );
+		Remote_Actors::upsert( $this->actor( $target ) );
+		\add_post_meta( $origin_id, Following::FOLLOWING_META_KEY, (string) $this->user_id );
+
+		$broken = $this->actor( $target, array( 'alsoKnownAs' => array( $origin ) ) );
+		unset( $broken['inbox'] );
+
+		$filter = $this->mock_remote(
+			array(
+				$origin => $this->actor( $origin, array( 'movedTo' => $target ) ),
+				$target => $broken,
+			)
+		);
+
+		Move::handle_move(
+			array(
+				'type'   => 'Move',
+				'actor'  => $origin,
+				'object' => $origin,
+				'target' => $target,
+			),
+			$this->user_id
+		);
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertSame( $origin_id, Remote_Actors::get_by_uri( $origin )->ID, 'The old actor must not be merged away.' );
+		$this->assertContains( (string) $this->user_id, \get_post_meta( $origin_id, Following::FOLLOWING_META_KEY, false ) );
+		$this->assertCount( 0, $this->get_follows( $this->user_id, $target ) );
+	}
+
+	/**
 	 * Build a remote actor document.
 	 *
 	 * @param string $id    The actor id.
