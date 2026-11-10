@@ -271,6 +271,7 @@ class Remote_Actors {
 				array( 'status' => 404 )
 			);
 		}
+
 		list( $inserted, $updated ) = get_guid_forms( $actor_uri );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
