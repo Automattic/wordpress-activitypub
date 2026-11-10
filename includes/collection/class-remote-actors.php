@@ -272,8 +272,9 @@ class Remote_Actors {
 			);
 		}
 		list( $inserted, $updated ) = get_guid_forms( $actor_uri );
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$post_ids = $wpdb->get_col(
+		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT ID FROM $wpdb->posts WHERE CAST(guid AS BINARY) IN (%s, %s) AND post_type=%s ORDER BY ID ASC",
 				$inserted,
@@ -282,48 +283,24 @@ class Remote_Actors {
 			)
 		);
 
-		foreach ( $post_ids as $post_id ) {
-			$post = \get_post( $post_id );
-			if ( ! $post instanceof \WP_Post ) {
-				continue;
-			}
-
-			// Both spellings can match another ID (`?a=1&b=2` and `?a=1&#038;b=2`), so the stored id or its hash decides.
-			if ( self::is_stored_id( $post, $actor_uri ) ) {
-				return $post;
-			}
+		if ( ! $post_id ) {
+			return new \WP_Error(
+				'activitypub_actor_not_found',
+				\__( 'Actor not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
 		}
 
-		return new \WP_Error(
-			'activitypub_actor_not_found',
-			\__( 'Actor not found', 'activitypub' ),
-			array( 'status' => 404 )
-		);
-	}
-
-	/**
-	 * Whether a stored actor row belongs to an actor URI.
-	 *
-	 * The `post_name` hash is set on every create and update, and also where only the `guid` changes
-	 * (a Move); older rows have only the `id` in the stored JSON. A row with neither is trusted by its
-	 * `guid`, as before.
-	 *
-	 * @param \WP_Post|object $row       The stored row, with `post_name` and `post_content`.
-	 * @param string          $actor_uri The actor URI that was looked up.
-	 *
-	 * @return bool True if the row belongs to the URI.
-	 */
-	private static function is_stored_id( $row, $actor_uri ) {
-		if ( get_id_hash( $actor_uri ) === $row->post_name ) {
-			return true;
+		$post = \get_post( $post_id );
+		if ( ! $post instanceof \WP_Post ) {
+			return new \WP_Error(
+				'activitypub_actor_not_found',
+				\__( 'Actor not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
 		}
 
-		$actor = \json_decode( (string) $row->post_content, true );
-		if ( ! \is_array( $actor ) || ! \is_string( $actor['id'] ?? null ) ) {
-			return true;
-		}
-
-		return $actor['id'] === $actor_uri;
+		return $post;
 	}
 
 	/**
@@ -404,28 +381,34 @@ class Remote_Actors {
 			// Map each stored spelling back to the URIs the caller asked for, the same values get_by_uri() matches.
 			$guids = array();
 			foreach ( $chunk as $uri ) {
+				// As in get_by_uri(), an invalid URL matches no actor, and must not match an empty guid.
+				if ( '' === get_id_hash( $uri ) ) {
+					continue;
+				}
+
 				foreach ( \array_unique( get_guid_forms( $uri ) ) as $guid ) {
 					$guids[ $guid ][] = $uri;
 				}
 			}
 
+			if ( ! $guids ) {
+				continue;
+			}
+
 			$placeholders = \implode( ', ', \array_fill( 0, \count( $guids ), '%s' ) );
 
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			$found = $wpdb->get_results(
+			$found = $wpdb->get_col(
 				$wpdb->prepare(
-					"SELECT guid, post_name, post_content FROM $wpdb->posts WHERE post_type = %s AND CAST(guid AS BINARY) IN ( $placeholders )",
+					"SELECT guid FROM $wpdb->posts WHERE post_type = %s AND CAST(guid AS BINARY) IN ( $placeholders )",
 					\array_merge( array( self::POST_TYPE ), \array_map( 'strval', \array_keys( $guids ) ) )
 				)
 			);
 			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
-			foreach ( $found as $row ) {
-				foreach ( $guids[ $row->guid ] ?? array() as $uri ) {
-					// As in get_by_uri(), the stored id or its hash decides between URIs with the same spelling.
-					if ( self::is_stored_id( $row, $uri ) ) {
-						$existing[ $uri ] = true;
-					}
+			foreach ( $found as $guid ) {
+				foreach ( $guids[ $guid ] ?? array() as $uri ) {
+					$existing[ $uri ] = true;
 				}
 			}
 		}
