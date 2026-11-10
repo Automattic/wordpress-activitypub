@@ -20,6 +20,8 @@ use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Transformer\Factory;
 
+use function Activitypub\unescape_guid;
+
 /**
  * ActivityPub Migration Class
  *
@@ -1011,7 +1013,7 @@ class Migration {
 			$post_content = \json_decode( $meta->meta_value, true );
 
 			if ( \json_last_error() !== JSON_ERROR_NONE ) {
-				$post_content = Proxy::get( $post->guid );
+				$post_content = Proxy::get( unescape_guid( $post->guid ) );
 
 				if ( \is_wp_error( $post_content ) ) {
 					\delete_post_meta( $post->ID, '_activitypub_actor_json' );

@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Following;
+use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Accept;
 use Activitypub\Tests\Uri_Test_Cases;
@@ -587,5 +588,55 @@ class Test_Following extends \WP_UnitTestCase {
 		$this->assertIsInt( $undo_id );
 		$undo = \json_decode( \get_post( $undo_id )->post_content, true );
 		$this->assertStringEndsWith( 'p=' . $follow_id, $undo['object']['id'] );
+	}
+
+	/**
+	 * The Follow carries the actor's ID, not its escaped guid.
+	 *
+	 * @covers ::follow
+	 */
+	public function test_follow_sends_unescaped_actor_id() {
+		$uri     = 'https://example.com/uri-test/?a=1&b=2';
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
+
+		$post_id = Remote_Actors::create( $this->actor_for_uri( $uri ) );
+		Remote_Actors::update( $post_id, $this->actor_for_uri( $uri ) );
+
+		$outbox_id = Following::follow( $post_id, $user_id );
+		$this->assertIsInt( $outbox_id );
+
+		$activity = \json_decode( \get_post_field( 'post_content', $outbox_id ), true );
+		$this->assertSame( $uri, $activity['object'] );
+		$this->assertSame( $uri, \get_post_meta( $outbox_id, '_activitypub_object_id', true ) );
+	}
+
+	/**
+	 * A Follow sent before the ID was unescaped, with the escaped guid as object, is still found.
+	 *
+	 * @covers ::follow
+	 */
+	public function test_follow_finds_follow_sent_with_escaped_id() {
+		$uri     = 'https://example.com/uri-test/?a=1&b=2';
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
+
+		$post_id = Remote_Actors::create( $this->actor_for_uri( $uri ) );
+		Remote_Actors::update( $post_id, $this->actor_for_uri( $uri ) );
+		\add_post_meta( $post_id, Following::PENDING_META_KEY, (string) $user_id );
+
+		$old_follow = self::factory()->post->create(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				'post_author' => $user_id,
+				'meta_input'  => array(
+					'_activitypub_object_id'     => \get_post_field( 'guid', $post_id, 'raw' ),
+					'_activitypub_activity_type' => 'Follow',
+				),
+			)
+		);
+
+		$this->assertSame( $old_follow, Following::follow( $post_id, $user_id ) );
 	}
 }
