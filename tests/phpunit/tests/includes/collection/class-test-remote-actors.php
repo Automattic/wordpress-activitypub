@@ -437,6 +437,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 
 		$this->assertCount( 1, $results );
 		$this->assertSame( $post_id, $results[0]->ID );
+		$this->assertCount( 0, Remote_Actors::search( 'foo://x' ), 'A query that is no URL must not match every actor.' );
 	}
 
 	/**
