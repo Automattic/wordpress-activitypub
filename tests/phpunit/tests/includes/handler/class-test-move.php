@@ -1153,11 +1153,11 @@ class Test_Move extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * A user who can no longer follow keeps the relationship instead of losing it.
+	 * A user who can no longer follow does not end up following the new actor without a Follow.
 	 *
 	 * @covers ::handle_move
 	 */
-	public function test_handle_move_keeps_relationship_of_user_who_can_not_follow() {
+	public function test_handle_move_does_not_keep_following_without_follow() {
 		$origin = 'https://old.example/users/mia';
 		$target = 'https://new.example/users/mia';
 
@@ -1183,7 +1183,7 @@ class Test_Move extends \WP_UnitTestCase {
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 
-		$this->assertContains( (string) $this->user_id, \get_post_meta( $id, Following::FOLLOWING_META_KEY, false ) );
+		$this->assertNotContains( (string) $this->user_id, \get_post_meta( $id, Following::FOLLOWING_META_KEY, false ), 'The new server never got a Follow.' );
 		$this->assertCount( 0, $this->get_follows( $this->user_id, $target ) );
 	}
 
@@ -1220,6 +1220,42 @@ class Test_Move extends \WP_UnitTestCase {
 		Moderation::remove_site_block( Moderation::TYPE_DOMAIN, 'blocked.example' );
 
 		$this->assertNotContains( $target, $fetched );
+	}
+
+	/**
+	 * A target that can not be stored (no inbox) leaves the old actor as it was.
+	 *
+	 * @covers ::handle_move
+	 */
+	public function test_handle_move_keeps_origin_when_target_can_not_be_stored() {
+		$origin = 'https://old.example/users/ola';
+		$target = 'https://new.example/users/ola';
+
+		$id     = Remote_Actors::upsert( $this->actor( $origin ) );
+		$broken = $this->actor( $target, array( 'alsoKnownAs' => array( $origin ) ) );
+		unset( $broken['inbox'] );
+
+		$filter = $this->mock_remote(
+			array(
+				$origin => $this->actor( $origin, array( 'movedTo' => $target ) ),
+				$target => $broken,
+			)
+		);
+
+		Move::handle_move(
+			array(
+				'type'   => 'Move',
+				'actor'  => $origin,
+				'object' => $origin,
+				'target' => $target,
+			),
+			$this->user_id
+		);
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertSame( $id, Remote_Actors::get_by_uri( $origin )->ID, 'The old actor must stay where it was.' );
+		$this->assertWPError( Remote_Actors::get_by_uri( $target ) );
 	}
 
 	/**

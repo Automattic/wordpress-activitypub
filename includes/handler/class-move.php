@@ -118,6 +118,15 @@ class Move {
 
 		// If the origin is followed but the target is not, update the origin to point to the target.
 		if ( \is_wp_error( $target_object ) ) {
+			/*
+			 * Proxy::get() already self-confirmed the target. Store it first, so a target that can
+			 * not be stored (no inbox) leaves the origin as it was. wp_update_post() keeps the guid.
+			 */
+			$result = Remote_Actors::update( $origin_object->ID, $target_json );
+			if ( \is_wp_error( $result ) ) {
+				return;
+			}
+
 			// Written in the form an insert stores, which every guid lookup matches.
 			list( $guid ) = get_stored_id_forms( $target_id );
 			$data         = array( 'guid' => $guid );
@@ -128,15 +137,10 @@ class Move {
 
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 			$wpdb->update( $wpdb->posts, $data, array( 'ID' => (int) $origin_object->ID ) );
-
-			// Clear the cache.
-			\wp_cache_delete( $origin_object->ID, 'posts' );
+			\clean_post_cache( $origin_object->ID );
 
 			$success        = true;
 			$target_post_id = $origin_object->ID;
-
-			// Proxy::get() already self-confirmed the target. Update by ID: wp_update_post() keeps the guid written above.
-			$result = Remote_Actors::update( $origin_object->ID, $target_json );
 		}
 
 		// If both the target and origin are stored, merge them.
@@ -192,16 +196,11 @@ class Move {
 			}
 
 			foreach ( $refollow as $user_id ) {
-				// A user who can no longer follow keeps the relationship as it is, instead of losing it.
-				if ( \is_wp_error( Actors::get_by_id( (int) $user_id ) ) ) {
-					continue;
-				}
+				// After a swap the post still says the user follows; the new server does not know that yet.
+				Following::reject( $target_post_id, (int) $user_id );
 
-				// The swapped post still says the user follows; the new server does not know that yet.
-				\delete_post_meta( $target_post_id, Following::FOLLOWING_META_KEY, $user_id );
-				\delete_post_meta( $target_post_id, Following::PENDING_META_KEY, $user_id );
-
-				if ( ! Moderation::is_actor_blocked( $target_id, (int) $user_id ) ) {
+				// Only a user who can still follow, and does not block the new actor, follows it.
+				if ( ! \is_wp_error( Actors::get_by_id( (int) $user_id ) ) && ! Moderation::is_actor_blocked( $target_id, (int) $user_id ) ) {
 					Following::follow( $target_post_id, (int) $user_id );
 				}
 			}
