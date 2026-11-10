@@ -212,7 +212,7 @@ class Inbox {
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT ID FROM $wpdb->posts WHERE CAST(guid AS BINARY) IN (%s, %s) AND post_type=%s ORDER BY ID ASC",
-				// What `pre_post_guid` stores on this WordPress version, and the `esc_url()` form older releases saved.
+				// What `pre_post_guid` stores on insert, and the `esc_url()` form every wp_update_post() writes back.
 				\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $guid ), 0, 'db' ) ),
 				\esc_url( $guid ),
 				self::POST_TYPE
@@ -501,7 +501,7 @@ class Inbox {
 		$post_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT ID FROM {$wpdb->posts} WHERE CAST(guid AS BINARY) IN (%s, %s) AND post_type=%s ORDER BY ID ASC",
-				// What `pre_post_guid` stores on this WordPress version, and the `esc_url()` form older releases saved.
+				// What `pre_post_guid` stores on insert, and the `esc_url()` form every wp_update_post() writes back.
 				\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $guid ), 0, 'db' ) ),
 				\esc_url( $guid ),
 				self::POST_TYPE

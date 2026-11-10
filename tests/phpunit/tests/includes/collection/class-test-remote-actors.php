@@ -73,6 +73,59 @@ class Test_Remote_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An actor is still found after an update, which stores the guid in its `esc_url()` form.
+	 *
+	 * @covers ::get_by_uri
+	 * @covers ::get_existing_uris
+	 * @dataProvider uri_provider
+	 * @group uri-lookup
+	 * @param string $uri Original actor ID.
+	 */
+	public function test_lookup_after_update_with_special_characters( $uri ) {
+		$actor   = $this->actor_for_uri( $uri );
+		$post_id = Remote_Actors::create( $actor );
+		Remote_Actors::update( $post_id, $actor );
+		Remote_Actors::update( $post_id, $actor );
+
+		$found = Remote_Actors::get_by_uri( $uri );
+		$this->assertInstanceOf( 'WP_Post', $found );
+		$this->assertSame( $post_id, $found->ID );
+		$this->assertSame( array( $uri => true ), Remote_Actors::get_existing_uris( array( $uri ) ) );
+		$this->assertSame( $post_id, Remote_Actors::upsert( $actor ), 'A third write must not create a second actor.' );
+	}
+
+	/**
+	 * Two IDs whose stored guids are spelled the same are not mixed up.
+	 *
+	 * After an update `?a=1&b=2` is stored as `?a=1&#038;b=2`, the same string the literal ID stores.
+	 *
+	 * @covers ::get_by_uri
+	 * @covers ::get_existing_uris
+	 * @group uri-lookup
+	 */
+	public function test_lookup_does_not_mix_up_encoded_ids() {
+		$plain   = 'https://example.com/uri-test/?a=1&b=2';
+		$literal = 'https://example.com/uri-test/?a=1&#038;b=2';
+
+		$plain_id = Remote_Actors::create( $this->actor_for_uri( $plain ) );
+		Remote_Actors::update( $plain_id, $this->actor_for_uri( $plain ) );
+
+		$this->assertWPError( Remote_Actors::get_by_uri( $literal ), 'The literal ID must not find the other actor.' );
+		$this->assertSame( array(), Remote_Actors::get_existing_uris( array( $literal ) ) );
+
+		$literal_id = Remote_Actors::create( $this->actor_for_uri( $literal ) );
+		$this->assertSame( $plain_id, Remote_Actors::get_by_uri( $plain )->ID );
+		$this->assertSame( $literal_id, Remote_Actors::get_by_uri( $literal )->ID );
+		$this->assertSame(
+			array(
+				$plain   => true,
+				$literal => true,
+			),
+			Remote_Actors::get_existing_uris( array( $plain, $literal ) )
+		);
+	}
+
+	/**
 	 * Following a key or owner reference must not change the signing authority.
 	 *
 	 * @dataProvider redirected_key_reference_provider
