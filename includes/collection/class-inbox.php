@@ -210,13 +210,14 @@ class Inbox {
 	 */
 	public static function get_by_guid( $guid ) {
 		global $wpdb;
-		list( $inserted, $updated ) = get_guid_forms( $guid );
+		list( $inserted, $updated, $raw ) = get_guid_forms( $guid );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE CAST(guid AS BINARY) IN (%s, %s) AND post_type=%s ORDER BY ID ASC",
+				"SELECT ID FROM $wpdb->posts WHERE CAST(guid AS BINARY) IN (%s, %s, %s) AND post_type=%s ORDER BY ID ASC",
 				$inserted,
 				$updated,
+				$raw,
 				self::POST_TYPE
 			)
 		);
@@ -491,14 +492,15 @@ class Inbox {
 	 */
 	public static function deduplicate( $guid ) {
 		global $wpdb;
-		list( $inserted, $updated ) = get_guid_forms( $guid );
+		list( $inserted, $updated, $raw ) = get_guid_forms( $guid );
 
 		// Query for all posts with this GUID directly (get_posts doesn't supports guid parameter).
 		$post_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
-				"SELECT ID FROM {$wpdb->posts} WHERE CAST(guid AS BINARY) IN (%s, %s) AND post_type=%s ORDER BY ID ASC",
+				"SELECT ID FROM {$wpdb->posts} WHERE CAST(guid AS BINARY) IN (%s, %s, %s) AND post_type=%s ORDER BY ID ASC",
 				$inserted,
 				$updated,
+				$raw,
 				self::POST_TYPE
 			)
 		);

@@ -284,23 +284,27 @@ function get_id_hash( $id ) {
 }
 
 /**
- * Get the two forms an ID is stored in as a post `guid`.
+ * Get every spelling an ID can be stored in.
  *
- * On insert, core's `pre_post_guid` filters store `&` as `&amp;`. On every `wp_update_post()`,
- * core writes the stored `guid` back in its `esc_url()` form (`&#038;`, `&#039;`). So a lookup by
- * `guid` has to match both. Both forms are the same for an ID without `&` or `'`.
+ * On insert, core's `pre_post_guid` filters store `&` as `&amp;` in a `guid`. On every
+ * `wp_update_post()`, core writes the stored `guid` back in its `esc_url()` form (`&#038;`, `&#039;`).
+ * Meta values and rows written directly keep the raw ID. So a lookup by a stored ID matches all three.
+ * They are the same for an ID without `&` or `'`.
  *
  * @since unreleased
  *
  * @param string $id The ID.
  *
- * @return string[] The insert form and the update form.
+ * @return string[] The insert form, the update form and the raw ID.
  */
 function get_guid_forms( $id ) {
+	$id = (string) $id;
+
 	return array(
 		// prepare() handles the SQL escaping.
-		\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( (string) $id ), 0, 'db' ) ),
-		\esc_url( (string) $id ),
+		\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $id ), 0, 'db' ) ),
+		\esc_url( $id ),
+		$id,
 	);
 }
 

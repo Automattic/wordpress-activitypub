@@ -264,14 +264,15 @@ class Remote_Actors {
 	public static function get_by_uri( $actor_uri ) {
 		global $wpdb;
 
-		list( $inserted, $updated ) = get_guid_forms( $actor_uri );
+		list( $inserted, $updated, $raw ) = get_guid_forms( $actor_uri );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE CAST(guid AS BINARY) IN (%s, %s) AND post_type=%s ORDER BY ID ASC",
+				"SELECT ID FROM $wpdb->posts WHERE CAST(guid AS BINARY) IN (%s, %s, %s) AND post_type=%s ORDER BY ID ASC",
 				$inserted,
 				$updated,
+				$raw,
 				self::POST_TYPE
 			)
 		);
