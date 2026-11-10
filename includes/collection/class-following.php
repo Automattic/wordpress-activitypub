@@ -86,9 +86,11 @@ class Following {
 					'order'          => 'DESC',
 					'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 						array(
-							'key'   => '_activitypub_object_id',
-							'value' => unescape_guid( $post->guid ),
-							'type'  => 'BINARY',
+							'key'     => '_activitypub_object_id',
+							// Follows sent before the id was unescaped carry the stored guid.
+							'value'   => \array_unique( array( unescape_guid( $post->guid ), $post->guid ) ),
+							'compare' => 'IN',
+							'type'    => 'BINARY',
 						),
 						array(
 							'key'   => '_activitypub_activity_type',
@@ -217,9 +219,11 @@ class Following {
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query'     => array(
 					array(
-						'key'   => '_activitypub_object_id',
-						'value' => unescape_guid( $post->guid ),
-						'type'  => 'BINARY',
+						'key'     => '_activitypub_object_id',
+						// Follows sent before the id was unescaped carry the stored guid.
+						'value'   => \array_unique( array( unescape_guid( $post->guid ), $post->guid ) ),
+						'compare' => 'IN',
+						'type'    => 'BINARY',
 					),
 					array(
 						'key'   => '_activitypub_activity_type',
