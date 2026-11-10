@@ -8,13 +8,19 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Remote_Actors;
 use Activitypub\Comment;
 
 /**
  * Mailer Class.
  */
 class Mailer {
+	/**
+	 * Meta key on the remote actor for the last new-follower email, %d is the local user ID.
+	 *
+	 * @var string
+	 */
+	const FOLLOWER_EMAIL_META_KEY = '_activitypub_last_follower_email_sent_%d';
+
 	/**
 	 * Initialize the Mailer.
 	 *
@@ -181,16 +187,12 @@ class Mailer {
 			$admin_url = '/options-general.php?page=activitypub&tab=followers';
 		}
 
-		if ( ! $remote_actor instanceof \WP_Post && ! empty( $activity['actor'] ) ) {
-			$remote_actor = Remote_Actors::get_by_uri( $activity['actor'] );
-		}
-
 		$meta_key  = null;
 		$last_sent = 0;
 
 		// Prevent repeated notification spam if an actor cycles Follow and Undo.
 		if ( $remote_actor instanceof \WP_Post ) {
-			$meta_key  = \sprintf( '_activitypub_last_follower_email_sent_%d', $user_id );
+			$meta_key  = \sprintf( self::FOLLOWER_EMAIL_META_KEY, $user_id );
 			$last_sent = (int) \get_post_meta( $remote_actor->ID, $meta_key, true );
 
 			if ( $last_sent && ( \time() - $last_sent ) < DAY_IN_SECONDS ) {
@@ -272,7 +274,7 @@ class Mailer {
 
 		\remove_action( 'phpmailer_init', $alt_function );
 
-		if ( ! $sent && $remote_actor instanceof \WP_Post && $meta_key ) {
+		if ( ! $sent && $meta_key ) {
 			if ( $last_sent ) {
 				\update_post_meta( $remote_actor->ID, $meta_key, $last_sent );
 			} else {
