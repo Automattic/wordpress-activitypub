@@ -10,6 +10,7 @@ namespace Activitypub\Collection;
 use Activitypub\Activity\Activity;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\unescape_guid;
 
 /**
  * ActivityPub Following Collection.
@@ -86,7 +87,7 @@ class Following {
 					'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 						array(
 							'key'   => '_activitypub_object_id',
-							'value' => Remote_Actors::get_uri( $post ),
+							'value' => unescape_guid( $post->guid ),
 							'type'  => 'BINARY',
 						),
 						array(
@@ -115,7 +116,7 @@ class Following {
 		$follow = new Activity();
 		$follow->set_type( 'Follow' );
 		$follow->set_actor( $actor->get_id() );
-		$actor_uri = Remote_Actors::get_uri( $post );
+		$actor_uri = unescape_guid( $post->guid );
 		$follow->set_object( $actor_uri );
 		$follow->set_to( array( $actor_uri ) );
 
@@ -217,7 +218,7 @@ class Following {
 				'meta_query'     => array(
 					array(
 						'key'   => '_activitypub_object_id',
-						'value' => Remote_Actors::get_uri( $post ),
+						'value' => unescape_guid( $post->guid ),
 						'type'  => 'BINARY',
 					),
 					array(

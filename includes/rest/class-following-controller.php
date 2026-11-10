@@ -13,6 +13,7 @@ use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\unescape_guid;
 
 /**
  * Following_Controller class.
@@ -131,7 +132,7 @@ class Following_Controller extends Actors_Controller {
 							}
 							return $actor->to_array( false );
 						}
-						return Remote_Actors::get_uri( $item );
+						return unescape_guid( $item->guid );
 					},
 					$data['following']
 				)

@@ -131,7 +131,7 @@ class Sanitize {
 			if ( \is_wp_error( $actor ) ) {
 				$uris[] = $uri;
 			} else {
-				$uris[] = \sanitize_url( Remote_Actors::get_uri( $actor ) );
+				$uris[] = \sanitize_url( unescape_guid( $actor->guid ) );
 			}
 		}
 

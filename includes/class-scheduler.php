@@ -302,7 +302,7 @@ class Scheduler {
 			 * upsert would just rewrite the same stale data and this refresh
 			 * would be a no-op. The Update handler documents the same trap.
 			 */
-			$actor_uri = Remote_Actors::get_uri( $actor );
+			$actor_uri = unescape_guid( $actor->guid );
 			$meta      = Proxy::get( $actor_uri, array( 'cached' => false ) );
 
 			if ( empty( $meta ) || ! \is_array( $meta ) || \is_wp_error( $meta ) ) {
@@ -368,7 +368,7 @@ class Scheduler {
 		$actors = Remote_Actors::get_faulty( $number );
 
 		foreach ( $actors as $actor ) {
-			$meta = get_remote_metadata_by_actor( Remote_Actors::get_uri( $actor ), false );
+			$meta = get_remote_metadata_by_actor( unescape_guid( $actor->guid ), false );
 
 			if ( Tombstone::exists( $meta ) ) {
 				Remote_Actors::delete( $actor->ID );
