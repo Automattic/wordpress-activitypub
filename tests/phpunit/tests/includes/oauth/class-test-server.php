@@ -253,6 +253,25 @@ class Test_Server extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An invalid bearer token must not turn the client configuration (FEP-65ca) into a 401.
+	 *
+	 * @covers ::authenticate_oauth
+	 */
+	public function test_bearer_token_ignored_on_client_config() {
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer invalid-token';
+
+		foreach ( array( 'client-config', 'client-config/1.0' ) as $path ) {
+			$this->set_rest_route( '/' . ACTIVITYPUB_REST_NAMESPACE . '/' . $path );
+
+			$result = Server::authenticate_oauth( null );
+
+			$this->assertNull( $result, \sprintf( 'An invalid token must not fail %s.', $path ) );
+			$this->assertFalse( Server::is_oauth_request() );
+			$this->assertSame( 0, \get_current_user_id() );
+		}
+	}
+
+	/**
 	 * Outside REST dispatch (e.g. outbox permalinks) the token still authenticates.
 	 *
 	 * @covers ::authenticate_oauth

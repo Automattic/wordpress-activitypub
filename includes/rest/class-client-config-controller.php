@@ -109,16 +109,17 @@ class Client_Config_Controller extends \WP_REST_Controller {
 		}
 
 		$data = array(
-			'version'  => '1.0',
-			'composer' => array(
+			'version'                 => '1.0',
+			'account_scope_supported' => false,
+			'composer'                => array(
 				'max_length' => null,
 			),
-			'accounts' => array(
+			'accounts'                => array(
 				'username' => array(
 					'changeable' => false,
 				),
 			),
-			'links'    => $links,
+			'links'                   => $links,
 		);
 
 		$response = \rest_ensure_response( $data );

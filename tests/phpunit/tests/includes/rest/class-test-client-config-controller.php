@@ -98,6 +98,7 @@ class Test_Client_Config_Controller extends \Activitypub\Tests\Test_REST_Control
 		$this->assertSame( 'public, max-age=3600', $headers['Cache-Control'] );
 
 		$this->assertSame( '1.0', $data['version'] );
+		$this->assertFalse( $data['account_scope_supported'] );
 		$this->assertSame( array( 'max_length' => null ), $data['composer'] );
 		$this->assertFalse( $data['accounts']['username']['changeable'] );
 
