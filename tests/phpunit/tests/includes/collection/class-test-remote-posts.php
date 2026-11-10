@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Collection;
 
 use Activitypub\Cache\Media;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
 use Activitypub\Post_Types;
 use Activitypub\Tests\Uri_Test_Cases;
@@ -2623,5 +2624,42 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 
 		$this->assertInstanceOf( '\WP_Post', Remote_Posts::update( $activity, 1 ) );
 		$this->assertSame( get_id_hash( $object_id ), \get_post_field( 'post_name', $post->ID ) );
+	}
+
+	/**
+	 * The owner check compares the actor's ID, not its escaped guid.
+	 *
+	 * @covers ::update
+	 */
+	public function test_update_accepts_owner_with_escaped_id() {
+		$actor_uri = 'https://example.com/uri-test/?user=1&type=actor';
+		$actor_id  = Remote_Actors::create( $this->actor_for_uri( $actor_uri ) );
+		Remote_Actors::update( $actor_id, $this->actor_for_uri( $actor_uri ) );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'  => Remote_Posts::POST_TYPE,
+				'guid'       => 'https://example.com/objects/escaped-owner',
+				'post_title' => 'Original Title',
+			)
+		);
+		\add_post_meta( $post_id, '_activitypub_remote_actor_id', $actor_id );
+
+		$result = Remote_Posts::update(
+			array(
+				'actor'  => $actor_uri,
+				'object' => array(
+					'id'           => 'https://example.com/objects/escaped-owner',
+					'type'         => 'Note',
+					'name'         => 'Updated Title',
+					'content'      => '<p>Updated content</p>',
+					'attributedTo' => $actor_uri,
+				),
+			),
+			1
+		);
+
+		$this->assertNotWPError( $result );
+		$this->assertSame( 'Updated Title', \get_post( $post_id )->post_title );
 	}
 }

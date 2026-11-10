@@ -11,10 +11,12 @@ use Activitypub\Emoji;
 use Activitypub\Sanitize;
 
 use function Activitypub\get_id_hash;
+use function Activitypub\get_stored_id_forms;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 use function Activitypub\process_remote_media;
+use function Activitypub\unescape_guid;
 
 /**
  * Remote Posts collection.
@@ -142,13 +144,14 @@ class Remote_Posts {
 	 */
 	public static function get_by_guid( $guid ) {
 		global $wpdb;
+		list( $inserted, $updated, $raw ) = get_stored_id_forms( $guid );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE CAST(guid AS BINARY) IN (%s, %s) AND post_type=%s ORDER BY ID ASC",
-				// What `pre_post_guid` stores on this WordPress version, and the `esc_url()` form older releases saved.
-				\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $guid ), 0, 'db' ) ),
-				\esc_url( $guid ),
+				"SELECT ID FROM $wpdb->posts WHERE CAST(guid AS BINARY) IN (%s, %s, %s) AND post_type=%s ORDER BY ID ASC",
+				$inserted,
+				$updated,
+				$raw,
 				self::POST_TYPE
 			)
 		);
@@ -190,7 +193,7 @@ class Remote_Posts {
 		 */
 		if ( isset( $activity['actor'] ) ) {
 			$owner = \get_post( (int) \get_post_meta( $post->ID, '_activitypub_remote_actor_id', true ) );
-			if ( ! $owner instanceof \WP_Post || object_to_uri( $activity['actor'] ) !== $owner->guid ) {
+			if ( ! $owner instanceof \WP_Post || object_to_uri( $activity['actor'] ) !== unescape_guid( $owner->guid ) ) {
 				return new \WP_Error(
 					'activitypub_update_forbidden',
 					\__( 'Update failed: the actor does not own this post.', 'activitypub' ),

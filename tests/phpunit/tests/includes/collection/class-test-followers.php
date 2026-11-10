@@ -129,6 +129,46 @@ class Test_Followers extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A follower is still found after its actor was updated, which rewrites the stored guid.
+	 *
+	 * @covers ::get_by_uri
+	 * @dataProvider uri_provider
+	 * @group uri-lookup
+	 * @param string $uri Original actor ID.
+	 */
+	public function test_get_by_uri_after_update_with_special_characters( $uri ) {
+		$actor   = $this->actor_for_uri( $uri );
+		$post_id = Remote_Actors::create( $actor );
+		\add_post_meta( $post_id, Followers::FOLLOWER_META_KEY, '1' );
+		Remote_Actors::update( $post_id, $actor );
+
+		$found = Followers::get_by_uri( 1, $uri );
+		$this->assertInstanceOf( 'WP_Post', $found );
+		$this->assertSame( $post_id, $found->ID );
+		$this->assertWPError( Followers::get_by_uri( 2, $uri ), 'Only a follower of that user is found.' );
+	}
+
+	/**
+	 * With two rows for one actor, the follower is found on the row that holds the follow.
+	 *
+	 * Sites hit by the old lookup can have such a duplicate: the updated row, and a second one created later.
+	 *
+	 * @covers ::get_by_uri
+	 */
+	public function test_get_by_uri_finds_follower_on_duplicate_row() {
+		$uri   = 'https://example.com/uri-test/?a=1&b=2';
+		$actor = $this->actor_for_uri( $uri );
+		$first = Remote_Actors::create( $actor );
+		Remote_Actors::update( $first, $actor );
+		$second = Remote_Actors::create( $actor );
+		\add_post_meta( $second, Followers::FOLLOWER_META_KEY, '1' );
+
+		$found = Followers::get_by_uri( 1, $uri );
+		$this->assertInstanceOf( 'WP_Post', $found );
+		$this->assertSame( $second, $found->ID );
+	}
+
+	/**
 	 * Tests get_followers.
 	 *
 	 * @covers ::get_followers

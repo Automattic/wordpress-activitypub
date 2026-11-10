@@ -73,6 +73,27 @@ class Test_Remote_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An actor is still found after an update, which stores the guid in its `esc_url()` form.
+	 *
+	 * @covers ::get_by_uri
+	 * @covers ::get_existing_uris
+	 * @dataProvider uri_provider
+	 * @group uri-lookup
+	 * @param string $uri Original actor ID.
+	 */
+	public function test_lookup_after_update_with_special_characters( $uri ) {
+		$actor   = $this->actor_for_uri( $uri );
+		$post_id = Remote_Actors::create( $actor );
+		Remote_Actors::update( $post_id, $actor );
+
+		$found = Remote_Actors::get_by_uri( $uri );
+		$this->assertInstanceOf( 'WP_Post', $found );
+		$this->assertSame( $post_id, $found->ID );
+		$this->assertSame( array( $uri => true ), Remote_Actors::get_existing_uris( array( $uri ) ) );
+		$this->assertSame( $post_id, Remote_Actors::upsert( $actor ), 'A third write must not create a second actor.' );
+	}
+
+	/**
 	 * Following a key or owner reference must not change the signing authority.
 	 *
 	 * @dataProvider redirected_key_reference_provider
@@ -400,6 +421,24 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 1QIDAQAB
 -----END PUBLIC KEY-----
 ';
+
+	/**
+	 * Test that search finds an actor by a URL with `&` after the actor was updated.
+	 *
+	 * @covers ::search
+	 */
+	public function test_search_matches_updated_uri() {
+		$uri     = 'https://remote.example.com/actor/?id=1&type=person';
+		$actor   = $this->actor_for_uri( $uri );
+		$post_id = Remote_Actors::create( $actor );
+		Remote_Actors::update( $post_id, $actor );
+
+		$results = Remote_Actors::search( 'https://remote.example.com/actor/?id=1&type' );
+
+		$this->assertCount( 1, $results );
+		$this->assertSame( $post_id, $results[0]->ID );
+		$this->assertCount( 0, Remote_Actors::search( 'foo://x' ), 'A query that is no URL must not match every actor.' );
+	}
 
 	/**
 	 * Test that search finds an actor whose stored name is entity-escaped.

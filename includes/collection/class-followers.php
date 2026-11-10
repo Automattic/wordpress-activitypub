@@ -12,6 +12,7 @@ use Activitypub\Tombstone;
 
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_stored_id_forms;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 
@@ -138,16 +139,19 @@ class Followers {
 	public static function get_by_uri( $user_id, $actor ) {
 		global $wpdb;
 
+		list( $inserted, $updated, $raw ) = get_stored_id_forms( $actor );
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = %s AND pm.meta_value = %d AND CAST(p.guid AS BINARY) = %s",
+				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = %s AND pm.meta_value = %d AND CAST(p.guid AS BINARY) IN (%s, %s, %s) ORDER BY p.ID ASC",
 				array(
 					Remote_Actors::POST_TYPE,
 					self::FOLLOWER_META_KEY,
 					$user_id,
-					// What `pre_post_guid` stores on this WordPress version; prepare() handles the escaping.
-					\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $actor ), 0, 'db' ) ),
+					$inserted,
+					$updated,
+					$raw,
 				)
 			)
 		);
@@ -459,7 +463,7 @@ class Followers {
 	public static function compute_partial_digest( $user_id, $authority ) {
 		// Get followers filtered by authority.
 		$followers    = self::get_by_authority( $user_id, $authority );
-		$follower_ids = \wp_list_pluck( $followers, 'guid' );
+		$follower_ids = \array_map( '\Activitypub\unescape_guid', \wp_list_pluck( $followers, 'guid' ) );
 
 		// Delegate to the core digest computation algorithm.
 		return Signature::get_collection_digest( $follower_ids );
@@ -512,7 +516,7 @@ class Followers {
 	 */
 	public static function generate_sync_header( $user_id, $authority ) {
 		$followers = self::get_by_authority( $user_id, $authority );
-		$followers = \wp_list_pluck( $followers, 'guid' );
+		$followers = \array_map( '\Activitypub\unescape_guid', \wp_list_pluck( $followers, 'guid' ) );
 
 		// Compute the digest for this specific authority.
 		$digest = Signature::get_collection_digest( $followers );

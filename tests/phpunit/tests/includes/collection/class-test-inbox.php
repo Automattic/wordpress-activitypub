@@ -59,6 +59,17 @@ class Test_Inbox extends \WP_UnitTestCase {
 
 		$this->assertInstanceOf( 'WP_Post', $found, 'The original activity ID must find the saved inbox item.' );
 		$this->assertSame( $inbox_id, $found->ID );
+
+		// An update writes the guid back in its esc_url() form.
+		\wp_update_post(
+			array(
+				'ID'         => $inbox_id,
+				'post_title' => 'Updated',
+			)
+		);
+		$found = Inbox::get_by_guid( $activity_id );
+		$this->assertInstanceOf( 'WP_Post', $found, 'The inbox item must still be found after an update.' );
+		$this->assertSame( $inbox_id, $found->ID );
 	}
 
 	/**

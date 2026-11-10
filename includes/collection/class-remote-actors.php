@@ -14,9 +14,11 @@ use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
 use function Activitypub\get_id_hash;
+use function Activitypub\get_stored_id_forms;
 use function Activitypub\is_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
+use function Activitypub\unescape_guid;
 
 /**
  * Remote Actors collection class.
@@ -261,12 +263,16 @@ class Remote_Actors {
 	 */
 	public static function get_by_uri( $actor_uri ) {
 		global $wpdb;
+
+		list( $inserted, $updated, $raw ) = get_stored_id_forms( $actor_uri );
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE CAST(guid AS BINARY)=%s AND post_type=%s",
-				// What `pre_post_guid` stores on this WordPress version; prepare() handles the SQL escaping.
-				\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $actor_uri ), 0, 'db' ) ),
+				"SELECT ID FROM $wpdb->posts WHERE CAST(guid AS BINARY) IN (%s, %s, %s) AND post_type=%s ORDER BY ID ASC",
+				$inserted,
+				$updated,
+				$raw,
 				self::POST_TYPE
 			)
 		);
@@ -316,8 +322,11 @@ class Remote_Actors {
 
 		// Match the actor URI only for URL-like queries, so short terms don't match every https:// guid.
 		if ( \str_contains( $query, '://' ) ) {
-			$conditions .= ' OR p.guid LIKE %s';
-			$params[]    = $like;
+			// An escaped form is empty when the query is no URL, and `%%` would match every actor.
+			foreach ( \array_unique( \array_filter( get_stored_id_forms( $query ) ) ) as $form ) {
+				$conditions .= ' OR p.guid LIKE %s';
+				$params[]    = '%' . $wpdb->esc_like( $form ) . '%';
+			}
 		}
 
 		$params[] = $number;
@@ -366,10 +375,12 @@ class Remote_Actors {
 		$existing = array();
 
 		foreach ( \array_chunk( \array_values( \array_unique( $uris ) ), 200 ) as $chunk ) {
-			// Map each stored spelling back to the URI the caller asked for, the same value get_by_uri() matches.
+			// Map each stored spelling back to the URIs the caller asked for, the same values get_by_uri() matches.
 			$guids = array();
 			foreach ( $chunk as $uri ) {
-				$guids[ \wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $uri ), 0, 'db' ) ) ] = $uri;
+				foreach ( \array_unique( get_stored_id_forms( $uri ) ) as $guid ) {
+					$guids[ $guid ][] = $uri;
+				}
 			}
 
 			$placeholders = \implode( ', ', \array_fill( 0, \count( $guids ), '%s' ) );
@@ -384,8 +395,8 @@ class Remote_Actors {
 			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 			foreach ( $found as $guid ) {
-				if ( isset( $guids[ $guid ] ) ) {
-					$existing[ $guids[ $guid ] ] = true;
+				foreach ( $guids[ $guid ] ?? array() as $uri ) {
+					$existing[ $uri ] = true;
 				}
 			}
 		}
@@ -997,7 +1008,7 @@ class Remote_Actors {
 			return '';
 		}
 
-		$acct = Webfinger::uri_to_acct( $post->guid );
+		$acct = Webfinger::uri_to_acct( unescape_guid( $post->guid ) );
 
 		if ( \is_wp_error( $acct ) ) {
 			$actor = Actor::init_from_json( $post->post_content );

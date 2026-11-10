@@ -306,7 +306,7 @@ class Moderation {
 	 */
 	public static function get_user_blocks( $user_id ) {
 		return array(
-			'actors'   => \wp_list_pluck( Blocked_Actors::get_many( $user_id ), 'guid' ),
+			'actors'   => \array_map( '\Activitypub\unescape_guid', \wp_list_pluck( Blocked_Actors::get_many( $user_id ), 'guid' ) ),
 			'domains'  => \get_user_meta( $user_id, self::USER_META_KEYS[ self::TYPE_DOMAIN ], true ) ?: array(),
 			'keywords' => \get_user_meta( $user_id, self::USER_META_KEYS[ self::TYPE_KEYWORD ], true ) ?: array(),
 		);
@@ -424,7 +424,7 @@ class Moderation {
 	 */
 	public static function get_site_blocks() {
 		return array(
-			'actors'   => \wp_list_pluck( Blocked_Actors::get_many( Actors::BLOG_USER_ID ), 'guid' ),
+			'actors'   => \array_map( '\Activitypub\unescape_guid', \wp_list_pluck( Blocked_Actors::get_many( Actors::BLOG_USER_ID ), 'guid' ) ),
 			'domains'  => \get_option( self::OPTION_KEYS[ self::TYPE_DOMAIN ], array() ),
 			'keywords' => \get_option( self::OPTION_KEYS[ self::TYPE_KEYWORD ], array() ),
 		);

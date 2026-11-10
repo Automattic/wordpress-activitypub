@@ -12,6 +12,7 @@ use Activitypub\Collection\Remote_Actors;
 use Activitypub\Proxy;
 
 use function Activitypub\get_id_hash;
+use function Activitypub\get_stored_id_forms;
 use function Activitypub\object_to_uri;
 
 /**
@@ -65,8 +66,10 @@ class Move {
 
 		// If the origin is followed but the target is not, update the origin to point to the target.
 		if ( \is_wp_error( $target_object ) && ! \is_wp_error( $origin_object ) ) {
-			$data = array( 'guid' => \sanitize_url( $target_uri ) );
-			$hash = get_id_hash( $target_uri );
+			// Written in the form an insert stores, which every guid lookup matches.
+			list( $guid ) = get_stored_id_forms( $target_uri );
+			$data         = array( 'guid' => $guid );
+			$hash         = get_id_hash( $target_uri );
 			if ( $hash ) {
 				$data['post_name'] = $hash;
 			}

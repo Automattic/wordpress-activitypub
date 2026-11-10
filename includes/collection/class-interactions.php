@@ -22,6 +22,7 @@ use function Activitypub\is_same_host;
 use function Activitypub\object_id_to_comment;
 use function Activitypub\object_to_uri;
 use function Activitypub\process_remote_images;
+use function Activitypub\unescape_guid;
 use function Activitypub\url_to_commentid;
 
 /**
@@ -166,7 +167,7 @@ class Interactions {
 		 * handled-update success flag stays false.
 		 */
 		$owner_id = (int) \get_comment_meta( $comment_data['comment_ID'], '_activitypub_remote_actor_id', true );
-		if ( $owner_id ? object_to_uri( $activity['actor'] ) !== \get_post_field( 'guid', $owner_id, 'raw' ) : ! is_same_host( $activity['actor'], $object_id ) ) {
+		if ( $owner_id ? object_to_uri( $activity['actor'] ) !== unescape_guid( \get_post_field( 'guid', $owner_id, 'raw' ) ) : ! is_same_host( $activity['actor'], $object_id ) ) {
 			return new \WP_Error(
 				'activitypub_update_forbidden',
 				\__( 'The Update actor does not own the target comment.', 'activitypub' )

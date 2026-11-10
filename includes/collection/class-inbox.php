@@ -12,9 +12,11 @@ use Activitypub\Activity\Base_Object;
 use Activitypub\Comment;
 
 use function Activitypub\get_id_hash;
+use function Activitypub\get_stored_id_forms;
 use function Activitypub\is_activity_public;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
+use function Activitypub\unescape_guid;
 
 /**
  * ActivityPub Inbox Collection
@@ -208,13 +210,14 @@ class Inbox {
 	 */
 	public static function get_by_guid( $guid ) {
 		global $wpdb;
+		list( $inserted, $updated, $raw ) = get_stored_id_forms( $guid );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE CAST(guid AS BINARY) IN (%s, %s) AND post_type=%s ORDER BY ID ASC",
-				// What `pre_post_guid` stores on this WordPress version, and the `esc_url()` form older releases saved.
-				\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $guid ), 0, 'db' ) ),
-				\esc_url( $guid ),
+				"SELECT ID FROM $wpdb->posts WHERE CAST(guid AS BINARY) IN (%s, %s, %s) AND post_type=%s ORDER BY ID ASC",
+				$inserted,
+				$updated,
+				$raw,
 				self::POST_TYPE
 			)
 		);
@@ -292,15 +295,8 @@ class Inbox {
 					);
 				}
 
-				/*
-				 * The comment stores the activity ID as it arrived, so undo the escaping applied
-				 * to the GUID before comparing the two. Only the sequences that escaping can
-				 * produce are reversed, plus the `&amp;` that rows written before it carry:
-				 * decoding the full entity set would also rewrite a `&lt;` or `&quot;` that an ID
-				 * happens to contain as literal text, which escaping never put there.
-				 */
-				$decoded = \str_replace( array( '&#038;', '&amp;', '&#039;' ), array( '&', '&', "'" ), $inbox_item->guid );
-				$result  = Comment::object_id_to_comment( \esc_url_raw( $decoded ) );
+				// The comment stores the activity ID as it arrived, so undo the escaping applied to the GUID first.
+				$result = Comment::object_id_to_comment( \esc_url_raw( unescape_guid( $inbox_item->guid ) ) );
 
 				if ( empty( $result ) ) {
 					return new \WP_Error(
@@ -496,14 +492,15 @@ class Inbox {
 	 */
 	public static function deduplicate( $guid ) {
 		global $wpdb;
+		list( $inserted, $updated, $raw ) = get_stored_id_forms( $guid );
 
 		// Query for all posts with this GUID directly (get_posts doesn't supports guid parameter).
 		$post_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
-				"SELECT ID FROM {$wpdb->posts} WHERE CAST(guid AS BINARY) IN (%s, %s) AND post_type=%s ORDER BY ID ASC",
-				// What `pre_post_guid` stores on this WordPress version, and the `esc_url()` form older releases saved.
-				\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $guid ), 0, 'db' ) ),
-				\esc_url( $guid ),
+				"SELECT ID FROM {$wpdb->posts} WHERE CAST(guid AS BINARY) IN (%s, %s, %s) AND post_type=%s ORDER BY ID ASC",
+				$inserted,
+				$updated,
+				$raw,
 				self::POST_TYPE
 			)
 		);

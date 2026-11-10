@@ -640,4 +640,70 @@ class Test_Move extends \WP_UnitTestCase {
 		$this->assertWPError( Remote_Actors::get_by_uri( $target ), 'The move must not be applied.' );
 		$this->assertSame( $id, Remote_Actors::get_by_uri( $origin )->ID, 'The origin must stay as it is.' );
 	}
+
+	/**
+	 * A move to a target id with `&` ends up on the moved actor, not on a second one.
+	 *
+	 * @covers ::handle_move
+	 */
+	public function test_handle_move_target_with_query_string() {
+		$origin = 'https://old.example/users/lena';
+		$target = 'https://new.example/?author=7&type=actor';
+
+		$origin_object = array(
+			'type'    => 'Person',
+			'id'      => $origin,
+			'url'     => $origin,
+			'inbox'   => $origin . '/inbox',
+			'movedTo' => $target,
+		);
+		$target_object = array(
+			'type'        => 'Person',
+			'id'          => $target,
+			'url'         => $target,
+			'inbox'       => 'https://new.example/inbox',
+			'alsoKnownAs' => array( $origin ),
+		);
+
+		$id = Remote_Actors::upsert( $origin_object );
+
+		$filter = static function ( $pre, $url_or_object ) use ( $origin, $origin_object, $target, $target_object ) {
+			$url = object_to_uri( $url_or_object );
+			if ( $url === $origin ) {
+				return $origin_object;
+			}
+			if ( $url === $target ) {
+				return $target_object;
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+
+		Move::handle_move(
+			array(
+				'type'   => 'Move',
+				'actor'  => $origin,
+				'object' => $target,
+			),
+			$this->user_id
+		);
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertSame( $id, Remote_Actors::get_by_uri( $target )->ID, 'The moved actor must be found by its new id.' );
+		$this->assertSame(
+			1,
+			\count(
+				\get_posts(
+					array(
+						'post_type'   => Remote_Actors::POST_TYPE,
+						'post_status' => 'any',
+						'fields'      => 'ids',
+						'numberposts' => -1,
+					)
+				)
+			),
+			'No second actor may be created.'
+		);
+	}
 }
