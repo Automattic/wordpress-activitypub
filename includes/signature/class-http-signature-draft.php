@@ -13,8 +13,8 @@ namespace Activitypub\Signature;
 
 use Activitypub\Collection\Remote_Actors;
 
-use function Activitypub\fold_authority;
-use function Activitypub\home_host;
+use function Activitypub\get_authority;
+use function Activitypub\is_signature_host;
 
 /**
  * Class Http_Signature_Draft.
@@ -36,7 +36,7 @@ class Http_Signature_Draft implements Http_Signature {
 	public function sign( $args, $url ) {
 		$url_parts = \wp_parse_url( $url );
 
-		$host = $url_parts['host'];
+		$host = get_authority( $url );
 		$path = '/';
 
 		// Add path.
@@ -91,10 +91,11 @@ class Http_Signature_Draft implements Http_Signature {
 	 * Verify the HTTP Signature against a request.
 	 *
 	 * @since 9.0.0 Returns the verified keyId on success instead of `true`.
+	 * @since 9.4.0 Returns the id of the actor that owns the verified key instead of the keyId.
 	 *
 	 * @param array       $headers The HTTP headers.
 	 * @param string|null $body    The request body, if applicable.
-	 * @return string|\WP_Error The verified keyId on success, WP_Error on failure.
+	 * @return string|\WP_Error The id of the actor that owns the verified key on success, WP_Error on failure.
 	 */
 	public function verify( array $headers, $body = null ) {
 		if ( ! isset( $headers['signature'] ) && ! isset( $headers['authorization'] ) ) {
@@ -108,14 +109,34 @@ class Http_Signature_Draft implements Http_Signature {
 			return new \WP_Error( 'activitypub_signature', 'No Key ID present.' );
 		}
 
-		$public_key = Remote_Actors::get_public_key( $parsed['keyId'] );
+		/*
+		 * Require the headers that tie a signature to this request: `host`, which get_signed_data()
+		 * checks is ours, and the digest of a body. A signature over less verifies on its own terms,
+		 * but could be presented to any site, with any body.
+		 */
+		if ( ! \in_array( 'host', $parsed['headers'], true ) ) {
+			return new \WP_Error( 'activitypub_signature_components', 'The signature does not cover the host.', array( 'status' => 401 ) );
+		}
+
+		if ( '' !== (string) $body && ! \in_array( 'digest', $parsed['headers'], true ) ) {
+			return new \WP_Error( 'activitypub_signature_components', 'The signature does not cover the request body.', array( 'status' => 401 ) );
+		}
+
+		// Read before the key is fetched, so a request made out to another host or out of its time window fails without a lookup.
+		$signed_data = $this->get_signed_data( $parsed['headers'], $parsed, $headers );
+		if ( ! $signed_data ) {
+			return new \WP_Error( 'invalid_signed_data', 'Signed data is invalid or expired.' );
+		}
+
+		$owner      = null;
+		$public_key = Remote_Actors::get_public_key( $parsed['keyId'], $owner );
 		if ( \is_wp_error( $public_key ) ) {
 			return $public_key;
 		}
 
-		$signed_data = $this->get_signed_data( $parsed['headers'], $parsed, $headers );
-		if ( ! $signed_data ) {
-			return new \WP_Error( 'invalid_signed_data', 'Signed data is invalid or expired.' );
+		// The owner is what callers bind to the actor, so a key without one does not verify anything.
+		if ( ! \is_string( $owner ) || '' === $owner ) {
+			return new \WP_Error( 'activitypub_no_key_owner', 'The signing key has no owner.', array( 'status' => 401 ) );
 		}
 
 		$algorithm = $this->get_signature_algorithm( $parsed, $public_key );
@@ -134,8 +155,8 @@ class Http_Signature_Draft implements Http_Signature {
 			return new \WP_Error( 'activitypub_signature', 'Invalid signature', array( 'status' => 401 ) );
 		}
 
-		// Return the verified keyId so the caller can bind it to the activity actor.
-		return $parsed['keyId'];
+		// Return the key's owner so the caller can bind it to the activity actor.
+		return $owner;
 	}
 
 	/**
@@ -210,7 +231,12 @@ class Http_Signature_Draft implements Http_Signature {
 	 * @return bool|\WP_Error True, if the signature is valid, WP_Error on failure.
 	 */
 	private function verify_content_digest( $headers, $body ) {
-		if ( ! isset( $headers['digest'][0] ) || null === $body ) {
+		// A signed but absent header enters the signed data empty and would vouch for any body.
+		if ( ! isset( $headers['digest'][0] ) ) {
+			return '' === (string) $body ? true : new \WP_Error( 'missing_digest', 'The Digest header is missing.', array( 'status' => 401 ) );
+		}
+
+		if ( null === $body ) {
 			return true;
 		}
 
@@ -276,7 +302,7 @@ class Http_Signature_Draft implements Http_Signature {
 	 * @param array $signature_block The signature block.
 	 * @param array $headers         The HTTP headers.
 	 *
-	 * @return string signed headers for comparison
+	 * @return string|false Signed headers for comparison, or false if they are invalid or expired.
 	 */
 	private function get_signed_data( $signed_headers, $signature_block, $headers ) {
 		$signed_data       = '';
@@ -288,54 +314,19 @@ class Http_Signature_Draft implements Http_Signature {
 
 		// This also verifies time-based values by returning false if any of these are out of range.
 		foreach ( $signed_headers as $header ) {
-			if ( 'host' === $header && isset( $headers['x_original_host'][0] ) ) {
+			if ( 'host' === $header ) {
 				/*
-				 * A proxy that rewrites `Host` leaves the value the peer signed only in this
-				 * header, so it has to be readable. It is also client-supplied, and `host` is
-				 * the one component tying a draft signature to this server: `(request-target)`
-				 * carries the method and path but no scheme or host. Taking any value on trust
-				 * lets a signature made out to another server verify here when it is replayed
-				 * to the same path, so only a host this site answers on is honoured. Anything
-				 * else falls through to the `Host` the request actually arrived with.
+				 * `host` is the one component tying a draft signature to this server, since
+				 * `(request-target)` carries no scheme or host. A proxy that rewrites `Host`
+				 * leaves the value the peer signed only in `X-Original-Host`, so it is read first.
 				 */
-				$original = fold_authority( $headers['x_original_host'][0] );
-
-				/**
-				 * Filters the hosts a signature may legitimately have been made out to.
-				 *
-				 * Sites whose proxy terminates on a name that is neither `home_url()` nor
-				 * `site_url()` add it here. Write them the way they appear in a URL; they are
-				 * folded before they are compared.
-				 *
-				 * @since 9.3.1
-				 *
-				 * @param string[] $hosts Hosts this site answers on.
-				 */
-				$hosts = \apply_filters(
-					'activitypub_signature_original_hosts',
-					array(
-						home_host(),
-						\wp_parse_url( \site_url(), \PHP_URL_HOST ),
-					)
-				);
-
-				/*
-				 * Folded after the filter, not before, so a callback can return a host written
-				 * any way a URL might spell it. Cast because a callback returning one host
-				 * outside an array would otherwise be a fatal rather than a non-match. Empty
-				 * results are dropped, or an unparseable entry would match an empty header.
-				 */
-				$allowed = array();
-				foreach ( (array) $hosts as $host ) {
-					$folded = fold_authority( $host );
-					if ( '' !== $folded ) {
-						$allowed[] = $folded;
-					}
-				}
-
-				if ( '' !== $original && \in_array( $original, $allowed, true ) ) {
+				if ( is_signature_host( $headers['x_original_host'][0] ?? '' ) ) {
 					$signed_data .= $header . ': ' . $headers['x_original_host'][0] . "\n";
 					continue;
+				}
+
+				if ( ! is_signature_host( $headers['host'][0] ?? '' ) ) {
+					return false;
 				}
 			}
 			if ( '(request-target)' === $header ) {

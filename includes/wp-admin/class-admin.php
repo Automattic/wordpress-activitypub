@@ -368,7 +368,7 @@ class Admin {
 					'assets/js/activitypub-admin.js',
 					ACTIVITYPUB_PLUGIN_FILE
 				),
-				array( 'jquery', 'wp-util' ),
+				array( 'clipboard', 'jquery', 'wp-a11y', 'wp-util' ),
 				ACTIVITYPUB_PLUGIN_VERSION,
 				false
 			);
@@ -656,7 +656,7 @@ class Admin {
 	 * Only the browsable `source_url` is linked, not the ActivityPub ID: reactions like Likes
 	 * and Announces store only that, and it is not always a page.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param int $comment_id The comment id.
 	 *

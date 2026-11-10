@@ -381,6 +381,7 @@ class Settings_Fields {
 		$allow_likes   = \get_option( 'activitypub_allow_likes', '1' );
 		$allow_reposts = \get_option( 'activitypub_allow_reposts', '1' );
 		$auto_approve  = \get_option( 'activitypub_auto_approve_reactions', '0' );
+		$images        = \get_option( 'activitypub_allow_comment_images', '0' );
 		?>
 		<fieldset>
 			<p>
@@ -402,6 +403,13 @@ class Settings_Fields {
 					<?php \esc_html_e( 'Auto approve reactions', 'activitypub' ); ?>
 				</label>
 			</p>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_allow_comment_images" value="1" <?php \checked( '1', $images ); ?> />
+					<?php \esc_html_e( 'Show images attached to replies', 'activitypub' ); ?>
+				</label>
+			</p>
+			<p class="description"><?php \esc_html_e( 'WordPress does not show images in comments. With this option, images that people attach to their Fediverse replies are shown below the comment text. Images that are not cached, for example with remote caching turned off, are loaded from the server of the person who replied.', 'activitypub' ); ?></p>
 		</fieldset>
 		<?php
 	}

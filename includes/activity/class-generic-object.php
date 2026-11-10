@@ -368,7 +368,7 @@ class Generic_Object {
 	/**
 	 * Whether a property name is declared as a term in the JSON-LD context.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param string $key The property name as it appears on the wire.
 	 *

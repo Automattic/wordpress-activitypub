@@ -310,7 +310,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 	 * The inbox route's permission callback already refuses a non-owner, so unlike the outbox this
 	 * method needs no seek gate of its own.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param string           $item    The ActivityPub activity ID.
 	 * @param \WP_REST_Request $request Full details about the request.
@@ -472,18 +472,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			}
 		}
 
-		$response = \rest_ensure_response(
-			array(
-				'type'   => 'https://w3id.org/fep/c180#approval-required',
-				'title'  => 'Approval Required',
-				'status' => '202',
-				'detail' => 'This activity requires approval before it can be processed.',
-			)
-		);
-		$response->set_status( 202 );
-		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
-
-		return $response;
+		return Server::accepted_response();
 	}
 
 	/**

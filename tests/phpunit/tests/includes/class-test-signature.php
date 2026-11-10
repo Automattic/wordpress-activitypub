@@ -10,6 +10,7 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
 use Activitypub\Signature;
 
@@ -34,6 +35,23 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 		self::$test_keys = \json_decode( \file_get_contents( AP_TESTS_DIR . '/data/fixtures/http-signature-keys.json' ), true );
+	}
+
+	/**
+	 * Set up.
+	 */
+	public function set_up() {
+		parent::set_up();
+
+		// The fixtures sign their requests for example.org, so it is one of this site's hosts here.
+		\add_filter(
+			'activitypub_signature_original_hosts',
+			function ( $hosts ) {
+				$hosts[] = 'example.org';
+
+				return $hosts;
+			}
+		);
 	}
 
 	/**
@@ -1073,6 +1091,95 @@ class Test_Signature extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A stored key that does not verify is refreshed from the actor's host once, so a rotated key heals.
+	 *
+	 * @covers ::verify_http_signature
+	 */
+	public function test_verify_http_signature_refreshes_a_rotated_key() {
+		\update_option( 'activitypub_rfc9421_signature', '0' );
+		$old = self::$test_keys['rsa']['4096'];
+		$new = self::$test_keys['rsa']['2048'];
+		$id  = 'https://example.org/users/rotated';
+
+		$document = static function ( $public_key ) use ( $id ) {
+			return array(
+				'id'                => $id,
+				'type'              => 'Person',
+				'inbox'             => $id . '/inbox',
+				'preferredUsername' => 'rotated',
+				'publicKey'         => array(
+					'id'           => $id . '#main-key',
+					'owner'        => $id,
+					'publicKeyPem' => $public_key,
+				),
+			);
+		};
+		Remote_Actors::upsert( $document( $old['public_key'] ) );
+
+		// Let the next refresh through, as if the throttle had expired.
+		$expire = static function () use ( $id ) {
+			\delete_transient( 'activitypub_key_refresh_' . \md5( $id ) );
+		};
+
+		$served  = $document( $new['public_key'] );
+		$fetches = 0;
+		$mock    = static function ( $pre, $url ) use ( &$fetches, &$served, $id ) {
+			if ( $url !== $id ) {
+				return $pre;
+			}
+			++$fetches;
+			return $served;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock, 10, 2 );
+
+		$request = static function () use ( $id, $new ) {
+			$args    = \apply_filters(
+				'http_request_args',
+				array(
+					'method'      => 'POST',
+					'body'        => \wp_json_encode(
+						array(
+							'type'  => 'Update',
+							'actor' => $id,
+						)
+					),
+					'key_id'      => $id . '#main-key',
+					'private_key' => \openssl_pkey_get_private( $new['private_key'] ),
+					'user_id'     => 1,
+					'headers'     => array(
+						'Content-Type' => 'application/activity+json',
+						'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
+						'Host'         => 'example.org',
+					),
+				),
+				'https://example.org/wp-json/activitypub/1.0/inbox'
+			);
+			$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+			$request->set_body( $args['body'] );
+			$request->set_headers( $args['headers'] );
+
+			return $request;
+		};
+
+		// The actor rotated to the new key; its host serves it, the stored record still has the old one.
+		$this->assertSame( $id, Signature::verify_http_signature( $request() ), 'A rotated key verifies after one refresh.' );
+		$this->assertSame( 1, $fetches );
+
+		// A key its host does not serve either still fails, and is not fetched again at once.
+		$served = $document( $old['public_key'] );
+		Remote_Actors::upsert( $served );
+		$expire();
+		$this->assertWPError( Signature::verify_http_signature( $request() ) );
+		$this->assertSame( 2, $fetches );
+		$this->assertWPError( Signature::verify_http_signature( $request() ) );
+		$this->assertSame( 2, $fetches, 'An actor refreshed a moment ago is not fetched again.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock, 10 );
+		\delete_option( 'activitypub_rfc9421_signature' );
+		$expire();
+	}
+
+	/**
 	 * RFC 9421: the keyId returned is the label that actually verified, not merely the first.
 	 *
 	 * A request can carry several signature labels and the verifier accepts whichever validates.
@@ -1140,9 +1247,9 @@ class Test_Signature extends \WP_UnitTestCase {
 		$result = Signature::verify_http_signature( $request );
 
 		$this->assertSame(
-			'https://example.org/author/admin#main-key',
+			'https://example.org/author/admin',
 			$result,
-			'The keyId of the label that actually verified must be returned, not the first label.'
+			'The key owner of the label that actually verified must be returned, not the first label.'
 		);
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
@@ -1806,7 +1913,7 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		$result = Signature::verify_http_signature( $request );
 
-		$this->assertSame( 'https://example.org/author/admin#main-key', $result, 'The verified keyId is returned on success.' );
+		$this->assertSame( 'https://example.org/author/admin', $result, 'The verified key\'s owner is returned on success.' );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 	}
@@ -1855,6 +1962,46 @@ class Test_Signature extends \WP_UnitTestCase {
 		$this->assertSame( $legacy, \get_option( $option_key ), 'The legacy pair should be persisted under the new option.' );
 
 		\delete_option( $option_key );
+	}
+
+	/**
+	 * A signature for a server on a non-default port names the port, as `Host` does.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers \Activitypub\Signature\Http_Signature_Draft::sign
+	 * @covers \Activitypub\Signature\Http_Message_Signature::sign
+	 * @dataProvider signature_format_provider
+	 *
+	 * @param string $rfc9421 '1' for RFC 9421, '0' for Draft Cavage.
+	 */
+	public function test_sign_names_a_non_default_port( $rfc9421 ) {
+		\update_option( 'activitypub_rfc9421_signature', $rfc9421 );
+		$mock = $this->mock_remote_key();
+
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI']    = '/wp-json/activitypub/1.0/inbox';
+		$_SERVER['HTTP_HOST']      = 'example.org:8443';
+		$_SERVER['HTTPS']          = 'on';
+
+		$request = $this->build_replayed_request( 'example.org:8443', 'example.org:8443' );
+		$result  = Signature::verify_http_signature( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+		\delete_option( 'activitypub_rfc9421_signature' );
+
+		$this->assertNotWPError( $result, 'A signature has to name the port the request is sent with.' );
+	}
+
+	/**
+	 * Signature formats.
+	 *
+	 * @return array[]
+	 */
+	public function signature_format_provider() {
+		return array(
+			'draft cavage' => array( '0' ),
+			'rfc 9421'     => array( '1' ),
+		);
 	}
 
 	/**
@@ -1948,6 +2095,457 @@ class Test_Signature extends \WP_UnitTestCase {
 			$result,
 			'A signature made out to another host must not verify, whatever X-Original-Host claims.'
 		);
+	}
+
+	/**
+	 * The WordPress address is not a host this site answers on for signatures.
+	 *
+	 * @covers ::verify_http_signature
+	 */
+	public function test_verify_http_signature_rejects_the_site_url_host() {
+		\update_option( 'activitypub_rfc9421_signature', '0' );
+		$mock = $this->mock_remote_key();
+
+		$site_url = function () {
+			return 'https://shared.example/site';
+		};
+		\add_filter( 'site_url', $site_url );
+
+		$request = $this->build_replayed_request( 'shared.example', 'internal.local', 'shared.example' );
+		$result  = Signature::verify_http_signature( $request );
+
+		\remove_filter( 'site_url', $site_url );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+		\delete_option( 'activitypub_rfc9421_signature' );
+
+		$this->assertWPError( $result, 'A signature made out to the WordPress address host must not verify.' );
+	}
+
+	/**
+	 * A draft signature made out to another host must not verify when it arrives with that host.
+	 *
+	 * @covers ::verify_http_signature
+	 */
+	public function test_verify_http_signature_rejects_a_foreign_host() {
+		\update_option( 'activitypub_rfc9421_signature', '0' );
+		$mock = $this->mock_remote_key();
+
+		$lookups = 0;
+		$count   = function ( $pre ) use ( &$lookups ) {
+			++$lookups;
+
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $count, 5 );
+
+		$request = $this->build_replayed_request( 'evil.example', 'evil.example' );
+		$result  = Signature::verify_http_signature( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $count, 5 );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+		\delete_option( 'activitypub_rfc9421_signature' );
+
+		$this->assertWPError( $result, 'A signature made out to another host must not verify, whatever Host claims.' );
+		$this->assertSame( 'invalid_signed_data', $result->get_error_code() );
+		$this->assertSame( 0, $lookups, 'The key must not be looked up for a request made out to another host.' );
+	}
+
+	/**
+	 * A host added through the filter is honoured as Host, for sites reached under another name.
+	 *
+	 * @covers ::verify_http_signature
+	 */
+	public function test_verify_http_signature_honours_the_filter_for_host() {
+		\update_option( 'activitypub_rfc9421_signature', '0' );
+		$mock = $this->mock_remote_key();
+
+		$allow = function ( $hosts ) {
+			$hosts[] = 'mapped.example';
+
+			return $hosts;
+		};
+		\add_filter( 'activitypub_signature_original_hosts', $allow );
+
+		$request = $this->build_replayed_request( 'mapped.example', 'mapped.example' );
+		$result  = Signature::verify_http_signature( $request );
+
+		\remove_filter( 'activitypub_signature_original_hosts', $allow );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+		\delete_option( 'activitypub_rfc9421_signature' );
+
+		$this->assertNotWPError( $result, 'A host named by the filter has to be accepted as Host.' );
+	}
+
+	/**
+	 * An RFC 9421 signature made out to another host must not verify when it arrives with that host.
+	 *
+	 * The host check runs before the signing key is looked up.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
+	 * @covers \Activitypub\Signature\Http_Message_Signature::get_component_values
+	 */
+	public function test_verify_http_signature_rfc9421_rejects_a_foreign_host() {
+		\update_option( 'activitypub_rfc9421_signature', '1' );
+		$keys = self::$test_keys['rsa']['2048'];
+
+		$lookups = 0;
+		$mock    = function () use ( $keys, &$lookups ) {
+			++$lookups;
+
+			return array(
+				'id'        => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock );
+
+		$args = \apply_filters(
+			'http_request_args',
+			array(
+				'method'      => 'POST',
+				'body'        => '{"type":"Create","actor":"https://example.org/author/admin"}',
+				'headers'     => array(
+					'Date' => \gmdate( 'D, d M Y H:i:s T' ),
+					'Host' => 'evil.example',
+				),
+				'key_id'      => 'https://example.org/author/admin#main-key',
+				'private_key' => \openssl_pkey_get_private( $keys['private_key'] ),
+				'user_id'     => 1,
+			),
+			'https://evil.example/wp-json/activitypub/1.0/inbox'
+		);
+
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI']    = '/wp-json/activitypub/1.0/inbox';
+		$_SERVER['HTTP_HOST']      = 'evil.example';
+		$_SERVER['HTTPS']          = 'on';
+
+		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_body( $args['body'] );
+		$request->set_headers( $args['headers'] );
+
+		$result = Signature::verify_http_signature( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+		\delete_option( 'activitypub_rfc9421_signature' );
+
+		$this->assertWPError( $result, 'A signature made out to another host must not verify, whatever Host claims.' );
+		$this->assertSame( 'activitypub_signature_host', $result->get_error_code() );
+		$this->assertSame( 0, $lookups, 'The key must not be looked up for a request made out to another host.' );
+	}
+
+	/**
+	 * An RFC 9421 signature covering the `host` field is bound to this site like `@authority`.
+	 *
+	 * Signed by hand because this class's own `sign()` covers `@target-uri` and `@authority`.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers \Activitypub\Signature\Http_Message_Signature::get_component_values
+	 */
+	public function test_verify_http_signature_rfc9421_binds_the_host_field() {
+		$keys = self::$test_keys['rsa']['2048'];
+
+		$mock = function () use ( $keys ) {
+			return array(
+				'id'        => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock );
+
+		$verify = function ( $host ) use ( $keys ) {
+			$params = \sprintf( '("@method" "host");created=%d;keyid="https://example.org/author/admin#main-key";alg="rsa-v1_5-sha256"', \time() );
+			$base   = "\"@method\": POST\n\"host\": {$host}\n\"@signature-params\": {$params}";
+			\openssl_sign( $base, $signature, \openssl_pkey_get_private( $keys['private_key'] ), \OPENSSL_ALGO_SHA256 );
+
+			$_SERVER['REQUEST_METHOD'] = 'POST';
+			$_SERVER['REQUEST_URI']    = '/wp-json/activitypub/1.0/inbox';
+			$_SERVER['HTTP_HOST']      = $host;
+
+			$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+			$request->set_headers(
+				array(
+					'Host'            => $host,
+					'Signature-Input' => 'sig=' . $params,
+					'Signature'       => 'sig=:' . \base64_encode( $signature ) . ':',
+				)
+			);
+
+			return Signature::verify_http_signature( $request );
+		};
+
+		$foreign = $verify( 'evil.example' );
+		$own     = $verify( 'example.org' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+
+		$this->assertWPError( $foreign, 'A signature over a foreign host field must not verify.' );
+		$this->assertSame( 'activitypub_signature_host', $foreign->get_error_code() );
+		$this->assertNotWPError( $own, 'A signature over this site\'s host field still verifies.' );
+	}
+
+	/**
+	 * Data provider for test_verify_http_signature_rfc9421_requires_covered_components.
+	 *
+	 * @return array[] Covered components, whether a body and a Content-Digest header are sent, the expected error code.
+	 */
+	public function covered_components_provider() {
+		return array(
+			'target and digest'       => array( array( '@method', 'host', 'content-digest' ), true, true, null ),
+			'target without body'     => array( array( '@method', 'host' ), false, false, null ),
+			'no target'               => array( array( '@method', 'content-digest' ), true, true, 'activitypub_signature_components' ),
+			'body not covered'        => array( array( '@method', 'host' ), true, true, 'activitypub_signature_components' ),
+			'covered digest not sent' => array( array( '@method', 'host', 'content-digest' ), true, false, 'missing_digest' ),
+			'digest without body'     => array( array( '@method', 'host', 'content-digest' ), false, true, 'digest_mismatch' ),
+			'target uri'              => array( array( '@method', '@target-uri', 'content-digest' ), true, true, null ),
+			'authority'               => array( array( '@method', '@authority', 'content-digest' ), true, true, null ),
+			'no target and no body'   => array( array( '@method' ), false, false, 'activitypub_signature_components' ),
+		);
+	}
+
+	/**
+	 * An RFC 9421 signature has to cover this site and, with a body, the body's digest.
+	 *
+	 * Signed by hand because this class's own `sign()` always covers both.
+	 *
+	 * @dataProvider covered_components_provider
+	 * @covers ::verify_http_signature
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_content_digest
+	 *
+	 * @param string[]    $covered     Covered components.
+	 * @param bool        $with_body   Whether the request carries a body.
+	 * @param bool        $with_digest Whether the Content-Digest header is sent.
+	 * @param string|null $error       The expected error code, null if the signature verifies.
+	 */
+	public function test_verify_http_signature_rfc9421_requires_covered_components( $covered, $with_body, $with_digest, $error ) {
+		$keys = self::$test_keys['rsa']['2048'];
+
+		$mock = function () use ( $keys ) {
+			return array(
+				'id'        => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock );
+
+		// The digest is always of the activity, so one sent without a body does not match.
+		$activity = '{"type":"Create","actor":"https://example.org/author/admin"}';
+		$body     = $with_body ? $activity : '';
+		$digest   = $with_digest ? 'sha-256=:' . \base64_encode( \hash( 'sha256', $activity, true ) ) . ':' : '';
+		$values   = array(
+			'@method'        => 'POST',
+			'@target-uri'    => 'https://example.org/wp-json/activitypub/1.0/inbox',
+			'@authority'     => 'example.org',
+			'host'           => 'example.org',
+			'content-digest' => $digest,
+		);
+
+		$base = '';
+		foreach ( $covered as $component ) {
+			$base .= \sprintf( "\"%s\": %s\n", $component, $values[ $component ] );
+		}
+
+		$params = \sprintf( '("%s");created=%d;keyid="https://example.org/author/admin#main-key";alg="rsa-v1_5-sha256"', \implode( '" "', $covered ), \time() );
+		\openssl_sign( $base . '"@signature-params": ' . $params, $signature, \openssl_pkey_get_private( $keys['private_key'] ), \OPENSSL_ALGO_SHA256 );
+
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI']    = '/wp-json/activitypub/1.0/inbox';
+		$_SERVER['HTTP_HOST']      = 'example.org';
+		$_SERVER['HTTPS']          = 'on';
+
+		$headers = array(
+			'Host'            => 'example.org',
+			'Signature-Input' => 'sig=' . $params,
+			'Signature'       => 'sig=:' . \base64_encode( $signature ) . ':',
+		);
+		if ( $with_digest ) {
+			$headers['Content-Digest'] = $digest;
+		}
+
+		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_body( $body );
+		$request->set_headers( $headers );
+
+		$result = Signature::verify_http_signature( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+
+		if ( null === $error ) {
+			$this->assertNotWPError( $result );
+		} else {
+			$this->assertWPError( $result );
+			$this->assertContains( $error, $result->get_error_codes() );
+		}
+	}
+
+	/**
+	 * Data provider for test_verify_http_signature_draft_requires_signed_headers.
+	 *
+	 * @return array[] Signed headers, whether a body and a Digest header are sent, the expected error code.
+	 */
+	public function signed_headers_provider() {
+		return array(
+			'host and digest'        => array( array( '(request-target)', 'host', 'date', 'digest' ), true, true, null ),
+			'host without body'      => array( array( '(request-target)', 'host', 'date' ), false, false, null ),
+			'no host'                => array( array( '(request-target)', 'date', 'digest' ), true, true, 'activitypub_signature_components' ),
+			'body not signed'        => array( array( '(request-target)', 'host', 'date' ), true, true, 'activitypub_signature_components' ),
+			'signed digest not sent' => array( array( '(request-target)', 'host', 'date', 'digest' ), true, false, 'missing_digest' ),
+			'digest without body'    => array( array( '(request-target)', 'host', 'date', 'digest' ), false, true, 'digest_mismatch' ),
+		);
+	}
+
+	/**
+	 * A draft signature has to sign the host and, with a body, the body's digest.
+	 *
+	 * Signed by hand because this class's own `sign()` always signs both.
+	 *
+	 * @dataProvider signed_headers_provider
+	 * @covers ::verify_http_signature
+	 * @covers \Activitypub\Signature\Http_Signature_Draft::verify
+	 * @covers \Activitypub\Signature\Http_Signature_Draft::verify_content_digest
+	 *
+	 * @param string[]    $signed      Signed headers.
+	 * @param bool        $with_body   Whether the request carries a body.
+	 * @param bool        $with_digest Whether the Digest header is sent.
+	 * @param string|null $error       The expected error code, null if the signature verifies.
+	 */
+	public function test_verify_http_signature_draft_requires_signed_headers( $signed, $with_body, $with_digest, $error ) {
+		$keys = Actors::get_keypair( 1 );
+
+		$mock = function () use ( $keys ) {
+			return array(
+				'id'        => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock );
+
+		// The digest is always of the activity, so one sent without a body does not match.
+		$activity = '{"type":"Create","actor":"https://example.org/author/admin"}';
+		$body     = $with_body ? $activity : '';
+		$date     = \gmdate( 'D, d M Y H:i:s T' );
+		$values   = array(
+			'(request-target)' => 'post /wp-json/activitypub/1.0/inbox',
+			'host'             => 'example.org',
+			'date'             => $date,
+			'digest'           => 'SHA-256=' . \base64_encode( \hash( 'sha256', $activity, true ) ),
+		);
+
+		// A header that is not sent is left out of the signed data.
+		$lines = array();
+		foreach ( $signed as $header ) {
+			if ( 'digest' !== $header || $with_digest ) {
+				$lines[] = \sprintf( '%s: %s', $header, $values[ $header ] );
+			}
+		}
+		\openssl_sign( \implode( "\n", $lines ), $signature, $keys['private_key'], \OPENSSL_ALGO_SHA256 );
+
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI']    = '/wp-json/activitypub/1.0/inbox';
+		$_SERVER['HTTP_HOST']      = 'example.org';
+
+		$headers = array(
+			'Host'      => 'example.org',
+			'Date'      => $date,
+			'Signature' => \sprintf(
+				'keyId="https://example.org/author/admin#main-key",algorithm="rsa-sha256",headers="%s",signature="%s"',
+				\implode( ' ', $signed ),
+				\base64_encode( $signature )
+			),
+		);
+		if ( $with_digest ) {
+			$headers['Digest'] = $values['digest'];
+		}
+
+		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_body( $body );
+		$request->set_headers( $headers );
+
+		$result = Signature::verify_http_signature( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+
+		if ( null === $error ) {
+			$this->assertNotWPError( $result );
+		} else {
+			$this->assertWPError( $result );
+			$this->assertContains( $error, $result->get_error_codes() );
+		}
+	}
+
+	/**
+	 * RFC 9421: a signature made out to this site still verifies when a proxy rewrote Host.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers \Activitypub\Signature\Http_Message_Signature::get_component_values
+	 */
+	public function test_verify_http_signature_rfc9421_accepts_our_own_original_host() {
+		\update_option( 'activitypub_rfc9421_signature', '1' );
+		$mock = $this->mock_remote_key();
+
+		$own = \wp_parse_url( \home_url(), \PHP_URL_HOST );
+
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI']    = '/wp-json/activitypub/1.0/inbox';
+		$_SERVER['HTTP_HOST']      = 'internal.local';
+		$_SERVER['HTTPS']          = 'on';
+
+		// The peer signed our public host; a proxy then rewrote `Host` to an internal name.
+		$request = $this->build_replayed_request( $own, 'internal.local', $own );
+		$result  = Signature::verify_http_signature( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+		\delete_option( 'activitypub_rfc9421_signature' );
+
+		$this->assertNotWPError( $result, 'A signature made out to this site must still verify when a proxy rewrote Host.' );
+	}
+
+	/**
+	 * RFC 9421: a foreign X-Original-Host is ignored, so Host has to name this site.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers \Activitypub\Signature\Http_Message_Signature::get_component_values
+	 */
+	public function test_verify_http_signature_rfc9421_rejects_a_foreign_original_host() {
+		\update_option( 'activitypub_rfc9421_signature', '1' );
+		$mock = $this->mock_remote_key();
+
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI']    = '/wp-json/activitypub/1.0/inbox';
+		$_SERVER['HTTPS']          = 'on';
+
+		// Arriving with our host, so the foreign header falls back to it and the signature no longer matches.
+		$_SERVER['HTTP_HOST'] = 'example.org';
+		$own_host             = Signature::verify_http_signature( $this->build_replayed_request( 'evil.example', 'example.org', 'evil.example' ) );
+
+		// Arriving with an internal name, nothing names this site.
+		$_SERVER['HTTP_HOST'] = 'internal.local';
+		$internal             = Signature::verify_http_signature( $this->build_replayed_request( 'evil.example', 'internal.local', 'evil.example' ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+		\delete_option( 'activitypub_rfc9421_signature' );
+
+		$this->assertWPError( $own_host, 'A signature made out to another host must not verify, whatever X-Original-Host claims.' );
+		$this->assertWPError( $internal, 'A foreign X-Original-Host must not stand in for this site.' );
+		$this->assertSame( 'activitypub_signature_host', $internal->get_error_code() );
 	}
 
 	/**

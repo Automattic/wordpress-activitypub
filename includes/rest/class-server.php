@@ -7,9 +7,11 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\Moderation;
 use Activitypub\Signature;
 
 use function Activitypub\maybe_set_no_store;
+use function Activitypub\object_to_uri;
 use function Activitypub\use_authorized_fetch;
 
 /**
@@ -27,6 +29,7 @@ class Server {
 	 */
 	public static function init() {
 		\add_filter( 'rest_pre_dispatch', array( self::class, 'normalize_route' ), 1, 3 );
+		\add_filter( 'rest_pre_dispatch', array( self::class, 'reject_blocked_sender' ), 5, 3 );
 		\add_filter( 'rest_pre_dispatch', array( self::class, 'maybe_add_actor_from_signature' ), 10, 3 );
 		\add_filter( 'rest_request_before_callbacks', array( self::class, 'validate_requests' ), 9, 3 );
 		\add_filter( 'rest_request_parameter_order', array( self::class, 'request_parameter_order' ), 10, 2 );
@@ -155,6 +158,61 @@ class Server {
 	}
 
 	/**
+	 * Stop a request from a site-wide blocked sender before its signature is verified.
+	 *
+	 * Verifying fetches the sender's key, so a blocked domain would still hear from the site with
+	 * every request. Only here, before verification, is the activity type known, and retractions
+	 * still go on: verifying them is worth the request, see Moderation::RETRACTION_TYPES.
+	 *
+	 * @since 9.4.0
+	 *
+	 * @param mixed            $result  Response to replace the requested version with.
+	 * @param \WP_REST_Server  $server  Server instance.
+	 * @param \WP_REST_Request $request Request used to generate the response.
+	 *
+	 * @return mixed The response, the accepted answer for a blocked sender's delivery, or a WP_Error for its other requests.
+	 */
+	public static function reject_blocked_sender( $result, $server, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		if ( null !== $result || ! \str_starts_with( $request->get_route(), '/' . ACTIVITYPUB_REST_NAMESPACE ) ) {
+			return $result;
+		}
+
+		$json   = $request->get_json_params();
+		$json   = \is_array( $json ) ? $json : array();
+		$sender = Signature::get_key_id( $request ) ?? object_to_uri( $json['actor'] ?? null );
+
+		if ( ! \is_string( $sender ) || ! Moderation::is_actor_blocked( \strip_fragment_from_url( $sender ) ) ) {
+			return $result;
+		}
+
+		if ( \in_array( $json['type'] ?? '', Moderation::RETRACTION_TYPES, true ) ) {
+			return $result;
+		}
+
+		// Deliveries get the answer of an accepted delivery, so the sender does not keep retrying.
+		if ( \WP_REST_Server::CREATABLE === $request->get_method() ) {
+			return self::accepted_response();
+		}
+
+		return new \WP_Error( 'activitypub_sender_blocked', \__( 'The sender is blocked.', 'activitypub' ), array( 'status' => 403 ) );
+	}
+
+	/**
+	 * The answer to an inbox delivery.
+	 *
+	 * Accepted deliveries get an empty `202 Accepted`, also when a filter or a block stopped
+	 * the activity. A site that turns off incoming interactions refuses those with a `202`
+	 * of its own, see validate_requests().
+	 *
+	 * @since unreleased
+	 *
+	 * @return \WP_REST_Response The response.
+	 */
+	public static function accepted_response() {
+		return new \WP_REST_Response( null, 202 );
+	}
+
+	/**
 	 * Backfill a missing `actor` on incoming FeatureRequest activities from the signature.
 	 *
 	 * Mastodon (FEP-7aa9) omits `actor` from the FeatureRequest body and conveys the
@@ -218,6 +276,11 @@ class Server {
 	/**
 	 * Filters the REST API response to properly handle the ActivityPub error formatting.
 	 *
+	 * Errors are sent as RFC 9457 problem details. An error sets its FEP-c180 problem type and
+	 * title as `type` and `title` in its error data; without them, the type is `about:blank` and
+	 * the title is the error code.
+	 *
+	 * @see https://www.rfc-editor.org/rfc/rfc9457
 	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/c180/fep-c180.md
 	 *
 	 * @param \WP_HTTP_Response $response Result to send to the client. Usually a `WP_REST_Response`.
@@ -252,9 +315,17 @@ class Server {
 			$data     = $response->get_data();
 		}
 
+		/*
+		 * Error data can be anything, an object included; only an array carries a problem type.
+		 * Its title is used only with a type, so an untyped error keeps the error code as title.
+		 */
+		$error_data = \is_array( $data['data'] ?? null ) ? $data['data'] : array();
+		$type       = \is_string( $error_data['type'] ?? null ) ? $error_data['type'] : 'about:blank';
+		$title      = 'about:blank' !== $type && \is_string( $error_data['title'] ?? null ) ? $error_data['title'] : ( $data['code'] ?? '' );
+
 		$error = array(
-			'type'     => 'about:blank',
-			'title'    => $data['code'] ?? '',
+			'type'     => $type,
+			'title'    => $title,
 			'detail'   => $data['message'] ?? '',
 			'status'   => $response->get_status(),
 
@@ -267,6 +338,7 @@ class Server {
 		);
 
 		$response->set_data( $error );
+		$response->header( 'Content-Type', 'application/problem+json; charset=' . \get_option( 'blog_charset' ) );
 
 		return $response;
 	}

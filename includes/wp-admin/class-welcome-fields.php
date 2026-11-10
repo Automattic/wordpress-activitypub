@@ -7,6 +7,8 @@
 
 namespace Activitypub\WP_Admin;
 
+use Activitypub\Collection\Actors;
+
 use function Activitypub\user_can_activitypub;
 
 /**
@@ -101,8 +103,121 @@ class Welcome_Fields {
 			</div>
 			<h2 class="activitypub-welcome-title"><?php \esc_html_e( 'Welcome to the Fediverse!', 'activitypub' ); ?></h2>
 			<p class="activitypub-welcome-subtitle"><?php \esc_html_e( 'Get connected in just a few steps.', 'activitypub' ); ?></p>
+			<?php self::render_welcome_handles(); ?>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Render the Fediverse handles of this site.
+	 *
+	 * Newcomers have no way of knowing their own address, so it gets a prominent
+	 * spot in the welcome header, next to a button that copies it.
+	 *
+	 * @since unreleased
+	 *
+	 * @return void
+	 */
+	private static function render_welcome_handles() {
+		$handles = self::get_welcome_handles();
+
+		if ( ! $handles ) {
+			return;
+		}
+
+		$copy_label = \__( 'Copy', 'activitypub' );
+		?>
+		<div class="activitypub-welcome-handles">
+			<p class="activitypub-welcome-handles-description">
+				<?php
+				echo \esc_html(
+					\_n(
+						'This is your address in the Fediverse. Share it so people can follow you.',
+						'These are your addresses in the Fediverse. Share them so people can follow you.',
+						\count( $handles ),
+						'activitypub'
+					)
+				);
+				?>
+			</p>
+			<?php foreach ( $handles as $handle ) : ?>
+				<div class="activitypub-welcome-handle">
+					<label for="<?php echo \esc_attr( $handle['id'] ); ?>"><?php echo \esc_html( $handle['label'] ); ?></label>
+					<input
+						class="code"
+						id="<?php echo \esc_attr( $handle['id'] ); ?>"
+						readonly
+						type="text"
+						value="<?php echo \esc_attr( $handle['handle'] ); ?>"
+					/>
+					<button
+						aria-label="<?php echo \esc_attr( $handle['copy_label'] ); ?>"
+						class="button button-secondary activitypub-copy-to-clipboard"
+						data-clipboard-text="<?php echo \esc_attr( $handle['handle'] ); ?>"
+						data-copied-label="<?php \esc_attr_e( 'Copied!', 'activitypub' ); ?>"
+						data-copy-label="<?php echo \esc_attr( $copy_label ); ?>"
+						type="button"
+					>
+						<?php echo \esc_html( $copy_label ); ?>
+					</button>
+				</div>
+			<?php endforeach; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Get the Fediverse handles to show in the welcome header.
+	 *
+	 * Which profiles exist depends on the actor mode, so both the blog and the current
+	 * user are asked whether they are enabled for ActivityPub at all.
+	 *
+	 * @since unreleased
+	 *
+	 * @return array[] List of handles, each with an `id`, `label`, `handle` and `copy_label` key.
+	 */
+	private static function get_welcome_handles() {
+		$actors = array( 'blog' => Actors::BLOG_USER_ID );
+		$labels = array(
+			'blog' => \__( 'Blog profile', 'activitypub' ),
+			'user' => \__( 'Your profile', 'activitypub' ),
+		);
+
+		// The blog actor is `0`, so an anonymous request must not ask for it twice.
+		$user_id = \get_current_user_id();
+		if ( Actors::BLOG_USER_ID !== $user_id ) {
+			$actors['user'] = $user_id;
+		}
+
+		$handles = array();
+
+		foreach ( $actors as $type => $actor_id ) {
+			if ( ! user_can_activitypub( $actor_id ) ) {
+				continue;
+			}
+
+			$actor = Actors::get_by_id( $actor_id );
+
+			if ( \is_wp_error( $actor ) ) {
+				continue;
+			}
+
+			$handle = '@' . $actor->get_webfinger();
+
+			$handles[] = array(
+				'id'         => 'activitypub-welcome-handle-' . $type,
+				'label'      => $labels[ $type ],
+				'handle'     => $handle,
+				// Both handles can be on the page, so the button names have to tell them apart.
+				'copy_label' => \sprintf(
+					/* translators: %s: A Fediverse handle, for example "@blog@example.com". */
+					\__( 'Copy %s to clipboard', 'activitypub' ),
+					$handle
+				),
+			);
+		}
+
+		return $handles;
 	}
 
 	/**

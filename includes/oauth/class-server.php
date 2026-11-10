@@ -120,6 +120,15 @@ class Server {
 		$route     = '/' . \ltrim( $route, '/' );
 		$namespace = '/' . \trim( ACTIVITYPUB_REST_NAMESPACE, '/' );
 
+		/*
+		 * The client configuration (FEP-65ca) is the same for every requester,
+		 * and an invalid or expired token must still get it, not a 401.
+		 */
+		$client_config = $namespace . '/client-config';
+		if ( $route === $client_config || 0 === \strpos( $route, $client_config . '/' ) ) {
+			return false;
+		}
+
 		return $route === $namespace || 0 === \strpos( $route, $namespace . '/' );
 	}
 
@@ -314,7 +323,11 @@ class Server {
 				'activitypub_insufficient_scope',
 				/* translators: %s: The required scope */
 				\sprintf( \__( 'This action requires the "%s" scope.', 'activitypub' ), $scope ),
-				array( 'status' => 403 )
+				array(
+					'status' => 403,
+					'type'   => 'https://w3id.org/fep/c180#client-not-authorized',
+					'title'  => 'Client not authorized',
+				)
 			);
 		}
 

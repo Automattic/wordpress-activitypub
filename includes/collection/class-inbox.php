@@ -11,7 +11,9 @@ use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Comment;
 
+use function Activitypub\get_id_hash;
 use function Activitypub\is_activity_public;
+use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 
 /**
@@ -128,6 +130,7 @@ class Inbox {
 			'post_author'  => 0, // No specific author, recipients stored in meta.
 			'post_status'  => 'publish',
 			'guid'         => \esc_url_raw( $activity->get_id() ),
+			'post_name'    => get_id_hash( $activity->get_id() ),
 			'meta_input'   => array(
 				'_activitypub_object_id'             => $object_id,
 				'_activitypub_activity_type'         => $activity->get_type(),
@@ -208,7 +211,7 @@ class Inbox {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE guid IN (%s, %s) AND post_type=%s ORDER BY ID ASC",
+				"SELECT ID FROM $wpdb->posts WHERE CAST(guid AS BINARY) IN (%s, %s) AND post_type=%s ORDER BY ID ASC",
 				// What `pre_post_guid` stores on this WordPress version, and the `esc_url()` form older releases saved.
 				\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $guid ), 0, 'db' ) ),
 				\esc_url( $guid ),
@@ -251,10 +254,11 @@ class Inbox {
 		 * comment behind) any activity whose public id it knows but does not own.
 		 *
 		 * Items stored before this meta existed have no actor recorded; those are let
-		 * through for backward compatibility rather than becoming permanently un-undoable.
+		 * through for backward compatibility rather than becoming permanently un-undoable,
+		 * but only from the host of the activity's id.
 		 */
 		$stored_actor = \get_post_meta( $inbox_item->ID, '_activitypub_activity_remote_actor', true );
-		if ( null !== $actor && $stored_actor && object_to_uri( $actor ) !== $stored_actor ) {
+		if ( null !== $actor && ( $stored_actor ? object_to_uri( $actor ) !== $stored_actor : ! is_same_host( $actor, $id ) ) ) {
 			return new \WP_Error(
 				'activitypub_inbox_undo_forbidden',
 				\__( 'Undo is not possible because the actor does not own the activity.', 'activitypub' ),
@@ -463,6 +467,7 @@ class Inbox {
 					array(
 						'key'   => '_activitypub_object_id',
 						'value' => $object_id,
+						'type'  => 'BINARY',
 					),
 				),
 			)
@@ -495,7 +500,7 @@ class Inbox {
 		// Query for all posts with this GUID directly (get_posts doesn't supports guid parameter).
 		$post_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
-				"SELECT ID FROM {$wpdb->posts} WHERE guid IN (%s, %s) AND post_type=%s ORDER BY ID ASC",
+				"SELECT ID FROM {$wpdb->posts} WHERE CAST(guid AS BINARY) IN (%s, %s) AND post_type=%s ORDER BY ID ASC",
 				// What `pre_post_guid` stores on this WordPress version, and the `esc_url()` form older releases saved.
 				\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $guid ), 0, 'db' ) ),
 				\esc_url( $guid ),
@@ -516,6 +521,14 @@ class Inbox {
 			$recipients = \get_post_meta( $duplicate_id, '_activitypub_user_id', false );
 			self::add_recipients( $primary_id, $recipients );
 			\wp_delete_post( $duplicate_id, true );
+		}
+
+		// A duplicate's hash gets a suffix from wp_unique_post_slug(), so the primary keeps the plain hash.
+		$hash = get_id_hash( $guid );
+		if ( $primary && $hash && $hash !== $primary->post_name ) {
+			$wpdb->update( $wpdb->posts, array( 'post_name' => $hash ), array( 'ID' => $primary_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			\clean_post_cache( $primary_id );
+			$primary = \get_post( $primary_id );
 		}
 
 		return $primary;

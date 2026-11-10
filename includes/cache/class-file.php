@@ -199,8 +199,22 @@ abstract class File {
 			}
 		}
 
+		/*
+		 * Files are downloaded while a page renders, so a URL that failed is not tried again for
+		 * a while. Otherwise every page view would wait for the same slow or broken host.
+		 */
+		$failed_key = 'activitypub_failed_download_' . static::get_type() . '_' . static::generate_hash( $url );
+		if ( \get_transient( $failed_key ) ) {
+			return false;
+		}
+
 		// Download and cache the file.
-		return static::cache( $url, $entity_id, $options );
+		$local_url = static::cache( $url, $entity_id, $options );
+		if ( ! $local_url ) {
+			\set_transient( $failed_key, 1, HOUR_IN_SECONDS );
+		}
+
+		return $local_url;
 	}
 
 	/**
@@ -347,7 +361,7 @@ abstract class File {
 	 * Each directory is scanned twice, retaining only the newest copy per hash rather than every
 	 * duplicate. Subdirectories are cleaned before this directory's files are removed.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param string $directory The cache directory to walk, subdirectories included.
 	 * @param bool   $delete    Whether to remove and move the files. Default false, count only.

@@ -168,6 +168,7 @@ class Collections_Controller extends Actors_Controller {
 				$args = array(
 					'post__in'            => $sticky_posts,
 					'ignore_sticky_posts' => 1,
+					'has_password'        => false,
 					'orderby'             => 'date',
 					'order'               => 'DESC',
 					// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
@@ -183,7 +184,8 @@ class Collections_Controller extends Actors_Controller {
 					$args['author'] = $user_id;
 				}
 
-				$posts = \get_posts( $args );
+				// The query leaves out password-protected posts; the rest of what keeps a post private (post type support, filters) is checked per post.
+				$posts = \array_values( \array_filter( \get_posts( $args ), 'Activitypub\is_post_publicly_queryable' ) );
 			}
 		}
 
@@ -191,7 +193,7 @@ class Collections_Controller extends Actors_Controller {
 			'@context'     => Base_Object::JSON_LD_CONTEXT,
 			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/collections/featured', $user_id ) ),
 			'type'         => 'OrderedCollection',
-			'totalItems'   => \is_countable( $posts ) ? \count( $posts ) : 0,
+			'totalItems'   => \count( $posts ),
 			'orderedItems' => array(),
 		);
 

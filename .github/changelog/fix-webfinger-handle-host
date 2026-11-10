@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Domain blocks now also apply to handles that have a path after the domain, like @user@example.com/x.

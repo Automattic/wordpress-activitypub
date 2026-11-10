@@ -10,6 +10,7 @@ namespace Activitypub\Collection;
 use Activitypub\Emoji;
 use Activitypub\Sanitize;
 
+use function Activitypub\get_id_hash;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
@@ -144,7 +145,7 @@ class Remote_Posts {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE guid IN (%s, %s) AND post_type=%s ORDER BY ID ASC",
+				"SELECT ID FROM $wpdb->posts WHERE CAST(guid AS BINARY) IN (%s, %s) AND post_type=%s ORDER BY ID ASC",
 				// What `pre_post_guid` stores on this WordPress version, and the `esc_url()` form older releases saved.
 				\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $guid ), 0, 'db' ) ),
 				\esc_url( $guid ),
@@ -356,6 +357,7 @@ class Remote_Posts {
 			'post_date_gmt' => $gm_date,
 			'post_date'     => \get_date_from_gmt( $gm_date ),
 			'guid'          => isset( $activity['id'] ) ? \esc_url_raw( $activity['id'] ) : '',
+			'post_name'     => isset( $activity['id'] ) ? get_id_hash( $activity['id'] ) : '',
 		);
 	}
 
@@ -387,7 +389,7 @@ class Remote_Posts {
 	 * @param int    $limit           Maximum number of attachments. Default 20.
 	 * @param string $attachment_type Optional media type to include, such as 'image'.
 	 *
-	 * @return array Array of attachments with 'url', 'alt', and 'type' keys.
+	 * @return array<int, array{url: string, alt: string, type: string}> Array of attachments with 'url', 'alt', and 'type' keys.
 	 */
 	public static function extract_attachments( $activity_object, $limit = 20, $attachment_type = '' ) {
 		$limit = (int) $limit;

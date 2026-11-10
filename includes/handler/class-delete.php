@@ -122,7 +122,7 @@ class Delete {
 	/**
 	 * Revoke a QuoteAuthorization stamp the quoted author deleted.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param array     $activity The Activity object.
 	 * @param int[]|int $user_ids The local user IDs.
@@ -145,6 +145,7 @@ class Delete {
 				'numberposts' => 1,
 				'meta_key'    => '_activitypub_quote_authorization', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 				'meta_value'  => $stamp_uri, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'meta_type'   => 'BINARY',
 			)
 		);
 
@@ -417,7 +418,7 @@ class Delete {
 	 * arrives.
 	 *
 	 * @since 8.2.0 The `$force_signature` parameter is now respected.
-	 * @since unreleased Limited to POST deliveries to an inbox route.
+	 * @since 9.4.0 Limited to POST deliveries to an inbox route.
 	 *
 	 * @param bool             $defer           Whether to defer signature verification.
 	 * @param \WP_REST_Request $request         The request object.

@@ -170,4 +170,124 @@ class Test_Functions_Url extends \WP_UnitTestCase {
 		$this->assertSame( 'xn--caf-dma.example', \Activitypub\fold_host( 'café.example.' ) );
 		$this->assertSame( 'xn--caf-dma.example', \Activitypub\fold_host( 'XN--CAF-DMA.example' ) );
 	}
+
+	/**
+	 * Only a host this site answers on, or one added through the filter, may be signed for.
+	 *
+	 * @covers \Activitypub\is_signature_host
+	 * @dataProvider signature_host_provider
+	 *
+	 * @param string $authority The authority, with `%s` standing for this site's host.
+	 * @param bool   $expected  The expected result.
+	 */
+	public function test_is_signature_host( $authority, $expected ) {
+		$allow = function ( $hosts ) {
+			$hosts[] = 'Mapped.Example';
+
+			return $hosts;
+		};
+		\add_filter( 'activitypub_signature_original_hosts', $allow );
+
+		$result = \Activitypub\is_signature_host( \sprintf( $authority, \Activitypub\home_host() ) );
+
+		\remove_filter( 'activitypub_signature_original_hosts', $allow );
+
+		$this->assertSame( $expected, $result );
+	}
+
+	/**
+	 * Authorities for test_is_signature_host.
+	 *
+	 * @return array[]
+	 */
+	public function signature_host_provider() {
+		return array(
+			'home host'                 => array( '%s', true ),
+			'home host with a port'     => array( '%s:8080', true ),
+			'filtered host'             => array( 'mapped.example', true ),
+			'filtered host, case, port' => array( 'MAPPED.EXAMPLE:443', true ),
+			'foreign host'              => array( 'evil.example', false ),
+			'home host as a subdomain'  => array( 'evil.%s', false ),
+			'empty'                     => array( '', false ),
+			'a port without a host'     => array( ':8080', false ),
+			'home host, trailing dot'   => array( '%s.', true ),
+			'userinfo before home host' => array( 'evil.example@%s', false ),
+			'home host with a path'     => array( '%s/inbox', false ),
+			'home host with a query'    => array( '%s?x=1', false ),
+			'home host with a fragment' => array( '%s#x', false ),
+			'leading whitespace'        => array( ' %s', false ),
+			'empty port'                => array( '%s:', false ),
+			'port with a leading zero'  => array( '%s:08080', false ),
+		);
+	}
+
+	/**
+	 * The authority keeps a port only when it is not the scheme's default, like `Host`.
+	 *
+	 * @covers \Activitypub\get_authority
+	 * @dataProvider authority_provider
+	 *
+	 * @param string $url      The URL.
+	 * @param string $expected The expected authority.
+	 */
+	public function test_get_authority( $url, $expected ) {
+		$this->assertSame( $expected, \Activitypub\get_authority( $url ) );
+	}
+
+	/**
+	 * URLs for test_get_authority.
+	 *
+	 * @return array[]
+	 */
+	public function authority_provider() {
+		return array(
+			'no port'              => array( 'https://example.org/inbox', 'example.org' ),
+			'default https port'   => array( 'https://example.org:443/inbox', 'example.org' ),
+			'default http port'    => array( 'http://example.org:80/inbox', 'example.org' ),
+			'non-default port'     => array( 'https://example.org:8443/inbox', 'example.org:8443' ),
+			'other scheme default' => array( 'http://example.org:443/inbox', 'example.org:443' ),
+			'ipv6 with a port'     => array( 'https://[2001:db8::1]:8443/', '[2001:db8::1]:8443' ),
+			'no host'              => array( '/inbox', '' ),
+		);
+	}
+
+	/**
+	 * A host is local when it folds to this site's host or to the host the site moved from.
+	 *
+	 * @covers \Activitypub\is_local_host
+	 * @dataProvider local_host_provider
+	 *
+	 * @param string|null $host     The host, with `%s` standing for this site's host.
+	 * @param string|null $old_host The stored old host, or null for none.
+	 * @param bool        $expected The expected result.
+	 */
+	public function test_is_local_host( $host, $old_host, $expected ) {
+		if ( null !== $old_host ) {
+			\update_option( 'activitypub_old_host', $old_host );
+		}
+
+		$result = \Activitypub\is_local_host( null === $host ? null : \sprintf( $host, \Activitypub\home_host() ) );
+
+		\delete_option( 'activitypub_old_host' );
+
+		$this->assertSame( $expected, $result );
+	}
+
+	/**
+	 * Hosts for test_is_local_host.
+	 *
+	 * @return array[]
+	 */
+	public function local_host_provider() {
+		return array(
+			'home host'             => array( '%s', null, true ),
+			'home host, other case' => array( 'WWW.%s.', null, true ),
+			'old host'              => array( 'old.example', 'old.example', true ),
+			'old host, unset'       => array( 'old.example', null, false ),
+			'foreign host'          => array( 'evil.example', 'old.example', false ),
+			'empty host'            => array( '', null, false ),
+			'host that folds away'  => array( '.', null, false ),
+			'no host'               => array( null, null, false ),
+		);
+	}
 }

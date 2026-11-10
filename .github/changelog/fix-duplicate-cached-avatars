@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fixed profile pictures being downloaded again on every page view, leaving a copy behind each time and filling up the uploads folder.

@@ -56,7 +56,11 @@ class Posts {
 				return new \WP_Error(
 					'activitypub_forbidden',
 					\__( 'You do not have permission to create posts.', 'activitypub' ),
-					array( 'status' => 403 )
+					array(
+						'status' => 403,
+						'type'   => 'https://w3id.org/fep/c180#actor-not-authorized',
+						'title'  => 'Actor not authorized',
+					)
 				);
 			}
 		}
@@ -216,7 +220,7 @@ class Posts {
 	/**
 	 * Serialize a Reply block for the given URL.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param string $url The URL of the object being replied to.
 	 *

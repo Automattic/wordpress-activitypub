@@ -20,6 +20,15 @@ namespace Activitypub;
 class Emoji {
 
 	/**
+	 * Pattern of a valid emoji shortcode, without colons.
+	 *
+	 * Letters, digits, underscores and hyphens, 2 to 100 characters.
+	 *
+	 * @var string
+	 */
+	private const SHORTCODE = '[A-Za-z0-9_-]{2,100}';
+
+	/**
 	 * Wrap emoji shortcodes in content with block patterns.
 	 *
 	 * Called at insert time to wrap emoji shortcodes with activitypub/emoji blocks.
@@ -35,8 +44,16 @@ class Emoji {
 			return $content;
 		}
 
+		$replacements = array();
+
 		foreach ( $activity['tag'] as $tag ) {
-			if ( ! \is_array( $tag ) || ! isset( $tag['type'] ) || 'Emoji' !== $tag['type'] || empty( $tag['name'] ) ) {
+			if ( ! \is_array( $tag ) || ! isset( $tag['type'] ) || 'Emoji' !== $tag['type'] ) {
+				continue;
+			}
+
+			// Only valid shortcodes, the first tag of a name wins.
+			$key = self::get_shortcode( $tag['name'] ?? null );
+			if ( false === $key || isset( $replacements[ $key ] ) ) {
 				continue;
 			}
 
@@ -45,31 +62,16 @@ class Emoji {
 				continue;
 			}
 
-			$shortcode   = $tag['name'];
 			$block_attrs = array( 'url' => \esc_url( $url ) );
 
 			if ( ! empty( $tag['updated'] ) && \is_string( $tag['updated'] ) && \strtotime( $tag['updated'] ) ) {
 				$block_attrs['updated'] = \sanitize_text_field( $tag['updated'] );
 			}
 
-			$wrapped = \sprintf(
-				'<!-- wp:activitypub/emoji %s -->%s<!-- /wp:activitypub/emoji -->',
-				\wp_json_encode( $block_attrs ),
-				$shortcode
-			);
-
-			// Case-insensitive replacement, avoid already wrapped shortcodes.
-			$pattern = '/(?<!-->)' . \preg_quote( $shortcode, '/' ) . '(?!<!-- \/wp:activitypub\/emoji -->)/i';
-			$content = \preg_replace_callback(
-				$pattern,
-				function () use ( $wrapped ) {
-					return $wrapped;
-				},
-				$content
-			);
+			$replacements[ $key ] = \get_comment_delimited_block_content( 'activitypub/emoji', $block_attrs, \sprintf( ':%s:', \trim( $tag['name'], ':' ) ) );
 		}
 
-		return $content;
+		return self::replace_names( $content, $replacements );
 	}
 
 	/**
@@ -181,14 +183,16 @@ class Emoji {
 			return array();
 		}
 
-		$emoji_tags = \array_values(
-			\array_filter(
-				$actor['tag'],
-				function ( $tag ) {
-					return \is_array( $tag ) && isset( $tag['type'] ) && 'Emoji' === $tag['type'];
-				}
-			)
-		);
+		$emoji_tags = array();
+
+		foreach ( $actor['tag'] as $tag ) {
+			// Only valid shortcodes are stored.
+			if ( ! \is_array( $tag ) || ! isset( $tag['type'] ) || 'Emoji' !== $tag['type'] || false === self::get_shortcode( $tag['name'] ?? null ) ) {
+				continue;
+			}
+
+			$emoji_tags[] = $tag;
+		}
 
 		if ( empty( $emoji_tags ) ) {
 			return array();
@@ -216,8 +220,17 @@ class Emoji {
 			return $text;
 		}
 
+		$replacements = array();
+
 		foreach ( $tags as $tag ) {
-			if ( empty( $tag['name'] ) ) {
+			// Only valid shortcodes (actors stored earlier can have others), the first tag of a name wins.
+			$key = self::get_shortcode( $tag['name'] ?? null );
+			if ( false === $key || isset( $replacements[ $key ] ) ) {
+				continue;
+			}
+
+			// Only emoji the text uses, so the cache lookups below scale with the text, not with the actor's emoji.
+			if ( false === \stripos( $text, \sprintf( ':%s:', $key ) ) ) {
 				continue;
 			}
 
@@ -243,12 +256,59 @@ class Emoji {
 			);
 
 			$name = \trim( $tag['name'], ':' );
-			$img  = self::get_img_tag( $cached_url ?: $url, $name );
 
-			$text = \str_ireplace( $tag['name'], $img, $text );
+			$replacements[ $key ] = self::get_img_tag( $cached_url ?: $url, $name );
 		}
 
-		return $text;
+		return self::replace_names( $text, $replacements );
+	}
+
+	/**
+	 * Get the shortcode of an emoji name.
+	 *
+	 * Names that are not valid shortcodes are not stored or matched.
+	 *
+	 * @param mixed $name The emoji name, usually with colons.
+	 *
+	 * @return string|false The lowercase shortcode without colons, false if the name is not valid.
+	 */
+	private static function get_shortcode( $name ) {
+		if ( ! \is_string( $name ) ) {
+			return false;
+		}
+
+		$shortcode = \trim( $name, ':' );
+		if ( ! \preg_match( \sprintf( '/^%s\z/', self::SHORTCODE ), $shortcode ) ) {
+			return false;
+		}
+
+		return \strtolower( $shortcode );
+	}
+
+	/**
+	 * Replace emoji shortcodes in one pass over the original text.
+	 *
+	 * Scans for `:shortcode:` with a fixed pattern and looks each one up, case-insensitively, so
+	 * the pattern does not grow with the emoji.
+	 *
+	 * @param string $text         The text to process.
+	 * @param array  $replacements The replacements, keyed by the lowercase shortcode without colons.
+	 *
+	 * @return string The text with the shortcodes replaced, or unchanged if PCRE bails.
+	 */
+	private static function replace_names( $text, $replacements ) {
+		if ( empty( $replacements ) ) {
+			return $text;
+		}
+
+		// A shortcode needs a boundary on both sides: no letter, digit or colon next to it.
+		return \preg_replace_callback(
+			\sprintf( '/(?<![\p{L}\p{N}:]):(%s):(?![\p{L}\p{N}:])/u', self::SHORTCODE ),
+			function ( $matches ) use ( $replacements ) {
+				return $replacements[ \strtolower( $matches[1] ) ] ?? $matches[0];
+			},
+			$text
+		) ?? $text;
 	}
 
 	/**

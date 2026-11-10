@@ -507,6 +507,29 @@ class Scheduler {
 		$context  = Inbox::CONTEXT_INBOX;
 		$user_ids = Inbox::get_recipients( $inbox_item->ID );
 
+		/*
+		 * A block can be added after the activity was stored, so the block decision is made again.
+		 * The disallowed list is not, it reads the sender's address, which a cron run does not have.
+		 */
+		if ( Moderation::activity_is_blocked_site_wide( $activity ) || Moderation::activity_is_blocked_by_content_owner( $activity ) ) {
+			return;
+		}
+
+		$allowed = \array_values(
+			\array_filter(
+				$user_ids,
+				static function ( $user_id ) use ( $activity ) {
+					return ! Moderation::activity_is_blocked_for_user( $activity, $user_id );
+				}
+			)
+		);
+
+		// Only stop when blocks removed every recipient; an item stored without recipients is handled as before.
+		if ( $user_ids && ! $allowed ) {
+			return;
+		}
+		$user_ids = $allowed;
+
 		/**
 		 * Fires after any ActivityPub Inbox activity has been handled, regardless of activity type.
 		 *

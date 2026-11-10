@@ -9,6 +9,7 @@ namespace Activitypub\Integration;
 
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
+use Activitypub\Comment;
 use Activitypub\Proxy;
 use Automattic\Jetpack\Connection\Manager;
 use Automattic\Jetpack\Podcast\Feed\Customize_Feed;
@@ -113,7 +114,12 @@ class Jetpack {
 		$comment_types[] = 'quote';
 		$comment_types[] = 'repost';
 
-		return \array_unique( $comment_types );
+		// Types other plugins register are only known after init, the built-in ones above always are.
+		if ( \did_action( 'init' ) ) {
+			$comment_types = \array_merge( $comment_types, Comment::get_comment_type_slugs() );
+		}
+
+		return \array_values( \array_unique( $comment_types ) );
 	}
 
 	/**

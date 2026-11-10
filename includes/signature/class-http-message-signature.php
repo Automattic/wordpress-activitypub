@@ -13,6 +13,9 @@ namespace Activitypub\Signature;
 
 use Activitypub\Collection\Remote_Actors;
 
+use function Activitypub\get_authority;
+use function Activitypub\is_signature_host;
+
 /**
  * Class Http_Message_Signature.
  *
@@ -94,7 +97,7 @@ class Http_Message_Signature implements Http_Signature {
 		$components = array(
 			'"@method"'     => \strtoupper( $args['method'] ),
 			'"@target-uri"' => $url,
-			'"@authority"'  => \wp_parse_url( $url, PHP_URL_HOST ),
+			'"@authority"'  => get_authority( $url ),
 		);
 
 		if ( isset( $args['headers']['Collection-Synchronization'] ) ) {
@@ -134,10 +137,11 @@ class Http_Message_Signature implements Http_Signature {
 	 * Verify the HTTP Signature against a request.
 	 *
 	 * @since 9.0.0 Returns the verified keyId on success instead of `true`.
+	 * @since 9.4.0 Returns the id of the actor that owns the verified key instead of the keyId.
 	 *
 	 * @param array       $headers The HTTP headers.
 	 * @param string|null $body    The request body, if applicable.
-	 * @return string|\WP_Error The verified keyId on success, WP_Error on failure.
+	 * @return string|\WP_Error The id of the actor that owns the verified key on success, WP_Error on failure.
 	 */
 	public function verify( array $headers, $body = null ) {
 		$parsed = $this->parse_signature_labels( $headers );
@@ -148,17 +152,15 @@ class Http_Message_Signature implements Http_Signature {
 		$errors = new \WP_Error();
 		foreach ( $parsed as $data ) {
 			$result = $this->verify_signature_label( $data, $headers, $body );
-			if ( true === $result ) {
+			if ( ! \is_wp_error( $result ) ) {
 				/*
-				 * Return the keyId of the label that actually verified, so the caller binds
+				 * Return the key owner of the label that actually verified, so the caller binds
 				 * against the real signer instead of guessing among several labels.
 				 */
-				return $data['params']['keyid'];
+				return $result;
 			}
 
-			if ( \is_wp_error( $result ) ) {
-				$errors->add( $result->get_error_code(), $result->get_error_message() );
-			}
+			$errors->add( $result->get_error_code(), $result->get_error_message() );
 		}
 
 		// No valid signature found.
@@ -222,7 +224,7 @@ class Http_Message_Signature implements Http_Signature {
 	 * @param array       $data     Parsed signature data.
 	 * @param array       $headers  HTTP headers.
 	 * @param string|null $body     Request body, if applicable.
-	 * @return bool|\WP_Error True, if the signature is valid, WP_Error on failure.
+	 * @return string|\WP_Error The id of the actor that owns the label's key, if the signature is valid, WP_Error on failure.
 	 */
 	private function verify_signature_label( $data, $headers, $body ) {
 		$params = $data['params'];
@@ -265,14 +267,46 @@ class Http_Message_Signature implements Http_Signature {
 			return new \WP_Error( 'missing_time_anchor', 'The signature is missing a time anchor (created or expires).' );
 		}
 
+		/*
+		 * Require the components that tie a signature to this request: one naming this site, which
+		 * get_component_values() checks is ours, and the digest of a body. A signature over less
+		 * verifies on its own terms, but could be presented to any site, with any body.
+		 */
+		$covered = \array_map(
+			static function ( $component ) {
+				return \strtolower( \trim( \strtok( $component, ';' ), '"' ) );
+			},
+			$data['components']
+		);
+
+		if ( ! \array_intersect( array( '@target-uri', '@authority', 'host' ), $covered ) ) {
+			return new \WP_Error( 'activitypub_signature_components', 'The signature does not cover the request target.' );
+		}
+
+		if ( '' !== (string) $body && ! \in_array( 'content-digest', $covered, true ) ) {
+			return new \WP_Error( 'activitypub_signature_components', 'The signature does not cover the request body.' );
+		}
+
+		// Read before the key is fetched, so a request made out to another host fails without a lookup.
+		$components = $this->get_component_values( $data['components'], $headers );
+		if ( \is_wp_error( $components ) ) {
+			return $components;
+		}
+
 		// KeyId verification.
 		if ( empty( $params['keyid'] ) ) {
 			return new \WP_Error( 'missing_keyid', 'Missing keyId in signature parameters.' );
 		}
 
-		$public_key = Remote_Actors::get_public_key( $params['keyid'] );
+		$owner      = null;
+		$public_key = Remote_Actors::get_public_key( $params['keyid'], $owner );
 		if ( \is_wp_error( $public_key ) ) {
 			return $public_key;
+		}
+
+		// The owner is what callers bind to the actor, so a key without one does not verify anything.
+		if ( ! \is_string( $owner ) || '' === $owner ) {
+			return new \WP_Error( 'activitypub_no_key_owner', 'The signing key has no owner.' );
 		}
 
 		// Algorithm verification.
@@ -287,7 +321,6 @@ class Http_Message_Signature implements Http_Signature {
 			return $result;
 		}
 
-		$components     = $this->get_component_values( $data['components'], $headers );
 		$signature_base = $this->get_signature_base_string( $components, $params );
 
 		$verified = \openssl_verify( $signature_base, $data['signature'], $public_key, $algorithm ) > 0;
@@ -295,7 +328,7 @@ class Http_Message_Signature implements Http_Signature {
 			return new \WP_Error( 'activitypub_signature', 'Invalid signature' );
 		}
 
-		return true;
+		return $owner;
 	}
 
 	/**
@@ -306,7 +339,12 @@ class Http_Message_Signature implements Http_Signature {
 	 * @return bool|\WP_Error True, if the signature is valid, WP_Error on failure.
 	 */
 	private function verify_content_digest( $headers, $body ) {
-		if ( ! isset( $headers['content_digest'][0] ) || null === $body ) {
+		// A covered but absent header enters the signature base empty and would vouch for any body.
+		if ( ! isset( $headers['content_digest'][0] ) ) {
+			return '' === (string) $body ? true : new \WP_Error( 'missing_digest', 'The Content-Digest header is missing.' );
+		}
+
+		if ( null === $body ) {
 			return true;
 		}
 
@@ -436,7 +474,7 @@ class Http_Message_Signature implements Http_Signature {
 	 * @param array $components Signature component names.
 	 * @param array $headers    HTTP headers.
 	 *
-	 * @return array Signature components.
+	 * @return array|\WP_Error Signature components, or an error if the request is made out to another host.
 	 */
 	private function get_component_values( $components, $headers ) {
 		$signature_components = array();
@@ -445,17 +483,36 @@ class Http_Message_Signature implements Http_Signature {
 			$key = \strtok( $component, ';' ); // See https://www.rfc-editor.org/rfc/rfc9421.html#name-query-parameters.
 			$key = \strtolower( \trim( $key, '"' ) );
 
+			/*
+			 * These name this server through the client-supplied `Host`, so check the value that enters the base.
+			 * A proxy that rewrites `Host` leaves the value the peer signed only in `X-Original-Host`, so it is read first.
+			 */
+			$host = '';
+			if ( \in_array( $key, array( '@target-uri', '@authority', 'host' ), true ) ) {
+				$host = 'host' === $key ? ( $headers['host'][0] ?? '' ) : ( $_SERVER['HTTP_HOST'] ?? '' );
+
+				if ( is_signature_host( $headers['x_original_host'][0] ?? '' ) ) {
+					$host = $headers['x_original_host'][0];
+				} elseif ( ! is_signature_host( $host ) ) {
+					return new \WP_Error( 'activitypub_signature_host', 'The signature is not made out to this site.' );
+				}
+			}
+
 			switch ( $key ) {
 				case '@method':
 					$value = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 					break;
 
 				case '@target-uri':
-					$value = \set_url_scheme( '//' . ( $_SERVER['HTTP_HOST'] ?? '' ) . ( $_SERVER['REQUEST_URI'] ?? '/' ) );
+					$value = \set_url_scheme( \sprintf( '//%s%s', $host, $_SERVER['REQUEST_URI'] ?? '/' ) );
 					break;
 
 				case '@authority':
-					$value = $_SERVER['HTTP_HOST'] ?? '';
+					$value = $host;
+					break;
+
+				case 'host':
+					$value = \preg_replace( '/\s+/', ' ', \trim( $host ) );
 					break;
 
 				case '@scheme':

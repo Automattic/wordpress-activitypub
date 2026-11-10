@@ -28,13 +28,13 @@ namespace Activitypub;
  * A remote document is always an array and an error always an object, so a string can
  * never be mistaken for either.
  *
- * @since unreleased
+ * @since 9.4.0
  */
 class Proxy {
 	/**
 	 * Get a remote object.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * An identifier that is not a string, or that hides its authority behind `user@host`, is
 	 * refused; see the checks in the body.
@@ -190,7 +190,7 @@ class Proxy {
 	 *
 	 * For evictions the site decides on itself, see {@see Proxy::purge()}.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param string|array|null $id    The ActivityPub id, or an object with an id.
 	 * @param string|array      $actor The actor the activity came from.
@@ -213,7 +213,7 @@ class Proxy {
 	 * For a deletion the site has confirmed itself, or plain housekeeping. Everything an
 	 * activity asks for goes through {@see Proxy::delete()}, which requires an actor.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param string|array|null $id The ActivityPub id, or an object with an id.
 	 *

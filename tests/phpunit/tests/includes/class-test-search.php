@@ -83,6 +83,126 @@ class Test_Search extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Searching for a comment's URL leads to it, but leaves its moderation status alone.
+	 *
+	 * A pending reply does not render on the front end, so a moderator goes to its moderation view.
+	 *
+	 * @dataProvider data_search_keeps_comment_status
+	 * @covers \Activitypub\Search::enhance_admin_comment_search
+	 *
+	 * @param string $role       The searching user's role.
+	 * @param string $status     The comment's approval status.
+	 * @param bool   $moderation Whether the search leads to the moderation view.
+	 */
+	public function test_search_keeps_comment_status( $role, $status, $moderation ) {
+		$user = \get_user_by( 'id', self::factory()->user->create( array( 'role' => $role ) ) );
+		$user->add_cap( 'activitypub' );
+		\wp_set_current_user( $user->ID );
+
+		// A public IP, so wp_http_validate_url() accepts the URL without a DNS lookup.
+		$url        = 'https://1.1.1.1/notes/1';
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => self::factory()->post->create(),
+				'comment_approved' => $status,
+			)
+		);
+		\add_comment_meta( $comment_id, 'source_id', $url );
+
+		$redirect = function ( $location ) {
+			throw new \Exception( \esc_url_raw( $location ) );
+		};
+		\add_filter( 'wp_redirect', $redirect );
+
+		$_GET['s']  = $url;
+		$redirected = '';
+		try {
+			Search::enhance_admin_comment_search();
+		} catch ( \Exception $e ) {
+			$redirected = $e->getMessage();
+		}
+		unset( $_GET['s'] );
+
+		\remove_filter( 'wp_redirect', $redirect );
+
+		$this->assertNotEmpty( $redirected, 'The search should still redirect after finding the comment.' );
+		$this->assertSame( $status, \get_comment( $comment_id )->comment_approved, 'The search must not change the comment status.' );
+		$this->assertSame( $moderation, \admin_url( 'comment.php?action=editcomment&c=' . $comment_id ) === $redirected );
+	}
+
+	/**
+	 * Roles for the comment status test.
+	 *
+	 * @return array[] Role, comment status and whether the search leads to the moderation view.
+	 */
+	public function data_search_keeps_comment_status() {
+		return array(
+			'author, pending'     => array( 'author', '0', false ),
+			'moderator, pending'  => array( 'editor', '0', true ),
+			'moderator, approved' => array( 'editor', '1', false ),
+		);
+	}
+
+	/**
+	 * A reply that cannot be stored leads nowhere, instead of breaking the search.
+	 *
+	 * @covers \Activitypub\Search::enhance_admin_comment_search
+	 */
+	public function test_search_with_failed_import() {
+		$user = \get_user_by( 'id', self::factory()->user->create( array( 'role' => 'editor' ) ) );
+		$user->add_cap( 'activitypub' );
+		\wp_set_current_user( $user->ID );
+
+		// A public IP, so wp_http_validate_url() accepts the URL without a DNS lookup.
+		$url   = 'https://1.1.1.1/notes/2';
+		$actor = 'https://1.1.1.1/users/test';
+		$fetch = static function ( $pre, $url_or_object ) use ( $url, $actor ) {
+			return $url === $url_or_object ? array(
+				'id'           => $url,
+				'type'         => 'Note',
+				'attributedTo' => $actor,
+				'content'      => 'Hello',
+				'inReplyTo'    => \get_permalink( self::factory()->post->create() ),
+			) : $pre;
+		};
+		$meta  = static function () use ( $actor ) {
+			return array(
+				'id'                => $actor,
+				'name'              => 'Test',
+				'preferredUsername' => 'test',
+				'url'               => $actor,
+			);
+		};
+		$fail  = static function () {
+			return new \WP_Error( 'comment_duplicate', 'Duplicate comment.' );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10, 2 );
+		\add_filter( 'pre_get_remote_metadata_by_actor', $meta );
+		\add_filter( 'pre_comment_approved', $fail, 99 );
+
+		$redirect = static function ( $location ) {
+			throw new \Exception( \esc_url_raw( $location ) );
+		};
+		\add_filter( 'wp_redirect', $redirect );
+
+		$_GET['s']  = $url;
+		$redirected = '';
+		try {
+			Search::enhance_admin_comment_search();
+		} catch ( \Exception $e ) {
+			$redirected = $e->getMessage();
+		}
+		unset( $_GET['s'] );
+
+		\remove_filter( 'wp_redirect', $redirect );
+		\remove_filter( 'pre_comment_approved', $fail, 99 );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $meta );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10 );
+
+		$this->assertSame( '', $redirected, 'A failed import must not redirect.' );
+	}
+
+	/**
 	 * Helper method to access private try_import_activitypub_object method via reflection.
 	 *
 	 * @param string $url The URL to import.

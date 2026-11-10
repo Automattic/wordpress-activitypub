@@ -93,11 +93,12 @@ class Test_Actors extends \WP_UnitTestCase {
 		$path = wp_parse_url( $item, PHP_URL_PATH ) ?? '';
 
 		if ( str_starts_with( $path, '/blog/' ) ) {
+			$host = wp_parse_url( $item, PHP_URL_HOST );
 			add_filter(
 				'home_url',
 				// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.Found
-				function ( $url ) {
-					return 'http://example.org/blog/';
+				function ( $url ) use ( $host ) {
+					return 'http://' . $host . '/blog/';
 				}
 			);
 		}
@@ -228,7 +229,27 @@ class Test_Actors extends \WP_UnitTestCase {
 			array( \rtrim( $https_home_url, '/' ), 'Activitypub\Model\Blog' ),
 			array( $home_url . '/@blog/s', 'WP_Error' ),
 			array( $home_url . '/@blogs/', 'WP_Error' ),
+			array( 'https://remote.example/@admin', 'WP_Error' ),
+			array( 'https://remote.example/@blog', 'WP_Error' ),
 		);
+	}
+
+	/**
+	 * The WordPress address does not resolve to the blog actor.
+	 *
+	 * @covers ::get_id_by_resource
+	 */
+	public function test_get_id_by_resource_ignores_site_url() {
+		$site_url = function () {
+			return 'https://shared.example/site';
+		};
+		\add_filter( 'site_url', $site_url );
+
+		$result = Actors::get_id_by_resource( 'https://shared.example/site' );
+
+		\remove_filter( 'site_url', $site_url );
+
+		$this->assertWPError( $result );
 	}
 
 	/**
@@ -250,7 +271,7 @@ class Test_Actors extends \WP_UnitTestCase {
 	public function test_disabled_blog_profile() {
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
-		$resource = 'http://example.org/@blog';
+		$resource = \home_url( '/@blog' );
 
 		$this->assertEquals( 'Activitypub\Model\Blog', get_class( Actors::get_by_resource( $resource ) ) );
 

@@ -174,6 +174,27 @@ function is_quote_activity( $data ) {
 }
 
 /**
+ * Get the URL a quote activity quotes.
+ *
+ * Checks the quote properties in priority order: quote, quoteUrl, quoteUri, _misskey_quote.
+ *
+ * @since 9.4.0
+ *
+ * @param array $activity The activity array.
+ *
+ * @return string|false The quote URL or false if not found.
+ */
+function get_quote_url( $activity ) {
+	foreach ( array( 'quote', 'quoteUrl', 'quoteUri', '_misskey_quote' ) as $key ) {
+		if ( ! empty( $activity['object'][ $key ] ) ) {
+			return object_to_uri( $activity['object'][ $key ] );
+		}
+	}
+
+	return false;
+}
+
+/**
  * Get the URI of an ActivityPub object.
  *
  * @param mixed $data The ActivityPub object.
@@ -241,6 +262,25 @@ function object_to_uri( $data ) {
 	}
 
 	return \is_string( $data ) ? $data : null;
+}
+
+/**
+ * Get the hash of an ID, to look the ID up by.
+ *
+ * A lookup by the ID itself is not exact: the database collation also matches IDs that
+ * differ in case or accents. A lookup by its hash is exact and can use an index. The ID is
+ * hashed as it is stored, sanitized by `esc_url_raw()`, and not normalized like the Tombstone key.
+ *
+ * @since unreleased
+ *
+ * @param string $id The ID.
+ *
+ * @return string The hash, or an empty string if the ID is not a valid URL.
+ */
+function get_id_hash( $id ) {
+	$id = \esc_url_raw( (string) $id );
+
+	return '' === $id ? '' : \hash( 'sha256', $id );
 }
 
 /**

@@ -188,6 +188,264 @@ class Test_Emoji extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Emoji tags with names that are not valid shortcodes.
+	 *
+	 * @return array Emoji tags with invalid names.
+	 */
+	private function get_invalid_emoji_tags() {
+		$tags = array();
+		foreach ( array( '" title="', ':wave<!-- note -->:', ':' . \str_repeat( 'a', 101 ) . ':' ) as $i => $name ) {
+			$tags[] = array(
+				'type' => 'Emoji',
+				'name' => $name,
+				'icon' => array(
+					'type' => 'Image',
+					'url'  => 'https://example.com/emoji/invalid' . $i . '.png',
+				),
+			);
+		}
+
+		return $tags;
+	}
+
+	/**
+	 * Build emoji tags with valid names.
+	 *
+	 * @param int $count  The number of tags.
+	 * @param int $length Optional. The length of the name prefix. Default 0.
+	 *
+	 * @return array The emoji tags.
+	 */
+	private function get_emoji_tags( $count, $length = 0 ) {
+		$tags = array();
+		for ( $i = 0; $i < $count; $i++ ) {
+			$tags[] = array(
+				'type' => 'Emoji',
+				'name' => ':' . \str_repeat( 'a', $length ) . 'emoji_' . $i . ':',
+				'icon' => array(
+					'type' => 'Image',
+					'url'  => 'https://example.com/emoji/' . $i . '.png',
+				),
+			);
+		}
+
+		return $tags;
+	}
+
+	/**
+	 * Test replace_from_json ignores names that are not valid shortcodes.
+	 *
+	 * @covers ::replace_from_json
+	 */
+	public function test_replace_from_json_ignores_invalid_names() {
+		$tags   = \array_merge( $this->get_emoji_tags( 1 ), $this->get_invalid_emoji_tags() );
+		$result = Emoji::replace_from_json( ':emoji_0: " title="', \wp_json_encode( $tags ) );
+
+		$this->assertSame( Emoji::get_img_tag( 'http://example.org/wp-content/uploads/activitypub/emoji/example.com/0.png', 'emoji_0' ) . ' " title="', $result );
+	}
+
+	/**
+	 * Test replace_from_json handles many long names, the pattern does not grow with them.
+	 *
+	 * @covers ::replace_from_json
+	 */
+	public function test_replace_from_json_with_many_long_names() {
+		$tags   = $this->get_emoji_tags( 3000, 80 );
+		$result = Emoji::replace_from_json( $tags[2000]['name'], \wp_json_encode( $tags ) );
+
+		$this->assertSame( Emoji::get_img_tag( 'http://example.org/wp-content/uploads/activitypub/emoji/example.com/2000.png', \trim( $tags[2000]['name'], ':' ) ), $result );
+	}
+
+	/**
+	 * Test wrap_in_content ignores a name that is not a valid shortcode.
+	 *
+	 * @covers ::wrap_in_content
+	 */
+	public function test_wrap_ignores_name_with_slash() {
+		$activity = array(
+			'tag' => array(
+				array(
+					'type' => 'Emoji',
+					'name' => ':wave:',
+					'icon' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/emoji/wave.png',
+					),
+				),
+				array(
+					'type' => 'Emoji',
+					'name' => 'activitypub/emoji',
+					'icon' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/emoji/block.png',
+					),
+				),
+			),
+		);
+
+		$result = Emoji::wrap_in_content( 'Hello :wave:', $activity );
+
+		$this->assertSame( 'Hello <!-- wp:activitypub/emoji {"url":"https://example.com/emoji/wave.png"} -->:wave:<!-- /wp:activitypub/emoji -->', $result );
+	}
+
+	/**
+	 * Test wrap_in_content ignores names that are not valid shortcodes.
+	 *
+	 * @covers ::wrap_in_content
+	 */
+	public function test_wrap_ignores_invalid_names() {
+		$tags   = \array_merge( $this->get_emoji_tags( 1 ), $this->get_invalid_emoji_tags() );
+		$result = Emoji::wrap_in_content( 'Hello :emoji_0: " title="', array( 'tag' => $tags ) );
+
+		$this->assertSame( 'Hello <!-- wp:activitypub/emoji {"url":"https://example.com/emoji/0.png"} -->:emoji_0:<!-- /wp:activitypub/emoji --> " title="', $result );
+	}
+
+	/**
+	 * Test wrap_in_content handles many emoji, there is no limit.
+	 *
+	 * @covers ::wrap_in_content
+	 */
+	public function test_wrap_with_many_emoji() {
+		$result = Emoji::wrap_in_content( ':emoji_0: :emoji_2000:', array( 'tag' => $this->get_emoji_tags( 3000 ) ) );
+
+		$this->assertSame( '<!-- wp:activitypub/emoji {"url":"https://example.com/emoji/0.png"} -->:emoji_0:<!-- /wp:activitypub/emoji --> <!-- wp:activitypub/emoji {"url":"https://example.com/emoji/2000.png"} -->:emoji_2000:<!-- /wp:activitypub/emoji -->', $result );
+	}
+
+	/**
+	 * Test replace_from_json only prepares emoji the text uses.
+	 *
+	 * @covers ::replace_from_json
+	 */
+	public function test_replace_from_json_skips_unused_emoji() {
+		$count = 0;
+		$track = static function ( $url, $context ) use ( &$count ) {
+			if ( 'emoji' === $context ) {
+				++$count;
+			}
+			return $url;
+		};
+		\add_filter( 'activitypub_remote_media_url', $track, 5, 2 );
+		Emoji::replace_from_json( 'Alice :emoji_1:', \wp_json_encode( $this->get_emoji_tags( 50 ) ) );
+		\remove_filter( 'activitypub_remote_media_url', $track, 5 );
+
+		$this->assertSame( 1, $count );
+	}
+
+	/**
+	 * A blobcat emoji tag for the colon tests.
+	 *
+	 * @return array The emoji tags.
+	 */
+	private function get_blobcat_tags() {
+		return array(
+			array(
+				'type' => 'Emoji',
+				'name' => ':blobcat:',
+				'icon' => array(
+					'type' => 'Image',
+					'url'  => 'https://example.com/emoji/blobcat.png',
+				),
+			),
+		);
+	}
+
+	/**
+	 * Texts with the blobcat shortcode, and whether it has a boundary on both sides.
+	 *
+	 * @return array[] The text and whether the shortcode is replaced.
+	 */
+	public function boundary_provider() {
+		return array(
+			'alone'                  => array( ':blobcat:', true ),
+			'between words'          => array( 'Hi :blobcat: there', true ),
+			'other case'             => array( 'Hi :Blobcat: there', true ),
+			'in parentheses'         => array( '(:blobcat:)', true ),
+			'before punctuation'     => array( ':blobcat:!', true ),
+			'in a paragraph'         => array( '<p>:blobcat:</p>', true ),
+			'after a line break'     => array( "Hi\n:blobcat:", true ),
+			'twice with a space'     => array( ':blobcat: :blobcat:', true ),
+			'after a digit'          => array( 'At 12:30:blobcat:', false ),
+			'after a letter'         => array( 'cat:blobcat:', false ),
+			'after another code'     => array( ':aa:blobcat:', false ),
+			'before a letter'        => array( ':blobcat:s', false ),
+			'twice without a space'  => array( ':blobcat::blobcat:', false ),
+			'after a unicode letter' => array( 'über:blobcat:', false ),
+			'before a unicode digit' => array( ':blobcat:٣', false ),
+			'missing colon'          => array( ':blobcat', false ),
+		);
+	}
+
+	/**
+	 * Test replace_from_json only replaces a shortcode with a boundary on both sides.
+	 *
+	 * @dataProvider boundary_provider
+	 * @covers ::replace_from_json
+	 *
+	 * @param string $text     The text.
+	 * @param bool   $replaced Whether the shortcode is replaced.
+	 */
+	public function test_replace_from_json_needs_boundaries( $text, $replaced ) {
+		$img      = Emoji::get_img_tag( 'http://example.org/wp-content/uploads/activitypub/emoji/example.com/blobcat.png', 'blobcat' );
+		$expected = $replaced ? \str_ireplace( ':blobcat:', $img, $text ) : $text;
+
+		$this->assertSame( $expected, Emoji::replace_from_json( $text, \wp_json_encode( $this->get_blobcat_tags() ) ) );
+	}
+
+	/**
+	 * Test wrap_in_content only wraps a shortcode with a boundary on both sides.
+	 *
+	 * @dataProvider boundary_provider
+	 * @covers ::wrap_in_content
+	 *
+	 * @param string $text    The text.
+	 * @param bool   $wrapped Whether the shortcode is wrapped.
+	 */
+	public function test_wrap_needs_boundaries( $text, $wrapped ) {
+		$block    = '<!-- wp:activitypub/emoji {"url":"https://example.com/emoji/blobcat.png"} -->:blobcat:<!-- /wp:activitypub/emoji -->';
+		$expected = $wrapped ? \str_ireplace( ':blobcat:', $block, $text ) : $text;
+
+		$this->assertSame( $expected, Emoji::wrap_in_content( $text, array( 'tag' => $this->get_blobcat_tags() ) ) );
+	}
+
+	/**
+	 * Test replace_from_json matches names case-insensitively.
+	 *
+	 * @covers ::replace_from_json
+	 */
+	public function test_replace_from_json_case_insensitive() {
+		$emoji_json = \wp_json_encode(
+			array(
+				array(
+					'type' => 'Emoji',
+					'name' => ':blobcat:',
+					'icon' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/emoji/blobcat.png',
+					),
+				),
+			)
+		);
+
+		$this->assertSame(
+			'Alice ' . Emoji::get_img_tag( 'http://example.org/wp-content/uploads/activitypub/emoji/example.com/blobcat.png', 'blobcat' ),
+			Emoji::replace_from_json( 'Alice :Blobcat:', $emoji_json )
+		);
+	}
+
+	/**
+	 * Test prepare_actor_meta stores only emoji with valid names.
+	 *
+	 * @covers ::prepare_actor_meta
+	 */
+	public function test_prepare_actor_meta_drops_invalid_names() {
+		$tags    = \array_merge( $this->get_emoji_tags( 1 ), $this->get_invalid_emoji_tags() );
+		$decoded = \json_decode( Emoji::prepare_actor_meta( array( 'tag' => $tags ) )['_activitypub_emoji'], true );
+
+		$this->assertCount( 1, $decoded );
+		$this->assertSame( ':emoji_0:', $decoded[0]['name'] );
+	}
+
+	/**
 	 * Test prepare_actor_meta extracts emoji tags.
 	 *
 	 * @covers ::prepare_actor_meta
@@ -382,10 +640,8 @@ class Test_Emoji extends \WP_UnitTestCase {
 
 		$result = Emoji::wrap_in_content( $text, $activity );
 
-		// The shortcode must appear literally, not expanded as a backreference.
-		$this->assertStringContainsString( ':te$0st:', $result );
-		$this->assertStringContainsString( '<!-- wp:activitypub/emoji', $result );
-		$this->assertStringContainsString( 'test.png', $result );
+		// Not a valid shortcode: the text stays literal, not expanded as a backreference, and is not wrapped.
+		$this->assertSame( $text, $result );
 	}
 
 	/**
@@ -411,9 +667,8 @@ class Test_Emoji extends \WP_UnitTestCase {
 
 		$result = Emoji::wrap_in_content( $text, $activity );
 
-		// The shortcode must appear literally, not treated as a backreference.
-		$this->assertStringContainsString( ':te\\1st:', $result );
-		$this->assertStringContainsString( '<!-- wp:activitypub/emoji', $result );
+		// Not a valid shortcode: the text stays literal, not treated as a backreference, and is not wrapped.
+		$this->assertSame( $text, $result );
 	}
 
 	/**

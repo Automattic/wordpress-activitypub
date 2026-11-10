@@ -8,6 +8,7 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Create;
 use Activitypub\Mailer;
 use Activitypub\Rest\Server;
@@ -338,6 +339,119 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Clean up.
 		remove_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
 		remove_filter( 'wp_mail', $wp_mail_callback );
+	}
+
+	/**
+	 * Test that new follower notification is rate-limited within the cooldown period.
+	 *
+	 * Prevents notification spam when a remote actor cycles follow and unfollow (Undo).
+	 *
+	 * @covers ::new_follower
+	 */
+	public function test_new_follower_rate_limit_within_cooldown() {
+		$actor_uri = 'https://example.com/spammer';
+		$activity  = array(
+			'type'   => 'Follow',
+			'actor'  => $actor_uri,
+			'object' => 'https://example.com/follow/spam-1',
+		);
+
+		$remote_actor_id = self::factory()->post->create(
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'guid'        => $actor_uri,
+				'post_status' => 'publish',
+			)
+		);
+		$remote_actor    = get_post( $remote_actor_id );
+
+		$remote_metadata_callback = function () use ( $actor_uri ) {
+			return array(
+				'name'              => 'Spam Follower',
+				'url'               => $actor_uri,
+				'preferredUsername' => 'spammer',
+			);
+		};
+		add_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
+
+		$mail_count       = 0;
+		$wp_mail_callback = function ( $args ) use ( &$mail_count ) {
+			++$mail_count;
+			return $args;
+		};
+		add_filter( 'wp_mail', $wp_mail_callback );
+
+		// First follow: notification email should be sent.
+		Mailer::new_follower( $activity, self::$user_id, true, $remote_actor );
+		$this->assertSame( 1, $mail_count );
+
+		// Verify post meta marker was recorded on the remote actor post.
+		$meta_key  = sprintf( Mailer::FOLLOWER_EMAIL_META_KEY, self::$user_id );
+		$last_sent = (int) get_post_meta( $remote_actor_id, $meta_key, true );
+		$this->assertGreaterThan( 0, $last_sent );
+
+		// Second follow immediately after: should be skipped within cooldown.
+		Mailer::new_follower( $activity, self::$user_id, true, $remote_actor );
+		$this->assertSame( 1, $mail_count, 'Repeated follow within cooldown period must not trigger another email.' );
+
+		// When cooldown expires, a subsequent follow should trigger notification again.
+		update_post_meta( $remote_actor_id, $meta_key, time() - DAY_IN_SECONDS - 1 );
+		Mailer::new_follower( $activity, self::$user_id, true, $remote_actor );
+		$this->assertSame( 2, $mail_count, 'Follow after cooldown period must send notification.' );
+
+		remove_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
+		remove_filter( 'wp_mail', $wp_mail_callback );
+	}
+
+	/**
+	 * Test that the cooldown claim is released if sending the notification email fails.
+	 *
+	 * @covers ::new_follower
+	 */
+	public function test_new_follower_releases_cooldown_claim_when_mail_fails() {
+		$actor_uri = 'https://example.com/failing-mail-actor';
+		$activity  = array(
+			'type'   => 'Follow',
+			'actor'  => $actor_uri,
+			'object' => 'https://example.com/follow/failing-1',
+		);
+
+		$remote_actor_id = self::factory()->post->create(
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'guid'        => $actor_uri,
+				'post_status' => 'publish',
+			)
+		);
+		$remote_actor    = get_post( $remote_actor_id );
+
+		$remote_metadata_callback = function () use ( $actor_uri ) {
+			return array(
+				'name'              => 'Failing Mail Actor',
+				'url'               => $actor_uri,
+				'preferredUsername' => 'failingmail',
+			);
+		};
+		add_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
+
+		// Simulate a wp_mail failure.
+		add_filter( 'pre_wp_mail', '__return_false' );
+
+		$meta_key = sprintf( Mailer::FOLLOWER_EMAIL_META_KEY, self::$user_id );
+
+		// Scenario A: First email attempt fails (no previous marker).
+		Mailer::new_follower( $activity, self::$user_id, true, $remote_actor );
+		$this->assertEmpty( get_post_meta( $remote_actor_id, $meta_key, true ), 'Marker should be removed if mail fails on initial send.' );
+
+		// Scenario B: Previous marker existed, but renewed send fails after cooldown expired.
+		$previous_timestamp = time() - DAY_IN_SECONDS - 100;
+		update_post_meta( $remote_actor_id, $meta_key, $previous_timestamp );
+
+		Mailer::new_follower( $activity, self::$user_id, true, $remote_actor );
+		$this->assertSame( $previous_timestamp, (int) get_post_meta( $remote_actor_id, $meta_key, true ), 'Original marker timestamp should be restored if send fails.' );
+
+		remove_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
+		remove_filter( 'pre_wp_mail', '__return_false' );
 	}
 
 	/**

@@ -100,6 +100,8 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 
 Check **Tools > Site Health** to verify the integration is working.
 
+LiteSpeed can serve a cached page before WordPress runs. If a customization chooses different representations for the same URL and `Accept` header depending on the visitor, configure LiteSpeed to vary on that input or exclude the affected URLs from its cache. Purge existing entries after changing the cache rules.
+
 Note that OpenLiteSpeed (the open-source version) may ignore `Vary` headers entirely. If you are on OpenLiteSpeed and still seeing issues, consider disabling content negotiation.
 
 ## Disabling content negotiation

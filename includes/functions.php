@@ -366,7 +366,7 @@ function get_embed_html( $url, $inline_css = true ) {
 /**
  * Check whether terms of a taxonomy are federated.
  *
- * @since unreleased
+ * @since 9.4.0
  *
  * @param string $taxonomy The taxonomy name.
  *
@@ -385,4 +385,68 @@ function is_supported_taxonomy( $taxonomy ) {
 	$supported_taxonomies = \apply_filters( 'activitypub_supported_taxonomies', array( 'category', 'post_tag' ) );
 
 	return \in_array( $taxonomy, $supported_taxonomies, true );
+}
+
+/**
+ * Check whether an import is running.
+ *
+ * Core defines `WP_IMPORTING` for importers that run from the Tools → Import screen.
+ * Importers also fire `import_start` and `import_end`, which covers an import that
+ * runs somewhere else, for example from WP-CLI.
+ *
+ * @since 9.4.1
+ *
+ * @return bool True while an import is running.
+ */
+function is_importing() {
+	$importing = ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) || \did_action( 'import_start' ) > \did_action( 'import_end' );
+
+	/**
+	 * Filters whether an import is running.
+	 *
+	 * @since 9.4.1
+	 *
+	 * @param bool $importing True while an import is running.
+	 */
+	return (bool) \apply_filters( 'activitypub_is_importing', $importing );
+}
+
+/**
+ * Get the IDs of the meta rows that hold exactly a value.
+ *
+ * Unlike a lookup by value through the metadata API, the value is matched byte for byte.
+ *
+ * @since unreleased
+ *
+ * @param string $meta_type  The object type: 'post', 'comment' or 'user'.
+ * @param int    $object_id  The object ID.
+ * @param string $meta_key   The meta key.
+ * @param string $meta_value The meta value.
+ *
+ * @return int[] The meta IDs.
+ */
+function get_meta_ids_by_value( $meta_type, $object_id, $meta_key, $meta_value ) {
+	global $wpdb;
+
+	$table = \_get_meta_table( $meta_type );
+
+	if ( ! $table ) {
+		return array();
+	}
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	$meta_ids = $wpdb->get_col(
+		$wpdb->prepare(
+			'SELECT %i FROM %i WHERE %i = %d AND meta_key = %s AND CAST(meta_value AS BINARY) = %s',
+			'user' === $meta_type ? 'umeta_id' : 'meta_id',
+			$table,
+			$meta_type . '_id',
+			$object_id,
+			$meta_key,
+			// Stored unslashed, see add_metadata().
+			\wp_unslash( $meta_value )
+		)
+	);
+
+	return \array_map( 'intval', $meta_ids );
 }

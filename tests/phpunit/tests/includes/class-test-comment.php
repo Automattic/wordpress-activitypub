@@ -10,12 +10,406 @@ namespace Activitypub\Tests;
 use Activitypub\Collection\Remote_Posts;
 use Activitypub\Comment;
 
+use function Activitypub\generate_image_block;
+use function Activitypub\process_remote_images;
+
 /**
  * Test class for Activitypub Comment.
  *
  * @coversDefaultClass \Activitypub\Comment
  */
 class Test_Comment extends \WP_UnitTestCase {
+	use Uri_Test_Cases;
+
+	/**
+	 * Set up the test.
+	 */
+	public function set_up() {
+		parent::set_up();
+
+		\update_option( 'activitypub_allow_comment_images', '1' );
+	}
+
+	/**
+	 * Tear down the test.
+	 */
+	public function tear_down() {
+		\delete_option( 'activitypub_allow_comment_images' );
+
+		parent::tear_down();
+	}
+
+	/**
+	 * Descriptions survive comment creation and updates with core block-attribute KSES active.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_image_descriptions_survive_comment_save_and_update() {
+		\wp_set_current_user( 0 );
+		\kses_init();
+		$post_id    = self::factory()->post->create();
+		$comment_id = 0;
+		$download   = static function () {
+			return new \WP_Error( 'cache_skipped', 'The image cache is unavailable.' );
+		};
+		$cached     = static function ( $url, $context ) {
+			// Stand in for the local cache, comment images are only shown from it.
+			return 'comment_media' === $context ? $url . '#cached' : $url;
+		};
+		\add_filter( 'activitypub_pre_download_url', $download );
+		\add_filter( 'activitypub_remote_media_url', $cached, 20, 2 );
+		foreach ( array( 'width < height', 'Updated: width < height, "quotes", & and literal &lt;' ) as $description ) {
+			$content = process_remote_images(
+				'',
+				Remote_Posts::extract_attachments(
+					array(
+						'attachment' => array(
+							'type' => 'Image',
+							'url'  => 'https://example.com/photo.jpg',
+							'name' => $description,
+						),
+					)
+				)
+			);
+			if ( $comment_id ) {
+				$this->assertSame(
+					1,
+					\wp_update_comment(
+						\wp_slash(
+							array(
+								'comment_ID'      => $comment_id,
+								'comment_content' => $content,
+							)
+						)
+					)
+				);
+			} else {
+				$comment_id = \wp_new_comment(
+					\wp_slash(
+						array(
+							'comment_post_ID'      => $post_id,
+							'comment_author'       => 'Remote author',
+							'comment_author_email' => 'remote@example.com',
+							'comment_author_url'   => '',
+							'comment_content'      => $content,
+							'comment_meta'         => array( 'protocol' => 'activitypub' ),
+						)
+					),
+					true
+				);
+				$this->assertIsInt( $comment_id );
+				\wp_set_comment_status( $comment_id, 'approve' );
+			}
+			$comment  = \get_comment( $comment_id );
+			$rendered = Comment::render_blocks( $comment->comment_content, $comment );
+			$image    = new \WP_HTML_Tag_Processor( $rendered );
+			$this->assertTrue( $image->next_tag( 'IMG' ) );
+			$this->assertSame( $description, $image->get_attribute( 'alt' ) );
+			$this->assertSame( 'lazy', $image->get_attribute( 'loading' ) );
+		}
+		\remove_filter( 'activitypub_remote_media_url', $cached, 20 );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+	}
+
+	/**
+	 * Only leaf image and emoji blocks may invoke render callbacks in comments.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_render_blocks_rejects_other_and_nested_blocks() {
+		$comment  = self::factory()->comment->create_and_get( array( 'comment_meta' => array( 'protocol' => 'activitypub' ) ) );
+		$calls    = 0;
+		$callback = static function () use ( &$calls ) {
+			++$calls;
+			return 'Unexpected callback.';
+		};
+		\register_block_type( 'activitypub/test-probe', array( 'render_callback' => $callback ) );
+		\register_block_type( 'core/test-probe', array( 'render_callback' => $callback ) );
+		Comment::render_blocks( '<!-- wp:activitypub/test-probe /-->', $comment );
+		Comment::render_blocks( '<!-- wp:activitypub/image --><!-- wp:test-probe /--><!-- /wp:activitypub/image -->', $comment );
+		Comment::render_blocks( '<!-- wp:activitypub/emoji --><!-- wp:test-probe /--><!-- /wp:activitypub/emoji -->', $comment );
+		\unregister_block_type( 'activitypub/test-probe' );
+		\unregister_block_type( 'core/test-probe' );
+
+		$this->assertSame( 0, $calls );
+	}
+
+	/**
+	 * Images are cached per comment, not with the current global post.
+	 *
+	 * @group activitypub
+	 * @covers ::render_blocks
+	 */
+	public function test_render_image_with_comment_context() {
+		$parent  = self::factory()->post->create();
+		$comment = self::factory()->comment->create_and_get(
+			array(
+				'comment_post_ID' => $parent,
+				'comment_meta'    => array( 'protocol' => 'activitypub' ),
+			)
+		);
+		$this->go_to( \get_permalink( self::factory()->post->create() ) );
+		$content  = generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' );
+		$seen_id  = null;
+		$seen_ctx = null;
+		$filter   = static function ( $url, $context, $entity_id ) use ( &$seen_id, &$seen_ctx ) {
+			$seen_id  = $entity_id;
+			$seen_ctx = $context;
+			return 'https://cdn.example.com/photo.jpg';
+		};
+		$download = static function () {
+			return new \WP_Error( 'cache_skipped', 'Test uses a CDN.' );
+		};
+		\add_filter( 'activitypub_pre_download_url', $download );
+		\add_filter( 'activitypub_remote_media_url', $filter, 1, 3 );
+		$rendered = Comment::render_blocks( $content, $comment );
+		\remove_filter( 'activitypub_remote_media_url', $filter, 1 );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+		$this->assertSame( (int) $comment->comment_ID, $seen_id );
+		$this->assertSame( 'comment_media', $seen_ctx );
+		$this->assertStringContainsString( 'https://cdn.example.com/photo.jpg', $rendered );
+	}
+
+	/**
+	 * Core block filters remain available to extensions when rendering comments.
+	 *
+	 * @group activitypub
+	 * @covers ::render_blocks
+	 */
+	public function test_render_blocks_preserves_core_filters() {
+		$comment = self::factory()->comment->create_and_get( array( 'comment_meta' => array( 'protocol' => 'activitypub' ) ) );
+		$content = generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' );
+		$filters = array( 'pre_render_block', 'render_block_data', 'render_block_context' );
+		$seen    = array();
+		$filter  = static function ( $value ) use ( &$seen ) {
+			$seen[] = \current_filter();
+			return $value;
+		};
+		foreach ( $filters as $hook ) {
+			\add_filter( $hook, $filter );
+		}
+		$pre_render = static function () {
+			return 'Filtered comment image.';
+		};
+		Comment::render_blocks( '<!-- wp:activitypub/image /-->', $comment );
+		\add_filter( 'pre_render_block', $pre_render, 20 );
+		$rendered = Comment::render_blocks( $content, $comment );
+		\remove_filter( 'pre_render_block', $pre_render, 20 );
+		foreach ( $filters as $hook ) {
+			\remove_filter( $hook, $filter );
+		}
+
+		$this->assertSame( 'Filtered comment image.', $rendered );
+		foreach ( $filters as $hook ) {
+			$this->assertContains( $hook, $seen );
+		}
+	}
+
+	/**
+	 * Ordinary comment submission cannot turn block attributes into an image.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_ordinary_comment_cannot_render_image_blocks() {
+		\wp_set_current_user( 0 );
+		\kses_init();
+		$content    = '<!-- wp:activitypub/image {"url":"https://example.com/tracker.jpg","alt":""} /-->';
+		$comment_id = \wp_new_comment(
+			\wp_slash(
+				array(
+					'comment_post_ID'      => self::factory()->post->create(),
+					'comment_author'       => 'Local commenter',
+					'comment_author_email' => 'local@example.com',
+					'comment_author_url'   => '',
+					'comment_content'      => $content,
+				)
+			),
+			true
+		);
+		$this->assertIsInt( $comment_id );
+		$comment = \get_comment( $comment_id );
+		$this->assertFalse( Comment::was_received( $comment ) );
+		$this->assertStringContainsString( '<!-- wp:activitypub/image', $comment->comment_content );
+
+		$download = static function () {
+			return new \WP_Error( 'cache_skipped', 'The image cache is unavailable.' );
+		};
+		\add_filter( 'activitypub_pre_download_url', $download );
+		$rendered = \apply_filters( 'comment_text', $comment->comment_content, $comment );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+
+		$this->assertStringNotContainsString( '<img', $rendered );
+		$this->assertStringNotContainsString( 'activitypub/image', Comment::render_blocks( $comment->comment_content ) );
+	}
+
+	/**
+	 * Stored images are not shown or fetched while comment images are disabled.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_stored_images_hidden_when_comment_images_disabled() {
+		\wp_set_current_user( 0 );
+		\kses_init();
+		$comment_id = \wp_new_comment(
+			\wp_slash(
+				array(
+					'comment_post_ID'      => self::factory()->post->create(),
+					'comment_author'       => 'Remote author',
+					'comment_author_email' => 'remote@example.com',
+					'comment_author_url'   => '',
+					'comment_content'      => generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' ),
+					'comment_meta'         => array( 'protocol' => 'activitypub' ),
+				)
+			),
+			true
+		);
+		$this->assertIsInt( $comment_id );
+		\delete_option( 'activitypub_allow_comment_images' );
+
+		$comment = \get_comment( $comment_id );
+		$content = $comment->comment_content;
+		$calls   = 0;
+		$filter  = static function ( $url ) use ( &$calls ) {
+			++$calls;
+			return $url;
+		};
+		\add_filter( 'activitypub_remote_media_url', $filter, 1 );
+		$rendered = Comment::render_blocks( $content, $comment );
+		\remove_filter( 'activitypub_remote_media_url', $filter, 1 );
+
+		$this->assertStringNotContainsString( '<img', $rendered );
+		$this->assertSame( 0, $calls );
+
+		// Comments saved without kses keep the inner img; it is not shown either.
+		$unfiltered = generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' );
+		$this->assertStringNotContainsString( '<img', Comment::render_blocks( $unfiltered, $comment ) );
+	}
+
+	/**
+	 * Comments that are not approved do not show or fetch their images, also not in the admin.
+	 *
+	 * @dataProvider data_unapproved_status
+	 * @covers ::render_blocks
+	 *
+	 * @param string $status The comment_approved value.
+	 */
+	public function test_unapproved_comment_images_hidden( $status ) {
+		$comment = self::factory()->comment->create_and_get(
+			array(
+				'comment_approved' => $status,
+				'comment_meta'     => array( 'protocol' => 'activitypub' ),
+			)
+		);
+		$content = generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' );
+		$calls   = 0;
+		$filter  = static function ( $url ) use ( &$calls ) {
+			++$calls;
+			return $url;
+		};
+		\add_filter( 'activitypub_remote_media_url', $filter, 1 );
+		$rendered = Comment::render_blocks( $content, $comment );
+		\remove_filter( 'activitypub_remote_media_url', $filter, 1 );
+
+		$this->assertStringNotContainsString( '<img', $rendered );
+		$this->assertSame( 0, $calls );
+	}
+
+	/**
+	 * Comment statuses that are not approved.
+	 *
+	 * @return array Test data.
+	 */
+	public function data_unapproved_status() {
+		return array(
+			'spam'    => array( 'spam' ),
+			'pending' => array( '0' ),
+			'trash'   => array( 'trash' ),
+		);
+	}
+
+	/**
+	 * A hidden image shows its description instead, so an image-only reply is not empty.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_hidden_image_shows_description() {
+		$comment = self::factory()->comment->create_and_get(
+			array(
+				'comment_approved' => '0',
+				'comment_meta'     => array( 'protocol' => 'activitypub' ),
+			)
+		);
+		$content = generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="A &quot;cat&quot;" />' )
+			. generate_image_block( 'https://example.com/other.jpg', '<img src="https://example.com/other.jpg" />' );
+
+		$rendered = Comment::render_blocks( $content, $comment );
+
+		$this->assertStringNotContainsString( 'example.com', $rendered );
+		$this->assertStringContainsString( '<p>Image: A &quot;cat&quot;</p>', $rendered );
+		$this->assertStringContainsString( '<p>Image</p>', $rendered );
+	}
+
+	/**
+	 * An image that cannot be cached is loaded from the remote host.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_uncached_image_shows_remote_image() {
+		\update_option( 'activitypub_allow_comment_images', '1' );
+		$comment   = self::factory()->comment->create_and_get(
+			array( 'comment_meta' => array( 'protocol' => 'activitypub' ) )
+		);
+		$content   = generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' );
+		$downloads = 0;
+		$download  = static function () use ( &$downloads ) {
+			++$downloads;
+			return new \WP_Error( 'http_request_failed', 'The remote host timed out.' );
+		};
+
+		\add_filter( 'activitypub_pre_download_url', $download );
+		$rendered = Comment::render_blocks( $content, $comment );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+		\delete_option( 'activitypub_allow_comment_images' );
+
+		$this->assertSame( 1, $downloads, 'The image was shown and its download attempted.' );
+		$this->assertStringContainsString( 'src="https://example.com/photo.jpg"', $rendered );
+	}
+
+	/**
+	 * Without the local cache, images are loaded from the remote host.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_images_shown_without_cache() {
+		\update_option( 'activitypub_allow_comment_images', '1' );
+		$comment = self::factory()->comment->create_and_get(
+			array( 'comment_meta' => array( 'protocol' => 'activitypub' ) )
+		);
+		$content = generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' );
+
+		\add_filter( 'activitypub_remote_cache_enabled', '__return_false' );
+		$rendered = Comment::render_blocks( $content, $comment );
+		\remove_filter( 'activitypub_remote_cache_enabled', '__return_false' );
+		\delete_option( 'activitypub_allow_comment_images' );
+
+		$this->assertStringContainsString( 'src="https://example.com/photo.jpg"', $rendered );
+	}
+
+	/**
+	 * Emoji rendering still works without a received comment.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_render_emoji_without_a_received_comment() {
+		$url      = \wp_upload_dir()['baseurl'] . '/activitypub/emoji/party.png';
+		$content  = '<!-- wp:activitypub/emoji ' . \wp_json_encode( array( 'url' => $url ) ) . ' -->:party:<!-- /wp:activitypub/emoji -->';
+		$comment  = self::factory()->comment->create_and_get();
+		$rendered = Comment::render_blocks( $content, $comment );
+
+		$this->assertStringContainsString( '<img', $rendered );
+		$this->assertStringContainsString( 'class="emoji"', $rendered );
+		$this->assertSame( $rendered, Comment::render_blocks( $content ) );
+	}
 
 	/**
 	 * Test get source id or url.
@@ -226,9 +620,10 @@ class Test_Comment extends \WP_UnitTestCase {
 				'comment_author'       => 'Approved',
 				'comment_author_url'   => 'https://example.com/@approved',
 				'comment_post_ID'      => $post_id,
-				'comment_author_email' => '',
+				'comment_author_email' => 'approved@example.com',
 				'comment_meta'         => array(
-					'protocol' => 'activitypub',
+					'protocol'                     => 'activitypub',
+					'_activitypub_remote_actor_id' => 1,
 				),
 			)
 		);
@@ -247,9 +642,10 @@ class Test_Comment extends \WP_UnitTestCase {
 				'comment_author'       => 'Approved',
 				'comment_author_url'   => 'https://example.com/@approved',
 				'comment_post_ID'      => $post_id,
-				'comment_author_email' => '',
+				'comment_author_email' => 'approved@example.com',
 				'comment_meta'         => array(
-					'protocol' => 'activitypub',
+					'protocol'                     => 'activitypub',
+					'_activitypub_remote_actor_id' => 1,
 				),
 			)
 		);
@@ -259,22 +655,24 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		\remove_filter( 'pre_comment_approved', array( 'Activitypub\Comment', 'pre_comment_approved' ), 11 );
 
-		$comment_id_unapproved = \wp_new_comment(
+		$comment_id_core = \wp_new_comment(
 			array(
 				'comment_type'         => 'comment',
 				'comment_content'      => 'This is final comment.',
 				'comment_author'       => 'Approved',
 				'comment_author_url'   => 'https://example.com/@approved',
 				'comment_post_ID'      => $post_id,
-				'comment_author_email' => '',
+				'comment_author_email' => 'approved@example.com',
 				'comment_meta'         => array(
-					'protocol' => 'activitypub',
+					'protocol'                     => 'activitypub',
+					'_activitypub_remote_actor_id' => 1,
 				),
 			)
 		);
 
-		$comment_unapproved = \get_comment( $comment_id_unapproved );
-		$this->assertEquals( '0', $comment_unapproved->comment_approved );
+		// Core approves it on its own, it matches the name and the email, which is the verified WebFinger handle.
+		$comment_core = \get_comment( $comment_id_core );
+		$this->assertEquals( '1', $comment_core->comment_approved );
 
 		// Restore flood control.
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
@@ -287,6 +685,7 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * later normal reply from the same actor to be auto-approved.
 	 *
 	 * @covers ::pre_comment_approved
+	 * @covers ::check_previous_comment_approval
 	 */
 	public function test_pre_comment_approved_ignores_reactions() {
 		// Disable flood control.
@@ -313,9 +712,10 @@ class Test_Comment extends \WP_UnitTestCase {
 				'comment_author'       => 'Approved',
 				'comment_author_url'   => 'https://example.com/@approved',
 				'comment_post_ID'      => $post_id,
-				'comment_author_email' => '',
+				'comment_author_email' => 'approved@example.com',
 				'comment_meta'         => array(
-					'protocol' => 'activitypub',
+					'protocol'                     => 'activitypub',
+					'_activitypub_remote_actor_id' => 1,
 				),
 			)
 		);
@@ -328,9 +728,10 @@ class Test_Comment extends \WP_UnitTestCase {
 				'comment_author'       => 'Approved',
 				'comment_author_url'   => 'https://example.com/@approved',
 				'comment_post_ID'      => $post_id,
-				'comment_author_email' => '',
+				'comment_author_email' => 'approved@example.com',
 				'comment_meta'         => array(
-					'protocol' => 'activitypub',
+					'protocol'                     => 'activitypub',
+					'_activitypub_remote_actor_id' => 1,
 				),
 			)
 		);
@@ -341,6 +742,339 @@ class Test_Comment extends \WP_UnitTestCase {
 		// Restore the option and flood control.
 		\update_option( 'comment_previously_approved', $previous );
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	/**
+	 * A copied name and URL do not count as previously approved.
+	 *
+	 * Both come from the actor document. The email is the WebFinger handle of the signed actor,
+	 * so another actor has another email.
+	 *
+	 * @covers ::pre_comment_approved
+	 * @covers ::check_previous_comment_approval
+	 */
+	public function test_pre_comment_approved_ignores_copied_name_and_url() {
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
+		\update_option( 'comment_previously_approved', '1' );
+
+		$post_id = self::factory()->post->create();
+
+		$this->new_remote_comment( $post_id, 'approved@example.com', 'Hello.', true );
+
+		$spoof = $this->new_remote_comment( $post_id, 'mallory@attacker.example', 'Not from the approved author.' );
+		$this->assertSame( '0', \get_comment( $spoof )->comment_approved );
+
+		$genuine = $this->new_remote_comment( $post_id, 'approved@example.com', 'From the approved author.' );
+		$this->assertSame( '1', \get_comment( $genuine )->comment_approved );
+
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	/**
+	 * The name and handle of an approved Fediverse commenter do not approve a comment from the form.
+	 *
+	 * The handle is the email of a federated comment and it is public, so an email that is the
+	 * handle of an approved Fediverse comment approves no comment from the form.
+	 *
+	 * @covers ::pre_comment_approved
+	 * @covers ::check_previous_comment_approval
+	 */
+	public function test_pre_comment_approved_ignores_federated_history_for_the_form() {
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
+		\update_option( 'comment_previously_approved', '1' );
+
+		$post_id = self::factory()->post->create();
+
+		$this->new_remote_comment( $post_id, 'approved@example.com', 'Hello.', true );
+
+		$form = array(
+			'comment_type'         => 'comment',
+			'comment_content'      => 'From the comment form.',
+			'comment_author'       => 'Approved',
+			'comment_author_email' => 'approved@example.com',
+			'comment_author_url'   => '',
+			'comment_post_ID'      => $post_id,
+		);
+
+		$spoof = \wp_new_comment( $form );
+		$this->assertSame( '0', \get_comment( $spoof )->comment_approved, 'Federated history must not approve a comment from the form.' );
+
+		// An approved comment from the form with the same email but another name does not count either.
+		$other = \wp_new_comment( \array_merge( $form, array( 'comment_author' => 'Other' ) ) );
+		\wp_set_comment_status( $other, 'approve' );
+		$form['comment_content'] = 'Under the approved name.';
+		$this->assertSame( '0', \get_comment( \wp_new_comment( $form ) )->comment_approved, 'The name has to match, as in core.' );
+
+		// The email is a Fediverse handle, so even a comment from the form that a moderator approved does not count.
+		\wp_set_comment_status( $spoof, 'approve' );
+		$form['comment_content'] = 'Again from the comment form.';
+		$again                   = \wp_new_comment( $form );
+		$this->assertSame( '0', \get_comment( $again )->comment_approved );
+
+		// An approval from another filter stays, even without history.
+		$approve = static function () {
+			return 1;
+		};
+		\add_filter( 'pre_comment_approved', $approve, 5 );
+		\update_option( 'comment_moderation', '1' );
+		$form['comment_author_email'] = 'new@example.com';
+		$this->assertSame( '1', \get_comment( \wp_new_comment( $form ) )->comment_approved, 'Another filter decides on its own.' );
+		\remove_filter( 'pre_comment_approved', $approve, 5 );
+
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	/**
+	 * Approved comments and new comments for core's previously approved check.
+	 *
+	 * @return array[] The approved comments, the new comment data and whether the new comment is approved.
+	 */
+	public function previously_approved_provider() {
+		$form = array(
+			'comment_type'         => 'comment',
+			'comment_author'       => 'Approved',
+			'comment_author_email' => 'approved@example.com',
+		);
+
+		$fediverse                 = $form;
+		$fediverse['comment_meta'] = array(
+			'protocol'                     => 'activitypub',
+			'_activitypub_remote_actor_id' => 101,
+		);
+
+		$other_actor = $fediverse;
+		$other_actor['comment_meta']['_activitypub_remote_actor_id'] = 202;
+
+		$unknown_actor = $fediverse;
+		unset( $unknown_actor['comment_meta']['_activitypub_remote_actor_id'] );
+
+		$other_handle                         = $fediverse;
+		$other_handle['comment_author_email'] = 'mallory@attacker.example';
+		$other_handle['comment_meta']['_activitypub_remote_actor_id'] = 303;
+
+		$mallory                   = $other_actor;
+		$mallory['comment_author'] = 'Mallory';
+
+		$webmention                 = $form;
+		$webmention['comment_meta'] = array( 'protocol' => 'webmention' );
+
+		return array(
+			'same actor'                         => array( array( $fediverse ), $fediverse, '1' ),
+			'other actor with the same handle'   => array( array( $fediverse ), $other_actor, '0' ),
+			'unknown actor'                      => array( array( $fediverse ), $unknown_actor, '0' ),
+			'other name'                         => array( array( $fediverse ), \array_merge( $fediverse, array( 'comment_author' => 'Other' ) ), '0' ),
+			'copied name with another handle'    => array( array( $fediverse ), $other_handle, '0' ),
+			'only a like'                        => array( array( \array_merge( $fediverse, array( 'comment_type' => 'like' ) ) ), $fediverse, '0' ),
+			'only a quote'                       => array( array( \array_merge( $fediverse, array( 'comment_type' => 'quote' ) ) ), $fediverse, '0' ),
+			'nothing approved'                   => array( array(), $fediverse, '0' ),
+			'form with the handle'               => array( array( $fediverse ), $form, '0' ),
+			'form with the handle in upper case' => array( array( $fediverse ), \array_merge( $form, array( 'comment_author_email' => 'Approved@Example.com' ) ), '0' ),
+			'review with the handle'             => array( array( $fediverse ), \array_merge( $form, array( 'comment_type' => 'review' ) ), '0' ),
+			'form after form'                    => array( array( $form ), $form, '1' ),
+			'review after form'                  => array( array( $form ), \array_merge( $form, array( 'comment_type' => 'review' ) ), '1' ),
+			'form after another name'            => array( array( $form ), \array_merge( $form, array( 'comment_author' => 'Other' ) ), '0' ),
+			'fediverse after form'               => array( array( $form ), $fediverse, '0' ),
+			'webmention after webmention'        => array( array( $webmention ), $webmention, '1' ),
+			'other actor renamed to the name'    => array( array( $fediverse, $mallory ), $other_actor, '0' ),
+		);
+	}
+
+	/**
+	 * Test core's previously approved check with Fediverse and other comments.
+	 *
+	 * @dataProvider previously_approved_provider
+	 * @covers ::check_previous_comment_approval
+	 *
+	 * @param array[] $approved The approved comments.
+	 * @param array   $comment  The new comment data.
+	 * @param string  $expected The approval status of the new comment.
+	 */
+	public function test_previously_approved( $approved, $comment, $expected ) {
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
+		\update_option( 'comment_previously_approved', '1' );
+
+		$fields = array(
+			'comment_post_ID'    => self::factory()->post->create(),
+			'comment_author_url' => '',
+		);
+
+		foreach ( $approved as $approved_comment ) {
+			\wp_insert_comment(
+				\array_merge(
+					$approved_comment,
+					$fields,
+					array(
+						'comment_content'  => 'Approved earlier.',
+						'comment_approved' => '1',
+					)
+				)
+			);
+		}
+
+		$comment_id = \wp_new_comment( \array_merge( $comment, $fields, array( 'comment_content' => 'New comment.' ) ) );
+
+		$this->assertSame( $expected, \get_comment( $comment_id )->comment_approved );
+
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	/**
+	 * Pingbacks have no email and are left to core.
+	 *
+	 * @covers ::check_previous_comment_approval
+	 */
+	public function test_previously_approved_leaves_pingbacks_to_core() {
+		\update_option( 'comment_previously_approved', '1' );
+
+		$pingback = array(
+			'comment_type'         => 'pingback',
+			'comment_author'       => 'Example',
+			'comment_author_email' => '',
+		);
+
+		$this->assertSame( 1, Comment::check_previous_comment_approval( 1, $pingback ) );
+	}
+
+	/**
+	 * Comments with the type `''` are checked like comments with the type `comment`.
+	 *
+	 * WordPress.com does not set core's `comment` default, so replies there have the type `''`,
+	 * both the stored ones and the new ones.
+	 *
+	 * @covers ::check_previous_comment_approval
+	 */
+	public function test_check_previous_comment_approval_with_empty_type() {
+		global $wpdb;
+
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
+		\update_option( 'comment_previously_approved', '1' );
+
+		$post_id     = self::factory()->post->create();
+		$approved_id = $this->new_remote_comment( $post_id, 'approved@example.com', 'Hello.', true );
+		$wpdb->update( $wpdb->comments, array( 'comment_type' => '' ), array( 'comment_ID' => $approved_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+
+		$comment = array(
+			'comment_type'         => '',
+			'comment_author'       => 'Approved',
+			'comment_author_email' => 'approved@example.com',
+			'comment_meta'         => array(
+				'protocol'                     => 'activitypub',
+				'_activitypub_remote_actor_id' => \get_comment_meta( $approved_id, '_activitypub_remote_actor_id', true ),
+			),
+		);
+
+		$this->assertSame( 1, Comment::check_previous_comment_approval( 1, $comment ), 'A stored reply with the type "" counts for a Fediverse reply.' );
+
+		unset( $comment['comment_meta'] );
+		$this->assertSame( 0, Comment::check_previous_comment_approval( 1, $comment ), 'Federated history must not approve a comment from the form.' );
+
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	/**
+	 * Core's moderation rules hold for a previously approved author.
+	 *
+	 * @dataProvider moderation_rule_provider
+	 * @covers ::pre_comment_approved
+	 *
+	 * @param string $option  The option to set.
+	 * @param string $value   The option value.
+	 * @param string $content The comment content.
+	 */
+	public function test_pre_comment_approved_keeps_core_moderation( $option, $value, $content ) {
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
+		\update_option( 'comment_previously_approved', '1' );
+
+		$post_id = self::factory()->post->create();
+
+		$this->new_remote_comment( $post_id, 'approved@example.com', 'Hello.', true );
+
+		\update_option( $option, $value );
+
+		$held = $this->new_remote_comment( $post_id, 'approved@example.com', $content );
+		$this->assertSame( '0', \get_comment( $held )->comment_approved );
+
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	/**
+	 * Core's moderation rules.
+	 *
+	 * @return array[] The option, its value and the comment content.
+	 */
+	public function moderation_rule_provider() {
+		return array(
+			'manual approval' => array( 'comment_moderation', '1', 'A plain reply.' ),
+			'moderation key'  => array( 'moderation_keys', 'casino', 'Visit the casino.' ),
+			'too many links'  => array( 'comment_max_links', '2', '<a href="https://a.example/">a</a> <a href="https://b.example/">b</a> <a href="https://c.example/">c</a>' ),
+		);
+	}
+
+	/**
+	 * A spam verdict stays for a previously approved author, as it does for a normal comment.
+	 *
+	 * Only comments on remote posts and auto-approved reactions override it.
+	 *
+	 * @covers ::pre_comment_approved
+	 */
+	public function test_pre_comment_approved_keeps_spam_for_approved_author() {
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
+		\update_option( 'comment_previously_approved', '1' );
+
+		$post_id = self::factory()->post->create();
+
+		$this->new_remote_comment( $post_id, 'approved@example.com', 'Hello.', true );
+
+		$comment_data = array(
+			'comment_post_ID'      => $post_id,
+			'comment_author'       => 'Approved',
+			'comment_author_email' => 'approved@example.com',
+			'comment_author_url'   => 'https://example.com/@approved',
+			'comment_content'      => 'A reply.',
+			'comment_author_IP'    => '',
+			'comment_agent'        => '',
+			'comment_type'         => 'comment',
+			'comment_meta'         => array(
+				'protocol' => 'activitypub',
+			),
+		);
+
+		$this->assertSame( 'spam', Comment::pre_comment_approved( 'spam', $comment_data ) );
+
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	/**
+	 * Add a federated comment, with the same name and URL for every author.
+	 *
+	 * @param int    $post_id The post ID.
+	 * @param string $email   The comment author email, the WebFinger handle.
+	 * @param string $content The comment content.
+	 * @param bool   $approve Optional. Whether to approve the comment after it was added. Default false.
+	 *
+	 * @return int The comment ID.
+	 */
+	private function new_remote_comment( $post_id, $email, $content, $approve = false ) {
+		$comment_id = \wp_new_comment(
+			array(
+				'comment_type'         => 'comment',
+				'comment_content'      => $content,
+				'comment_author'       => 'Approved',
+				'comment_author_url'   => 'https://example.com/@approved',
+				'comment_author_email' => $email,
+				'comment_post_ID'      => $post_id,
+				'comment_meta'         => array(
+					'protocol'                     => 'activitypub',
+					'_activitypub_remote_actor_id' => \absint( \crc32( $email ) ),
+				),
+			)
+		);
+
+		if ( $approve ) {
+			\wp_set_comment_status( $comment_id, 'approve' );
+		}
+
+		return $comment_id;
 	}
 
 	/**
@@ -774,6 +1508,36 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that object_id_to_comment only finds the exact ID.
+	 *
+	 * @covers ::object_id_to_comment
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The stored ID.
+	 * @param string $requested The requested ID.
+	 */
+	public function test_object_id_to_comment_matches_exact_id( $stored, $requested ) {
+		$comment_id = self::factory()->comment->create( array( 'comment_date' => '2024-01-01 00:00:00' ) );
+		\add_comment_meta( $comment_id, 'source_id', \esc_url_raw( $stored ) );
+
+		$this->assertFalse( Comment::object_id_to_comment( \esc_url_raw( $requested ), array( 'status' => 'any' ) ) );
+
+		// The other host's own comment, older and newer than the first one.
+		$other_id = self::factory()->comment->create( array( 'comment_date' => '2023-01-01 00:00:00' ) );
+		\add_comment_meta( $other_id, 'source_id', \esc_url_raw( $requested ) );
+		$this->assertEquals( $other_id, Comment::object_id_to_comment( \esc_url_raw( $requested ) )->comment_ID );
+
+		\wp_update_comment(
+			array(
+				'comment_ID'   => $other_id,
+				'comment_date' => '2025-01-01 00:00:00',
+			)
+		);
+		$this->assertEquals( $other_id, Comment::object_id_to_comment( \esc_url_raw( $requested ) )->comment_ID );
+		$this->assertEquals( $comment_id, Comment::object_id_to_comment( \esc_url_raw( $stored ) )->comment_ID );
+	}
+
+	/**
 	 * Test pre_comment_approved filter.
 	 *
 	 * @covers ::pre_comment_approved
@@ -1054,6 +1818,104 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		// Clean up.
 		\set_current_screen( 'front' );
+	}
+
+	/**
+	 * Admin queries name posts in every format core parses, so a hidden post is found in each.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_ap_post_comments_hidden_for_every_post_id_format() {
+		$post_id       = self::factory()->post->create();
+		$ap_post_id    = self::factory()->post->create( array( 'post_type' => 'ap_post' ) );
+		$ap_comment_id = \wp_insert_comment(
+			array(
+				'comment_post_ID' => $ap_post_id,
+				'comment_content' => 'Comment on ap_post',
+			)
+		);
+
+		\set_current_screen( 'edit-comments' );
+
+		$by_post_in_string = ( new \WP_Comment_Query() )->query( array( 'post__in' => \sprintf( '%d,%d', $post_id, $ap_post_id ) ) );
+		$by_negative_id    = ( new \WP_Comment_Query() )->query( array( 'post_id' => -$ap_post_id ) );
+
+		\set_current_screen( 'front' );
+
+		$this->assertNotContains( (string) $ap_comment_id, \wp_list_pluck( $by_post_in_string, 'comment_ID' ), 'A hidden post in a comma-separated post__in should be found.' );
+		$this->assertNotContains( (string) $ap_comment_id, \wp_list_pluck( $by_negative_id, 'comment_ID' ), 'A negative post_id should be read as core reads it.' );
+	}
+
+	/**
+	 * Admin queries for named posts of other types keep their comments, as WooCommerce order notes.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_admin_query_for_named_post_of_other_type_keeps_comments() {
+		\register_post_type( 'shop_order', array( 'public' => false ) );
+
+		$order_id = self::factory()->post->create( array( 'post_type' => 'shop_order' ) );
+		$note_id  = \wp_insert_comment(
+			array(
+				'comment_post_ID'  => $order_id,
+				'comment_content'  => 'Order status changed.',
+				'comment_type'     => 'order_note',
+				'comment_approved' => 1,
+			)
+		);
+
+		\set_current_screen( 'edit-comments' );
+
+		$by_post_id = ( new \WP_Comment_Query() )->query(
+			array(
+				'post_id' => $order_id,
+				'type'    => 'order_note',
+			)
+		);
+		$by_post_in = ( new \WP_Comment_Query() )->query(
+			array(
+				'post__in' => array( $order_id ),
+				'type'     => 'order_note',
+			)
+		);
+
+		\set_current_screen( 'front' );
+		\unregister_post_type( 'shop_order' );
+
+		$this->assertContains( (string) $note_id, \wp_list_pluck( $by_post_id, 'comment_ID' ), 'Notes of a named order should be found by post_id.' );
+		$this->assertContains( (string) $note_id, \wp_list_pluck( $by_post_in, 'comment_ID' ), 'Notes of a named order should be found by post__in.' );
+	}
+
+	/**
+	 * Admin queries for named objects that are not posts keep their comments, as orders stored outside wp_posts.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_admin_query_for_named_object_outside_posts_keeps_comments() {
+		$order_id = 987654;
+		$this->assertNull( \get_post( $order_id ), 'The order must not exist as a post.' );
+
+		$note_id = \wp_insert_comment(
+			array(
+				'comment_post_ID'  => $order_id,
+				'comment_content'  => 'Payment received.',
+				'comment_type'     => 'order_note',
+				'comment_approved' => 1,
+			)
+		);
+
+		\set_current_screen( 'edit-comments' );
+
+		$notes = ( new \WP_Comment_Query() )->query(
+			array(
+				'post_id' => $order_id,
+				'type'    => 'order_note',
+			)
+		);
+
+		\set_current_screen( 'front' );
+
+		$this->assertContains( (string) $note_id, \wp_list_pluck( $notes, 'comment_ID' ) );
 	}
 
 	/**
@@ -2195,5 +3057,28 @@ class Test_Comment extends \WP_UnitTestCase {
 		);
 
 		return array( $src, $img );
+	}
+
+	/**
+	 * Test that url_to_commentid only finds the exact ID or URL.
+	 *
+	 * @covers ::url_to_commentid
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The stored ID.
+	 * @param string $requested The requested ID.
+	 */
+	public function test_url_to_commentid_matches_exact_id( $stored, $requested ) {
+		$comment_id = self::factory()->comment->create();
+		\add_comment_meta( $comment_id, 'source_id', \esc_url_raw( $stored ) );
+		\add_comment_meta( $comment_id, 'source_url', \esc_url_raw( $stored ) );
+
+		$this->assertNull( Comment::url_to_commentid( $requested ) );
+
+		// The other host's own comment.
+		$other_id = self::factory()->comment->create();
+		\add_comment_meta( $other_id, 'source_id', \esc_url_raw( $requested ) );
+
+		$this->assertSame( $other_id, Comment::url_to_commentid( $requested ) );
 	}
 }

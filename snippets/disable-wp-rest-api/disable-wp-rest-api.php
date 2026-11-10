@@ -3,7 +3,7 @@
  * Plugin Name:       Allow ActivityPub through Disable WP REST API
  * Plugin URI:        https://github.com/Automattic/wordpress-activitypub
  * Description:       Keeps ActivityPub endpoints available while Disable WP REST API restricts other REST API requests.
- * Version:           unreleased
+ * Version:           1.0.0
  * Requires at least: 6.5
  * Requires PHP:      7.4
  * Author:            Automattic
@@ -25,7 +25,7 @@ if ( ! \defined( 'ABSPATH' ) ) {
 /**
  * Allow the current ActivityPub request through Disable WP REST API.
  *
- * @since unreleased
+ * @since 9.4.0
  *
  * @param false|string|string[] $allowed Existing allowed request URIs.
  * @return false|string|string[] Allowed request URIs.

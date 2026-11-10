@@ -14,6 +14,8 @@ use Activitypub\Mention;
 use Activitypub\Tests\Remote_Request_Stub;
 use Activitypub\Tests\Uri_Test_Cases;
 
+use function Activitypub\get_id_hash;
+
 /**
  * Class Test_Remote_Actors
  *
@@ -118,6 +120,164 @@ class Test_Remote_Actors extends \WP_UnitTestCase {
 			$this->assertWPError( $result );
 			$this->assertSame( 'activitypub_no_remote_key_found', $result->get_error_code() );
 		}
+	}
+
+	/**
+	 * The key's owner is the actor the key was taken from: stored, fetched, or a standalone key's owner.
+	 *
+	 * @covers ::get_public_key
+	 */
+	public function test_get_public_key_sets_owner() {
+		$stored = 'https://example.com/users/stored';
+		Remote_Actors::upsert(
+			array(
+				'id'                => $stored,
+				'type'              => 'Person',
+				'inbox'             => $stored . '/inbox',
+				'preferredUsername' => 'stored',
+				'publicKey'         => array(
+					'id'           => $stored . '#main-key',
+					'owner'        => $stored,
+					'publicKeyPem' => $this->x509_key,
+				),
+			)
+		);
+
+		$this->stub_remote_requests();
+		$fetched                                       = 'https://example.com/users/fetched';
+		$this->responses[ $fetched ]                   = array(
+			'id'        => $fetched,
+			'type'      => 'Person',
+			'publicKey' => array(
+				'id'           => $fetched . '#main-key',
+				'owner'        => $fetched,
+				'publicKeyPem' => $this->x509_key,
+			),
+		);
+		$this->responses['https://example.com/keys/1'] = array(
+			'id'           => 'https://example.com/keys/1',
+			'owner'        => $fetched,
+			'publicKeyPem' => $this->x509_key,
+		);
+
+		$owners = array();
+		foreach ( array( $stored . '#main-key', $fetched . '#main-key', 'https://example.com/keys/1' ) as $key_id ) {
+			$owner = null;
+			$this->assertNotWPError( Remote_Actors::get_public_key( $key_id, $owner ) );
+			$owners[] = $owner;
+		}
+		$this->unstub_remote_requests();
+
+		$this->assertSame( array( $stored, $fetched, $fetched ), $owners );
+	}
+
+	/**
+	 * A keyId without a host cannot name the actor it belongs to, so it gets no key and no owner.
+	 *
+	 * @covers ::get_public_key
+	 */
+	public function test_get_public_key_rejects_a_key_id_without_host() {
+		$actor = array(
+			'id'        => 'https://attacker.example/users/mallory',
+			'type'      => 'Person',
+			'publicKey' => array(
+				'id'           => 'https://attacker.example/users/mallory#main-key',
+				'owner'        => 'https://attacker.example/users/mallory',
+				'publicKeyPem' => $this->x509_key,
+			),
+		);
+		$mock  = static function () use ( $actor ) {
+			return $actor;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock );
+
+		$owner  = null;
+		$result = Remote_Actors::get_public_key( 'acct:mallory@attacker.example', $owner );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'activitypub_no_remote_key_found', $result->get_error_code() );
+		$this->assertNull( $owner );
+	}
+
+	/**
+	 * A stored actor whose key failed is refreshed from its host, at most once every few minutes.
+	 *
+	 * @covers ::refresh_public_key
+	 */
+	public function test_refresh_public_key() {
+		global $wpdb;
+
+		$id      = 'https://example.com/users/rotated';
+		$actor   = array(
+			'id'                => $id,
+			'type'              => 'Person',
+			'inbox'             => $id . '/inbox',
+			'preferredUsername' => 'rotated',
+			'publicKey'         => array(
+				'id'           => $id . '#main-key',
+				'owner'        => $id,
+				'publicKeyPem' => $this->x509_key,
+			),
+		);
+		$post_id = Remote_Actors::upsert( $actor );
+
+		$fetches = 0;
+		$served  = $actor;
+
+		$served['publicKey']['publicKeyPem'] = $this->pkcs1_key;
+
+		$mock = static function ( $pre, $url ) use ( &$fetches, &$served, $id ) {
+			if ( $url !== $id ) {
+				return $pre;
+			}
+			++$fetches;
+			return $served;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock, 10, 2 );
+
+		// Let the next refresh through, as if the throttle had expired.
+		$expire = static function () use ( $id ) {
+			\delete_transient( 'activitypub_key_refresh_' . \md5( $id ) );
+		};
+
+		// A new key is stored, and a second failing signature right after does not fetch again.
+		$this->assertTrue( Remote_Actors::refresh_public_key( $id . '#main-key' ) );
+		$this->assertFalse( Remote_Actors::refresh_public_key( $id . '#main-key' ) );
+		$this->assertSame( 1, $fetches, 'A refreshed actor is not fetched again at once.' );
+		$this->assertSame( $this->pkcs1_key, \json_decode( \get_post( $post_id )->post_content, true )['publicKey']['publicKeyPem'] );
+
+		// The same document again is no change, and leaves the record's modified date to the scheduler.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->update( $wpdb->posts, array( 'post_modified_gmt' => '2020-01-01 00:00:00' ), array( 'ID' => $post_id ) );
+		\clean_post_cache( $post_id );
+		$expire();
+		$this->assertFalse( Remote_Actors::refresh_public_key( $id . '#main-key' ) );
+		$this->assertSame( 2, $fetches );
+		$this->assertSame( '2020-01-01 00:00:00', \get_post( $post_id )->post_modified_gmt, 'An unchanged document is not written.' );
+
+		// A changed profile with the same key is stored.
+		$served['name'] = 'Renamed';
+		$expire();
+		$this->assertTrue( Remote_Actors::refresh_public_key( $id . '#main-key' ) );
+		$this->assertSame( 3, $fetches );
+		$this->assertSame( 'Renamed', \json_decode( \get_post( $post_id )->post_content, true )['name'] );
+
+		// A failed fetch changes nothing and is not retried at once.
+		$served = new \WP_Error( 'activitypub_not_found', 'Not found' );
+		$expire();
+		$this->assertFalse( Remote_Actors::refresh_public_key( $id . '#main-key' ) );
+		$this->assertFalse( Remote_Actors::refresh_public_key( $id . '#main-key' ) );
+		$this->assertSame( 4, $fetches, 'A failed fetch is not retried at once.' );
+		$this->assertSame( $this->pkcs1_key, \json_decode( \get_post( $post_id )->post_content, true )['publicKey']['publicKeyPem'] );
+
+		// An actor that is not stored is left to the proxy cache.
+		$this->assertFalse( Remote_Actors::refresh_public_key( 'https://example.com/users/unknown#main-key' ) );
+		$this->assertSame( 4, $fetches );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock, 10 );
+		$expire();
 	}
 
 	/**
@@ -2500,5 +2660,109 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$this->assertEquals( 'activitypub_actor_not_found', $result->get_error_code() );
 
 		\remove_filter( 'pre_http_request', $webfinger_callback );
+	}
+
+	/**
+	 * An actor is only found by its exact ID.
+	 *
+	 * @covers ::get_by_uri
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The stored ID.
+	 * @param string $requested The requested ID.
+	 */
+	public function test_get_by_uri_matches_exact_id( $stored, $requested ) {
+		$post_id = Remote_Actors::create( $this->actor_for_uri( $stored ) );
+		$this->assertIsInt( $post_id );
+
+		$this->assertWPError( Remote_Actors::get_by_uri( $requested ) );
+
+		// The other host's own actor is stored separately.
+		$other_id = Remote_Actors::upsert( $this->actor_for_uri( $requested ) );
+		$this->assertIsInt( $other_id );
+		$this->assertNotSame( $post_id, $other_id );
+
+		$this->assertSame( $other_id, Remote_Actors::get_by_uri( $requested )->ID );
+		$this->assertSame( $post_id, Remote_Actors::get_by_uri( $stored )->ID );
+	}
+
+	/**
+	 * An actor stores the hash of its ID, also when an actor stored without it is updated.
+	 *
+	 * @covers ::create
+	 * @covers ::update
+	 * @dataProvider uri_provider
+	 * @group uri-lookup
+	 *
+	 * @param string $uri The actor ID.
+	 */
+	public function test_stores_id_hash( $uri ) {
+		global $wpdb;
+
+		$post_id = Remote_Actors::create( $this->actor_for_uri( $uri ) );
+		$this->assertSame( get_id_hash( $uri ), \get_post_field( 'post_name', $post_id ) );
+
+		// As for actors stored before the hash.
+		$wpdb->update( $wpdb->posts, array( 'post_name' => 'uri-test' ), array( 'ID' => $post_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		\clean_post_cache( $post_id );
+
+		Remote_Actors::update( $post_id, $this->actor_for_uri( $uri ) );
+		$this->assertSame( get_id_hash( $uri ), \get_post_field( 'post_name', $post_id ) );
+	}
+
+	/**
+	 * An actor is only found by its exact handle.
+	 *
+	 * @covers ::fetch_by_acct
+	 * @dataProvider lookalike_acct_provider
+	 *
+	 * @param string $stored    The stored handle.
+	 * @param string $requested The requested handle.
+	 */
+	public function test_fetch_by_acct_matches_exact_handle( $stored, $requested ) {
+		$post_id = Remote_Actors::create( $this->actor_for_uri( 'https://example.com/uri-test/acct' ) );
+		\update_post_meta( $post_id, '_activitypub_acct', $stored );
+
+		// No WebFinger answer for the requested handle.
+		$no_webfinger = static function ( $preempt, $args, $url ) {
+			return false !== \strpos( $url, '.well-known/webfinger' ) ? new \WP_Error( 'http_request_failed', 'No WebFinger.' ) : $preempt;
+		};
+		\add_filter( 'pre_http_request', $no_webfinger, 10, 3 );
+
+		$found = Remote_Actors::fetch_by_acct( $requested );
+
+		\remove_filter( 'pre_http_request', $no_webfinger, 10 );
+
+		$this->assertWPError( $found );
+		$this->assertSame( $post_id, Remote_Actors::fetch_by_acct( $stored )->ID );
+	}
+
+	/**
+	 * An actor is found by its handle regardless of case, without asking WebFinger.
+	 *
+	 * @covers ::fetch_by_acct
+	 * @dataProvider same_acct_provider
+	 *
+	 * @param string $stored    The stored handle.
+	 * @param string $requested The requested handle.
+	 */
+	public function test_fetch_by_acct_ignores_case( $stored, $requested ) {
+		$post_id = Remote_Actors::create( $this->actor_for_uri( 'https://example.com/uri-test/acct' ) );
+		\update_post_meta( $post_id, '_activitypub_acct', $stored );
+
+		$requests = 0;
+		$count    = static function ( $preempt ) use ( &$requests ) {
+			++$requests;
+			return $preempt;
+		};
+		\add_filter( 'pre_http_request', $count );
+
+		$found = Remote_Actors::fetch_by_acct( $requested );
+
+		\remove_filter( 'pre_http_request', $count );
+
+		$this->assertSame( $post_id, $found->ID );
+		$this->assertSame( 0, $requests );
+		$this->assertSame( $stored, \get_post_meta( $post_id, '_activitypub_acct', true ), 'The stored handle must keep its case.' );
 	}
 }

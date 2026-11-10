@@ -12,6 +12,6 @@
 		}
 	},
 	"lifecycleScripts": {
-		"afterStart": "npx wp-env run cli wp rewrite structure /%year%/%monthnum%/%postname%/"
+		"afterStart": "npm run env -- run cli wp rewrite structure /%year%/%monthnum%/%postname%/"
 	}
 }

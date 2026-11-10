@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fixed the reaction buttons using the browser font instead of the theme font, which made them smaller than the placeholder for reactions without an action.

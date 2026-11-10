@@ -645,7 +645,7 @@ class Base_Object extends Generic_Object {
 	 * URI of the QuoteAuthorization object issued by the quoted author.
 	 *
 	 * @see https://w3id.org/fep/044f#quoteAuthorization
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @var string|null
 	 */

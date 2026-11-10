@@ -15,6 +15,13 @@ use Activitypub\Comment;
  */
 class Mailer {
 	/**
+	 * Meta key on the remote actor for the last new-follower email, %d is the local user ID.
+	 *
+	 * @var string
+	 */
+	const FOLLOWER_EMAIL_META_KEY = '_activitypub_last_follower_email_sent_%d';
+
+	/**
 	 * Initialize the Mailer.
 	 *
 	 * @return void
@@ -23,7 +30,7 @@ class Mailer {
 		\add_filter( 'comment_notification_subject', array( self::class, 'comment_notification_subject' ), 10, 2 );
 		\add_filter( 'comment_notification_text', array( self::class, 'comment_notification_text' ), 10, 2 );
 
-		\add_action( 'activitypub_handled_follow', array( self::class, 'new_follower' ), 10, 3 );
+		\add_action( 'activitypub_handled_follow', array( self::class, 'new_follower' ), 10, 4 );
 
 		\add_action( 'activitypub_handled_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
 		// Priority 20 keeps this after @see \Activitypub\Handler\Create::handle_create(), whose comment the reply check reads.
@@ -148,13 +155,14 @@ class Mailer {
 	/**
 	 * Send a notification email for every new follower.
 	 *
-	 * @param array     $activity The activity object.
-	 * @param int|int[] $user_ids The id(s) of the local blog-user(s).
-	 * @param bool      $success  True on success, false otherwise.
+	 * @param array                   $activity     The activity object.
+	 * @param int|int[]               $user_ids     The id(s) of the local blog-user(s).
+	 * @param bool                    $success      True on success, false otherwise.
+	 * @param \WP_Post|\WP_Error|null $remote_actor Optional. The remote actor post object.
 	 *
 	 * @return void
 	 */
-	public static function new_follower( $activity, $user_ids, $success ) {
+	public static function new_follower( $activity, $user_ids, $success, $remote_actor = null ) {
 		// Only send notification if the follow was successful.
 		if ( ! $success ) {
 			return;
@@ -179,9 +187,32 @@ class Mailer {
 			$admin_url = '/options-general.php?page=activitypub&tab=followers';
 		}
 
+		$meta_key  = null;
+		$last_sent = 0;
+
+		// Prevent repeated notification spam if an actor cycles Follow and Undo.
+		if ( $remote_actor instanceof \WP_Post ) {
+			$meta_key  = \sprintf( self::FOLLOWER_EMAIL_META_KEY, $user_id );
+			$last_sent = (int) \get_post_meta( $remote_actor->ID, $meta_key, true );
+
+			if ( $last_sent && ( \time() - $last_sent ) < DAY_IN_SECONDS ) {
+				return;
+			}
+		}
+
 		$actor = get_remote_metadata_by_actor( $activity['actor'] );
 		if ( ! $actor || \is_wp_error( $actor ) ) {
 			return;
+		}
+
+		if ( $meta_key ) {
+			$claimed = $last_sent
+				? \update_post_meta( $remote_actor->ID, $meta_key, \time(), $last_sent )
+				: \add_post_meta( $remote_actor->ID, $meta_key, \time(), true );
+
+			if ( ! $claimed ) {
+				return;
+			}
 		}
 
 		$actor = self::normalize_actor( $actor );
@@ -239,9 +270,17 @@ class Mailer {
 		};
 		\add_action( 'phpmailer_init', $alt_function );
 
-		\wp_mail( $email, $subject, $html_message, array( 'Content-type: text/html' ) );
+		$sent = \wp_mail( $email, $subject, $html_message, array( 'Content-type: text/html' ) );
 
 		\remove_action( 'phpmailer_init', $alt_function );
+
+		if ( ! $sent && $meta_key ) {
+			if ( $last_sent ) {
+				\update_post_meta( $remote_actor->ID, $meta_key, $last_sent );
+			} else {
+				\delete_post_meta( $remote_actor->ID, $meta_key );
+			}
+		}
 	}
 
 	/**

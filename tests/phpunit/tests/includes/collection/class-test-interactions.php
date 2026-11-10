@@ -7,10 +7,13 @@
 
 namespace Activitypub\Tests\Collection;
 
+use Activitypub\Cache\Comment_Media;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Tests\Equal_Html;
+use Activitypub\Tests\Uri_Test_Cases;
 
+use function Activitypub\get_id_hash;
 use function Activitypub\object_id_to_comment;
 
 /**
@@ -20,7 +23,466 @@ use function Activitypub\object_id_to_comment;
  */
 class Test_Interactions extends \WP_UnitTestCase {
 	use Equal_Html;
+	use Uri_Test_Cases;
 
+	/**
+	 * Unsafe attachments never become blocks, including when caching is unavailable.
+	 *
+	 * @covers ::add_comment
+	 * @covers ::update_comment
+	 */
+	public function test_comment_images_reject_unsafe_urls_before_creating_blocks() {
+		$activity = $this->create_test_object( 'https://example.com/unsafe-images' );
+		foreach ( array(
+			'http://127.0.0.1/photo.jpg',
+			'http://10.0.0.1/photo.jpg',
+			'http://172.16.0.1/photo.jpg',
+			'http://192.168.1.1/photo.jpg',
+			'http://[::1]/photo.jpg',
+			'https://user:pass@example.com/photo.jpg',
+		) as $url ) {
+			$activity['object']['attachment'][] = array(
+				'type' => 'Image',
+				'url'  => $url,
+			);
+		}
+		$comment_id = 0;
+		foreach ( array( 'https://example.com/写真.jpg', 'https://example.com/updated.jpg' ) as $url ) {
+			$object                           = $activity;
+			$object['object']['attachment'][] = array(
+				'type' => 'Image',
+				'url'  => $url,
+			);
+			if ( $comment_id ) {
+				$result = Interactions::update_comment( $object );
+				$this->assertNotWPError( $result );
+				$this->assertNotFalse( $result );
+			} else {
+				$comment_id = Interactions::add_comment( $object );
+				$this->assertIsInt( $comment_id );
+				// New authors are held for moderation, images only render for approved comments.
+				\wp_set_comment_status( $comment_id, 'approve' );
+			}
+			$comment = \get_comment( $comment_id );
+			$this->assertSame( 1, \substr_count( $comment->comment_content, '<!-- wp:activitypub/image' ) );
+			foreach ( $activity['object']['attachment'] as $attachment ) {
+				$this->assertStringNotContainsString( $attachment['url'], $comment->comment_content );
+			}
+			// No download, the stand-in plays the local cache.
+			\add_filter( 'activitypub_should_cache_url', '__return_false' );
+			\add_filter( 'activitypub_remote_media_url', array( __CLASS__, 'cached_comment_media' ), 20, 2 );
+			$rendered = \apply_filters( 'comment_text', $comment->comment_content, $comment );
+			\remove_filter( 'activitypub_remote_media_url', array( __CLASS__, 'cached_comment_media' ), 20 );
+			\remove_filter( 'activitypub_should_cache_url', '__return_false' );
+			$image = new \WP_HTML_Tag_Processor( $rendered );
+			$this->assertTrue( $image->next_tag( 'IMG' ) );
+			$this->assertSame( $url . '#cached', $image->get_attribute( 'src' ) );
+			$this->assertFalse( $image->next_tag( 'IMG' ) );
+		}
+	}
+
+	/**
+	 * Plain-text descriptions survive import and updates without becoming HTML or blocks.
+	 *
+	 * @dataProvider image_description_provider
+	 * @covers ::add_comment
+	 * @covers ::update_comment
+	 *
+	 * @param string $description The attachment description.
+	 */
+	public function test_comment_image_descriptions_remain_plain_text( $description ) {
+		\wp_set_current_user( 0 );
+		\kses_init();
+		$activity   = $this->create_test_object( 'https://example.com/plain-text-description' );
+		$comment_id = 0;
+		foreach ( array( $description, 'Updated: ' . $description ) as $name ) {
+			$activity['object']['attachment'] = array(
+				'type' => 'Image',
+				'url'  => 'https://example.com/description.jpg',
+				'name' => $name,
+			);
+			if ( $comment_id ) {
+				$result = Interactions::update_comment( $activity );
+				$this->assertNotWPError( $result );
+				$this->assertNotFalse( $result );
+			} else {
+				$comment_id = Interactions::add_comment( $activity );
+				$this->assertIsInt( $comment_id );
+				// New authors are held for moderation, images only render for approved comments.
+				\wp_set_comment_status( $comment_id, 'approve' );
+			}
+			$comment = \get_comment( $comment_id );
+			// No download, the stand-in plays the local cache.
+			\add_filter( 'activitypub_should_cache_url', '__return_false' );
+			\add_filter( 'activitypub_remote_media_url', array( __CLASS__, 'cached_comment_media' ), 20, 2 );
+			$rendered = \apply_filters( 'comment_text', $comment->comment_content, $comment );
+			\remove_filter( 'activitypub_remote_media_url', array( __CLASS__, 'cached_comment_media' ), 20 );
+			\remove_filter( 'activitypub_should_cache_url', '__return_false' );
+			$image = new \WP_HTML_Tag_Processor( $rendered );
+			$this->assertTrue( $image->next_tag( 'IMG' ) );
+			$this->assertSame( $name, $image->get_attribute( 'alt' ) );
+			$this->assertNull( $image->get_attribute( 'onerror' ) );
+			$this->assertFalse( $image->next_tag() );
+			$this->assertSame( 1, \substr_count( $comment->comment_content, '<!-- wp:' ) );
+		}
+	}
+
+	/**
+	 * Literal punctuation and markup-looking text in descriptions.
+	 *
+	 * @return array Descriptions.
+	 */
+	public function image_description_provider() {
+		return array(
+			array( 'width<height' ),
+			array( 'Check x<y and y>z' ),
+			array( '"quotes", & and literal &lt;' ),
+			array( '<script>alert(1)</script> " onerror="alert(1)' ),
+			array( '<!-- wp:core/html --><img src=x onerror=alert(1)><!-- /wp:core/html -->' ),
+		);
+	}
+
+	/**
+	 * Create and update strip remote blocks before adding our own image blocks.
+	 *
+	 * @covers ::add_comment
+	 * @covers ::update_comment
+	 */
+	public function test_comment_images_reject_remote_blocks_and_non_image_objects() {
+		$activity                         = $this->create_test_object( 'https://example.com/remote-block-reply' );
+		$activity['object']['attachment'] = array(
+			array(
+				'type' => 'Image',
+				'url'  => 'https://example.com/photo.jpg',
+			),
+			array(
+				'type' => 'Audio',
+				'url'  => 'https://example.com/audio.mp3',
+			),
+			array(
+				'type' => 'Video',
+				'url'  => 'https://example.com/video.mp4',
+			),
+		);
+		$activity['object']['content']    = '<<!-- -->!-- wp:activitypub/test-probe /--><p>Safe text.</p>';
+		$comment_id                       = Interactions::add_comment( $activity );
+		$this->assertIsInt( $comment_id );
+		$content = \get_comment( $comment_id )->comment_content;
+		$this->assertStringNotContainsString( '<!-- wp:activitypub/test-probe', $content );
+		$this->assertStringNotContainsString( 'audio.mp3', $content );
+		$this->assertStringNotContainsString( 'video.mp4', $content );
+		$this->assertStringContainsString( '<!-- wp:activitypub/image', $content );
+		$this->assertStringContainsString( 'photo.jpg', $content );
+
+		$activity['object']['content'] = '<!<script></script>-- wp:activitypub/test-probe /--><p>Updated text.</p>';
+		$result                        = Interactions::update_comment( $activity );
+		$this->assertNotWPError( $result );
+		$this->assertNotFalse( $result );
+		$content = \get_comment( $comment_id )->comment_content;
+		$this->assertStringNotContainsString( '<!-- wp:activitypub/test-probe', $content );
+		$this->assertStringNotContainsString( 'audio.mp3', $content );
+		$this->assertStringNotContainsString( 'video.mp4', $content );
+		$this->assertStringContainsString( '<!-- wp:activitypub/image', $content );
+		$this->assertStringContainsString( 'Updated text.', $content );
+	}
+
+	/**
+	 * Image attachments are ignored while comment images are disabled.
+	 *
+	 * @group activitypub
+	 * @covers ::add_comment
+	 */
+	public function test_comment_images_disabled_by_default() {
+		\delete_option( 'activitypub_allow_comment_images' );
+
+		$activity                         = $this->create_test_object( 'https://example.com/images-disabled' );
+		$activity['object']['attachment'] = array(
+			array(
+				'type' => 'Image',
+				'url'  => 'https://example.com/photo.jpg',
+			),
+		);
+
+		$comment = \get_comment( Interactions::add_comment( $activity ) );
+
+		$this->assertStringNotContainsString( 'activitypub/image', $comment->comment_content );
+		$this->assertStringNotContainsString( 'photo.jpg', $comment->comment_content );
+	}
+
+	/**
+	 * An image-only reply is not stored when none of its images is on a public host.
+	 *
+	 * @group activitypub
+	 * @covers ::add_comment
+	 */
+	public function test_image_only_comment_rejected_without_public_image() {
+		$activity                         = $this->create_test_object( 'https://example.com/private-image-reply' );
+		$activity['object']['attachment'] = array(
+			array(
+				'type' => 'Image',
+				'url'  => 'http://127.0.0.1/photo.jpg',
+			),
+		);
+		unset( $activity['object']['content'] );
+		$lookups = 0;
+		$lookup  = static function ( $value ) use ( &$lookups ) {
+			++$lookups;
+			return $value;
+		};
+
+		\add_filter( 'pre_get_remote_metadata_by_actor', $lookup, 10 );
+		$this->assertFalse( Interactions::add_comment( $activity ) );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $lookup, 10 );
+
+		$this->assertSame( 0, $lookups, 'The reply is rejected before the remote actor is fetched.' );
+	}
+
+	/**
+	 * Image-only comments use the lazy comment image cache and retain alt text.
+	 *
+	 * @group activitypub
+	 * @covers ::add_comment
+	 */
+	public function test_image_only_comment_uses_comment_cache() {
+		$url                              = 'https://example.com/photo.jpg?a=1&b=2';
+		$activity                         = $this->create_test_object( 'https://example.com/image-reply' );
+		$activity['object']['attachment'] = array(
+			array(
+				'type'      => 'Document',
+				'mediaType' => 'image/jpeg',
+				'url'       => $url,
+				'name'      => 'A "cat" & her kittens',
+			),
+		);
+		unset( $activity['object']['content'] );
+		$downloads = 0;
+		$download  = static function () use ( &$downloads ) {
+			++$downloads;
+			$file = \wp_tempnam( 'comment-image.jpg' );
+			\copy( AP_TESTS_DIR . '/data/assets/test.jpg', $file );
+			return array(
+				'file'      => $file,
+				'mime_type' => 'image/jpeg',
+			);
+		};
+		Comment_Media::init();
+		\add_filter( 'activitypub_pre_download_url', $download );
+		$comment_id = Interactions::add_comment( $activity );
+		\wp_set_comment_status( $comment_id, 'approve' );
+		$comment  = \get_comment( $comment_id );
+		$before   = $downloads;
+		$rendered = \apply_filters( 'comment_text', $comment->comment_content, $comment );
+		$again    = \apply_filters( 'comment_text', $comment->comment_content, $comment );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+		$cached = Comment_Media::get( $url, $comment_id );
+		\wp_delete_comment( $comment_id, true );
+		$after_delete = Comment_Media::get( $url, $comment_id );
+
+		$this->assertIsInt( $comment_id );
+		$this->assertStringContainsString( '<!-- wp:activitypub/image', $comment->comment_content );
+		$this->assertSame( 0, $before );
+		$this->assertSame( 1, $downloads );
+		$this->assertStringContainsString( '/activitypub/comments/' . $comment_id . '/', $rendered );
+		$this->assertStringContainsString( 'alt="A &quot;cat&quot; &amp; her kittens"', $rendered );
+		$this->assertSame( $rendered, $again );
+		$this->assertNotFalse( $cached );
+		$this->assertFalse( $after_delete );
+	}
+
+	/**
+	 * Updating a comment replaces its image blocks without a separate cache lifecycle.
+	 *
+	 * @group activitypub
+	 * @covers ::update_comment
+	 */
+	public function test_update_comment_images() {
+		$activity                         = $this->create_test_object( 'https://example.com/update-images' );
+		$activity['object']['attachment'] = array(
+			array(
+				'mediaType' => 'image/jpeg',
+				'url'       => 'https://example.com/old.jpg',
+			),
+		);
+		$comment_id                       = Interactions::add_comment( $activity );
+		$this->assertIsInt( $comment_id );
+
+		$activity['object']['attachment'][0]['url'] = 'https://example.com/new.jpg';
+		$result                                     = Interactions::update_comment( $activity );
+		$this->assertNotWPError( $result );
+		$this->assertNotFalse( $result );
+		$content = \get_comment( $comment_id )->comment_content;
+		$this->assertStringContainsString( 'new.jpg', $content );
+		$this->assertStringNotContainsString( 'old.jpg', $content );
+
+		unset( $activity['object']['attachment'] );
+		Interactions::update_comment( $activity );
+		$this->assertStringNotContainsString( '<!-- wp:activitypub/image', \get_comment( $comment_id )->comment_content );
+	}
+
+	/**
+	 * Creation and updates apply the image limit after filtering invalid and non-image attachments.
+	 *
+	 * @dataProvider comment_image_limit_provider
+	 * @covers ::add_comment
+	 * @covers ::update_comment
+	 *
+	 * @param int|null $limit    Filtered limit, or null to use the default.
+	 * @param int      $expected Expected number of image blocks.
+	 */
+	public function test_comment_image_attachment_limit( $limit, $expected ) {
+		$activity                         = $this->create_test_object( 'https://example.com/limited-images' );
+		$activity['object']['attachment'] = array(
+			array(
+				'type' => 'Image',
+				'url'  => '/invalid.jpg',
+			),
+			array(
+				'type' => 'Audio',
+				'url'  => 'https://8.8.4.1:443/audio.mp3',
+			),
+			array(
+				'type' => 'Video',
+				'url'  => 'https://8.8.4.1:443/video.mp4',
+			),
+		);
+		for ( $i = 1; $i <= 5; ++$i ) {
+			$activity['object']['attachment'][] = array(
+				'type'      => 'Document',
+				'mediaType' => 'image/jpeg',
+				'url'       => 'https://8.8.4.1:443/photo-' . $i . '.jpg',
+			);
+		}
+		$limit_filter = static function () use ( $limit ) {
+			return $limit;
+		};
+		if ( null !== $limit ) {
+			\add_filter( 'activitypub_comment_image_limit', $limit_filter );
+		}
+
+		$validations = 0;
+		$track       = static function ( $ports, $host ) use ( &$validations ) {
+			if ( '8.8.4.1' === $host ) {
+				++$validations;
+			}
+			return $ports;
+		};
+		\add_filter( 'http_allowed_safe_ports', $track, 10, 2 );
+		$comment_id         = Interactions::add_comment( $activity );
+		$created            = \get_comment( $comment_id )->comment_content;
+		$create_validations = $validations;
+		$validations        = 0;
+
+		$activity['object']['content'] = 'Updated text.';
+		foreach ( $activity['object']['attachment'] as &$attachment ) {
+			$attachment['url'] = \str_replace( 'photo-', 'updated-', $attachment['url'] );
+		}
+		unset( $attachment );
+		$result  = Interactions::update_comment( $activity );
+		$updated = \get_comment( $comment_id )->comment_content;
+		\remove_filter( 'activitypub_comment_image_limit', $limit_filter );
+		\remove_filter( 'http_allowed_safe_ports', $track );
+
+		$this->assertSame( $expected, $create_validations, 'Creation validates only the images it will display.' );
+		$this->assertSame( $expected, $validations, 'Updates validate only the images they will display.' );
+		$this->assertIsInt( $comment_id );
+		$this->assertNotWPError( $result );
+		$this->assertNotFalse( $result );
+		$this->assertStringContainsString( 'Updated text.', $updated );
+		foreach ( array(
+			'photo-'   => $created,
+			'updated-' => $updated,
+		) as $prefix => $content ) {
+			$this->assertSame( $expected, \substr_count( $content, '<!-- wp:activitypub/image' ) );
+			$this->assertStringNotContainsString( $prefix . ( $expected + 1 ) . '.jpg', $content );
+			for ( $i = 1; $i <= $expected; ++$i ) {
+				$this->assertStringContainsString( $prefix . $i . '.jpg', $content );
+			}
+		}
+		$this->assertStringNotContainsString( 'photo-', $updated );
+	}
+
+	/**
+	 * Default and customized comment image limits.
+	 *
+	 * @return array Test cases.
+	 */
+	public function comment_image_limit_provider() {
+		return array(
+			'default'  => array( null, 3 ),
+			'lower'    => array( 1, 1 ),
+			'higher'   => array( 5, 5 ),
+			'disabled' => array( 0, 0 ),
+			'negative' => array( -1, 0 ),
+		);
+	}
+
+	/**
+	 * An attachment URL in the text does not replace the attachment's image.
+	 *
+	 * @dataProvider linked_image_content_provider
+	 * @covers ::add_comment
+	 * @covers ::update_comment
+	 *
+	 * @param string $content Remote comment content with an attachment URL.
+	 */
+	public function test_comment_preserves_linked_image_attachments( $content ) {
+		$url                              = 'https://example.com/photo.jpg';
+		$activity                         = $this->create_test_object( 'https://example.com/linked-image-reply' );
+		$activity['object']['content']    = $content;
+		$activity['object']['attachment'] = array(
+			array(
+				'type' => 'Image',
+				'url'  => $url,
+				'name' => 'Photo description',
+			),
+		);
+		$comment_id                       = Interactions::add_comment( $activity );
+		$this->assertIsInt( $comment_id );
+		$stored = \get_comment( $comment_id )->comment_content;
+		$this->assertSame( 1, \substr_count( $stored, '<!-- wp:activitypub/image' ) );
+		$this->assertStringContainsString( 'Photo description', $stored );
+
+		$activity['object']['content']              = \str_replace( 'photo.jpg', 'updated.jpg', $content );
+		$activity['object']['attachment'][0]['url'] = 'https://example.com/updated.jpg';
+		$result                                     = Interactions::update_comment( $activity );
+		$this->assertNotWPError( $result );
+		$this->assertNotFalse( $result );
+		$stored = \get_comment( $comment_id )->comment_content;
+		$this->assertSame( 1, \substr_count( $stored, '<!-- wp:activitypub/image' ) );
+		$this->assertStringContainsString( 'updated.jpg', $stored );
+		$this->assertStringNotContainsString( 'photo.jpg', $stored );
+	}
+
+	/**
+	 * Text and links that reference an attached image.
+	 *
+	 * @return array Test cases.
+	 */
+	public function linked_image_content_provider() {
+		return array(
+			'plain URL'    => array( '<p>Photo: https://example.com/photo.jpg</p>' ),
+			'link'         => array( '<p><a href="https://example.com/photo.jpg">Photo</a></p>' ),
+			'linked image' => array( '<p><a href="https://example.com/photo.jpg"><img src="https://example.com/photo.jpg" alt="Photo" /></a></p>' ),
+		);
+	}
+
+	/**
+	 * Remote HTML cannot supply trusted image blocks or executable attributes.
+	 *
+	 * @group activitypub
+	 * @covers ::add_comment
+	 */
+	public function test_image_comment_strips_untrusted_markup() {
+		$activity                      = $this->create_test_object( 'https://example.com/hostile-image-reply' );
+		$activity['object']['content'] = '<!-- wp:activitypub/image {"url":"https://example.com/injected.jpg"} --><img src="https://example.com/injected.jpg" onerror="alert(1)"><!-- /wp:activitypub/image --><p>Safe text.</p>';
+		$comment_id                    = Interactions::add_comment( $activity );
+		$this->assertIsInt( $comment_id );
+		$content = \get_comment( $comment_id )->comment_content;
+		$this->assertStringNotContainsString( '<!-- wp:', $content );
+		$this->assertStringNotContainsString( 'injected.jpg', $content );
+		$this->assertStringNotContainsString( 'onerror', $content );
+		$this->assertStringContainsString( 'Safe text.', $content );
+	}
 
 	/**
 	 * User ID.
@@ -105,6 +567,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		\add_filter( 'pre_get_remote_metadata_by_actor', array( __CLASS__, 'get_remote_metadata_by_actor' ), 0, 2 );
 		\add_filter( 'activitypub_pre_import_emoji', array( $this, 'mock_emoji_import' ), 10, 2 );
+		\update_option( 'activitypub_allow_comment_images', '1' );
 	}
 
 	/**
@@ -112,6 +575,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		\remove_filter( 'activitypub_pre_import_emoji', array( $this, 'mock_emoji_import' ) );
+		\delete_option( 'activitypub_allow_comment_images' );
 
 		parent::tear_down();
 	}
@@ -132,6 +596,17 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$upload_dir = \wp_upload_dir();
 
 		return $upload_dir['baseurl'] . '/activitypub/emoji/example.com/' . \basename( $emoji_url );
+	}
+
+	/**
+	 * Stand in for the local comment image cache.
+	 *
+	 * @param string $url     The remote URL.
+	 * @param string $context The cache context.
+	 * @return string The "cached" URL for comment images.
+	 */
+	public static function cached_comment_media( $url, $context ) {
+		return 'comment_media' === $context ? $url . '#cached' : $url;
 	}
 
 	/**
@@ -410,6 +885,32 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$interactions = Interactions::get_by_id( $url );
 		$this->assertIsArray( $interactions );
 		$this->assertEquals( $comment->comment_ID, $interactions[0]->comment_ID );
+	}
+
+	/**
+	 * Test that get_by_id only finds the exact ID or URL.
+	 *
+	 * @covers ::get_by_id
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The stored ID.
+	 * @param string $requested The requested ID.
+	 */
+	public function test_get_by_id_matches_exact_id( $stored, $requested ) {
+		$comment_id = self::factory()->comment->create( array( 'comment_post_ID' => self::$post_id ) );
+		\add_comment_meta( $comment_id, 'protocol', 'activitypub' );
+		\add_comment_meta( $comment_id, 'source_id', \esc_url_raw( $stored ) );
+		\add_comment_meta( $comment_id, 'source_url', \esc_url_raw( $stored ) );
+
+		$this->assertSame( array(), Interactions::get_by_id( \esc_url_raw( $requested ) ) );
+
+		// The other host's own comment.
+		$other_id = self::factory()->comment->create( array( 'comment_post_ID' => self::$post_id ) );
+		\add_comment_meta( $other_id, 'protocol', 'activitypub' );
+		\add_comment_meta( $other_id, 'source_id', \esc_url_raw( $requested ) );
+
+		$this->assertEquals( array( $other_id ), \wp_list_pluck( Interactions::get_by_id( \esc_url_raw( $requested ) ), 'comment_ID' ) );
+		$this->assertEquals( array( $comment_id ), \wp_list_pluck( Interactions::get_by_id( \esc_url_raw( $stored ) ), 'comment_ID' ) );
 	}
 
 	/**
@@ -947,12 +1448,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 			),
 		);
 
-		$filter = function () {
-			return array(
-				'body'     => wp_json_encode( array( 'subject' => 'acct:tester@example.com' ) ),
-				'response' => array( 'code' => 200 ),
-			);
-		};
+		$filter = $this->webfinger_answer( 'acct:tester@example.com', $actor_url );
 		\add_filter( 'pre_http_request', $filter );
 
 		$comment_data = Interactions::activity_to_comment( $activity );
@@ -960,6 +1456,99 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertEquals( 'tester@example.com', $comment_data['comment_author_email'] );
 
 		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * A handle that does not point back to the actor is not used as email.
+	 *
+	 * The actor's server answers the first lookup and may name any account. Core's
+	 * "previously approved" check matches on the email, so it must be the actor's own.
+	 *
+	 * @covers ::activity_to_comment
+	 */
+	public function test_activity_to_comment_ignores_foreign_webfinger_handle() {
+		$activity = array(
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/users/mallory',
+			'object' => array(
+				'content' => 'Test comment content',
+				'id'      => 'https://example.com/activities/2',
+			),
+		);
+
+		$filter = $this->webfinger_answer( 'acct:victim@example.com', 'https://example.com/users/victim' );
+		\add_filter( 'pre_http_request', $filter );
+
+		$comment_data = Interactions::activity_to_comment( $activity );
+
+		$this->assertSame( '', $comment_data['comment_author_email'] );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * The handle is checked in the form it is stored in.
+	 *
+	 * Core runs the email through sanitize_email(), which drops characters it does not allow in a
+	 * domain. A handle on the actor's own look-alike domain must not turn into another account's
+	 * handle after it was checked.
+	 *
+	 * @covers ::activity_to_comment
+	 */
+	public function test_activity_to_comment_checks_the_sanitized_handle() {
+		$mallory  = 'https://exampleé.com/users/mallory';
+		$activity = array(
+			'type'   => 'Create',
+			'actor'  => $mallory,
+			'object' => array(
+				'content' => 'Test comment content',
+				'id'      => 'https://exampleé.com/activities/3',
+			),
+		);
+
+		// The look-alike domain points back to Mallory, the real one to Alice.
+		$filter = function ( $pre, $args, $url ) use ( $mallory ) {
+			$real = 'example.com' === \wp_parse_url( $url, PHP_URL_HOST );
+
+			return \call_user_func(
+				$real ? $this->webfinger_answer( 'acct:alice@example.com', 'https://example.com/users/alice' ) : $this->webfinger_answer( 'acct:alice@exampleé.com', $mallory )
+			);
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		$comment_data = Interactions::activity_to_comment( $activity );
+
+		$this->assertSame( '', $comment_data['comment_author_email'] );
+
+		\remove_filter( 'pre_http_request', $filter, 10 );
+	}
+
+	/**
+	 * Answer every WebFinger lookup with a handle and the actor it points to.
+	 *
+	 * @param string $subject The acct URI.
+	 * @param string $actor   The actor ID of the `self` link.
+	 *
+	 * @return callable The `pre_http_request` callback.
+	 */
+	private function webfinger_answer( $subject, $actor ) {
+		return function () use ( $subject, $actor ) {
+			return array(
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => $subject,
+						'links'   => array(
+							array(
+								'rel'  => 'self',
+								'type' => 'application/activity+json',
+								'href' => $actor,
+							),
+						),
+					)
+				),
+				'response' => array( 'code' => 200 ),
+			);
+		};
 	}
 
 	/**
@@ -1236,6 +1825,50 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		// Clean up.
 		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+	}
+
+	/**
+	 * Reactions with an embedded object do not build image blocks.
+	 *
+	 * @covers ::add_reaction
+	 */
+	public function test_add_reaction_skips_images() {
+		\wp_insert_post(
+			array(
+				'post_type'   => 'ap_post',
+				'post_title'  => 'Test AP Post for Reaction',
+				'post_status' => 'publish',
+				'guid'        => 'https://remote.example.com/users/remoteuser/statuses/457',
+			)
+		);
+		$activity     = array(
+			'type'   => 'Announce',
+			'actor'  => 'https://example.com/users/booster',
+			'object' => array(
+				'id'         => 'https://remote.example.com/users/remoteuser/statuses/457',
+				'type'       => 'Note',
+				'attachment' => array(
+					array(
+						'type'      => 'Document',
+						'mediaType' => 'image/jpeg',
+						'url'       => 'https://example.com/photo.jpg',
+					),
+				),
+			),
+			'id'     => 'https://example.com/activities/announce/790',
+		);
+		$calls        = 0;
+		$limit_filter = static function ( $limit ) use ( &$calls ) {
+			++$calls;
+			return $limit;
+		};
+		\add_filter( 'activitypub_comment_image_limit', $limit_filter );
+		$comment_id = Interactions::add_reaction( $activity );
+		\remove_filter( 'activitypub_comment_image_limit', $limit_filter );
+
+		$this->assertIsInt( $comment_id );
+		$this->assertSame( 0, $calls );
+		$this->assertStringNotContainsString( 'activitypub/image', \get_comment( $comment_id )->comment_content );
 	}
 
 	/**
@@ -1622,6 +2255,270 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a comment without a recorded owner is only updated from its own host.
+	 *
+	 * @covers ::update_comment
+	 */
+	public function test_update_comment_without_owner_rejects_other_host() {
+		// The actor is not cached, so no owner is recorded, as for comments from before the mapping.
+		$comment_id = Interactions::add_comment(
+			array(
+				'actor'  => 'https://example.com/users/legacy-owner',
+				'id'     => 'https://example.com/activities/legacy-comment',
+				'object' => array(
+					'id'        => 'https://example.com/notes/legacy-note',
+					'content'   => 'Original content',
+					'inReplyTo' => self::$post_permalink,
+				),
+			)
+		);
+		$this->assertIsInt( $comment_id );
+		$this->assertEmpty( \get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true ) );
+
+		$result = Interactions::update_comment(
+			array(
+				'actor'  => 'https://attacker.example/users/evil',
+				'id'     => 'https://attacker.example/activities/takeover',
+				'object' => array(
+					'id'        => 'https://example.com/notes/legacy-note',
+					'content'   => 'HACKED content',
+					'inReplyTo' => self::$post_permalink,
+				),
+			)
+		);
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_update_forbidden', $result->get_error_code() );
+		$this->assertStringNotContainsString( 'HACKED', \get_comment( $comment_id )->comment_content );
+
+		// A media object is found by its url, which has to be on the actor's host as well.
+		$result = Interactions::update_comment(
+			array(
+				'actor'  => 'https://attacker.example/users/evil',
+				'id'     => 'https://attacker.example/activities/takeover-image',
+				'object' => array(
+					'type'      => 'Image',
+					'id'        => 'https://attacker.example/image',
+					'url'       => 'https://example.com/notes/legacy-note',
+					'content'   => 'HACKED content',
+					'inReplyTo' => self::$post_permalink,
+				),
+			)
+		);
+		$this->assertWPError( $result );
+		$this->assertStringNotContainsString( 'HACKED', \get_comment( $comment_id )->comment_content );
+
+		// The author on the comment's own host can still update it.
+		Interactions::update_comment(
+			array(
+				'actor'  => 'https://example.com/users/legacy-owner',
+				'id'     => 'https://example.com/activities/legacy-edit',
+				'object' => array(
+					'id'        => 'https://example.com/notes/legacy-note',
+					'content'   => 'Edited by owner',
+					'inReplyTo' => self::$post_permalink,
+				),
+			)
+		);
+		$this->assertStringContainsString( 'Edited by owner', \get_comment( $comment_id )->comment_content );
+	}
+
+	/**
+	 * Test that a comment without a recorded owner is only updated through its exact ID.
+	 *
+	 * @covers ::update_comment
+	 * @dataProvider lookalike_uri_provider
+	 *
+	 * @param string $stored    The stored ID.
+	 * @param string $requested The requested ID.
+	 */
+	public function test_update_comment_without_owner_matches_exact_id( $stored, $requested ) {
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => self::$post_id,
+				'comment_content' => 'Original content',
+			)
+		);
+		\add_comment_meta( $comment_id, 'protocol', 'activitypub' );
+		\add_comment_meta( $comment_id, 'source_id', \esc_url_raw( $stored ) );
+
+		$host   = \wp_parse_url( $requested, PHP_URL_HOST );
+		$update = array(
+			'actor'  => \sprintf( 'https://%s/users/author', $host ),
+			'id'     => \sprintf( 'https://%s/activities/edit', $host ),
+			'object' => array(
+				'id'        => $requested,
+				'content'   => 'Edited content',
+				'inReplyTo' => self::$post_permalink,
+			),
+		);
+
+		$this->assertFalse( Interactions::update_comment( $update ) );
+		$this->assertSame( 'Original content', \get_comment( $comment_id )->comment_content );
+
+		// The other host's own comment is the one updated.
+		$other_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => self::$post_id,
+				'comment_content' => 'Other content',
+			)
+		);
+		\add_comment_meta( $other_id, 'protocol', 'activitypub' );
+		\add_comment_meta( $other_id, 'source_id', \esc_url_raw( $requested ) );
+
+		Interactions::update_comment( $update );
+		$this->assertStringContainsString( 'Edited content', \get_comment( $other_id )->comment_content );
+		$this->assertSame( 'Original content', \get_comment( $comment_id )->comment_content );
+	}
+
+	/**
+	 * Test that a media reply, stored under its url, can be updated by its author.
+	 *
+	 * @covers ::update_comment
+	 */
+	public function test_update_comment_finds_media_reply_by_url() {
+		$object = array(
+			'type'      => 'Image',
+			'id'        => 'https://example.com/media/1',
+			'url'       => 'https://example.com/media/1.jpg',
+			'content'   => 'Original content',
+			'inReplyTo' => self::$post_permalink,
+		);
+
+		$comment_id = Interactions::add_comment(
+			array(
+				'actor'  => 'https://example.com/users/photographer',
+				'id'     => 'https://example.com/activities/media-reply',
+				'object' => $object,
+			)
+		);
+		$this->assertIsInt( $comment_id );
+
+		$object['content'] = 'Edited by owner';
+		Interactions::update_comment(
+			array(
+				'actor'  => 'https://example.com/users/photographer',
+				'id'     => 'https://example.com/activities/media-edit',
+				'object' => $object,
+			)
+		);
+
+		$this->assertStringContainsString( 'Edited by owner', \get_comment( $comment_id )->comment_content );
+	}
+
+	/**
+	 * Test that a recorded owner may update the comment from another host, as after a Move.
+	 *
+	 * @covers ::update_comment
+	 */
+	public function test_update_comment_by_owner_on_other_host() {
+		$old_uri = 'https://example.com/users/mover';
+		$new_uri = 'https://new.example/users/mover';
+
+		Remote_Actors::upsert(
+			array(
+				'id'                => $old_uri,
+				'type'              => 'Person',
+				'preferredUsername' => 'mover',
+				'inbox'             => $old_uri . '/inbox',
+			)
+		);
+		$new_id = Remote_Actors::upsert(
+			array(
+				'id'                => $new_uri,
+				'type'              => 'Person',
+				'preferredUsername' => 'mover',
+				'inbox'             => $new_uri . '/inbox',
+			)
+		);
+
+		$object     = array(
+			'id'        => 'https://example.com/notes/moved-note',
+			'content'   => 'Original content',
+			'inReplyTo' => self::$post_permalink,
+		);
+		$comment_id = Interactions::add_comment(
+			array(
+				'actor'  => $old_uri,
+				'id'     => 'https://example.com/activities/moved-comment',
+				'object' => $object,
+			)
+		);
+		$this->assertIsInt( $comment_id );
+
+		// The Move merge points the comment at the new account.
+		\update_comment_meta( $comment_id, '_activitypub_remote_actor_id', $new_id );
+
+		$object['content'] = 'Edited by the old account';
+		$result            = Interactions::update_comment(
+			array(
+				'actor'  => $old_uri,
+				'id'     => 'https://example.com/activities/old-edit',
+				'object' => $object,
+			)
+		);
+		$this->assertWPError( $result, 'The old account no longer owns the comment.' );
+
+		$object['content'] = 'Edited by the new account';
+		Interactions::update_comment(
+			array(
+				'actor'  => $new_uri,
+				'id'     => 'https://new.example/activities/new-edit',
+				'object' => $object,
+			)
+		);
+		$this->assertStringContainsString( 'Edited by the new account', \get_comment( $comment_id )->comment_content );
+	}
+
+	/**
+	 * Test that a comment whose recorded owner is gone cannot be updated by another actor.
+	 *
+	 * @covers ::update_comment
+	 */
+	public function test_update_comment_rejects_when_owner_is_gone() {
+		$owner_uri = 'https://example.com/users/gone-owner';
+
+		$owner_id = Remote_Actors::upsert(
+			array(
+				'id'                => $owner_uri,
+				'type'              => 'Person',
+				'preferredUsername' => 'owner',
+				'inbox'             => $owner_uri . '/inbox',
+			)
+		);
+
+		$comment_id = Interactions::add_comment(
+			array(
+				'actor'  => $owner_uri,
+				'id'     => 'https://example.com/activities/gone-comment',
+				'object' => array(
+					'id'        => 'https://example.com/notes/gone-note',
+					'content'   => 'Original content',
+					'inReplyTo' => self::$post_permalink,
+				),
+			)
+		);
+		$this->assertEquals( $owner_id, \get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true ) );
+
+		Remote_Actors::delete( $owner_id );
+
+		// Another actor on the same host, so only the owner check stands in the way.
+		$result = Interactions::update_comment(
+			array(
+				'actor'  => 'https://example.com/users/neighbour',
+				'id'     => 'https://example.com/activities/neighbour-edit',
+				'object' => array(
+					'id'        => 'https://example.com/notes/gone-note',
+					'content'   => 'HACKED content',
+					'inReplyTo' => self::$post_permalink,
+				),
+			)
+		);
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_update_forbidden', $result->get_error_code() );
+		$this->assertStringNotContainsString( 'HACKED', \get_comment( $comment_id )->comment_content );
+	}
+
+	/**
 	 * Persisting a comment must not leave global comment filters attached.
 	 *
 	 * The Akismet nonce override and the other guards are only meant to apply to the
@@ -1767,5 +2664,60 @@ class Test_Interactions extends \WP_UnitTestCase {
 		if ( false !== $flood_priority ) {
 			\add_action( 'check_comment_flood', 'check_comment_flood_db', $flood_priority, 4 );
 		}
+	}
+
+	/**
+	 * A comment stores the hash of its ID and URL, also when a comment stored without them is updated.
+	 *
+	 * @covers ::add_comment
+	 * @covers ::update_comment
+	 * @covers ::persist
+	 * @dataProvider uri_provider
+	 * @group uri-lookup
+	 *
+	 * @param string $uri The object ID.
+	 */
+	public function test_comment_stores_id_hash( $uri ) {
+		$object                  = $this->create_test_object( $uri );
+		$object['object']['url'] = $uri . '/url';
+
+		$comment_id = Interactions::add_comment( $object );
+		$this->assertIsInt( $comment_id );
+
+		foreach ( array( 'source_id', 'source_url' ) as $key ) {
+			$this->assertSame( get_id_hash( \get_comment_meta( $comment_id, $key, true ) ), \get_comment_meta( $comment_id, "_activitypub_{$key}_hash", true ) );
+
+			// As for comments stored before the hash.
+			\delete_comment_meta( $comment_id, "_activitypub_{$key}_hash" );
+		}
+
+		Interactions::update_comment( $object );
+
+		foreach ( array( 'source_id', 'source_url' ) as $key ) {
+			$this->assertSame( get_id_hash( \get_comment_meta( $comment_id, $key, true ) ), \get_comment_meta( $comment_id, "_activitypub_{$key}_hash", true ) );
+		}
+	}
+
+	/**
+	 * A reaction stores the hash of its activity ID.
+	 *
+	 * @covers ::add_reaction
+	 * @covers ::persist
+	 * @dataProvider uri_provider
+	 * @group uri-lookup
+	 *
+	 * @param string $uri The activity ID.
+	 */
+	public function test_reaction_stores_id_hash( $uri ) {
+		$comment_id = Interactions::add_reaction(
+			array(
+				'type'   => 'Like',
+				'id'     => $uri,
+				'actor'  => 'https://example.com/users/test',
+				'object' => self::$post_permalink,
+			)
+		);
+		$this->assertIsInt( $comment_id );
+		$this->assertSame( get_id_hash( $uri ), \get_comment_meta( $comment_id, '_activitypub_source_id_hash', true ) );
 	}
 }

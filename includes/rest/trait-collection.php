@@ -120,7 +120,7 @@ trait Collection {
 	/**
 	 * Collect the query arguments that belong in a collection's id and page links.
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param \WP_REST_Request $request The collection request.
 	 *
@@ -154,7 +154,7 @@ trait Collection {
 	 *
 	 * @see https://swicg.github.io/activitypub-api/seekitem
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @return array The argument definition.
 	 */
@@ -193,7 +193,7 @@ trait Collection {
 	 *
 	 * @see https://swicg.github.io/activitypub-api/seekitem
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param \WP_REST_Request $request       The request object.
 	 * @param string           $collection_id The plain collection ID (URL without query arguments).
@@ -263,7 +263,7 @@ trait Collection {
 	 * Mirrors an `orderby` of ID, so the count of matching posts is the cursor's zero-based index.
 	 * Shared by the ID-ordered collections (followers, following).
 	 *
-	 * @since unreleased
+	 * @since 9.4.0
 	 *
 	 * @param int    $id    The cursor post's ID.
 	 * @param string $order The collection's sort order, `asc` or `desc`.
