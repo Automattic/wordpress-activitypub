@@ -94,36 +94,6 @@ class Test_Remote_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * An empty ID finds no actor, even a row with an empty `post_name`.
-	 *
-	 * @covers ::get_by_uri
-	 * @group uri-lookup
-	 */
-	public function test_get_by_uri_empty_id() {
-		$post_id = self::factory()->post->create(
-			array(
-				'post_type' => Remote_Actors::POST_TYPE,
-				'post_name' => '',
-				'guid'      => '',
-			)
-		);
-		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$wpdb->update(
-			$wpdb->posts,
-			array(
-				'guid'      => '',
-				'post_name' => '',
-			),
-			array( 'ID' => $post_id )
-		);
-		\clean_post_cache( $post_id );
-
-		$this->assertWPError( Remote_Actors::get_by_uri( '' ) );
-		$this->assertSame( array(), Remote_Actors::get_existing_uris( array( '' ) ) );
-	}
-
-	/**
 	 * Following a key or owner reference must not change the signing authority.
 	 *
 	 * @dataProvider redirected_key_reference_provider

@@ -263,15 +263,6 @@ class Remote_Actors {
 	public static function get_by_uri( $actor_uri ) {
 		global $wpdb;
 
-		// Not a valid URL, so no stored actor can match; an empty guid must not match either.
-		if ( '' === get_id_hash( $actor_uri ) ) {
-			return new \WP_Error(
-				'activitypub_actor_not_found',
-				\__( 'Actor not found', 'activitypub' ),
-				array( 'status' => 404 )
-			);
-		}
-
 		list( $inserted, $updated ) = get_guid_forms( $actor_uri );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -382,18 +373,9 @@ class Remote_Actors {
 			// Map each stored spelling back to the URIs the caller asked for, the same values get_by_uri() matches.
 			$guids = array();
 			foreach ( $chunk as $uri ) {
-				// As in get_by_uri(), an invalid URL matches no actor, and must not match an empty guid.
-				if ( '' === get_id_hash( $uri ) ) {
-					continue;
-				}
-
 				foreach ( \array_unique( get_guid_forms( $uri ) ) as $guid ) {
 					$guids[ $guid ][] = $uri;
 				}
-			}
-
-			if ( ! $guids ) {
-				continue;
 			}
 
 			$placeholders = \implode( ', ', \array_fill( 0, \count( $guids ), '%s' ) );

@@ -144,7 +144,7 @@ class Followers {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = %s AND pm.meta_value = %d AND CAST(p.guid AS BINARY) IN (%s, %s)",
+				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = %s AND pm.meta_value = %d AND CAST(p.guid AS BINARY) IN (%s, %s) ORDER BY p.ID ASC",
 				array(
 					Remote_Actors::POST_TYPE,
 					self::FOLLOWER_META_KEY,
