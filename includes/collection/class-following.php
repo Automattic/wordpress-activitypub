@@ -10,7 +10,7 @@ namespace Activitypub\Collection;
 use Activitypub\Activity\Activity;
 
 use function Activitypub\add_to_outbox;
-use function Activitypub\get_guid_forms;
+use function Activitypub\get_stored_id_forms;
 use function Activitypub\unescape_guid;
 
 /**
@@ -88,7 +88,7 @@ class Following {
 					'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 						array(
 							'key'     => '_activitypub_object_id',
-							'value'   => get_guid_forms( unescape_guid( $post->guid ) ),
+							'value'   => get_stored_id_forms( unescape_guid( $post->guid ) ),
 							'compare' => 'IN',
 							'type'    => 'BINARY',
 						),
@@ -220,7 +220,7 @@ class Following {
 				'meta_query'     => array(
 					array(
 						'key'     => '_activitypub_object_id',
-						'value'   => get_guid_forms( unescape_guid( $post->guid ) ),
+						'value'   => get_stored_id_forms( unescape_guid( $post->guid ) ),
 						'compare' => 'IN',
 						'type'    => 'BINARY',
 					),

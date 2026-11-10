@@ -13,8 +13,8 @@ use Activitypub\Proxy;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
-use function Activitypub\get_guid_forms;
 use function Activitypub\get_id_hash;
+use function Activitypub\get_stored_id_forms;
 use function Activitypub\is_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
@@ -264,7 +264,7 @@ class Remote_Actors {
 	public static function get_by_uri( $actor_uri ) {
 		global $wpdb;
 
-		list( $inserted, $updated, $raw ) = get_guid_forms( $actor_uri );
+		list( $inserted, $updated, $raw ) = get_stored_id_forms( $actor_uri );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
@@ -375,7 +375,7 @@ class Remote_Actors {
 			// Map each stored spelling back to the URIs the caller asked for, the same values get_by_uri() matches.
 			$guids = array();
 			foreach ( $chunk as $uri ) {
-				foreach ( \array_unique( get_guid_forms( $uri ) ) as $guid ) {
+				foreach ( \array_unique( get_stored_id_forms( $uri ) ) as $guid ) {
 					$guids[ $guid ][] = $uri;
 				}
 			}

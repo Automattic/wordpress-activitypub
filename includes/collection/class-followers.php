@@ -10,9 +10,9 @@ namespace Activitypub\Collection;
 use Activitypub\Signature;
 use Activitypub\Tombstone;
 
-use function Activitypub\get_guid_forms;
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_stored_id_forms;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 
@@ -139,7 +139,7 @@ class Followers {
 	public static function get_by_uri( $user_id, $actor ) {
 		global $wpdb;
 
-		list( $inserted, $updated, $raw ) = get_guid_forms( $actor );
+		list( $inserted, $updated, $raw ) = get_stored_id_forms( $actor );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$id = $wpdb->get_var(

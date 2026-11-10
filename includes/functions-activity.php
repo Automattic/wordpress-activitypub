@@ -297,7 +297,7 @@ function get_id_hash( $id ) {
  *
  * @return string[] The insert form, the update form and the raw ID.
  */
-function get_guid_forms( $id ) {
+function get_stored_id_forms( $id ) {
 	$id = (string) $id;
 
 	return array(

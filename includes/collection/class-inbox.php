@@ -11,8 +11,8 @@ use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Comment;
 
-use function Activitypub\get_guid_forms;
 use function Activitypub\get_id_hash;
+use function Activitypub\get_stored_id_forms;
 use function Activitypub\is_activity_public;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
@@ -210,7 +210,7 @@ class Inbox {
 	 */
 	public static function get_by_guid( $guid ) {
 		global $wpdb;
-		list( $inserted, $updated, $raw ) = get_guid_forms( $guid );
+		list( $inserted, $updated, $raw ) = get_stored_id_forms( $guid );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
@@ -492,7 +492,7 @@ class Inbox {
 	 */
 	public static function deduplicate( $guid ) {
 		global $wpdb;
-		list( $inserted, $updated, $raw ) = get_guid_forms( $guid );
+		list( $inserted, $updated, $raw ) = get_stored_id_forms( $guid );
 
 		// Query for all posts with this GUID directly (get_posts doesn't supports guid parameter).
 		$post_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery

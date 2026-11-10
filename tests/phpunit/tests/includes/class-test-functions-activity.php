@@ -12,8 +12,9 @@ use Activitypub\Activity\Base_Object;
 use function Activitypub\extract_recipients_from_activity;
 use function Activitypub\extract_recipients_from_activity_property;
 use function Activitypub\get_activity_visibility;
-use function Activitypub\get_guid_forms;
 use function Activitypub\get_id_hash;
+use function Activitypub\get_stored_id_forms;
+use function Activitypub\unescape_guid;
 
 /**
  * Test class for Activity Functions.
@@ -1283,12 +1284,12 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 	/**
 	 * The guid forms are what WordPress stores on insert and what every update writes back.
 	 *
-	 * @covers \Activitypub\get_guid_forms
+	 * @covers \Activitypub\get_stored_id_forms
 	 */
-	public function test_get_guid_forms() {
+	public function test_get_stored_id_forms() {
 		$id      = 'https://example.com/uri-test/?a=1&b=2';
 		$post_id = self::factory()->post->create( array( 'guid' => \esc_url_raw( $id ) ) );
-		$forms   = get_guid_forms( $id );
+		$forms   = get_stored_id_forms( $id );
 
 		$this->assertSame( \get_post_field( 'guid', $post_id, 'raw' ), $forms[0], 'The first form is the stored insert form.' );
 
@@ -1302,7 +1303,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 
 		$this->assertSame( \get_post_field( 'guid', $post_id, 'raw' ), $forms[1], 'The second form is what an update writes back.' );
 		$this->assertSame( $id, $forms[2], 'The third form is the raw ID, as meta values keep it.' );
-		$this->assertSame( array( 'https://example.com/plain', 'https://example.com/plain', 'https://example.com/plain' ), get_guid_forms( 'https://example.com/plain' ) );
+		$this->assertSame( array( 'https://example.com/plain', 'https://example.com/plain', 'https://example.com/plain' ), get_stored_id_forms( 'https://example.com/plain' ) );
 	}
 
 	/**
@@ -1330,5 +1331,28 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			'at scheme'      => array( 'at://did:plc:abc123/app.bsky.feed.post/1' ),
 			'javascript url' => array( 'javascript:alert(1)' ),
 		);
+	}
+
+	/**
+	 * Unescaping a stored guid gives the ID back, after an insert and after an update.
+	 *
+	 * @covers \Activitypub\unescape_guid
+	 */
+	public function test_unescape_guid() {
+		$id      = "https://example.com/uri-test/o'brien?a=1&b=2";
+		$post_id = self::factory()->post->create( array( 'guid' => \esc_url_raw( $id ) ) );
+
+		$this->assertSame( $id, unescape_guid( \get_post_field( 'guid', $post_id, 'raw' ) ), 'The insert form must give the ID back.' );
+
+		\wp_update_post(
+			array(
+				'ID'         => $post_id,
+				'post_title' => 'Updated',
+			)
+		);
+		\clean_post_cache( $post_id );
+
+		$this->assertSame( $id, unescape_guid( \get_post_field( 'guid', $post_id, 'raw' ) ), 'The update form must give the ID back.' );
+		$this->assertSame( 'https://example.com/a&lt;b', unescape_guid( 'https://example.com/a&lt;b' ), 'Only the escapes core adds are reversed.' );
 	}
 }

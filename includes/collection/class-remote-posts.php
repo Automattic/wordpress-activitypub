@@ -10,8 +10,8 @@ namespace Activitypub\Collection;
 use Activitypub\Emoji;
 use Activitypub\Sanitize;
 
-use function Activitypub\get_guid_forms;
 use function Activitypub\get_id_hash;
+use function Activitypub\get_stored_id_forms;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
@@ -144,7 +144,7 @@ class Remote_Posts {
 	 */
 	public static function get_by_guid( $guid ) {
 		global $wpdb;
-		list( $inserted, $updated, $raw ) = get_guid_forms( $guid );
+		list( $inserted, $updated, $raw ) = get_stored_id_forms( $guid );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
