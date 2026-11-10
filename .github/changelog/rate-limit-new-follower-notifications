@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Rate limit new follower notification emails to prevent repeated notifications when an actor cycles follow and unfollow.
