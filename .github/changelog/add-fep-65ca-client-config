@@ -1,4 +1,4 @@
 Significance: minor
 Type: added
 
-Third-party apps can now find your site's account pages, like login and password reset, when the ActivityPub API is enabled.
+Third-party apps can now find your site's account pages and posting options, like login, password reset and content warnings, when the ActivityPub API is enabled.
