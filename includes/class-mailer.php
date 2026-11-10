@@ -196,7 +196,14 @@ class Mailer {
 			if ( $last_sent && ( \time() - $last_sent ) < DAY_IN_SECONDS ) {
 				return;
 			}
+		}
 
+		$actor = get_remote_metadata_by_actor( $activity['actor'] );
+		if ( ! $actor || \is_wp_error( $actor ) ) {
+			return;
+		}
+
+		if ( $meta_key ) {
 			$claimed = $last_sent
 				? \update_post_meta( $remote_actor->ID, $meta_key, \time(), $last_sent )
 				: \add_post_meta( $remote_actor->ID, $meta_key, \time(), true );
@@ -204,18 +211,6 @@ class Mailer {
 			if ( ! $claimed ) {
 				return;
 			}
-		}
-
-		$actor = get_remote_metadata_by_actor( $activity['actor'] );
-		if ( ! $actor || \is_wp_error( $actor ) ) {
-			if ( $remote_actor instanceof \WP_Post && $meta_key ) {
-				if ( $last_sent ) {
-					\update_post_meta( $remote_actor->ID, $meta_key, $last_sent );
-				} else {
-					\delete_post_meta( $remote_actor->ID, $meta_key );
-				}
-			}
-			return;
 		}
 
 		$actor = self::normalize_actor( $actor );
