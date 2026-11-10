@@ -99,7 +99,16 @@ class Test_Client_Config_Controller extends \Activitypub\Tests\Test_REST_Control
 
 		$this->assertSame( '1.0', $data['version'] );
 		$this->assertFalse( $data['account_scope_supported'] );
-		$this->assertSame( array( 'max_length' => null ), $data['composer'] );
+		$this->assertNull( $data['composer']['max_length'] );
+		$this->assertSame( array( 'text/html' ), $data['composer']['content_types'] );
+		$this->assertTrue( $data['composer']['content_warning']['supported'] );
+		$this->assertSame( array( 'public', 'unlisted' ), $data['composer']['visibility'] );
+		$this->assertTrue( $data['composer']['editing']['supported'] );
+		$this->assertNull( $data['composer']['editing']['window_seconds'] );
+		$this->assertFalse( $data['composer']['polls']['supported'] );
+		$this->assertFalse( $data['composer']['quotes']['supported'] );
+		$this->assertNull( $data['composer']['max_mentions'] );
+		$this->assertNull( $data['composer']['max_hashtags'] );
 		$this->assertFalse( $data['accounts']['username']['changeable'] );
 
 		$this->assertSame( \wp_login_url(), $data['links']['login'] );

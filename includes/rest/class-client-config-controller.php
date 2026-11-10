@@ -112,7 +112,22 @@ class Client_Config_Controller extends \WP_REST_Controller {
 			'version'                 => '1.0',
 			'account_scope_supported' => false,
 			'composer'                => array(
-				'max_length' => null,
+				'max_length'      => null,
+				'content_types'   => array( 'text/html' ),
+				'content_warning' => array(
+					'supported'  => true,
+					'max_length' => null,
+				),
+				'visibility'      => array( 'public', 'unlisted' ),
+				'editing'         => array(
+					'supported'      => true,
+					'window_seconds' => null,
+					'max_edits'      => null,
+				),
+				'polls'           => array( 'supported' => false ),
+				'quotes'          => array( 'supported' => false ),
+				'max_mentions'    => null,
+				'max_hashtags'    => null,
 			),
 			'accounts'                => array(
 				'username' => array(
