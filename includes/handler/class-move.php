@@ -7,7 +7,6 @@
 
 namespace Activitypub\Handler;
 
-use Activitypub\Collection\Actors;
 use Activitypub\Collection\Blocked_Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
@@ -103,10 +102,7 @@ class Move {
 			return;
 		}
 
-		$target_object  = Remote_Actors::get_by_uri( $target_id );
-		$result         = null;
-		$success        = false;
-		$target_post_id = 0;
+		$target_object = Remote_Actors::get_by_uri( $target_id );
 
 		// Our users who follow the old actor follow the new one (FEP-7628), unless they already do.
 		$refollow = self::get_following_user_ids( $origin_object->ID );
@@ -116,14 +112,14 @@ class Move {
 
 		global $wpdb;
 
-		// If the origin is followed but the target is not, update the origin to point to the target.
+		// If only the origin is stored, it becomes the target.
 		if ( \is_wp_error( $target_object ) ) {
 			/*
 			 * Proxy::get() already self-confirmed the target. Store it first, so a target that can
 			 * not be stored (no inbox) leaves the origin as it was. wp_update_post() keeps the guid.
 			 */
 			$result = Remote_Actors::update( $origin_object->ID, $target_json );
-			if ( \is_wp_error( $result ) ) {
+			if ( ! $result || \is_wp_error( $result ) ) {
 				return;
 			}
 
@@ -139,12 +135,12 @@ class Move {
 			$wpdb->update( $wpdb->posts, $data, array( 'ID' => (int) $origin_object->ID ) );
 			\clean_post_cache( $origin_object->ID );
 
-			$success        = true;
 			$target_post_id = $origin_object->ID;
-		}
+		} else {
+			// If both the target and origin are stored, merge them.
+			// The new Follows go to the inbox of the fresh copy, not to a stale stored one.
+			Remote_Actors::update( $target_object->ID, $target_json );
 
-		// If both the target and origin are stored, merge them.
-		if ( ! \is_wp_error( $target_object ) ) {
 			// Followers and blocks of the origin carry over; our own follows are sent again below.
 			$origin_users = \get_post_meta( $origin_object->ID, Followers::FOLLOWER_META_KEY, false );
 			$target_users = \get_post_meta( $target_object->ID, Followers::FOLLOWER_META_KEY, false );
@@ -182,27 +178,24 @@ class Move {
 			}
 			// phpcs:enable
 
-			$success        = true;
 			$target_post_id = $target_object->ID;
 			$result         = Remote_Actors::delete( $origin_object->ID );
 		}
 
-		if ( $success ) {
-			// A user who blocks the new actor neither follows it nor keeps it as a follower.
-			foreach ( \get_post_meta( $target_post_id, Followers::FOLLOWER_META_KEY, false ) as $user_id ) {
-				if ( Moderation::is_actor_blocked( $target_id, (int) $user_id ) ) {
-					Followers::remove( $target_post_id, (int) $user_id );
-				}
+		// A user who blocks the new actor neither follows it nor keeps it as a follower.
+		foreach ( \get_post_meta( $target_post_id, Followers::FOLLOWER_META_KEY, false ) as $user_id ) {
+			if ( Moderation::is_actor_blocked( $target_id, (int) $user_id ) ) {
+				Followers::remove( $target_post_id, (int) $user_id );
 			}
+		}
 
-			foreach ( $refollow as $user_id ) {
-				// After a swap the post still says the user follows; the new server does not know that yet.
-				Following::reject( $target_post_id, (int) $user_id );
+		foreach ( $refollow as $user_id ) {
+			// After a swap the post still says the user follows; the new server does not know that yet.
+			Following::reject( $target_post_id, (int) $user_id );
 
-				// Only a user who can still follow, and does not block the new actor, follows it.
-				if ( ! \is_wp_error( Actors::get_by_id( (int) $user_id ) ) && ! Moderation::is_actor_blocked( $target_id, (int) $user_id ) ) {
-					Following::follow( $target_post_id, (int) $user_id );
-				}
+			// A user who blocks the new actor does not follow it; follow() refuses users who can no longer follow.
+			if ( ! Moderation::is_actor_blocked( $target_id, (int) $user_id ) ) {
+				Following::follow( $target_post_id, (int) $user_id );
 			}
 		}
 
@@ -211,18 +204,17 @@ class Move {
 		 *
 		 * @param array $activity The ActivityPub activity data.
 		 * @param int[] $user_ids The local user IDs.
-		 * @param bool  $success  True on success, false otherwise.
-		 * @param mixed $result   The result of the operation (e.g., post ID, WP_Error, or status).
+		 * @param bool  $success  Always true; a Move that is not handled returns before this action.
+		 * @param mixed $result   The moved actor's post ID, or the result of deleting the merged old actor.
 		 */
-		\do_action( 'activitypub_handled_move', $activity, (array) $user_ids, $success, $result );
+		\do_action( 'activitypub_handled_move', $activity, (array) $user_ids, true, $result );
 	}
 
 	/**
 	 * Extract the target from the activity.
 	 *
-	 * The ActivityStreams spec define the `target` attribute as the
-	 * destination of the activity, but Mastodon uses the `object`
-	 * attribute to move profiles.
+	 * FEP-7628 and Mastodon send the new actor as `target`. Without a `target`,
+	 * the `object` is read as the new actor, the way older senders sent it.
 	 *
 	 * @param array $activity The JSON "Move" Activity.
 	 *

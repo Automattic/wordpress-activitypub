@@ -1259,6 +1259,76 @@ class Test_Move extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An update that fails without an error (wp_update_post() returns 0) leaves the old actor as it was.
+	 *
+	 * @covers ::handle_move
+	 */
+	public function test_handle_move_keeps_origin_when_update_fails() {
+		$origin = 'https://old.example/users/uma';
+		$target = 'https://new.example/users/uma';
+
+		$id = Remote_Actors::upsert( $this->actor( $origin ) );
+
+		$filter = $this->mock_remote(
+			array(
+				$origin => $this->actor( $origin, array( 'movedTo' => $target ) ),
+				$target => $this->actor( $target, array( 'alsoKnownAs' => array( $origin ) ) ),
+			)
+		);
+		\add_filter( 'wp_insert_post_empty_content', '__return_true' );
+
+		Move::handle_move(
+			array(
+				'type'   => 'Move',
+				'actor'  => $origin,
+				'object' => $origin,
+				'target' => $target,
+			),
+			$this->user_id
+		);
+
+		\remove_filter( 'wp_insert_post_empty_content', '__return_true' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertSame( $id, Remote_Actors::get_by_uri( $origin )->ID, 'The old actor must stay where it was.' );
+		$this->assertWPError( Remote_Actors::get_by_uri( $target ) );
+	}
+
+	/**
+	 * A merge stores the fresh copy of the new actor, so the new Follows reach its current inbox.
+	 *
+	 * @covers ::handle_move
+	 */
+	public function test_handle_move_merge_refreshes_target() {
+		$origin = 'https://old.example/users/vic';
+		$target = 'https://new.example/users/vic';
+
+		Remote_Actors::upsert( $this->actor( $origin ) );
+		$target_id = Remote_Actors::upsert( $this->actor( $target, array( 'inbox' => 'https://new.example/old-inbox' ) ) );
+
+		$filter = $this->mock_remote(
+			array(
+				$origin => $this->actor( $origin, array( 'movedTo' => $target ) ),
+				$target => $this->actor( $target, array( 'alsoKnownAs' => array( $origin ) ) ),
+			)
+		);
+
+		Move::handle_move(
+			array(
+				'type'   => 'Move',
+				'actor'  => $origin,
+				'object' => $origin,
+				'target' => $target,
+			),
+			$this->user_id
+		);
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertSame( $target . '/inbox', \get_post_meta( $target_id, '_activitypub_inbox', true ) );
+	}
+
+	/**
 	 * Build a remote actor document.
 	 *
 	 * @param string $id    The actor id.
