@@ -85,7 +85,6 @@ class Test_Remote_Actors extends \WP_UnitTestCase {
 		$actor   = $this->actor_for_uri( $uri );
 		$post_id = Remote_Actors::create( $actor );
 		Remote_Actors::update( $post_id, $actor );
-		Remote_Actors::update( $post_id, $actor );
 
 		$found = Remote_Actors::get_by_uri( $uri );
 		$this->assertInstanceOf( 'WP_Post', $found );
@@ -123,6 +122,35 @@ class Test_Remote_Actors extends \WP_UnitTestCase {
 			),
 			Remote_Actors::get_existing_uris( array( $plain, $literal ) )
 		);
+	}
+
+	/**
+	 * An empty ID finds no actor, even a row with an empty `post_name`.
+	 *
+	 * @covers ::get_by_uri
+	 * @group uri-lookup
+	 */
+	public function test_get_by_uri_empty_id() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type' => Remote_Actors::POST_TYPE,
+				'post_name' => '',
+				'guid'      => '',
+			)
+		);
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		$wpdb->update(
+			$wpdb->posts,
+			array(
+				'guid'      => '',
+				'post_name' => '',
+			),
+			array( 'ID' => $post_id )
+		);
+		\clean_post_cache( $post_id );
+
+		$this->assertWPError( Remote_Actors::get_by_uri( '' ) );
 	}
 
 	/**

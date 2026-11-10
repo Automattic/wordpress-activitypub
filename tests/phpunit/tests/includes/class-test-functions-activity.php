@@ -12,6 +12,7 @@ use Activitypub\Activity\Base_Object;
 use function Activitypub\extract_recipients_from_activity;
 use function Activitypub\extract_recipients_from_activity_property;
 use function Activitypub\get_activity_visibility;
+use function Activitypub\get_guid_forms;
 use function Activitypub\get_id_hash;
 
 /**
@@ -1277,6 +1278,30 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 	 */
 	public function test_get_id_hash_differs_for_lookalikes( $stored, $requested ) {
 		$this->assertNotSame( get_id_hash( $stored ), get_id_hash( $requested ) );
+	}
+
+	/**
+	 * The guid forms are what WordPress stores on insert and what every update writes back.
+	 *
+	 * @covers \Activitypub\get_guid_forms
+	 */
+	public function test_get_guid_forms() {
+		$id      = 'https://example.com/uri-test/?a=1&b=2';
+		$post_id = self::factory()->post->create( array( 'guid' => \esc_url_raw( $id ) ) );
+		$forms   = get_guid_forms( $id );
+
+		$this->assertSame( \get_post_field( 'guid', $post_id, 'raw' ), $forms[0], 'The first form is the stored insert form.' );
+
+		\wp_update_post(
+			array(
+				'ID'         => $post_id,
+				'post_title' => 'Updated',
+			)
+		);
+		\clean_post_cache( $post_id );
+
+		$this->assertSame( \get_post_field( 'guid', $post_id, 'raw' ), $forms[1], 'The second form is what an update writes back.' );
+		$this->assertSame( array( 'https://example.com/plain', 'https://example.com/plain' ), get_guid_forms( 'https://example.com/plain' ) );
 	}
 
 	/**

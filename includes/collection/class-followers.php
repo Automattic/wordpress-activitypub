@@ -10,6 +10,7 @@ namespace Activitypub\Collection;
 use Activitypub\Signature;
 use Activitypub\Tombstone;
 
+use function Activitypub\get_guid_forms;
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\is_same_host;
@@ -138,16 +139,18 @@ class Followers {
 	public static function get_by_uri( $user_id, $actor ) {
 		global $wpdb;
 
+		list( $inserted, $updated ) = get_guid_forms( $actor );
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = %s AND pm.meta_value = %d AND CAST(p.guid AS BINARY) = %s",
+				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = %s AND pm.meta_value = %d AND CAST(p.guid AS BINARY) IN (%s, %s)",
 				array(
 					Remote_Actors::POST_TYPE,
 					self::FOLLOWER_META_KEY,
 					$user_id,
-					// What `pre_post_guid` stores on this WordPress version; prepare() handles the escaping.
-					\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $actor ), 0, 'db' ) ),
+					$inserted,
+					$updated,
 				)
 			)
 		);

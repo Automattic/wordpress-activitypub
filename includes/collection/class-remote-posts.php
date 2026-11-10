@@ -10,6 +10,7 @@ namespace Activitypub\Collection;
 use Activitypub\Emoji;
 use Activitypub\Sanitize;
 
+use function Activitypub\get_guid_forms;
 use function Activitypub\get_id_hash;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
@@ -142,13 +143,13 @@ class Remote_Posts {
 	 */
 	public static function get_by_guid( $guid ) {
 		global $wpdb;
+		list( $inserted, $updated ) = get_guid_forms( $guid );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT ID FROM $wpdb->posts WHERE CAST(guid AS BINARY) IN (%s, %s) AND post_type=%s ORDER BY ID ASC",
-				// What `pre_post_guid` stores on insert, and the `esc_url()` form every wp_update_post() writes back.
-				\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $guid ), 0, 'db' ) ),
-				\esc_url( $guid ),
+				$inserted,
+				$updated,
 				self::POST_TYPE
 			)
 		);

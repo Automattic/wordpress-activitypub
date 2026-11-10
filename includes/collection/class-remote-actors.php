@@ -13,6 +13,7 @@ use Activitypub\Proxy;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
+use function Activitypub\get_guid_forms;
 use function Activitypub\get_id_hash;
 use function Activitypub\is_actor;
 use function Activitypub\is_same_host;
@@ -261,13 +262,22 @@ class Remote_Actors {
 	 */
 	public static function get_by_uri( $actor_uri ) {
 		global $wpdb;
+
+		// Not a valid URL, so no stored actor can match; an empty guid must not match either.
+		if ( '' === get_id_hash( $actor_uri ) ) {
+			return new \WP_Error(
+				'activitypub_actor_not_found',
+				\__( 'Actor not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+		list( $inserted, $updated ) = get_guid_forms( $actor_uri );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_ids = $wpdb->get_col(
 			$wpdb->prepare(
 				"SELECT ID FROM $wpdb->posts WHERE CAST(guid AS BINARY) IN (%s, %s) AND post_type=%s ORDER BY ID ASC",
-				// What `pre_post_guid` stores on insert, and the `esc_url()` form every wp_update_post() writes back.
-				\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $actor_uri ), 0, 'db' ) ),
-				\esc_url( $actor_uri ),
+				$inserted,
+				$updated,
 				self::POST_TYPE
 			)
 		);
@@ -279,7 +289,7 @@ class Remote_Actors {
 			}
 
 			// Both spellings can match another ID (`?a=1&b=2` and `?a=1&#038;b=2`), so the stored id or its hash decides.
-			if ( self::is_stored_id( $post->post_content, $post->post_name, $actor_uri ) ) {
+			if ( self::is_stored_id( $post, $actor_uri ) ) {
 				return $post;
 			}
 		}
@@ -298,18 +308,17 @@ class Remote_Actors {
 	 * (a Move); older rows have only the `id` in the stored JSON. A row with neither is trusted by its
 	 * `guid`, as before.
 	 *
-	 * @param string $post_content The stored actor JSON.
-	 * @param string $post_name    The stored `post_name`.
-	 * @param string $actor_uri    The actor URI that was looked up.
+	 * @param \WP_Post|object $row       The stored row, with `post_name` and `post_content`.
+	 * @param string          $actor_uri The actor URI that was looked up.
 	 *
 	 * @return bool True if the row belongs to the URI.
 	 */
-	private static function is_stored_id( $post_content, $post_name, $actor_uri ) {
-		if ( get_id_hash( $actor_uri ) === $post_name ) {
+	private static function is_stored_id( $row, $actor_uri ) {
+		if ( get_id_hash( $actor_uri ) === $row->post_name ) {
 			return true;
 		}
 
-		$actor = \json_decode( (string) $post_content, true );
+		$actor = \json_decode( (string) $row->post_content, true );
 		if ( ! \is_array( $actor ) || ! \is_string( $actor['id'] ?? null ) ) {
 			return true;
 		}
@@ -395,8 +404,9 @@ class Remote_Actors {
 			// Map each stored spelling back to the URIs the caller asked for, the same values get_by_uri() matches.
 			$guids = array();
 			foreach ( $chunk as $uri ) {
-				$guids[ \wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $uri ), 0, 'db' ) ) ][] = $uri;
-				$guids[ \esc_url( $uri ) ][] = $uri;
+				foreach ( \array_unique( get_guid_forms( $uri ) ) as $guid ) {
+					$guids[ $guid ][] = $uri;
+				}
 			}
 
 			$placeholders = \implode( ', ', \array_fill( 0, \count( $guids ), '%s' ) );
@@ -413,7 +423,7 @@ class Remote_Actors {
 			foreach ( $found as $row ) {
 				foreach ( $guids[ $row->guid ] ?? array() as $uri ) {
 					// As in get_by_uri(), the stored id or its hash decides between URIs with the same spelling.
-					if ( self::is_stored_id( $row->post_content, $row->post_name, $uri ) ) {
+					if ( self::is_stored_id( $row, $uri ) ) {
 						$existing[ $uri ] = true;
 					}
 				}
