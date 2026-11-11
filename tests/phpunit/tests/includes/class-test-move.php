@@ -678,9 +678,10 @@ class Test_Move extends \WP_UnitTestCase {
 
 		$this->assertSame( $target_id, Move::remote( \get_post( $origin_id ), $this->remote_actor( $target ) ) );
 
-		$this->assertWPError( Remote_Actors::get_by_uri( $origin ), 'The old actor must be merged away.' );
+		$this->assertNull( \get_post( $origin_id ), 'The old actor must be merged away.' );
 		$this->assertContains( (string) $blocker, \get_post_meta( $target_id, Moderation::BLOCKED_ACTORS_META_KEY, false ), 'The block must carry over.' );
 		$this->assertTrue( Moderation::is_actor_blocked( $target, $blocker ) );
+		$this->assertTrue( Moderation::is_actor_blocked( $origin, $blocker ), 'The old actor must stay blocked.' );
 		$this->assertContains( (string) $user_id, \get_post_meta( $target_id, Following::PENDING_META_KEY, false ) );
 		$this->assertCount( 1, $this->get_follows( $user_id, $target ) );
 	}

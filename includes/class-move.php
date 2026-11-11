@@ -19,6 +19,7 @@ use Activitypub\Model\User;
 use Activitypub\Scheduler\Actor as Actor_Scheduler;
 
 use function Activitypub\is_actor;
+use function Activitypub\unescape_guid;
 
 /**
  * ActivityPub (Account) Move Class
@@ -235,6 +236,8 @@ class Move {
 		// Read before the merge, which deletes the old actor.
 		$refollow   = self::get_following_user_ids( $origin->ID );
 		$blocked_by = \get_post_meta( $origin->ID, Moderation::BLOCKED_ACTORS_META_KEY, false );
+		$origin_uri = unescape_guid( $origin->guid );
+		$old_actor  = $blocked_by ? Remote_Actors::get_actor( $origin ) : null;
 
 		// Stored first, so a new actor that can not be stored (no inbox) leaves the old one as it was.
 		$post_id = Remote_Actors::upsert( $actor );
@@ -253,9 +256,15 @@ class Move {
 
 		Remote_Actors::merge( $origin->ID, $post_id );
 
+		// The old account stays reachable, so it keeps its blocks. Stored again from our copy, without a fetch.
+		if ( $old_actor && ! \is_wp_error( $old_actor ) ) {
+			Remote_Actors::upsert( $old_actor );
+		}
+
 		// Through Blocked_Actors::add(), so the block hooks run and clean up the relationships.
 		foreach ( $blocked_by as $user_id ) {
 			Blocked_Actors::add( (int) $user_id, $actor['id'] );
+			Blocked_Actors::add( (int) $user_id, $origin_uri );
 		}
 
 		// A user who blocks the new actor neither follows it nor keeps it as a follower.
