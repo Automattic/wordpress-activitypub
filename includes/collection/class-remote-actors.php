@@ -217,6 +217,7 @@ class Remote_Actors {
 	 *
 	 * Without a stored new actor, the old post becomes the new actor. Otherwise the followers,
 	 * comments and Reader posts of the old actor go to the new one, and the old post is deleted.
+	 * The follows and blocks of our users do not carry over; use `Move::remote()` for that.
 	 *
 	 * @since unreleased
 	 *
