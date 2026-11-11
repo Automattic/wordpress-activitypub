@@ -2806,155 +2806,34 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
-	 * Without a stored new actor, the old post becomes the new actor, found by its new id after an update.
+	 * Followers, comments and Reader posts of the old actor go to the new one, and the old one is deleted.
 	 *
-	 * @covers ::move
+	 * @covers ::merge
 	 */
-	public function test_move_swaps_origin() {
-		$origin = 'https://old.example.com/users/ann';
-		$target = 'https://new.example.com/users/ann?a=1&b=2';
-
+	public function test_merge() {
 		$origin_id = Remote_Actors::upsert(
 			array(
-				'id'    => $origin,
+				'id'    => 'https://old.example.com/users/ben',
 				'type'  => 'Person',
-				'inbox' => $origin . '/inbox',
-			)
-		);
-		\add_post_meta( $origin_id, Followers::FOLLOWER_META_KEY, '1' );
-
-		$post_id = Remote_Actors::move(
-			\get_post( $origin_id ),
-			array(
-				'id'    => $target,
-				'type'  => 'Person',
-				'inbox' => 'https://new.example.com/inbox',
-			)
-		);
-
-		$this->assertSame( $origin_id, $post_id );
-		$this->assertSame( $origin_id, Remote_Actors::get_by_uri( $target )->ID );
-		$this->assertWPError( Remote_Actors::get_by_uri( $origin ) );
-		$this->assertSame( 'https://new.example.com/inbox', \get_post_meta( $origin_id, '_activitypub_inbox', true ) );
-		$this->assertSame( array( '1' ), \get_post_meta( $origin_id, Followers::FOLLOWER_META_KEY, false ), 'The followers stay on the post.' );
-
-		// A later update rewrites the guid; the lookup still finds it.
-		Remote_Actors::update(
-			$origin_id,
-			array(
-				'id'    => $target,
-				'type'  => 'Person',
-				'inbox' => 'https://new.example.com/inbox',
-			)
-		);
-		$this->assertSame( $origin_id, Remote_Actors::get_by_uri( $target )->ID );
-	}
-
-	/**
-	 * With a stored new actor, followers, comments and Reader posts of the old actor go to it, and the old one is deleted.
-	 *
-	 * @covers ::move
-	 */
-	public function test_move_merges_into_target() {
-		$origin = 'https://old.example.com/users/ben';
-		$target = 'https://new.example.com/users/ben';
-
-		$origin_id = Remote_Actors::upsert(
-			array(
-				'id'    => $origin,
-				'type'  => 'Person',
-				'inbox' => $origin . '/inbox',
+				'inbox' => 'https://old.example.com/users/ben/inbox',
 			)
 		);
 		$target_id = Remote_Actors::upsert(
 			array(
-				'id'    => $target,
+				'id'    => 'https://new.example.com/users/ben',
 				'type'  => 'Person',
-				'inbox' => $target . '/old-inbox',
+				'inbox' => 'https://new.example.com/users/ben/inbox',
 			)
 		);
 		\add_post_meta( $origin_id, Followers::FOLLOWER_META_KEY, '1' );
 		$comment_id = self::factory()->comment->create( array( 'comment_meta' => array( '_activitypub_remote_actor_id' => (string) $origin_id ) ) );
 		$reader_id  = self::factory()->post->create( array( 'meta_input' => array( '_activitypub_remote_actor_id' => (string) $origin_id ) ) );
 
-		$post_id = Remote_Actors::move(
-			\get_post( $origin_id ),
-			array(
-				'id'    => $target,
-				'type'  => 'Person',
-				'inbox' => $target . '/inbox',
-			)
-		);
+		Remote_Actors::merge( $origin_id, $target_id );
 
-		$this->assertSame( $target_id, $post_id );
 		$this->assertNull( \get_post( $origin_id ), 'The old actor must be deleted.' );
-		$this->assertSame( $target . '/inbox', \get_post_meta( $target_id, '_activitypub_inbox', true ), 'The new actor is stored fresh.' );
 		$this->assertSame( array( '1' ), \get_post_meta( $target_id, Followers::FOLLOWER_META_KEY, false ) );
 		$this->assertSame( (string) $target_id, \get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true ) );
 		$this->assertSame( (string) $target_id, \get_post_meta( $reader_id, '_activitypub_remote_actor_id', true ) );
-	}
-
-	/**
-	 * A swap whose guid write fails returns an error, so no Follow goes out under the old guid.
-	 *
-	 * @covers ::move
-	 */
-	public function test_move_fails_when_guid_write_fails() {
-		global $wpdb;
-
-		$origin = 'https://old.example.com/users/dan';
-		$target = 'https://new.example.com/users/dan';
-
-		$origin_id = Remote_Actors::upsert(
-			array(
-				'id'    => $origin,
-				'type'  => 'Person',
-				'inbox' => $origin . '/inbox',
-			)
-		);
-
-		// Break only the direct guid write; wp_update_post() writes the guid among all other fields.
-		$break = static function ( $query ) {
-			return false !== \strpos( $query, 'SET `guid`' ) ? 'UPDATE broken' : $query;
-		};
-		\add_filter( 'query', $break );
-		$suppress = $wpdb->suppress_errors();
-
-		$result = Remote_Actors::move(
-			\get_post( $origin_id ),
-			array(
-				'id'    => $target,
-				'type'  => 'Person',
-				'inbox' => $target . '/inbox',
-			)
-		);
-
-		$wpdb->suppress_errors( $suppress );
-		\remove_filter( 'query', $break );
-
-		$this->assertWPError( $result );
-		$this->assertWPError( Remote_Actors::get_by_uri( $target ) );
-		$this->assertSame( $origin_id, Remote_Actors::get_by_uri( $origin )->ID, 'The post keeps the old guid, so the next Move finds it.' );
-	}
-
-	/**
-	 * A move to the old actor itself keeps it, instead of merging it into itself and deleting it.
-	 *
-	 * @covers ::move
-	 */
-	public function test_move_to_itself_keeps_actor() {
-		$id    = 'https://old.example.com/users/cid';
-		$actor = array(
-			'id'    => $id,
-			'type'  => 'Person',
-			'inbox' => $id . '/inbox',
-		);
-
-		$post_id = Remote_Actors::upsert( $actor );
-		\add_post_meta( $post_id, Followers::FOLLOWER_META_KEY, '1' );
-
-		$this->assertWPError( Remote_Actors::move( \get_post( $post_id ), $actor ) );
-		$this->assertSame( $post_id, Remote_Actors::get_by_uri( $id )->ID );
-		$this->assertSame( array( '1' ), \get_post_meta( $post_id, Followers::FOLLOWER_META_KEY, false ) );
 	}
 }

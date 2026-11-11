@@ -674,7 +674,8 @@ class Test_Move extends \WP_UnitTestCase {
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 
-		$this->assertSame( $id, Remote_Actors::get_by_uri( $target )->ID );
+		$this->assertNotWPError( Remote_Actors::get_by_uri( $target ) );
+		$this->assertNull( \get_post( $id ), 'The old actor must be merged away.' );
 	}
 
 	/**
@@ -844,8 +845,9 @@ class Test_Move extends \WP_UnitTestCase {
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 
-		$this->assertSame( $id, Remote_Actors::get_by_uri( $target )->ID, 'Only the moved post may hold the new id.' );
-		$this->assertContains( (string) $this->user_id, \get_post_meta( $id, Following::PENDING_META_KEY, false ) );
+		$moved = Remote_Actors::get_by_uri( $target );
+		$this->assertNull( \get_post( $id ), 'The old actor must be merged away.' );
+		$this->assertContains( (string) $this->user_id, \get_post_meta( $moved->ID, Following::PENDING_META_KEY, false ) );
 
 		$actors = \get_posts(
 			array(
@@ -855,7 +857,7 @@ class Test_Move extends \WP_UnitTestCase {
 				'numberposts' => -1,
 			)
 		);
-		$this->assertSame( array( $id ), $actors, 'No second actor may be created.' );
+		$this->assertSame( array( $moved->ID ), $actors, 'Only the new actor may be left.' );
 	}
 
 	/**
@@ -965,7 +967,8 @@ class Test_Move extends \WP_UnitTestCase {
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 
-		$this->assertSame( $id, Remote_Actors::get_by_uri( $target )->ID );
+		$this->assertNotWPError( Remote_Actors::get_by_uri( $target ) );
+		$this->assertNull( \get_post( $id ), 'The old actor must be merged away.' );
 	}
 
 	/**

@@ -637,7 +637,7 @@ class Test_Move extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Our users who follow the old actor follow the new one, which the old post becomes.
+	 * Our users who follow the old actor follow the new one, which is stored as its own post.
 	 *
 	 * @covers ::remote
 	 */
@@ -650,11 +650,12 @@ class Test_Move extends \WP_UnitTestCase {
 		$id = Remote_Actors::upsert( $this->remote_actor( $origin ) );
 		\add_post_meta( $id, Following::FOLLOWING_META_KEY, (string) $user_id );
 
-		$this->assertSame( $id, Move::remote( \get_post( $id ), $this->remote_actor( $target ) ) );
+		$post_id = Move::remote( \get_post( $id ), $this->remote_actor( $target ) );
 
-		$this->assertSame( $id, Remote_Actors::get_by_uri( $target )->ID, 'The stored actor must be moved in place.' );
-		$this->assertNotContains( (string) $user_id, \get_post_meta( $id, Following::FOLLOWING_META_KEY, false ), 'The new server has not accepted yet.' );
-		$this->assertContains( (string) $user_id, \get_post_meta( $id, Following::PENDING_META_KEY, false ) );
+		$this->assertSame( Remote_Actors::get_by_uri( $target )->ID, $post_id );
+		$this->assertNull( \get_post( $id ), 'The old actor must be merged away.' );
+		$this->assertNotContains( (string) $user_id, \get_post_meta( $post_id, Following::FOLLOWING_META_KEY, false ), 'The new server has not accepted yet.' );
+		$this->assertContains( (string) $user_id, \get_post_meta( $post_id, Following::PENDING_META_KEY, false ) );
 		$this->assertCount( 1, $this->get_follows( $user_id, $target ), 'A Follow must be sent to the new actor.' );
 	}
 
@@ -699,10 +700,10 @@ class Test_Move extends \WP_UnitTestCase {
 		$id = Remote_Actors::upsert( $this->remote_actor( $origin ) );
 		\add_post_meta( $id, Following::FOLLOWING_META_KEY, (string) $user_id );
 
-		Move::remote( \get_post( $id ), $this->remote_actor( $target ) );
+		$post_id = Move::remote( \get_post( $id ), $this->remote_actor( $target ) );
 
-		$this->assertEmpty( \get_post_meta( $id, Following::FOLLOWING_META_KEY, false ) );
-		$this->assertEmpty( \get_post_meta( $id, Following::PENDING_META_KEY, false ) );
+		$this->assertEmpty( \get_post_meta( $post_id, Following::FOLLOWING_META_KEY, false ) );
+		$this->assertEmpty( \get_post_meta( $post_id, Following::PENDING_META_KEY, false ) );
 		$this->assertCount( 0, $this->get_follows( $user_id, $target ) );
 	}
 
@@ -722,9 +723,9 @@ class Test_Move extends \WP_UnitTestCase {
 		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, (string) $blocker );
 		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, (string) $user_id );
 
-		Move::remote( \get_post( $id ), $this->remote_actor( $target ) );
+		$post_id = Move::remote( \get_post( $id ), $this->remote_actor( $target ) );
 
-		$followers = \get_post_meta( $id, Followers::FOLLOWER_META_KEY, false );
+		$followers = \get_post_meta( $post_id, Followers::FOLLOWER_META_KEY, false );
 		$this->assertNotContains( (string) $blocker, $followers );
 		$this->assertContains( (string) $user_id, $followers );
 	}
@@ -742,10 +743,25 @@ class Test_Move extends \WP_UnitTestCase {
 		$id = Remote_Actors::upsert( $this->remote_actor( $origin ) );
 		\add_post_meta( $id, Following::FOLLOWING_META_KEY, (string) $user_id );
 
-		Move::remote( \get_post( $id ), $this->remote_actor( $target ) );
+		$post_id = Move::remote( \get_post( $id ), $this->remote_actor( $target ) );
 
-		$this->assertNotContains( (string) $user_id, \get_post_meta( $id, Following::FOLLOWING_META_KEY, false ), 'The new server never got a Follow.' );
+		$this->assertNotContains( (string) $user_id, \get_post_meta( $post_id, Following::FOLLOWING_META_KEY, false ), 'The new server never got a Follow.' );
 		$this->assertCount( 0, $this->get_follows( $user_id, $target ) );
+	}
+
+	/**
+	 * A move to the old actor itself keeps it, instead of merging it into itself and deleting it.
+	 *
+	 * @covers ::remote
+	 */
+	public function test_remote_to_itself_keeps_actor() {
+		$origin = 'https://old.example/users/cid';
+		$id     = Remote_Actors::upsert( $this->remote_actor( $origin ) );
+		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, '1' );
+
+		$this->assertWPError( Move::remote( \get_post( $id ), $this->remote_actor( $origin ) ) );
+		$this->assertSame( $id, Remote_Actors::get_by_uri( $origin )->ID );
+		$this->assertSame( array( '1' ), \get_post_meta( $id, Followers::FOLLOWER_META_KEY, false ) );
 	}
 
 	/**

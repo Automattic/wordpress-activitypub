@@ -213,71 +213,30 @@ class Remote_Actors {
 	}
 
 	/**
-	 * Move a stored remote actor to its new id.
+	 * Merge a stored remote actor into another one.
 	 *
-	 * Without a stored new actor, the old post becomes the new actor. Otherwise the followers,
-	 * comments and Reader posts of the old actor go to the new one, and the old post is deleted.
-	 * The follows and blocks of our users do not carry over; use `Move::remote()` for that.
+	 * The followers, comments and Reader posts of the old actor go to the new one, and the old post
+	 * is deleted. The follows and blocks of our users do not carry over; use `Move::remote()` for that.
 	 *
 	 * @since unreleased
 	 *
-	 * @param \WP_Post $origin The stored old actor.
-	 * @param array    $actor  The new actor, fetched and verified.
+	 * @param int $from The post ID of the old actor.
+	 * @param int $to   The post ID of the new actor.
 	 *
-	 * @return int|\WP_Error The post ID of the new actor, or WP_Error if it can not be stored.
+	 * @return void
 	 */
-	public static function move( $origin, $actor ) {
+	public static function merge( $from, $to ) {
 		global $wpdb;
 
-		$target = self::get_by_uri( $actor['id'] );
-		$merge  = ! \is_wp_error( $target );
-
-		// A merge into the old actor itself would delete it.
-		if ( $merge && $target->ID === $origin->ID ) {
-			return new \WP_Error( 'activitypub_move_same_actor', \__( 'The actor can not move to itself.', 'activitypub' ) );
-		}
-
-		// Stored first, so a new actor that can not be stored (no inbox) leaves the old one as it was.
-		$post_id = self::update( $merge ? $target->ID : $origin->ID, $actor );
-
-		if ( \is_wp_error( $post_id ) ) {
-			return $post_id;
-		}
-
-		if ( ! $post_id ) {
-			return new \WP_Error( 'activitypub_actor_not_stored', \__( 'The actor could not be stored.', 'activitypub' ) );
-		}
-
-		if ( ! $merge ) {
-			// wp_update_post() keeps the guid. Written in the form an insert stores, which every guid lookup matches.
-			list( $guid ) = get_stored_id_forms( $actor['id'] );
-			$data         = array( 'guid' => $guid );
-			$hash         = get_id_hash( $actor['id'] );
-			if ( $hash ) {
-				$data['post_name'] = $hash;
-			}
-
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-			$updated = $wpdb->update( $wpdb->posts, $data, array( 'ID' => (int) $origin->ID ) );
-			\clean_post_cache( $origin->ID );
-
-			// Under the old guid, a Follow would go to the old actor; the next Move finds the post again.
-			if ( false === $updated ) {
-				return new \WP_Error( 'activitypub_actor_not_moved', \__( 'The actor could not be moved.', 'activitypub' ) );
-			}
-
-			return $post_id;
-		}
-
-		foreach ( \array_diff( self::get_follower_ids( $origin->ID ), self::get_follower_ids( $target->ID ) ) as $user_id ) {
-			\add_post_meta( $target->ID, Followers::FOLLOWER_META_KEY, $user_id );
+		foreach ( \array_diff( self::get_follower_ids( $from ), self::get_follower_ids( $to ) ) as $user_id ) {
+			\add_post_meta( $to, Followers::FOLLOWER_META_KEY, $user_id );
 		}
 
 		// Comments and Reader posts of the old actor belong to the new one now.
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 		$where = array(
 			'meta_key'   => '_activitypub_remote_actor_id',
-			'meta_value' => (string) $origin->ID,
+			'meta_value' => (string) $from,
 		);
 
 		// The meta type and the cache group of its queries, which core names differently.
@@ -291,7 +250,7 @@ class Remote_Actors {
 			$ids   = $wpdb->get_col( $wpdb->prepare( 'SELECT %i FROM %i WHERE meta_key = %s AND meta_value = %s', \sprintf( '%s_id', $type ), $table, $where['meta_key'], $where['meta_value'] ) );
 
 			if ( $ids ) {
-				$wpdb->update( $table, array( 'meta_value' => (string) $target->ID ), $where );
+				$wpdb->update( $table, array( 'meta_value' => (string) $to ), $where );
 				\wp_cache_delete_multiple( $ids, \sprintf( '%s_meta', $type ) );
 				\wp_cache_set_last_changed( $cache_group );
 			}
@@ -299,9 +258,7 @@ class Remote_Actors {
 		// phpcs:enable
 
 		// Clears the inbox caches of the followers, which now include the new actor.
-		self::delete( $origin->ID );
-
-		return $post_id;
+		self::delete( $from );
 	}
 
 	/**

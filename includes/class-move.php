@@ -232,25 +232,30 @@ class Move {
 	 * @return int|\WP_Error The post ID of the new actor, or WP_Error if it can not be stored.
 	 */
 	public static function remote( $origin, $actor ) {
-		// Read before the move, which deletes the old actor on a merge.
+		// Read before the merge, which deletes the old actor.
 		$refollow   = self::get_following_user_ids( $origin->ID );
 		$blocked_by = \get_post_meta( $origin->ID, Moderation::BLOCKED_ACTORS_META_KEY, false );
 
-		$post_id = Remote_Actors::move( $origin, $actor );
+		// Stored first, so a new actor that can not be stored (no inbox) leaves the old one as it was.
+		$post_id = Remote_Actors::upsert( $actor );
 
 		if ( \is_wp_error( $post_id ) ) {
 			return $post_id;
 		}
 
-		// After a swap the post keeps its follows and blocks; a merge brings them to another post.
-		if ( $post_id !== $origin->ID ) {
-			// Users who already follow the new actor keep that follow.
-			$refollow = \array_diff( $refollow, self::get_following_user_ids( $post_id ) );
+		// A merge into the old actor itself would delete it.
+		if ( ! $post_id || $post_id === $origin->ID ) {
+			return new \WP_Error( 'activitypub_actor_not_moved', \__( 'The actor could not be moved.', 'activitypub' ) );
+		}
 
-			// Through Blocked_Actors::add(), so the block hooks run and clean up the relationships.
-			foreach ( $blocked_by as $user_id ) {
-				Blocked_Actors::add( (int) $user_id, $actor['id'] );
-			}
+		// Users who already follow the new actor keep that follow.
+		$refollow = \array_diff( $refollow, self::get_following_user_ids( $post_id ) );
+
+		Remote_Actors::merge( $origin->ID, $post_id );
+
+		// Through Blocked_Actors::add(), so the block hooks run and clean up the relationships.
+		foreach ( $blocked_by as $user_id ) {
+			Blocked_Actors::add( (int) $user_id, $actor['id'] );
 		}
 
 		// A user who blocks the new actor neither follows it nor keeps it as a follower.
@@ -260,11 +265,8 @@ class Move {
 			}
 		}
 
+		// A user who blocks the new actor does not follow it; follow() refuses users who can no longer follow.
 		foreach ( $refollow as $user_id ) {
-			// After a swap the post still says the user follows; the new server does not know that yet.
-			Following::reject( $post_id, (int) $user_id );
-
-			// A user who blocks the new actor does not follow it; follow() refuses users who can no longer follow.
 			if ( ! Moderation::is_actor_blocked( $actor['id'], (int) $user_id ) ) {
 				Following::follow( $post_id, (int) $user_id );
 			}
