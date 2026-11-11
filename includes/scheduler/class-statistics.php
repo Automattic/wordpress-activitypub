@@ -314,8 +314,9 @@ class Statistics {
 	private static function send_report( $user_id, $subject, $args, $alt_body ) {
 		$args['stats_url'] = \admin_url( 'index.php#activitypub_stats' );
 
+		$alt_body .= "\n";
 		/* translators: %s: URL of the Fediverse Stats dashboard widget */
-		$alt_body .= \sprintf( \__( "\nView your stats: %s\n", 'activitypub' ), $args['stats_url'] );
+		$alt_body .= \sprintf( \__( "View your stats: %s\n", 'activitypub' ), $args['stats_url'] );
 
 		return Mailer::send( $user_id, $subject, 'stats-report', $args, $alt_body );
 	}
