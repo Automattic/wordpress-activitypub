@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix remote profiles with special characters in their address showing up twice after they were updated.

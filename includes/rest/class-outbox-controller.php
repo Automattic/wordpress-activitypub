@@ -18,6 +18,7 @@ use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_object_id;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\object_to_uri;
+use function Activitypub\unescape_guid;
 
 /**
  * ActivityPub Outbox Controller.
@@ -606,7 +607,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 
 		// Return 201 Created with Location header.
 		$response = new \WP_REST_Response( $result, 201 );
-		$response->header( 'Location', $result['id'] ?? $outbox_item->guid );
+		$response->header( 'Location', $result['id'] ?? unescape_guid( $outbox_item->guid ) );
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 
 		return $response;

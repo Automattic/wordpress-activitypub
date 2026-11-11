@@ -284,6 +284,56 @@ function get_id_hash( $id ) {
 }
 
 /**
+ * Get every spelling an ID can be stored in.
+ *
+ * On insert, core's `pre_post_guid` filters store `&` as `&amp;` in a `guid`. On every
+ * `wp_update_post()`, core writes the stored `guid` back in its `esc_url()` form (`&#038;`, `&#039;`).
+ * Meta values and rows written directly keep the raw ID. So a lookup by a stored ID matches all three.
+ * They are the same for an ID without `&` or `'`.
+ *
+ * @since unreleased
+ *
+ * @param string $id The ID.
+ *
+ * @return string[] The insert form, the update form and the raw ID.
+ */
+function get_stored_id_forms( $id ) {
+	$id = (string) $id;
+
+	return array(
+		// prepare() handles the SQL escaping.
+		\wp_unslash( \sanitize_post_field( 'guid', \esc_url_raw( $id ), 0, 'db' ) ),
+		\esc_url( $id ),
+		$id,
+	);
+}
+
+/**
+ * Undo the escaping core applies to a post `guid`, to get the ID back.
+ *
+ * Reverses only the escapes core adds to a `guid` (`&#038;` and `&#039;` on update, `&amp;` on insert).
+ * Decoding the full entity set would also rewrite a `&lt;` or `&quot;` that an ID contains as literal
+ * text, which escaping never put there.
+ *
+ * @since unreleased
+ *
+ * @param string $guid The stored `guid`.
+ *
+ * @return string The ID.
+ */
+function unescape_guid( $guid ) {
+	// One pass, so a decoded `&` never starts another escape.
+	return \strtr(
+		(string) $guid,
+		array(
+			'&#038;' => '&',
+			'&amp;'  => '&',
+			'&#039;' => "'",
+		)
+	);
+}
+
+/**
  * Check whether two references point at the same actor.
  *
  * Both values are resolved to their canonical URI via object_to_uri() before

@@ -39,6 +39,7 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 ### Partially supported FEPs
 
 - [FEP-1b12: Group federation](https://codeberg.org/fediverse/fep/src/branch/main/fep/1b12/fep-1b12.md)
+- [FEP-65ca: Common Client Configuration](https://codeberg.org/fediverse/fep/src/branch/main/fep/65ca/fep-65ca.md)
 - [FEP-7aa9: Featuring recommendations using a dedicated collection](https://codeberg.org/fediverse/fep/src/branch/main/fep/7aa9/fep-7aa9.md) (answers `FeatureRequest` with a `FeatureAuthorization`; the plugin does not publish featured collections of its own)
 - [FEP-ae0c: Fediverse Relay Protocols](https://codeberg.org/fediverse/fep/src/branch/main/fep/ae0c/fep-ae0c.md)
 - [FEP-dc88: MathML in ActivityPub](https://codeberg.org/fediverse/fep/src/branch/main/fep/dc88/fep-dc88.md)

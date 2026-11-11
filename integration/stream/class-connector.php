@@ -9,6 +9,7 @@ namespace Activitypub\Integration\Stream;
 
 use Activitypub\Collection\Actors;
 
+use function Activitypub\unescape_guid;
 use function Activitypub\url_to_authorid;
 use function Activitypub\url_to_commentid;
 
@@ -119,7 +120,7 @@ class Connector extends \WP_Stream\Connector {
 	public function callback_activitypub_handled_follow( $activity, $user_ids, $success, $context ) {
 		// The hook passes an array of user IDs; Stream's log() builds a WP_User from this, so coerce to a single integer.
 		$user_id   = (int) ( \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids );
-		$actor_url = \is_object( $context ) && ! \is_wp_error( $context ) ? $context->guid : $activity['actor'];
+		$actor_url = \is_object( $context ) && ! \is_wp_error( $context ) ? unescape_guid( $context->guid ) : $activity['actor'];
 
 		$this->log(
 			\sprintf(

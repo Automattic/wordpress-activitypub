@@ -14,6 +14,7 @@ use Activitypub\Collection\Following;
 use Activitypub\Proxy;
 
 use function Activitypub\get_url_authority;
+use function Activitypub\unescape_guid;
 
 /**
  * Collection_Sync class.
@@ -76,7 +77,7 @@ class Collection_Sync {
 
 		$accepted = Following::get_by_authority( $user_id, $home_authority );
 		foreach ( $accepted as $following ) {
-			$key = \array_search( $following->guid, $remote_followers, true );
+			$key = \array_search( unescape_guid( $following->guid ), $remote_followers, true );
 			if ( false === $key ) {
 				Following::reject( $following, $user_id );
 			} else {
@@ -88,7 +89,7 @@ class Collection_Sync {
 
 		$pending = Following::get_by_authority( $user_id, $home_authority, Following::PENDING_META_KEY );
 		foreach ( $pending as $following ) {
-			$key = \array_search( $following->guid, $remote_followers, true );
+			$key = \array_search( unescape_guid( $following->guid ), $remote_followers, true );
 			if ( false === $key ) {
 				Following::reject( $following, $user_id );
 			} else {

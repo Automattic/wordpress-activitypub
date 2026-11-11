@@ -15,6 +15,7 @@ use Activitypub\Scheduler;
 use Activitypub\Webfinger;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\get_stored_id_forms;
 use function Activitypub\is_activity;
 use function Activitypub\object_to_uri;
 use function Activitypub\user_can_act_as_blog;
@@ -346,11 +347,16 @@ class Outbox {
 	 */
 	public static function get_by_guid( $guid ) {
 		global $wpdb;
+
+		list( $inserted, $updated, $raw ) = get_stored_id_forms( $guid );
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE CAST(guid AS BINARY)=%s AND post_type=%s",
-				\esc_url( $guid ),
+				"SELECT ID FROM $wpdb->posts WHERE CAST(guid AS BINARY) IN (%s, %s, %s) AND post_type=%s ORDER BY ID ASC",
+				$inserted,
+				$updated,
+				$raw,
 				self::POST_TYPE
 			)
 		);

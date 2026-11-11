@@ -10,6 +10,8 @@ namespace Activitypub\Collection;
 use Activitypub\Activity\Activity;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\get_stored_id_forms;
+use function Activitypub\unescape_guid;
 
 /**
  * ActivityPub Following Collection.
@@ -85,9 +87,10 @@ class Following {
 					'order'          => 'DESC',
 					'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 						array(
-							'key'   => '_activitypub_object_id',
-							'value' => $post->guid,
-							'type'  => 'BINARY',
+							'key'     => '_activitypub_object_id',
+							'value'   => get_stored_id_forms( unescape_guid( $post->guid ) ),
+							'compare' => 'IN',
+							'type'    => 'BINARY',
 						),
 						array(
 							'key'   => '_activitypub_activity_type',
@@ -115,8 +118,9 @@ class Following {
 		$follow = new Activity();
 		$follow->set_type( 'Follow' );
 		$follow->set_actor( $actor->get_id() );
-		$follow->set_object( $post->guid );
-		$follow->set_to( array( $post->guid ) );
+		$actor_uri = unescape_guid( $post->guid );
+		$follow->set_object( $actor_uri );
+		$follow->set_to( array( $actor_uri ) );
 
 		$result = add_to_outbox( $follow, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
 
@@ -215,9 +219,10 @@ class Following {
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query'     => array(
 					array(
-						'key'   => '_activitypub_object_id',
-						'value' => $post->guid,
-						'type'  => 'BINARY',
+						'key'     => '_activitypub_object_id',
+						'value'   => get_stored_id_forms( unescape_guid( $post->guid ) ),
+						'compare' => 'IN',
+						'type'    => 'BINARY',
 					),
 					array(
 						'key'   => '_activitypub_activity_type',

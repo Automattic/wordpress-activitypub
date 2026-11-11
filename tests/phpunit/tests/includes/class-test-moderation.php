@@ -8,6 +8,7 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Moderation;
 
 /**
@@ -1437,5 +1438,30 @@ class Test_Moderation extends \WP_UnitTestCase {
 		// Clean up.
 		Moderation::remove_site_block( 'domain', $domain );
 		Moderation::remove_user_block( $this->test_user_id, 'actor', $actor_uri3 );
+	}
+
+	/**
+	 * A block still applies after the blocked actor was updated, which escapes its stored guid.
+	 *
+	 * @covers ::is_actor_blocked
+	 * @covers ::get_user_blocks
+	 */
+	public function test_block_applies_after_actor_update() {
+		$uri     = 'https://example.com/uri-test/?a=1&b=2';
+		$actor   = array(
+			'id'                => $uri,
+			'type'              => 'Person',
+			'url'               => $uri,
+			'inbox'             => 'https://example.com/inbox',
+			'preferredUsername' => 'uri-test',
+		);
+		$user_id = self::factory()->user->create();
+		$post_id = Remote_Actors::create( $actor );
+
+		Moderation::add_user_block( $user_id, Moderation::TYPE_ACTOR, $uri );
+		Remote_Actors::update( $post_id, $actor );
+
+		$this->assertTrue( Moderation::is_actor_blocked( $uri, $user_id ) );
+		$this->assertContains( $uri, Moderation::get_user_blocks( $user_id )['actors'] );
 	}
 }

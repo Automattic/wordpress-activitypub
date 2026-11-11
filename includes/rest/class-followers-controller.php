@@ -17,6 +17,7 @@ use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\is_unsafe_ipv6_literal;
 use function Activitypub\maybe_set_no_store;
+use function Activitypub\unescape_guid;
 
 /**
  * Followers_Controller class.
@@ -227,7 +228,7 @@ class Followers_Controller extends Actors_Controller {
 							}
 							return $actor->to_array( false );
 						}
-						return $item->guid;
+						return unescape_guid( $item->guid );
 					},
 					$data['followers']
 				)
@@ -351,7 +352,7 @@ class Followers_Controller extends Actors_Controller {
 		}
 
 		$followers = Followers::get_by_authority( $user_id, $authority );
-		$followers = \wp_list_pluck( $followers, 'guid' );
+		$followers = \array_map( '\Activitypub\unescape_guid', \wp_list_pluck( $followers, 'guid' ) );
 
 		$response = array(
 			'id'           => get_rest_url_by_path(
