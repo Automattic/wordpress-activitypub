@@ -10,6 +10,10 @@ namespace Activitypub;
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Blocked_Actors;
+use Activitypub\Collection\Followers;
+use Activitypub\Collection\Following;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Model\Blog;
 use Activitypub\Model\User;
 use Activitypub\Scheduler\Actor as Actor_Scheduler;
@@ -213,6 +217,76 @@ class Move {
 		}
 
 		return $outbox_id;
+	}
+
+	/**
+	 * Move a remote actor to its new id.
+	 *
+	 * Our users who follow the old actor follow the new one (FEP-7628), and their blocks carry over.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_Post $origin The stored old actor.
+	 * @param array    $actor  The new actor, fetched and verified.
+	 *
+	 * @return int|\WP_Error The post ID of the new actor, or WP_Error if it can not be stored.
+	 */
+	public static function remote( $origin, $actor ) {
+		// Read before the move, which deletes the old actor on a merge.
+		$refollow   = self::get_following_user_ids( $origin->ID );
+		$blocked_by = \get_post_meta( $origin->ID, Moderation::BLOCKED_ACTORS_META_KEY, false );
+
+		$post_id = Remote_Actors::move( $origin, $actor );
+
+		if ( \is_wp_error( $post_id ) ) {
+			return $post_id;
+		}
+
+		// After a swap the post keeps its follows and blocks; a merge brings them to another post.
+		if ( $post_id !== $origin->ID ) {
+			// Users who already follow the new actor keep that follow.
+			$refollow = \array_diff( $refollow, self::get_following_user_ids( $post_id ) );
+
+			// Through Blocked_Actors::add(), so the block hooks run and clean up the relationships.
+			foreach ( $blocked_by as $user_id ) {
+				Blocked_Actors::add( (int) $user_id, $actor['id'] );
+			}
+		}
+
+		// A user who blocks the new actor neither follows it nor keeps it as a follower.
+		foreach ( \get_post_meta( $post_id, Followers::FOLLOWER_META_KEY, false ) as $user_id ) {
+			if ( Moderation::is_actor_blocked( $actor['id'], (int) $user_id ) ) {
+				Followers::remove( $post_id, (int) $user_id );
+			}
+		}
+
+		foreach ( $refollow as $user_id ) {
+			// After a swap the post still says the user follows; the new server does not know that yet.
+			Following::reject( $post_id, (int) $user_id );
+
+			// A user who blocks the new actor does not follow it; follow() refuses users who can no longer follow.
+			if ( ! Moderation::is_actor_blocked( $actor['id'], (int) $user_id ) ) {
+				Following::follow( $post_id, (int) $user_id );
+			}
+		}
+
+		return $post_id;
+	}
+
+	/**
+	 * Get the local users that follow or asked to follow a remote actor.
+	 *
+	 * @param int $post_id The remote actor post ID.
+	 *
+	 * @return string[] The user IDs.
+	 */
+	private static function get_following_user_ids( $post_id ) {
+		return \array_unique(
+			\array_merge(
+				\get_post_meta( $post_id, Following::FOLLOWING_META_KEY, false ),
+				\get_post_meta( $post_id, Following::PENDING_META_KEY, false )
+			)
+		);
 	}
 
 	/**

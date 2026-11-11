@@ -213,6 +213,92 @@ class Remote_Actors {
 	}
 
 	/**
+	 * Move a stored remote actor to its new id.
+	 *
+	 * Without a stored new actor, the old post becomes the new actor. Otherwise the followers,
+	 * comments and Reader posts of the old actor go to the new one, and the old post is deleted.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_Post $origin The stored old actor.
+	 * @param array    $actor  The new actor, fetched and verified.
+	 *
+	 * @return int|\WP_Error The post ID of the new actor, or WP_Error if it can not be stored.
+	 */
+	public static function move( $origin, $actor ) {
+		global $wpdb;
+
+		$target = self::get_by_uri( $actor['id'] );
+		$merge  = ! \is_wp_error( $target );
+
+		// A merge into the old actor itself would delete it.
+		if ( $merge && $target->ID === $origin->ID ) {
+			return new \WP_Error( 'activitypub_move_same_actor', \__( 'The actor can not move to itself.', 'activitypub' ) );
+		}
+
+		// Stored first, so a new actor that can not be stored (no inbox) leaves the old one as it was.
+		$post_id = self::update( $merge ? $target->ID : $origin->ID, $actor );
+
+		if ( \is_wp_error( $post_id ) ) {
+			return $post_id;
+		}
+
+		if ( ! $post_id ) {
+			return new \WP_Error( 'activitypub_actor_not_stored', \__( 'The actor could not be stored.', 'activitypub' ) );
+		}
+
+		if ( ! $merge ) {
+			// wp_update_post() keeps the guid. Written in the form an insert stores, which every guid lookup matches.
+			list( $guid ) = get_stored_id_forms( $actor['id'] );
+			$data         = array( 'guid' => $guid );
+			$hash         = get_id_hash( $actor['id'] );
+			if ( $hash ) {
+				$data['post_name'] = $hash;
+			}
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+			$wpdb->update( $wpdb->posts, $data, array( 'ID' => (int) $origin->ID ) );
+			\clean_post_cache( $origin->ID );
+
+			return $post_id;
+		}
+
+		foreach ( \array_diff( self::get_follower_ids( $origin->ID ), self::get_follower_ids( $target->ID ) ) as $user_id ) {
+			\add_post_meta( $target->ID, Followers::FOLLOWER_META_KEY, $user_id );
+		}
+
+		// Comments and Reader posts of the old actor belong to the new one now.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+		$where = array(
+			'meta_key'   => '_activitypub_remote_actor_id',
+			'meta_value' => (string) $origin->ID,
+		);
+
+		// The meta type and the cache group of its queries, which core names differently.
+		$types = array(
+			'comment' => 'comment',
+			'post'    => 'posts',
+		);
+
+		foreach ( $types as $type => $cache_group ) {
+			$table = $wpdb->{ \sprintf( '%smeta', $type ) };
+			$ids   = $wpdb->get_col( $wpdb->prepare( 'SELECT %i FROM %i WHERE meta_key = %s AND meta_value = %s', \sprintf( '%s_id', $type ), $table, $where['meta_key'], $where['meta_value'] ) );
+
+			if ( $ids ) {
+				$wpdb->update( $table, array( 'meta_value' => (string) $target->ID ), $where );
+				\wp_cache_delete_multiple( $ids, \sprintf( '%s_meta', $type ) );
+				\wp_cache_set_last_changed( $cache_group );
+			}
+		}
+		// phpcs:enable
+
+		// Clears the inbox caches of the followers, which now include the new actor.
+		self::delete( $origin->ID );
+
+		return $post_id;
+	}
+
+	/**
 	 * Get the IDs of the local users a remote actor follows.
 	 *
 	 * @since 9.4.0

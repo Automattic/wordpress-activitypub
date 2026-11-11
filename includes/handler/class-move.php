@@ -7,16 +7,12 @@
 
 namespace Activitypub\Handler;
 
-use Activitypub\Collection\Blocked_Actors;
-use Activitypub\Collection\Followers;
-use Activitypub\Collection\Following;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Moderation;
+use Activitypub\Move as Account_Move;
 use Activitypub\Proxy;
 
-use function Activitypub\get_id_hash;
-use function Activitypub\get_stored_id_forms;
 use function Activitypub\is_actor;
 use function Activitypub\is_same_domain;
 use function Activitypub\object_to_uri;
@@ -95,111 +91,15 @@ class Move {
 			return;
 		}
 
-		$target_id = $target_json['id'];
-
 		// A remote actor can not move to one of ours, nor to an actor the site blocks.
-		if ( is_same_domain( $target_id ) || Moderation::is_actor_blocked( $target_id ) ) {
+		if ( is_same_domain( $target_json['id'] ) || Moderation::is_actor_blocked( $target_json['id'] ) ) {
 			return;
 		}
 
-		$target_object = Remote_Actors::get_by_uri( $target_id );
+		$result = Account_Move::remote( $origin_object, $target_json );
 
-		// Our users who follow the old actor follow the new one (FEP-7628), unless they already do.
-		$refollow = self::get_following_user_ids( $origin_object->ID );
-		if ( ! \is_wp_error( $target_object ) ) {
-			$refollow = \array_diff( $refollow, self::get_following_user_ids( $target_object->ID ) );
-		}
-
-		global $wpdb;
-
-		// If only the origin is stored, it becomes the target.
-		if ( \is_wp_error( $target_object ) ) {
-			/*
-			 * Proxy::get() already self-confirmed the target. Store it first, so a target that can
-			 * not be stored (no inbox) leaves the origin as it was. wp_update_post() keeps the guid.
-			 */
-			$result = Remote_Actors::update( $origin_object->ID, $target_json );
-			if ( ! $result || \is_wp_error( $result ) ) {
-				return;
-			}
-
-			// Written in the form an insert stores, which every guid lookup matches.
-			list( $guid ) = get_stored_id_forms( $target_id );
-			$data         = array( 'guid' => $guid );
-			$hash         = get_id_hash( $target_id );
-			if ( $hash ) {
-				$data['post_name'] = $hash;
-			}
-
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-			$wpdb->update( $wpdb->posts, $data, array( 'ID' => (int) $origin_object->ID ) );
-			\clean_post_cache( $origin_object->ID );
-
-			$target_post_id = $origin_object->ID;
-		} else {
-			// If both the target and origin are stored, merge them.
-			// The new Follows go to the inbox of the fresh copy, not to a stale stored one.
-			$result = Remote_Actors::update( $target_object->ID, $target_json );
-			if ( ! $result || \is_wp_error( $result ) ) {
-				return;
-			}
-
-			// Followers and blocks of the origin carry over; our own follows are sent again below.
-			$origin_users = \get_post_meta( $origin_object->ID, Followers::FOLLOWER_META_KEY, false );
-			$target_users = \get_post_meta( $target_object->ID, Followers::FOLLOWER_META_KEY, false );
-			foreach ( \array_diff( $origin_users, $target_users ) as $user_id ) {
-				\add_post_meta( $target_object->ID, Followers::FOLLOWER_META_KEY, $user_id );
-			}
-
-			// Through Blocked_Actors::add(), so the block hooks run and clean up the relationships.
-			foreach ( \get_post_meta( $origin_object->ID, Moderation::BLOCKED_ACTORS_META_KEY, false ) as $user_id ) {
-				Blocked_Actors::add( (int) $user_id, $target_id );
-			}
-
-			// Comments and Reader posts of the origin belong to the target now.
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-			$where = array(
-				'meta_key'   => '_activitypub_remote_actor_id',
-				'meta_value' => (string) $origin_object->ID,
-			);
-
-			// The meta type and the cache group of its queries, which core names differently.
-			$types = array(
-				'comment' => 'comment',
-				'post'    => 'posts',
-			);
-
-			foreach ( $types as $type => $cache_group ) {
-				$table = $wpdb->{ \sprintf( '%smeta', $type ) };
-				$ids   = $wpdb->get_col( $wpdb->prepare( 'SELECT %i FROM %i WHERE meta_key = %s AND meta_value = %s', \sprintf( '%s_id', $type ), $table, $where['meta_key'], $where['meta_value'] ) );
-
-				if ( $ids ) {
-					$wpdb->update( $table, array( 'meta_value' => (string) $target_object->ID ), $where );
-					\wp_cache_delete_multiple( $ids, \sprintf( '%s_meta', $type ) );
-					\wp_cache_set_last_changed( $cache_group );
-				}
-			}
-			// phpcs:enable
-
-			$target_post_id = $target_object->ID;
-			$result         = Remote_Actors::delete( $origin_object->ID );
-		}
-
-		// A user who blocks the new actor neither follows it nor keeps it as a follower.
-		foreach ( \get_post_meta( $target_post_id, Followers::FOLLOWER_META_KEY, false ) as $user_id ) {
-			if ( Moderation::is_actor_blocked( $target_id, (int) $user_id ) ) {
-				Followers::remove( $target_post_id, (int) $user_id );
-			}
-		}
-
-		foreach ( $refollow as $user_id ) {
-			// After a swap the post still says the user follows; the new server does not know that yet.
-			Following::reject( $target_post_id, (int) $user_id );
-
-			// A user who blocks the new actor does not follow it; follow() refuses users who can no longer follow.
-			if ( ! Moderation::is_actor_blocked( $target_id, (int) $user_id ) ) {
-				Following::follow( $target_post_id, (int) $user_id );
-			}
+		if ( \is_wp_error( $result ) ) {
+			return;
 		}
 
 		/**
@@ -208,7 +108,7 @@ class Move {
 		 * @param array $activity The ActivityPub activity data.
 		 * @param int[] $user_ids The local user IDs.
 		 * @param bool  $success  Always true; a Move that is not handled returns before this action.
-		 * @param mixed $result   The moved actor's post ID, or the result of deleting the merged old actor.
+		 * @param int   $result   The post ID of the new actor.
 		 */
 		\do_action( 'activitypub_handled_move', $activity, (array) $user_ids, true, $result );
 	}
@@ -312,21 +212,5 @@ class Move {
 
 		// Check if the origin points at the target.
 		return object_to_uri( $origin_object['movedTo'] ?? null ) === $target_object['id'];
-	}
-
-	/**
-	 * Get the local users that follow or asked to follow a remote actor.
-	 *
-	 * @param int $post_id The remote actor post ID.
-	 *
-	 * @return string[] The user IDs.
-	 */
-	private static function get_following_user_ids( $post_id ) {
-		return \array_unique(
-			\array_merge(
-				\get_post_meta( $post_id, Following::FOLLOWING_META_KEY, false ),
-				\get_post_meta( $post_id, Following::PENDING_META_KEY, false )
-			)
-		);
 	}
 }
