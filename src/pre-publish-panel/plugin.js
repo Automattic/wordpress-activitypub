@@ -1,10 +1,9 @@
 import { PluginPrePublishPanel, store as editorStore } from '@wordpress/editor';
 import { store as blockEditorStore } from '@wordpress/block-editor';
-import { store as coreStore } from '@wordpress/core-data';
 import { registerPlugin } from '@wordpress/plugins';
 import { Button } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
-import { useEffect, useMemo } from '@wordpress/element';
+import { useMemo } from '@wordpress/element';
 import { addFilter } from '@wordpress/hooks';
 import { __, sprintf } from '@wordpress/i18n';
 import { getSuggestedPostFormat, FORMAT_LABELS } from './utils';
@@ -90,54 +89,6 @@ const PrePublishPanel = () => {
 };
 
 /**
- * Opens core's tags suggestion, which starts closed.
- *
- * Core shows it when the site has tags and the post has none. Core has no API
- * to open it, so the panel is found by its title, the taxonomy's "add new item"
- * label, when the pre-publish sidebar opens. If core's markup changes, it just
- * stays closed.
- *
- * @return {null} Renders nothing.
- */
-const TagsSuggestion = () => {
-	const { isOpened, addLabel, hasSiteTags } = useSelect( ( selectFn ) => {
-		const taxonomy = selectFn( coreStore ).getTaxonomy( 'post_tag' );
-
-		return {
-			isOpened: selectFn( editorStore ).isPublishSidebarOpened(),
-			addLabel: taxonomy?.labels?.add_new_item,
-			/*
-			 * Core's own query for its suggestion. Asking for it here loads it with the editor,
-			 * and the panel renders once it has an answer, so it is checked again then.
-			 */
-			hasSiteTags: !! (
-				taxonomy && selectFn( coreStore ).getEntityRecords( 'taxonomy', 'post_tag', { per_page: 1 } )?.length
-			),
-		};
-	}, [] );
-
-	useEffect( () => {
-		if ( ! isOpened || ! addLabel || ! hasSiteTags ) {
-			return;
-		}
-
-		// Wait for core's panel, which renders with the sidebar.
-		window.requestAnimationFrame( () => {
-			const label = Array.from(
-				document.querySelectorAll( '.editor-post-publish-panel__prepublish .editor-post-publish-panel__link' )
-			).find( ( element ) => element.textContent === addLabel );
-			const toggle = label?.closest( 'button' );
-
-			if ( 'false' === toggle?.getAttribute( 'aria-expanded' ) ) {
-				toggle.click();
-			}
-		} );
-	}, [ isOpened, addLabel, hasSiteTags ] );
-
-	return null;
-};
-
-/**
  * The text of core's tags suggestion, which gets a note on hashtags.
  *
  * @type {string}
@@ -159,8 +110,8 @@ addFilter( 'i18n.gettext_default', 'activitypub/tags-suggestion', ( translation,
 	if ( window._activityPubOptions?.useHashtags ) {
 		note +=
 			' ' +
-			/* translators: Appended after the previous sentence. "#hashtags" stands for words written with a leading # in the post content. */
-			__( 'You can also write #hashtags in your post.', 'activitypub' );
+			/* translators: Appended after the previous sentence. "#hashtag" stands for a word written with a leading # in the post content. */
+			__( 'Any #hashtag you write in your post is added as a tag too.', 'activitypub' );
 	}
 
 	// Core fills in the taxonomy name with sprintf(), so a percent sign in the note must stay literal.
@@ -169,10 +120,5 @@ addFilter( 'i18n.gettext_default', 'activitypub/tags-suggestion', ( translation,
 
 registerPlugin( 'activitypub-pre-publish', {
 	icon: asterism,
-	render: () => (
-		<>
-			<PrePublishPanel />
-			<TagsSuggestion />
-		</>
-	),
+	render: PrePublishPanel,
 } );
