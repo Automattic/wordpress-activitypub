@@ -13,9 +13,6 @@ use Activitypub\Collection\Actors;
 use Activitypub\Mailer;
 use Activitypub\Statistics as Statistics_Collector;
 
-use function Activitypub\is_user_type_disabled;
-use function Activitypub\user_can_see_stats;
-
 /**
  * Statistics scheduler class.
  */
@@ -169,7 +166,6 @@ class Statistics {
 				'most_active_month_name' => $most_active_month_name,
 				'followers_text'         => $followers_text,
 				'supporter_text'         => $supporter_text,
-				'stats_url'              => self::get_stats_url( $user_id ),
 				'user_id'                => $user_id,
 			)
 		);
@@ -200,12 +196,7 @@ class Statistics {
 			$alt_body .= \sprintf( \__( "Most active month: %s\n", 'activitypub' ), $most_active_month_name );
 		}
 
-		if ( ! empty( $args['stats_url'] ) ) {
-			/* translators: %s: URL of the Fediverse Stats dashboard widget */
-			$alt_body .= \sprintf( \__( "\nView your stats: %s\n", 'activitypub' ), $args['stats_url'] );
-		}
-
-		Mailer::send( $user_id, $subject, 'stats-report', $args, $alt_body );
+		self::send_report( $user_id, $subject, $args, $alt_body );
 	}
 
 	/**
@@ -277,7 +268,6 @@ class Statistics {
 				'closing'        => \__( 'Keep sharing great content on the Fediverse!', 'activitypub' ),
 				'followers_text' => $followers_text,
 				'supporter_text' => $supporter_text,
-				'stats_url'      => self::get_stats_url( $user_id ),
 				'user_id'        => $user_id,
 			)
 		);
@@ -303,38 +293,31 @@ class Statistics {
 			$alt_body .= \sprintf( \__( "New followers: %+d\n", 'activitypub' ), $stats['followers_count'] );
 		}
 
-		if ( ! empty( $args['stats_url'] ) ) {
-			/* translators: %s: URL of the Fediverse Stats dashboard widget */
-			$alt_body .= \sprintf( \__( "\nView your stats: %s\n", 'activitypub' ), $args['stats_url'] );
-		}
-
-		Mailer::send( $user_id, $subject, 'stats-report', $args, $alt_body );
+		self::send_report( $user_id, $subject, $args, $alt_body );
 	}
 
 	/**
-	 * Get the URL of the Fediverse Stats dashboard widget for a report recipient.
+	 * Send a stats report, adding the link to the Fediverse Stats dashboard widget.
 	 *
-	 * Defers to the gate that registers the widget, so the link is only added when the
-	 * recipient would actually see the widget on their dashboard. The blog actor is not a
-	 * WordPress user, so it cannot be passed to that gate: its report goes to `admin_email`,
-	 * which stands in for the `manage_options` branch.
+	 * Both reports carry the same link, so it is built here rather than in each sender.
+	 * Who receives a report is already decided before this point: reports only go to the
+	 * actors in `Actors::get_all_ids()`, and `Mailer::send()` sends each one to that
+	 * actor's own address.
 	 *
-	 * @param int $user_id The user ID, or `Actors::BLOG_USER_ID` for the blog actor.
+	 * @param int    $user_id  The user ID.
+	 * @param string $subject  The email subject.
+	 * @param array  $args     Template arguments.
+	 * @param string $alt_body The plain text alternative.
 	 *
-	 * @return string The dashboard URL, or an empty string if the recipient cannot see the widget.
+	 * @return bool Whether the email was sent successfully.
 	 */
-	private static function get_stats_url( $user_id ) {
-		if ( Actors::BLOG_USER_ID === $user_id ) {
-			$can_see_stats = ! is_user_type_disabled( 'blog' );
-		} else {
-			$can_see_stats = user_can_see_stats( $user_id );
-		}
+	private static function send_report( $user_id, $subject, $args, $alt_body ) {
+		$args['stats_url'] = \admin_url( 'index.php#activitypub_stats' );
 
-		if ( ! $can_see_stats ) {
-			return '';
-		}
+		/* translators: %s: URL of the Fediverse Stats dashboard widget */
+		$alt_body .= \sprintf( \__( "\nView your stats: %s\n", 'activitypub' ), $args['stats_url'] );
 
-		return \admin_url( 'index.php#activitypub_stats' );
+		return Mailer::send( $user_id, $subject, 'stats-report', $args, $alt_body );
 	}
 
 	/**

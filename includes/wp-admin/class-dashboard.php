@@ -12,7 +12,6 @@ use Activitypub\Model\Blog;
 
 use function Activitypub\is_user_type_disabled;
 use function Activitypub\user_can_activitypub;
-use function Activitypub\user_can_see_stats;
 
 /**
  * Dashboard Widgets Class.
@@ -63,7 +62,7 @@ class Dashboard {
 		}
 
 		// Stats widget.
-		if ( user_can_see_stats() ) {
+		if ( self::user_can_see_stats() ) {
 			\wp_add_dashboard_widget(
 				'activitypub_stats',
 				\__( 'Fediverse Stats', 'activitypub' ),
@@ -89,7 +88,7 @@ class Dashboard {
 		}
 
 		// Only enqueue if user has access to stats.
-		if ( ! user_can_see_stats() ) {
+		if ( ! self::user_can_see_stats() ) {
 			return;
 		}
 
@@ -139,6 +138,18 @@ class Dashboard {
 			'activitypub-dashboard-stats',
 			'wp.domReady( function() { if ( activitypub && activitypub.dashboardStats ) { activitypub.dashboardStats.initialize( "activitypub-stats-widget-root" ); } } );'
 		);
+	}
+
+	/**
+	 * Check if the current user can see the stats widget.
+	 *
+	 * @return bool True if user has access.
+	 */
+	private static function user_can_see_stats() {
+		$has_user_access = user_can_activitypub( \get_current_user_id() ) && ! is_user_type_disabled( 'user' );
+		$has_blog_access = ! is_user_type_disabled( 'blog' ) && \current_user_can( 'manage_options' );
+
+		return $has_user_access || $has_blog_access;
 	}
 
 	/**

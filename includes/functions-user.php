@@ -152,37 +152,6 @@ function user_can_act_as_blog() {
 }
 
 /**
- * Checks whether a user can see the Fediverse Stats dashboard widget.
- *
- * A user reaches the widget either through their own actor, or through the blog
- * actor if they can manage the site. The blog actor itself is not a user and has
- * no dashboard, so `BLOG_USER_ID` and any other non-user ID are rejected: callers
- * acting for the blog actor decide for themselves who its report reaches.
- *
- * @since unreleased
- *
- * @param int|null $user_id Optional. The user to check. Default null, the current user.
- *
- * @return bool True if the user can see the stats widget.
- */
-function user_can_see_stats( $user_id = null ) {
-	if ( null === $user_id ) {
-		$user_id = \get_current_user_id();
-	}
-
-	$user_id = (int) $user_id;
-
-	if ( $user_id <= Actors::BLOG_USER_ID ) {
-		return false;
-	}
-
-	$has_user_access = user_can_activitypub( $user_id ) && ! is_user_type_disabled( 'user' );
-	$has_blog_access = ! is_user_type_disabled( 'blog' ) && \user_can( $user_id, 'manage_options' );
-
-	return $has_user_access || $has_blog_access;
-}
-
-/**
  * Checks if a User-Type is disabled for ActivityPub.
  *
  * This function is used to check if the 'blog' or 'user'
