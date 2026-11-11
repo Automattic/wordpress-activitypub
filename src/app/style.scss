@@ -17,14 +17,15 @@
 	bottom: 0;
 
 	// Line boot's inspector column up with the stage card; the corner radius
-	// stays boot's, its view transitions are drawn with that radius. Since
-	// WordPress 7.2 boot only has hashed class names, so the column is found
-	// by the inspector it holds.
+	// stays boot's, its view transitions are drawn with that radius. WordPress
+	// 7.2 boot only has hashed class names, so the column is found by the
+	// inspector it holds.
 	.boot-layout__inspector,
 	:has(> .activitypub-inspector, > .activitypub-inspector-loading) {
 
 		@include mixins.break-medium() {
-			margin: var(--wpds-dimension-gap-lg, 16px) var(--wpds-dimension-gap-lg, 16px) var(--wpds-dimension-gap-lg, 16px) 0;
+			margin-block: var(--wpds-dimension-gap-lg, 16px);
+			margin-inline: 0 var(--wpds-dimension-gap-lg, 16px);
 		}
 	}
 }
