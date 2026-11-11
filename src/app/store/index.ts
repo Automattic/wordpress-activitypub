@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-import { createReduxStore, register, StoreDescriptor } from '@wordpress/data';
+import { createReduxStore, register, select, StoreDescriptor } from '@wordpress/data';
 import { controls as dataControls } from '@wordpress/data-controls';
 
 /**
@@ -37,11 +37,15 @@ const storeConfig: StoreConfig = {
 };
 
 /**
- * Create and register the store
+ * Create and register the store.
+ *
+ * The route and content bundles each carry a copy of this module, so only the first one registers.
  */
 export const store: StoreDescriptor = createReduxStore( STORE_NAME, storeConfig );
 
-register( store );
+if ( ! select( STORE_NAME ) ) {
+	register( store );
+}
 
 /**
  * Re-export types for convenience
