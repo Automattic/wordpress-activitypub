@@ -18,6 +18,7 @@
  * - followers_start   (int) Followers at period start (annual only).
  * - followers_end     (int) Followers at period end (annual only).
  * - followers_text    (string) The follower detail text (HTML allowed).
+ * - stats_url         (string) URL of the Fediverse Stats dashboard widget, empty to omit the link.
  * - most_active_month_name (string) Most active month (annual only).
  * - {type}_count   (int)    Per-engagement-type counts.
  *
@@ -42,6 +43,7 @@ $args = wp_parse_args(
 		'top_posts'              => array(),
 		'top_multiplicator'      => null,
 		'supporter_text'         => '',
+		'stats_url'              => '',
 		'user_id'                => 0,
 	)
 );
@@ -206,6 +208,14 @@ if ( null !== $net_change ) :
 <?php endif; ?>
 
 <p><?php echo esc_html( $args['closing'] ?? '' ); ?></p>
+
+<?php if ( ! empty( $args['stats_url'] ) ) : ?>
+<p>
+	<a class="button" href="<?php echo esc_url( $args['stats_url'] ); ?>">
+		<?php esc_html_e( 'View your stats', 'activitypub' ); ?>
+	</a>
+</p>
+<?php endif; ?>
 
 <?php
 /**

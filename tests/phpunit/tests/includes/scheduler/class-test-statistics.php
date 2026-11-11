@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Scheduler;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Scheduler\Statistics as Statistics_Scheduler;
 use Activitypub\Statistics as Statistics_Collector;
 use WP_UnitTestCase;
@@ -43,30 +44,81 @@ class Test_Statistics extends WP_UnitTestCase {
 	protected $sent_count = 0;
 
 	/**
+	 * HTML message of the last sent email.
+	 *
+	 * @var string
+	 */
+	protected $sent_message = '';
+
+	/**
+	 * Plain text alternative of the last sent email.
+	 *
+	 * @var string
+	 */
+	protected $sent_alt_body = '';
+
+	/**
 	 * Reset email counter and short-circuit wp_mail before each test.
 	 */
 	public function set_up() {
 		parent::set_up();
-		$this->sent_count = 0;
-		\add_filter( 'pre_wp_mail', array( $this, 'short_circuit_wp_mail' ) );
+		$this->sent_count    = 0;
+		$this->sent_message  = '';
+		$this->sent_alt_body = '';
+		\add_filter( 'pre_wp_mail', array( $this, 'short_circuit_wp_mail' ), 10, 2 );
 	}
 
 	/**
 	 * Remove the test mail filter so it doesn't leak across tests.
 	 */
 	public function tear_down() {
-		\remove_filter( 'pre_wp_mail', array( $this, 'short_circuit_wp_mail' ) );
+		\remove_filter( 'pre_wp_mail', array( $this, 'short_circuit_wp_mail' ), 10 );
+		\remove_action( 'phpmailer_init', array( $this, 'capture_alt_body' ), 11 );
 		parent::tear_down();
 	}
 
 	/**
 	 * Count sent emails and short-circuit wp_mail during tests.
 	 *
+	 * @param null|bool $short_circuit Short-circuit return value.
+	 * @param array     $atts          The wp_mail() arguments.
+	 *
 	 * @return bool Always true to short-circuit wp_mail.
 	 */
-	public function short_circuit_wp_mail() {
+	public function short_circuit_wp_mail( $short_circuit, $atts = array() ) {
 		++$this->sent_count;
+		$this->sent_message = $atts['message'] ?? '';
+
 		return true;
+	}
+
+	/**
+	 * Capture the plain text alternative body set by the mailer.
+	 *
+	 * Runs after `Mailer::send()`'s own `phpmailer_init` callback, which assigns AltBody.
+	 *
+	 * @param \PHPMailer\PHPMailer\PHPMailer $mailer The mailer instance.
+	 */
+	public function capture_alt_body( $mailer ) {
+		$this->sent_alt_body = $mailer->{'AltBody'};
+	}
+
+	/**
+	 * Seed a month of stats with meaningful activity.
+	 *
+	 * @param int $user_id The user ID.
+	 * @param int $year    The year.
+	 * @param int $month   The month.
+	 */
+	protected function seed_monthly_stats( $user_id, $year, $month ) {
+		\update_option(
+			Statistics_Collector::get_monthly_option_name( $user_id, $year, $month ),
+			array(
+				'posts_count'     => 3,
+				'followers_count' => 5,
+				'followers_total' => 10,
+			)
+		);
 	}
 
 	/**
@@ -190,5 +242,124 @@ class Test_Statistics extends WP_UnitTestCase {
 		Statistics_Scheduler::send_annual_email( self::$user_id, $year, $summary, true );
 
 		$this->assertSame( 2, $this->sent_count, 'Forced send should bypass the email-sent check and still send.' );
+	}
+
+	/**
+	 * Test that the monthly report links to the Fediverse Stats dashboard widget.
+	 *
+	 * @covers ::send_monthly_email
+	 */
+	public function test_send_monthly_email_links_to_stats_widget() {
+		$year  = 2026;
+		$month = 5;
+		$this->seed_monthly_stats( self::$user_id, $year, $month );
+
+		Statistics_Scheduler::send_monthly_email( self::$user_id, $year, $month );
+
+		$this->assertSame( 1, $this->sent_count, 'Monthly email should be sent.' );
+		$this->assertStringContainsString(
+			\esc_url( \admin_url( 'index.php#activitypub_stats' ) ),
+			$this->sent_message,
+			'Monthly email should link to the stats dashboard widget.'
+		);
+		$this->assertStringContainsString( 'View your stats', $this->sent_message, 'Monthly email should show the stats link label.' );
+	}
+
+	/**
+	 * Test that the annual report links to the Fediverse Stats dashboard widget.
+	 *
+	 * @covers ::send_annual_email
+	 */
+	public function test_send_annual_email_links_to_stats_widget() {
+		\update_user_option( self::$user_id, 'activitypub_mailer_annual_report', '1' );
+
+		Statistics_Scheduler::send_annual_email( self::$user_id, 2024, array( 'posts_count' => 8 ) );
+
+		$this->assertSame( 1, $this->sent_count, 'Annual email should be sent.' );
+		$this->assertStringContainsString(
+			\esc_url( \admin_url( 'index.php#activitypub_stats' ) ),
+			$this->sent_message,
+			'Annual email should link to the stats dashboard widget.'
+		);
+	}
+
+	/**
+	 * Test that the blog actor's report links to the stats widget.
+	 *
+	 * @covers ::send_monthly_email
+	 */
+	public function test_send_monthly_email_links_to_stats_widget_for_blog_actor() {
+		$year  = 2026;
+		$month = 6;
+		$this->seed_monthly_stats( Actors::BLOG_USER_ID, $year, $month );
+
+		Statistics_Scheduler::send_monthly_email( Actors::BLOG_USER_ID, $year, $month );
+
+		$this->assertSame( 1, $this->sent_count, 'Blog actor monthly email should be sent.' );
+		$this->assertStringContainsString(
+			\esc_url( \admin_url( 'index.php#activitypub_stats' ) ),
+			$this->sent_message,
+			'Blog actor email should link to the stats dashboard widget.'
+		);
+	}
+
+	/**
+	 * Test that the plain text alternative also carries the stats URL.
+	 *
+	 * @covers ::send_monthly_email
+	 */
+	public function test_send_monthly_email_adds_stats_url_to_alt_body() {
+		$year  = 2026;
+		$month = 8;
+		$this->seed_monthly_stats( self::$user_id, $year, $month );
+
+		// Let wp_mail run so Mailer's phpmailer_init callback assigns AltBody. The default
+		// From address (wordpress@localhost) has no TLD, which PHPMailer rejects.
+		\remove_filter( 'pre_wp_mail', array( $this, 'short_circuit_wp_mail' ), 10 );
+		\add_filter( 'wp_mail_from', array( $this, 'valid_mail_from' ) );
+		\add_action( 'phpmailer_init', array( $this, 'capture_alt_body' ), 11 );
+
+		Statistics_Scheduler::send_monthly_email( self::$user_id, $year, $month );
+
+		\remove_filter( 'wp_mail_from', array( $this, 'valid_mail_from' ) );
+
+		$this->assertStringContainsString(
+			\admin_url( 'index.php#activitypub_stats' ),
+			$this->sent_alt_body,
+			'Plain text body should include the stats dashboard URL.'
+		);
+	}
+
+	/**
+	 * Test that the annual report's plain text alternative also carries the stats URL.
+	 *
+	 * @covers ::send_annual_email
+	 */
+	public function test_send_annual_email_adds_stats_url_to_alt_body() {
+		\update_user_option( self::$user_id, 'activitypub_mailer_annual_report', '1' );
+
+		// Let wp_mail run so Mailer's phpmailer_init callback assigns AltBody.
+		\remove_filter( 'pre_wp_mail', array( $this, 'short_circuit_wp_mail' ), 10 );
+		\add_filter( 'wp_mail_from', array( $this, 'valid_mail_from' ) );
+		\add_action( 'phpmailer_init', array( $this, 'capture_alt_body' ), 11 );
+
+		Statistics_Scheduler::send_annual_email( self::$user_id, 2023, array( 'posts_count' => 8 ) );
+
+		\remove_filter( 'wp_mail_from', array( $this, 'valid_mail_from' ) );
+
+		$this->assertStringContainsString(
+			\admin_url( 'index.php#activitypub_stats' ),
+			$this->sent_alt_body,
+			'Annual plain text body should include the stats dashboard URL.'
+		);
+	}
+
+	/**
+	 * Provide a From address PHPMailer accepts.
+	 *
+	 * @return string The From address.
+	 */
+	public function valid_mail_from() {
+		return 'wordpress@example.org';
 	}
 }
