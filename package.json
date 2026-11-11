@@ -79,7 +79,7 @@
 		"@wordpress/scripts": "^37.1.0",
 		"@wordpress/url": "^5.1.0",
 		"@wordpress/viewport": "^7.1.0",
-		"@wordpress/views": "^3.0.0",
+		"@wordpress/views": "^3.1.0",
 		"babel-jest": "^30.5.2",
 		"classnames": "^2.5.1",
 		"clsx": "^2.1.1",
