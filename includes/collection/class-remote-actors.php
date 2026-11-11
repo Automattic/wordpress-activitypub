@@ -257,8 +257,13 @@ class Remote_Actors {
 			}
 
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-			$wpdb->update( $wpdb->posts, $data, array( 'ID' => (int) $origin->ID ) );
+			$updated = $wpdb->update( $wpdb->posts, $data, array( 'ID' => (int) $origin->ID ) );
 			\clean_post_cache( $origin->ID );
+
+			// Under the old guid, a Follow would go to the old actor; the next Move finds the post again.
+			if ( false === $updated ) {
+				return new \WP_Error( 'activitypub_actor_not_moved', \__( 'The actor could not be moved.', 'activitypub' ) );
+			}
 
 			return $post_id;
 		}

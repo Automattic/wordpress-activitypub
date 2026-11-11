@@ -2895,6 +2895,49 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
+	 * A swap whose guid write fails returns an error, so no Follow goes out under the old guid.
+	 *
+	 * @covers ::move
+	 */
+	public function test_move_fails_when_guid_write_fails() {
+		global $wpdb;
+
+		$origin = 'https://old.example.com/users/dan';
+		$target = 'https://new.example.com/users/dan';
+
+		$origin_id = Remote_Actors::upsert(
+			array(
+				'id'    => $origin,
+				'type'  => 'Person',
+				'inbox' => $origin . '/inbox',
+			)
+		);
+
+		// Break only the direct guid write; wp_update_post() writes the guid among all other fields.
+		$break = static function ( $query ) {
+			return false !== \strpos( $query, 'SET `guid`' ) ? 'UPDATE broken' : $query;
+		};
+		\add_filter( 'query', $break );
+		$suppress = $wpdb->suppress_errors();
+
+		$result = Remote_Actors::move(
+			\get_post( $origin_id ),
+			array(
+				'id'    => $target,
+				'type'  => 'Person',
+				'inbox' => $target . '/inbox',
+			)
+		);
+
+		$wpdb->suppress_errors( $suppress );
+		\remove_filter( 'query', $break );
+
+		$this->assertWPError( $result );
+		$this->assertWPError( Remote_Actors::get_by_uri( $target ) );
+		$this->assertSame( $origin_id, Remote_Actors::get_by_uri( $origin )->ID, 'The post keeps the old guid, so the next Move finds it.' );
+	}
+
+	/**
 	 * A move to the old actor itself keeps it, instead of merging it into itself and deleting it.
 	 *
 	 * @covers ::move
