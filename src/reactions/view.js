@@ -12,15 +12,16 @@ createModalStore( 'activitypub/reactions' );
 
 /**
  * @typedef {Object} context
- * @property {string}  blockId         The block ID.
- * @property {Object}  modal           The modal state.
- * @property {boolean} modal.isCompact Whether the modal is compact.
- * @property {boolean} modal.isOpen    Whether the modal is open.
- * @property {Object}  modal.items     The items to display in the modal.
- * @property {string}  modal.title     The modal title (used in full-size mode).
- * @property {string}  modal.intent    The intent type (like, announce).
- * @property {string}  postId          The post ID.
- * @property {Object}  reactions       Reactions data, keyed by reaction type.
+ * @property {string}       blockId         The block ID.
+ * @property {Object}       modal           The modal state.
+ * @property {boolean}      modal.isCompact Whether the modal is compact.
+ * @property {boolean}      modal.isOpen    Whether the modal is open.
+ * @property {Object}       modal.items     The items to display in the modal.
+ * @property {string}       modal.title     The modal title (used in full-size mode).
+ * @property {string}       modal.intent    The intent type (like, announce).
+ * @property {string|false} modal.action    The reaction type of an open action added by another plugin.
+ * @property {string}       postId          The post ID.
+ * @property {Object}       reactions       Reactions data, keyed by reaction type.
  */
 
 /**
@@ -37,6 +38,17 @@ const INTENT_LABEL_KEYS = {
 const STORAGE_KEY = 'fediverse-remote-user';
 
 const { actions, callbacks, state } = store( 'activitypub/reactions', {
+	state: {
+		/**
+		 * Whether the dialog of another plugin's action is hidden.
+		 *
+		 * @return {boolean} True unless this action is open.
+		 */
+		get isActionHidden() {
+			const context = getContext();
+			return context.modal.action !== context.action;
+		},
+	},
 	actions: {
 		/**
 		 * Fetches reactions for a post.
@@ -83,6 +95,20 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 			}
 
 			// Open via shared modal (will trap focus since isCompact is false).
+			actions.openModal();
+		},
+
+		/**
+		 * Open the modal for an action added by another plugin.
+		 */
+		openActionModal() {
+			const context = getContext();
+			const { action, title } = getElement().ref.dataset;
+
+			context.modal.isCompact = false;
+			context.modal.action = action;
+			context.modal.title = title;
+
 			actions.openModal();
 		},
 
@@ -318,6 +344,7 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 			// Reset to compact mode for next use.
 			context.modal.isCompact = true;
 			context.modal.intent = '';
+			context.modal.action = false;
 			context.modal.title = '';
 			context.isError = false;
 			context.errorMessage = '';

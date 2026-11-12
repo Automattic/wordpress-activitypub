@@ -8,6 +8,7 @@
 use Activitypub\Blocks;
 use Activitypub\Collection\Interactions;
 use Activitypub\Comment;
+use Activitypub\Sanitize;
 
 use function Activitypub\get_post_id;
 use function Activitypub\get_reaction_author_name;
@@ -236,6 +237,7 @@ $context = array(
 
 if ( $attributes['showActions'] ) {
 	$context['modal']['intent']   = '';
+	$context['modal']['action']   = false;
 	$context['copyButtonText']    = __( 'Copy', 'activitypub' );
 	$context['errorMessage']      = '';
 	$context['isError']           = false;
@@ -251,6 +253,53 @@ $intent_map = array(
 	'repost' => 'announce',
 	'quote'  => 'announce',
 );
+
+$external_actions = array();
+if ( $attributes['showActions'] ) {
+	/**
+	 * Filters the actions other plugins add to the Reactions block.
+	 *
+	 * Each action adds a button for its reaction type. The button opens the block's modal
+	 * with the action's content, for example a form to send a Webmention. The types
+	 * ActivityPub handles itself (like, repost, quote) can't be replaced.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $actions {
+	 *     Actions, keyed by comment type.
+	 *
+	 *     @type string $title   The modal title.
+	 *     @type string $content The modal content (HTML, forms are allowed).
+	 *     @type string $label   Optional. The button label. Defaults to the singular label of the comment type.
+	 * }
+	 * @param int    $post_id  The post ID.
+	 * @param string $block_id The block ID, to prefix IDs in the content.
+	 */
+	$_actions = array_diff_key( (array) apply_filters( 'activitypub_reactions_actions', array(), $_post_id, $block_id ), $intent_map );
+
+	foreach ( $_actions as $_type => $_action ) {
+		// Numeric keys are no comment types.
+		if ( ! is_string( $_type ) || ! is_array( $_action ) ) {
+			continue;
+		}
+
+		$label = ! empty( $_action['label'] ) ? $_action['label'] : Comment::get_comment_type_attr( $_type, 'singular' );
+		if ( ! $label ) {
+			continue;
+		}
+
+		$external_actions[ $_type ] = array(
+			'content' => $_action['content'] ?? '',
+			'button'  => sprintf(
+				'<button class="reaction-action-button has-text-color has-background" data-action="%1$s" data-title="%2$s" data-wp-on--click="actions.openActionModal" type="button" aria-label="%3$s">%4$s</button>',
+				esc_attr( $_type ),
+				esc_attr( ! empty( $_action['title'] ) ? $_action['title'] : $label ),
+				esc_attr( $label ),
+				esc_html( $label )
+			),
+		);
+	}
+}
 
 // Build reactions content.
 ob_start();
@@ -275,6 +324,8 @@ ob_start();
 		>
 			<?php echo esc_html( $singular ); ?>
 		</button>
+		<?php elseif ( isset( $external_actions[ $_type ] ) ) : ?>
+			<?php echo $external_actions[ $_type ]['button']; // phpcs:ignore WordPress.Security.EscapeOutput ?>
 		<?php elseif ( $attributes['showActions'] && $singular ) : ?>
 		<span class="reaction-action-placeholder" aria-hidden="true"><?php echo esc_html( $singular ); ?></span>
 		<?php endif; ?>
@@ -319,9 +370,10 @@ ob_start();
 	<?php
 	// Second pass: render action buttons for reaction types without items.
 	if ( $attributes['showActions'] ) :
-		$empty_types = array_diff_key( $intent_map, $reactions );
+		$empty_types   = array_diff_key( $intent_map, $reactions );
+		$empty_actions = array_diff_key( $external_actions, $reactions );
 
-		if ( ! empty( $empty_types ) ) :
+		if ( ! empty( $empty_types ) || ! empty( $empty_actions ) ) :
 			?>
 	<div class="reaction-actions-only" role="group" aria-label="<?php esc_attr_e( 'Reaction actions', 'activitypub' ); ?>">
 			<?php
@@ -337,6 +389,9 @@ ob_start();
 		>
 				<?php echo esc_html( $singular ); ?>
 		</button>
+			<?php endforeach; ?>
+			<?php foreach ( $empty_actions as $_action ) : ?>
+				<?php echo $_action['button']; // phpcs:ignore WordPress.Security.EscapeOutput ?>
 			<?php endforeach; ?>
 	</div>
 			<?php
@@ -371,7 +426,8 @@ ob_start();
 	</ul>
 </div>
 <?php if ( $attributes['showActions'] ) : ?>
-<div class="activitypub-intent-dialog" data-wp-bind--hidden="context.modal.isCompact">
+<div data-wp-bind--hidden="context.modal.isCompact">
+<div class="activitypub-intent-dialog" data-wp-bind--hidden="context.modal.action">
 	<div class="activitypub-dialog__section">
 		<h4><?php esc_html_e( 'Post URL', 'activitypub' ); ?></h4>
 		<div class="activitypub-dialog__description">
@@ -449,6 +505,16 @@ ob_start();
 			</label>
 		</div>
 	</div>
+</div>
+	<?php foreach ( $external_actions as $_type => $_action ) : ?>
+<div
+	class="activitypub-intent-dialog"
+	data-wp-bind--hidden="state.isActionHidden"
+		<?php echo wp_interactivity_data_wp_context( array( 'action' => $_type ) ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
+>
+		<?php echo Sanitize::form_html( $_action['content'] ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
+</div>
+	<?php endforeach; ?>
 </div>
 <?php endif; ?>
 <?php
