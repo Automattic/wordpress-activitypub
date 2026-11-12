@@ -66,7 +66,7 @@
 		"@wordpress/i18n": "^7.0.0",
 		"@wordpress/icons": "^19.0.0",
 		"@wordpress/interactivity": "^8.0.0",
-		"@wordpress/interface": "^11.0.0",
+		"@wordpress/interface": "^11.1.0",
 		"@wordpress/jest-preset-default": "^14.2.0",
 		"@wordpress/keyboard-shortcuts": "^6.0.0",
 		"@wordpress/keycodes": "^5.0.0",
