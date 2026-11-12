@@ -500,6 +500,28 @@ describe( 'Tags suggestion', () => {
 	} );
 } );
 
+describe( 'Post format suggestion text', () => {
+	const coreText =
+		'Your theme uses post formats to highlight different kinds of content, like images or videos. Apply a post format to see this special styling.';
+
+	test( 'adds a note on the Fediverse when the format sets the object type', () => {
+		window._activityPubOptions = { objectType: 'wordpress-post-format' };
+
+		// Core's call, through the default i18n instance.
+		expect(
+			__(
+				'Your theme uses post formats to highlight different kinds of content, like images or videos. Apply a post format to see this special styling.'
+			)
+		).toBe( `${ coreText } The format also changes how your post is shared on the Fediverse.` );
+	} );
+
+	test( 'leaves the text alone when the format does not set the object type', () => {
+		window._activityPubOptions = { objectType: 'note' };
+
+		expect( applyFilters( 'i18n.gettext_default', coreText, coreText, undefined ) ).toBe( coreText );
+	} );
+} );
+
 describe( 'Post format panel', () => {
 	const Panels = () => {
 		const { render: Render } = registerPlugin.mock.calls[ 0 ][ 1 ];

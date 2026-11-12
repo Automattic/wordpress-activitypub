@@ -115,7 +115,28 @@ const PrePublishPanel = () => {
 const CORE_TAGS_TEXT =
 	'%s help users and search engines navigate your site and find your content. Add a few keywords to describe your post.';
 
+/**
+ * The text of core's post format suggestion, which gets a note on the Fediverse.
+ *
+ * @type {string}
+ */
+const CORE_FORMAT_TEXT =
+	'Your theme uses post formats to highlight different kinds of content, like images or videos. Apply a post format to see this special styling.';
+
 addFilter( 'i18n.gettext_default', 'activitypub/tags-suggestion', ( translation, text ) => {
+	// Core's format suggestion replaces the plugin's own, so it says what the format does on the Fediverse.
+	if ( CORE_FORMAT_TEXT === text && window._activityPubOptions?.objectType === 'wordpress-post-format' ) {
+		return (
+			translation +
+			' ' +
+			__(
+				/* translators: Appended to the editor's post format suggestion, after "Your theme uses post formats […]". */
+				'The format also changes how your post is shared on the Fediverse.',
+				'activitypub'
+			)
+		);
+	}
+
 	if ( CORE_TAGS_TEXT !== text ) {
 		return translation;
 	}
