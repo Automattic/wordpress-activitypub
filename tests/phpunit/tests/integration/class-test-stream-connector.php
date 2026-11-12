@@ -696,6 +696,33 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 	public function test_class_hierarchy() {
 		$this->assertInstanceOf( '\WP_Stream\Connector', $this->stream_connector );
 	}
+
+	/**
+	 * Test that the connector does not redeclare properties of the parent class.
+	 *
+	 * Stream 4.5.0 added native types to the properties of WP_Stream\Connector.
+	 * A child class that redeclares one of them must use the same type, which
+	 * would break older Stream versions where the properties are untyped. The
+	 * connector must assign these values instead of redeclaring them.
+	 *
+	 * @see https://github.com/Automattic/wordpress-activitypub/issues/4066
+	 *
+	 * @covers ::__construct
+	 */
+	public function test_connector_does_not_redeclare_parent_properties() {
+		$parent_class = \get_parent_class( Connector::class );
+		$parent       = new \ReflectionClass( $parent_class );
+
+		foreach ( $parent->getProperties() as $parent_property ) {
+			$property = new \ReflectionProperty( Connector::class, $parent_property->getName() );
+
+			$this->assertSame(
+				$parent->getName(),
+				$property->getDeclaringClass()->getName(),
+				\sprintf( 'Connector must not redeclare the parent property $%s.', $parent_property->getName() )
+			);
+		}
+	}
 }
 
 // Mock WP_Stream\Connector if it doesn't exist.
