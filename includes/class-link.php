@@ -38,6 +38,15 @@ class Link {
 			$activity['content'] = self::the_content( $activity['content'] );
 		}
 
+		// The maps hold the same text in other languages, so they get the same links.
+		if ( ! empty( $activity['summaryMap'] ) && \is_array( $activity['summaryMap'] ) && is_actor( $activity ) ) {
+			$activity['summaryMap'] = \array_map( array( self::class, 'the_content' ), $activity['summaryMap'] );
+		}
+
+		if ( ! empty( $activity['contentMap'] ) && \is_array( $activity['contentMap'] ) ) {
+			$activity['contentMap'] = \array_map( array( self::class, 'the_content' ), $activity['contentMap'] );
+		}
+
 		return $activity;
 	}
 
