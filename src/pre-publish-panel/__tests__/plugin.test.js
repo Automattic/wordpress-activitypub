@@ -34,6 +34,8 @@ jest.mock( '@wordpress/components', () => ( {
 
 jest.mock( '@wordpress/block-editor', () => ( { store: 'core/block-editor' } ) );
 
+jest.mock( '@wordpress/core-data', () => ( { store: 'core' } ) );
+
 jest.mock( '@wordpress/data', () => ( {
 	useDispatch: () => ( { editPost: jest.fn() } ),
 	useSelect: ( callback ) =>
@@ -42,8 +44,13 @@ jest.mock( '@wordpress/data', () => ( {
 				return { getBlocks: () => mockEditorState.blocks ?? [] };
 			}
 
+			if ( 'core' === store ) {
+				return { getThemeSupports: () => ( { formats: mockEditorState.themeFormats ?? [] } ) };
+			}
+
 			return {
 				getEditedPostAttribute: ( attribute ) => mockEditorState.attributes[ attribute ],
+				getSuggestedPostFormat: () => mockEditorState.coreSuggestion ?? null,
 			};
 		} ),
 } ) );
@@ -510,7 +517,7 @@ describe( 'Post format panel', () => {
 	test( 'titles a format suggestion as a suggestion', () => {
 		render( <Panels /> );
 
-		expect( screen.getByRole( 'heading' ) ).toHaveTextContent( 'Suggestion:Change format' );
+		expect( screen.getByRole( 'heading' ) ).toHaveTextContent( 'Suggestion:Use a post format' );
 	} );
 
 	test( 'titles the confirmation of a set format as the post format', () => {
@@ -518,5 +525,20 @@ describe( 'Post format panel', () => {
 		render( <Panels /> );
 
 		expect( screen.getByRole( 'heading' ) ).toHaveTextContent( /^Post format$/ );
+	} );
+
+	test( 'leaves the suggestion to core when core suggests a format', () => {
+		mockEditorState.coreSuggestion = 'image';
+		mockEditorState.themeFormats = [ 'image' ];
+		render( <Panels /> );
+
+		expect( screen.queryByTestId( 'pre-publish-panel' ) ).toBeNull();
+	} );
+
+	test( "suggests a format when the theme does not support core's suggestion", () => {
+		mockEditorState.coreSuggestion = 'image';
+		render( <Panels /> );
+
+		expect( screen.getByRole( 'heading' ) ).toHaveTextContent( 'Suggestion:Use a post format' );
 	} );
 } );

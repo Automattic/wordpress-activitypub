@@ -1,5 +1,6 @@
 import { PluginPrePublishPanel, store as editorStore } from '@wordpress/editor';
 import { store as blockEditorStore } from '@wordpress/block-editor';
+import { store as coreStore } from '@wordpress/core-data';
 import { registerPlugin } from '@wordpress/plugins';
 import { Button } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
@@ -26,14 +27,21 @@ const asterism = (
  *
  * Only renders when the object type setting is 'wordpress-post-format' and
  * the post content suggests a better format than the default Article.
+ * A suggestion is left out while core's own post format suggestion shows.
  *
  * @return {React.JSX.Element|null} The pre-publish panel or null.
  */
 const PrePublishPanel = () => {
-	const { blocks, postFormat } = useSelect( ( selectFn ) => {
+	const { blocks, postFormat, coreSuggestsFormat } = useSelect( ( selectFn ) => {
+		const format = selectFn( editorStore ).getEditedPostAttribute( 'format' );
+		const coreFormat = selectFn( editorStore ).getSuggestedPostFormat();
+		const themeFormats = selectFn( coreStore ).getThemeSupports()?.formats ?? [];
+
 		return {
 			blocks: selectFn( blockEditorStore ).getBlocks(),
-			postFormat: selectFn( editorStore ).getEditedPostAttribute( 'format' ),
+			postFormat: format,
+			// Same check as core's own "Use a post format" suggestion.
+			coreSuggestsFormat: !! coreFormat && themeFormats.includes( coreFormat ) && coreFormat !== format,
 		};
 	}, [] );
 
@@ -66,24 +74,35 @@ const PrePublishPanel = () => {
 		return null;
 	}
 
+	// Core already suggests a post format, a second suggestion would repeat it.
+	if ( coreSuggestsFormat ) {
+		return null;
+	}
+
 	return (
 		<PluginPrePublishPanel
 			title={ [
 				__( 'Suggestion:', 'activitypub' ),
 				<span className="editor-post-publish-panel__link" key="label">
-					{ __( 'Change format', 'activitypub' ) }
+					{ __( 'Use a post format', 'activitypub' ) }
 				</span>,
 			] }
-			initialOpen
+			initialOpen={ false }
 		>
 			<p>{ suggestion.message }</p>
-			<Button variant="secondary" onClick={ () => editPost( { format: suggestion.format } ) }>
-				{ sprintf(
-					/* translators: %s: The suggested post format name (e.g., "Image", "Gallery", "Video"). */
-					__( 'Set format to %s', 'activitypub' ),
-					FORMAT_LABELS[ suggestion.format ] || suggestion.format
-				) }
-			</Button>
+			<p>
+				<Button
+					__next40pxDefaultSize
+					variant="link"
+					onClick={ () => editPost( { format: suggestion.format } ) }
+				>
+					{ sprintf(
+						/* translators: %s: The suggested post format name (e.g., "Image", "Gallery", "Video"). */
+						__( 'Apply the "%s" format.', 'activitypub' ),
+						FORMAT_LABELS[ suggestion.format ] || suggestion.format
+					) }
+				</Button>
+			</p>
 		</PluginPrePublishPanel>
 	);
 };
