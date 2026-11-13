@@ -5,7 +5,55 @@
 // Set up the global options before importing utils, so NOTE_LENGTH picks up the value.
 window._activityPubOptions = { noteLength: 500 };
 
+import { render, screen } from '@testing-library/react';
+import { registerPlugin } from '@wordpress/plugins';
+import { applyFilters } from '@wordpress/hooks';
+import { __, sprintf } from '@wordpress/i18n';
 import { analyzeBlocks, getSuggestedPostFormat } from '../utils';
+import '../plugin';
+
+// The editor state the panels read, changed per test.
+let mockEditorState;
+
+jest.mock( '@wordpress/plugins', () => ( { registerPlugin: jest.fn() } ) );
+
+jest.mock( '@wordpress/editor', () => ( {
+	PluginPrePublishPanel: ( { title, children } ) => (
+		<div data-testid="pre-publish-panel">
+			<h2>{ title }</h2>
+			{ children }
+		</div>
+	),
+	PostTaxonomiesFlatTermSelector: ( { slug } ) => <div data-testid="term-selector" data-slug={ slug } />,
+	store: 'core/editor',
+} ) );
+
+jest.mock( '@wordpress/components', () => ( {
+	Button: ( { children, onClick } ) => <button onClick={ onClick }>{ children }</button>,
+} ) );
+
+jest.mock( '@wordpress/block-editor', () => ( { store: 'core/block-editor' } ) );
+
+jest.mock( '@wordpress/core-data', () => ( { store: 'core' } ) );
+
+jest.mock( '@wordpress/data', () => ( {
+	useDispatch: () => ( { editPost: jest.fn() } ),
+	useSelect: ( callback ) =>
+		callback( ( store ) => {
+			if ( 'core/block-editor' === store ) {
+				return { getBlocks: () => mockEditorState.blocks ?? [] };
+			}
+
+			if ( 'core' === store ) {
+				return { getThemeSupports: () => ( { formats: mockEditorState.themeFormats ?? [] } ) };
+			}
+
+			return {
+				getEditedPostAttribute: ( attribute ) => mockEditorState.attributes[ attribute ],
+				getSuggestedPostFormat: () => mockEditorState.coreSuggestion ?? null,
+			};
+		} ),
+} ) );
 
 describe( 'analyzeBlocks', () => {
 	test( 'returns all zeros for empty blocks', () => {
@@ -395,5 +443,124 @@ describe( 'getSuggestedPostFormat', () => {
 		// Multiple images should suggest gallery, not image.
 		const result = getSuggestedPostFormat( blocks, '' );
 		expect( result.format ).toBe( 'gallery' );
+	} );
+} );
+
+describe( 'Tags suggestion', () => {
+	const Panels = () => {
+		const { render: Render } = registerPlugin.mock.calls[ 0 ][ 1 ];
+		return <Render />;
+	};
+
+	const coreText =
+		'%s help users and search engines navigate your site and find your content. Add a few keywords to describe your post.';
+
+	beforeEach( () => {
+		window._activityPubOptions = { noteLength: 500 };
+		mockEditorState = { attributes: {} };
+	} );
+
+	test( 'marks the panels with the asterism icon', () => {
+		const { container } = render( registerPlugin.mock.calls[ 0 ][ 1 ].icon );
+
+		expect( container.querySelector( 'svg text' ) ).toHaveTextContent( '⁂' );
+	} );
+
+	test( 'renders no panel of its own', () => {
+		render( <Panels /> );
+
+		expect( screen.queryByTestId( 'pre-publish-panel' ) ).toBeNull();
+	} );
+
+	test( 'adds a note on hashtags to core suggestion text', () => {
+		// Core's call, through the default i18n instance.
+		expect(
+			sprintf(
+				/* translators: %s: The taxonomy name. */
+				__(
+					'%s help users and search engines navigate your site and find your content. Add a few keywords to describe your post.'
+				),
+				'Tags'
+			)
+		).toBe(
+			'Tags help users and search engines navigate your site and find your content. Add a few keywords to describe your post. Tags are also shared as hashtags, which help people on the Fediverse find your post.'
+		);
+	} );
+
+	test( 'mentions hashtags in the content when they are enabled', () => {
+		window._activityPubOptions.useHashtags = true;
+
+		expect( sprintf( applyFilters( 'i18n.gettext_default', coreText, coreText, undefined ), 'Tags' ) ).toMatch(
+			/Any #hashtag you write in your post is added as a tag too\.$/
+		);
+	} );
+
+	test( 'leaves other core strings alone', () => {
+		expect( __( 'Add a few keywords to describe your post.' ) ).toBe( 'Add a few keywords to describe your post.' );
+	} );
+} );
+
+describe( 'Post format suggestion text', () => {
+	const coreText =
+		'Your theme uses post formats to highlight different kinds of content, like images or videos. Apply a post format to see this special styling.';
+
+	test( 'adds a note on the Fediverse when the format sets the object type', () => {
+		window._activityPubOptions = { objectType: 'wordpress-post-format' };
+
+		// Core's call, through the default i18n instance.
+		expect(
+			__(
+				'Your theme uses post formats to highlight different kinds of content, like images or videos. Apply a post format to see this special styling.'
+			)
+		).toBe( `${ coreText } The format also changes how your post is shared on the Fediverse.` );
+	} );
+
+	test( 'leaves the text alone when the format does not set the object type', () => {
+		window._activityPubOptions = { objectType: 'note' };
+
+		expect( applyFilters( 'i18n.gettext_default', coreText, coreText, undefined ) ).toBe( coreText );
+	} );
+} );
+
+describe( 'Post format panel', () => {
+	const Panels = () => {
+		const { render: Render } = registerPlugin.mock.calls[ 0 ][ 1 ];
+		return <Render />;
+	};
+
+	beforeEach( () => {
+		window._activityPubOptions = { noteLength: 500, objectType: 'wordpress-post-format' };
+		mockEditorState = {
+			attributes: { format: 'standard' },
+			blocks: [ { name: 'core/image', attributes: {}, innerBlocks: [] } ],
+		};
+	} );
+
+	test( 'titles a format suggestion as a suggestion', () => {
+		render( <Panels /> );
+
+		expect( screen.getByRole( 'heading' ) ).toHaveTextContent( 'Suggestion:Use a post format' );
+	} );
+
+	test( 'titles the confirmation of a set format as the post format', () => {
+		mockEditorState.attributes.format = 'image';
+		render( <Panels /> );
+
+		expect( screen.getByRole( 'heading' ) ).toHaveTextContent( /^Post format$/ );
+	} );
+
+	test( 'leaves the suggestion to core when core suggests a format', () => {
+		mockEditorState.coreSuggestion = 'image';
+		mockEditorState.themeFormats = [ 'image' ];
+		render( <Panels /> );
+
+		expect( screen.queryByTestId( 'pre-publish-panel' ) ).toBeNull();
+	} );
+
+	test( "suggests a format when the theme does not support core's suggestion", () => {
+		mockEditorState.coreSuggestion = 'image';
+		render( <Panels /> );
+
+		expect( screen.getByRole( 'heading' ) ).toHaveTextContent( 'Suggestion:Use a post format' );
 	} );
 } );

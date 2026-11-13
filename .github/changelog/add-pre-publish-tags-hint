@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Before publishing a post without tags, the tag suggestion now explains that tags are shared as hashtags, which help people on the Fediverse find your post.

@@ -164,7 +164,7 @@ export const getSuggestedPostFormat = ( blocks, currentFormat ) => {
 		return {
 			format: 'gallery',
 			message: __(
-				"This post contains multiple images. Changing the format to Gallery won't change your post content, but will share it as a media post on the Fediverse, making it visible on platforms like Pixelfed.",
+				'This post contains multiple images. With the Gallery format, it is shared as a media post on the Fediverse and shows up on platforms like Pixelfed. Your post content stays the same.',
 				'activitypub'
 			),
 		};
@@ -175,7 +175,7 @@ export const getSuggestedPostFormat = ( blocks, currentFormat ) => {
 		return {
 			format: 'video',
 			message: __(
-				"This post contains a video. Changing the format to Video won't change your post content, but will share it as a media post on the Fediverse, improving compatibility with video-focused platforms.",
+				'This post contains a video. With the Video format, it is shared as a media post on the Fediverse and works better on video platforms. Your post content stays the same.',
 				'activitypub'
 			),
 		};
@@ -186,7 +186,7 @@ export const getSuggestedPostFormat = ( blocks, currentFormat ) => {
 		return {
 			format: 'audio',
 			message: __(
-				"This post contains audio content. Changing the format to Audio won't change your post content, but will share it as a media post on the Fediverse, improving compatibility with audio-focused platforms.",
+				'This post contains audio. With the Audio format, it is shared as a media post on the Fediverse and works better on audio platforms. Your post content stays the same.',
 				'activitypub'
 			),
 		};
@@ -202,7 +202,7 @@ export const getSuggestedPostFormat = ( blocks, currentFormat ) => {
 		return {
 			format: 'image',
 			message: __(
-				"This post contains an image. Changing the format to Image won't change your post content, but will share it as a media post on the Fediverse, making it visible on platforms like Pixelfed.",
+				'This post contains an image. With the Image format, it is shared as a media post on the Fediverse and shows up on platforms like Pixelfed. Your post content stays the same.',
 				'activitypub'
 			),
 		};
@@ -213,7 +213,7 @@ export const getSuggestedPostFormat = ( blocks, currentFormat ) => {
 		return {
 			format: 'status',
 			message: __(
-				"This is a short post with no media. Changing the format to Status won't change your post content, but will share it as a Note on the Fediverse, which is the standard format on platforms like Mastodon.",
+				'This is a short post without media. With the Status format, it is shared as a short post on the Fediverse, the way posts look on platforms like Mastodon. Your post content stays the same.',
 				'activitypub'
 			),
 		};

@@ -115,6 +115,7 @@ class Blocks {
 			'noteLength'            => ACTIVITYPUB_NOTE_LENGTH,
 			'statsImageUrlEndpoint' => Stats_Image::is_available() ? \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image-url/{user_id}/{year}' ) : '',
 			'reactionTypes'         => self::get_reaction_types(),
+			'useHashtags'           => '1' === \get_option( 'activitypub_use_hashtags', '0' ),
 		);
 		\wp_localize_script( 'wp-editor', '_activityPubOptions', $data );
 
