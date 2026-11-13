@@ -2804,4 +2804,36 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$this->assertSame( 0, $requests );
 		$this->assertSame( $stored, \get_post_meta( $post_id, '_activitypub_acct', true ), 'The stored handle must keep its case.' );
 	}
+
+	/**
+	 * Followers, comments and Reader posts of the old actor go to the new one, and the old one is deleted.
+	 *
+	 * @covers ::merge
+	 */
+	public function test_merge() {
+		$origin_id = Remote_Actors::upsert(
+			array(
+				'id'    => 'https://old.example.com/users/ben',
+				'type'  => 'Person',
+				'inbox' => 'https://old.example.com/users/ben/inbox',
+			)
+		);
+		$target_id = Remote_Actors::upsert(
+			array(
+				'id'    => 'https://new.example.com/users/ben',
+				'type'  => 'Person',
+				'inbox' => 'https://new.example.com/users/ben/inbox',
+			)
+		);
+		\add_post_meta( $origin_id, Followers::FOLLOWER_META_KEY, '1' );
+		$comment_id = self::factory()->comment->create( array( 'comment_meta' => array( '_activitypub_remote_actor_id' => (string) $origin_id ) ) );
+		$reader_id  = self::factory()->post->create( array( 'meta_input' => array( '_activitypub_remote_actor_id' => (string) $origin_id ) ) );
+
+		Remote_Actors::merge( $origin_id, $target_id );
+
+		$this->assertNull( \get_post( $origin_id ), 'The old actor must be deleted.' );
+		$this->assertSame( array( '1' ), \get_post_meta( $target_id, Followers::FOLLOWER_META_KEY, false ) );
+		$this->assertSame( (string) $target_id, \get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true ) );
+		$this->assertSame( (string) $target_id, \get_post_meta( $reader_id, '_activitypub_remote_actor_id', true ) );
+	}
 }

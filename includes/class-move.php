@@ -10,11 +10,16 @@ namespace Activitypub;
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Blocked_Actors;
+use Activitypub\Collection\Followers;
+use Activitypub\Collection\Following;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Model\Blog;
 use Activitypub\Model\User;
 use Activitypub\Scheduler\Actor as Actor_Scheduler;
 
 use function Activitypub\is_actor;
+use function Activitypub\unescape_guid;
 
 /**
  * ActivityPub (Account) Move Class
@@ -213,6 +218,86 @@ class Move {
 		}
 
 		return $outbox_id;
+	}
+
+	/**
+	 * Move a remote actor to its new id.
+	 *
+	 * Our users who follow the old actor follow the new one (FEP-7628), and their blocks carry over.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_Post $origin The stored old actor.
+	 * @param array    $actor  The new actor, fetched and verified.
+	 *
+	 * @return int|\WP_Error The post ID of the new actor, or WP_Error if it can not be stored.
+	 */
+	public static function remote( $origin, $actor ) {
+		// Read before the merge, which deletes the old actor.
+		$refollow   = self::get_following_user_ids( $origin->ID );
+		$blocked_by = \get_post_meta( $origin->ID, Moderation::BLOCKED_ACTORS_META_KEY, false );
+		$origin_uri = unescape_guid( $origin->guid );
+		$old_actor  = $blocked_by ? Remote_Actors::get_actor( $origin ) : null;
+
+		// Stored first, so a new actor that can not be stored (no inbox) leaves the old one as it was.
+		$post_id = Remote_Actors::upsert( $actor );
+
+		if ( \is_wp_error( $post_id ) ) {
+			return $post_id;
+		}
+
+		// A merge into the old actor itself would delete it.
+		if ( ! $post_id || $post_id === $origin->ID ) {
+			return new \WP_Error( 'activitypub_actor_not_moved', \__( 'The actor could not be moved.', 'activitypub' ) );
+		}
+
+		// Users who already follow the new actor keep that follow.
+		$refollow = \array_diff( $refollow, self::get_following_user_ids( $post_id ) );
+
+		Remote_Actors::merge( $origin->ID, $post_id );
+
+		// The old account stays reachable, so it keeps its blocks. Stored again from our copy, without a fetch.
+		if ( $old_actor && ! \is_wp_error( $old_actor ) ) {
+			Remote_Actors::upsert( $old_actor );
+		}
+
+		// Through Blocked_Actors::add(), so the block hooks run and clean up the relationships.
+		foreach ( $blocked_by as $user_id ) {
+			Blocked_Actors::add( (int) $user_id, $actor['id'] );
+			Blocked_Actors::add( (int) $user_id, $origin_uri );
+		}
+
+		// A user who blocks the new actor neither follows it nor keeps it as a follower.
+		foreach ( \get_post_meta( $post_id, Followers::FOLLOWER_META_KEY, false ) as $user_id ) {
+			if ( Moderation::is_actor_blocked( $actor['id'], (int) $user_id ) ) {
+				Followers::remove( $post_id, (int) $user_id );
+			}
+		}
+
+		// A user who blocks the new actor does not follow it; follow() refuses users who can no longer follow.
+		foreach ( $refollow as $user_id ) {
+			if ( ! Moderation::is_actor_blocked( $actor['id'], (int) $user_id ) ) {
+				Following::follow( $post_id, (int) $user_id );
+			}
+		}
+
+		return $post_id;
+	}
+
+	/**
+	 * Get the local users that follow or asked to follow a remote actor.
+	 *
+	 * @param int $post_id The remote actor post ID.
+	 *
+	 * @return string[] The user IDs.
+	 */
+	private static function get_following_user_ids( $post_id ) {
+		return \array_unique(
+			\array_merge(
+				\get_post_meta( $post_id, Following::FOLLOWING_META_KEY, false ),
+				\get_post_meta( $post_id, Following::PENDING_META_KEY, false )
+			)
+		);
 	}
 
 	/**
