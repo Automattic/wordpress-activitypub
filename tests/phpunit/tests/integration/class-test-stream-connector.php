@@ -713,7 +713,7 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 		$parent_class = \get_parent_class( Connector::class );
 		$parent       = new \ReflectionClass( $parent_class );
 
-		foreach ( $parent->getProperties() as $parent_property ) {
+		foreach ( $parent->getProperties( \ReflectionProperty::IS_PUBLIC | \ReflectionProperty::IS_PROTECTED ) as $parent_property ) {
 			$property = new \ReflectionProperty( Connector::class, $parent_property->getName() );
 
 			$this->assertSame(
