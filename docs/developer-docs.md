@@ -4,6 +4,7 @@
 - [Introduction](#introduction)
 - [Snippets](#snippets)
 - [Extending the Settings Interface](#extending-the-settings-interface)
+- [Abilities API](#abilities-api)
 - [Signing Outbound Requests](#signing-outbound-requests)
 
 ## Introduction
@@ -78,6 +79,12 @@ add_action( 'admin_enqueue_scripts', function( $hook ) {
     }
 } );
 ```
+
+## Abilities API
+
+The plugin registers its operations as WordPress Abilities (WP 6.9+), giving other plugins a stable, discoverable way to interact with ActivityPub without depending on internal classes.
+
+See [Abilities API](./abilities-api.md) for the available abilities, their input and output schemas, and usage examples.
 
 ## Signing Outbound Requests
 
