@@ -465,4 +465,40 @@ ENDPRE;
 		\remove_filter( 'the_content', array( \Activitypub\Hashtag::class, 'the_content' ) );
 		\remove_filter( 'activitypub_activity_object_array', array( \Activitypub\Hashtag::class, 'filter_activity_object' ), 99 );
 	}
+
+	/**
+	 * The language maps get the same hashtag links as `summary` and `content`.
+	 *
+	 * @covers ::filter_activity_object
+	 */
+	public function test_filter_activity_object_links_language_maps() {
+		\wp_create_term( 'object', 'post_tag' );
+		$link = \get_term_link( \get_term_by( 'name', 'object', 'post_tag' ), 'post_tag' );
+
+		$fields = array(
+			'summary'    => 'Hello #object',
+			'summaryMap' => array(
+				'en' => 'Hello #object',
+				'de' => 'Hallo #object',
+			),
+			'content'    => '<p>Hello #object</p>',
+			'contentMap' => array(
+				'en' => '<p>Hello #object</p>',
+				'de' => '<p>Hallo #object</p>',
+			),
+		);
+
+		$actor = \Activitypub\Hashtag::filter_activity_object( \array_merge( array( 'type' => 'Person' ), $fields ) );
+
+		$this->assertSame( $actor['summary'], $actor['summaryMap']['en'] );
+		$this->assertSame( $actor['content'], $actor['contentMap']['en'] );
+		$this->assertStringContainsString( \sprintf( 'href="%s"', $link ), $actor['summaryMap']['de'] );
+		$this->assertStringContainsString( \sprintf( 'href="%s"', $link ), $actor['contentMap']['de'] );
+
+		// The summary of a post stays plain text, in every language.
+		$note = \Activitypub\Hashtag::filter_activity_object( \array_merge( array( 'type' => 'Note' ), $fields ) );
+
+		$this->assertSame( $fields['summaryMap'], $note['summaryMap'] );
+		$this->assertSame( $note['content'], $note['contentMap']['en'] );
+	}
 }
