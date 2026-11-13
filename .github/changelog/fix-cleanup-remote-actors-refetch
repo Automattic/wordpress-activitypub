@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Ensure remote actor cleanup re-fetches metadata with cache bypassed, deletes only on 410 or confirmed tombstones, and schedules cleanups with post ID.

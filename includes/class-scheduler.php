@@ -368,20 +368,57 @@ class Scheduler {
 		$actors = Remote_Actors::get_faulty( $number );
 
 		foreach ( $actors as $actor ) {
-			$meta = get_remote_metadata_by_actor( unescape_guid( $actor->guid ), false );
+			$guid = unescape_guid( $actor->guid );
 
-			if ( Tombstone::exists( $meta ) ) {
+			/*
+			 * Use Proxy::get() directly with cache bypassed.
+			 * get_remote_metadata_by_actor() short-circuits to the locally cached
+			 * ap_actor post via Remote_Actors::fetch_by_various() whenever one exists,
+			 * so faulty actors would always rewrite stale local data and clear errors.
+			 */
+			$meta = Proxy::get( $guid, array( 'cached' => false ) );
+
+			/*
+			 * Only delete immediately on HTTP 410 Gone or a confirmed Tombstone object.
+			 * HTTP 404 is treated as a regular error below so that a transient
+			 * misconfiguration or temporary server issue does not purge followers.
+			 */
+			$is_tombstone = false;
+			if ( \is_wp_error( $meta ) ) {
+				$status       = (int) ( $meta->get_error_data()['status'] ?? $meta->get_error_code() );
+				$is_tombstone = 410 === $status;
+			} elseif ( ! empty( $meta ) && Tombstone::exists( $meta ) ) {
+				$is_tombstone = true;
+			}
+
+			if ( $is_tombstone ) {
+				\wp_schedule_single_event( \time(), 'activitypub_delete_remote_actor_interactions', array( $actor->ID ) );
+				\wp_schedule_single_event( \time(), 'activitypub_delete_remote_actor_posts', array( $actor->ID ) );
 				Remote_Actors::delete( $actor->ID );
 			} elseif ( empty( $meta ) || ! \is_array( $meta ) || \is_wp_error( $meta ) ) {
 				if ( Remote_Actors::count_errors( $actor->ID ) >= 5 ) {
-					\wp_schedule_single_event( \time(), 'activitypub_delete_remote_actor_interactions', array( $actor->guid ) );
-					\wp_schedule_single_event( \time(), 'activitypub_delete_remote_actor_posts', array( $actor->guid ) );
+					\wp_schedule_single_event( \time(), 'activitypub_delete_remote_actor_interactions', array( $actor->ID ) );
+					\wp_schedule_single_event( \time(), 'activitypub_delete_remote_actor_posts', array( $actor->ID ) );
 					Remote_Actors::delete( $actor->ID );
 				} else {
 					Remote_Actors::add_error( $actor->ID, $meta );
 				}
 			} else {
-				$id = Remote_Actors::upsert( $meta );
+				/*
+				 * Guard against identity drift: if the remote document declares an id
+				 * different from the actor's guid, skip it to avoid colliding with another
+				 * actor or rewriting the identity unexpectedly.
+				 */
+				$fetched_id = isset( $meta['id'] ) && \is_string( $meta['id'] ) ? \esc_url_raw( $meta['id'] ) : '';
+				if ( $fetched_id !== $guid ) {
+					continue;
+				}
+
+				/*
+				 * Update the existing actor in place using the known ID, avoiding
+				 * the redundant get_by_uri() query upsert() would do.
+				 */
+				$id = Remote_Actors::update( $actor->ID, $meta );
 				if ( \is_wp_error( $id ) ) {
 					Remote_Actors::add_error( $actor->ID, $id );
 				} else {
