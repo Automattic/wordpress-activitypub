@@ -2059,6 +2059,17 @@ class Test_Signature extends \WP_UnitTestCase {
 				'sig1=("@method");keyId="https://remote.example/key"',
 				'https://remote.example/key',
 			),
+			// Draft fields other than the timestamps are double-quoted.
+			'draft single-quoted keyId'         => array(
+				"keyId='https://other.example/key',signature=\"abc\"",
+				null,
+				null,
+			),
+			'draft unquoted keyId'              => array(
+				'keyId=https://other.example/key,signature="abc"',
+				null,
+				null,
+			),
 			// A field named signature first is a field, not the Authorization scheme.
 			'draft signature field first'       => array(
 				'signature ="abc", keyId="https://remote.example/key"',

@@ -317,15 +317,20 @@ class Http_Signature_Draft implements Http_Signature {
 				continue;
 			}
 
-			// A quoted value loses its enclosing quotes only.
-			$value = $pair[2];
-			if ( '' !== $value && ( '"' === $value[0] || "'" === $value[0] ) ) {
+			/*
+			 * The fields are double-quoted; the timestamps may also be single-quoted or bare, and are
+			 * digits only. A quoted value loses its enclosing quotes only.
+			 */
+			$value     = $pair[2];
+			$timestamp = \in_array( $field, array( '(created)', '(expires)' ), true );
+			if ( '' !== $value && ( '"' === $value[0] || ( $timestamp && "'" === $value[0] ) ) ) {
 				$value = \substr( $value, 1, -1 );
+			} elseif ( ! $timestamp ) {
+				continue;
 			}
 			$value = \trim( $value );
 
-			// The timestamps are digits only.
-			if ( \in_array( $field, array( '(created)', '(expires)' ), true ) && ! \ctype_digit( $value ) ) {
+			if ( $timestamp && ! \ctype_digit( $value ) ) {
 				$value = '';
 			}
 
