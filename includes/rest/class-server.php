@@ -177,11 +177,20 @@ class Server {
 			return $result;
 		}
 
-		$json   = $request->get_json_params();
-		$json   = \is_array( $json ) ? $json : array();
-		$sender = Signature::get_key_id( $request ) ?? object_to_uri( $json['actor'] ?? null );
+		$json = $request->get_json_params();
+		$json = \is_array( $json ) ? $json : array();
 
-		if ( ! \is_string( $sender ) || ! Moderation::is_actor_blocked( \strip_fragment_from_url( $sender ) ) ) {
+		// The key that verifies is one of these, and the actor is bound to it, so the sender is blocked when any of them is.
+		$senders   = Signature::get_key_ids( $request );
+		$senders[] = object_to_uri( $json['actor'] ?? null );
+		$blocked   = \array_filter(
+			$senders,
+			static function ( $sender ) {
+				return \is_string( $sender ) && Moderation::is_actor_blocked( \strip_fragment_from_url( $sender ) );
+			}
+		);
+
+		if ( ! $blocked ) {
 			return $result;
 		}
 

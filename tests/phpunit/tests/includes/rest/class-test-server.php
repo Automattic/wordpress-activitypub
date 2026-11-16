@@ -102,6 +102,7 @@ class Test_Server extends \WP_Test_REST_TestCase {
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
 		$request->set_header( 'content-type', 'application/activity+json' );
 		$request->set_header( 'signature-input', 'sig1=("@method" "@target-uri");keyid="https://remote.example.com/users/curator#main-key";created=1700000000' );
+		$request->set_header( 'signature', 'sig1=:AAAA:' );
 		$request->set_body( \wp_json_encode( array( 'type' => 'FeatureRequest' ) ) );
 
 		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
@@ -205,7 +206,7 @@ class Test_Server extends \WP_Test_REST_TestCase {
 
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
 		$request->set_header( 'content-type', 'application/activity+json' );
-		$request->set_header( 'signature', 'keyId="https://victim.example/users/victim#main-key",signature="abc"' );
+		$request->set_header( 'signature', 'sig1=:AAAA:, keyId="https://victim.example/users/victim#main-key",signature="abc"' );
 		$request->set_header( 'signature-input', 'sig1=("@method");keyid="https://attacker.example/users/attacker#main-key";created=1700000000' );
 		$request->set_body( \wp_json_encode( array( 'type' => 'FeatureRequest' ) ) );
 
@@ -226,6 +227,7 @@ class Test_Server extends \WP_Test_REST_TestCase {
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
 		$request->set_header( 'content-type', 'application/activity+json' );
 		$request->set_header( 'signature-input', 'sig1=("@method");keyid="https://victim.example/users/victim#main-key", sig2=("@method");keyid="https://attacker.example/users/attacker#main-key";created=1700000000' );
+		$request->set_header( 'signature', 'sig1=:AAAA:, sig2=:BBBB:' );
 		$request->set_body( \wp_json_encode( array( 'type' => 'FeatureRequest' ) ) );
 
 		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
@@ -1052,6 +1054,56 @@ class Test_Server extends \WP_Test_REST_TestCase {
 			$this->assertWPError( $result );
 			$this->assertSame( $status, $result->get_error_data()['status'] );
 		}
+	}
+
+	/**
+	 * A blocked sender is refused even when the request names other keys too.
+	 *
+	 * The verifier accepts whichever label validates, so the sender is blocked when any of the
+	 * keys it would try is.
+	 *
+	 * @covers ::reject_blocked_sender
+	 */
+	public function test_reject_blocked_sender_among_several_keys() {
+		\update_option( Moderation::OPTION_KEYS[ Moderation::TYPE_DOMAIN ], array( 'blocked.example' ) );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1/outbox' );
+		$request->set_header( 'signature-input', 'sig1=("@method" "@target-uri");keyid="https://blocked.example/users/test#main-key";created=1700000000, sig2=("@method" "@target-uri");keyid="https://other.example/users/test#main-key";created=1700000000' );
+		$request->set_header( 'signature', 'sig1=:AAAA:, sig2=:BBBB:' );
+		$result = Server::reject_blocked_sender( null, new \WP_REST_Server(), $request );
+
+		\delete_option( Moderation::OPTION_KEYS[ Moderation::TYPE_DOMAIN ] );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 403, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * A delivery from a blocked actor is stopped early, whatever keys it names.
+	 *
+	 * @covers ::reject_blocked_sender
+	 */
+	public function test_reject_blocked_actor_with_other_keys() {
+		\update_option( Moderation::OPTION_KEYS[ Moderation::TYPE_DOMAIN ], array( 'blocked.example' ) );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'content-type', 'application/activity+json' );
+		$request->set_header( 'signature-input', 'sig1=("@method");keyid="https://one.example/users/test#main-key", sig2=("@method");keyid="https://two.example/users/test#main-key"' );
+		$request->set_header( 'signature', 'sig1=:AAAA:, sig2=:BBBB:' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'  => 'Create',
+					'actor' => 'https://blocked.example/users/test',
+				)
+			)
+		);
+		$result = Server::reject_blocked_sender( null, new \WP_REST_Server(), $request );
+
+		\delete_option( Moderation::OPTION_KEYS[ Moderation::TYPE_DOMAIN ] );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 202, $result->get_error_data()['status'] );
 	}
 
 	/**
