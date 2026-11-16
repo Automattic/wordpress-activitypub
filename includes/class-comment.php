@@ -484,12 +484,11 @@ class Comment {
 			return $where;
 		}
 
-		$comment_types = self::get_comment_type_slugs();
-
-		if ( \in_array( $comment_type, $comment_types, true ) ) {
+		if ( \in_array( $comment_type, self::get_comment_type_slugs(), true ) ) {
 			$where .= $wpdb->prepare( ' AND comment_type = %s', $comment_type );
 		} else {
-			$placeholders = \implode( ', ', \array_fill( 0, \count( $comment_types ), '%s' ) );
+			$comment_types = self::get_comment_type_slugs( array( 'reaction' => true ) );
+			$placeholders  = \implode( ', ', \array_fill( 0, \count( $comment_types ), '%s' ) );
 			// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.NotPrepared
 			$where .= $wpdb->prepare( \sprintf( ' AND comment_type NOT IN (%s)', $placeholders ), ...$comment_types );
 		}
@@ -681,16 +680,19 @@ class Comment {
 	/**
 	 * Return the registered custom comment type slugs.
 	 *
+	 * @param array $args Optional. Arguments to match the registered types against, like
+	 *                    `array( 'reaction' => true )`. Default empty array, all types.
+	 *
 	 * @return array The registered custom comment type slugs.
 	 */
-	public static function get_comment_type_slugs() {
+	public static function get_comment_type_slugs( $args = array() ) {
 		if ( ! \did_action( 'init' ) ) {
 			\_doing_it_wrong( __METHOD__, 'This function should not be called before the init action has run. Comment types are only available after init.', '7.5.0' );
 
 			return array();
 		}
 
-		return \array_keys( self::get_comment_types() );
+		return \array_keys( \wp_list_filter( self::get_comment_types(), $args ) );
 	}
 
 	/**
@@ -818,6 +820,7 @@ class Comment {
 				'count_single'   => \_x( '%d quote', 'number of quotes', 'activitypub' ),
 				/* translators: %d: Number of quotes */
 				'count_plural'   => \_x( '%d quotes', 'number of quotes', 'activitypub' ),
+				'reaction'       => false,
 			)
 		);
 	}
@@ -889,7 +892,7 @@ class Comment {
 			return;
 		}
 
-		$ap_types = self::get_comment_type_slugs();
+		$ap_types = self::get_comment_type_slugs( array( 'reaction' => true ) );
 
 		/*
 		 * If the caller is explicitly asking for one of the ActivityPub
@@ -943,7 +946,7 @@ class Comment {
 			return $comment_args;
 		}
 
-		$excluded_types = self::get_comment_type_slugs();
+		$excluded_types = self::get_comment_type_slugs( array( 'reaction' => true ) );
 
 		// Merge rather than assign, so an exclusion another plugin set earlier survives.
 		if ( ! empty( $comment_args['type__not_in'] ) ) {
@@ -973,7 +976,7 @@ class Comment {
 
 		// Exclude ActivityPub comment types (likes, reposts) unless explicitly requested.
 		if ( empty( $prepared_args['type'] ) && empty( $prepared_args['type__in'] ) ) {
-			$prepared_args['type__not_in'] = self::get_comment_type_slugs();
+			$prepared_args['type__not_in'] = self::get_comment_type_slugs( array( 'reaction' => true ) );
 		}
 
 		return $prepared_args;
@@ -1028,8 +1031,12 @@ class Comment {
 			return $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM $wpdb->comments c INNER JOIN $wpdb->commentmeta m ON m.comment_id = c.comment_ID AND m.meta_key = 'protocol' AND m.meta_value = 'activitypub' WHERE c.comment_author_email = %s AND c.comment_approved = '1' LIMIT 1", \wp_unslash( $comment_data['comment_author_email'] ) ) ) ? 0 : $approved;
 		}
 
-		// Likes, reposts and quotes are left to core. A reply has the type `comment`, or `''` where core does not set that default (WordPress.com).
-		if ( ! \in_array( $comment_data['comment_type'], array( 'comment', '' ), true ) ) {
+		/*
+		 * Reactions are left to core. A reply has the type `comment`, or `''` where core does not set that default
+		 * (WordPress.com). A quote is shown with its content like a reply, so an approved like must not approve it.
+		 */
+		$content_types = \array_merge( array( 'comment', '' ), self::get_comment_type_slugs( array( 'reaction' => false ) ) );
+		if ( ! \in_array( $comment_data['comment_type'], $content_types, true ) ) {
 			return $approved;
 		}
 
@@ -1068,7 +1075,7 @@ class Comment {
 
 		// Maybe auto-approve likes and reposts.
 		if (
-			\in_array( $comment_data['comment_type'], self::get_comment_type_slugs(), true ) &&
+			\in_array( $comment_data['comment_type'], self::get_comment_type_slugs( array( 'reaction' => true ) ), true ) &&
 			'1' === \get_option( 'activitypub_auto_approve_reactions' )
 		) {
 			return 1;
@@ -1115,7 +1122,7 @@ class Comment {
 	 */
 	public static function pre_wp_update_comment_count_now( $new_count, $old_count, $post_id ) {
 		if ( null === $new_count ) {
-			$excluded_types = \array_filter( self::get_comment_type_slugs(), array( self::class, 'is_comment_type_enabled' ) );
+			$excluded_types = \array_filter( self::get_comment_type_slugs( array( 'reaction' => true ) ), array( self::class, 'is_comment_type_enabled' ) );
 
 			if ( ! empty( $excluded_types ) ) {
 				/*

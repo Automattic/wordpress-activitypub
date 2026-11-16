@@ -242,6 +242,11 @@ class Migration {
 			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_remove_duplicate_cache_files' );
 		}
 
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			// Quotes are comments now, not reactions, so they count.
+			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_update_comment_counts' );
+		}
+
 		/*
 		 * Defer the flush to late in the `init` cycle (priority 20). Migration::init
 		 * runs at priority 1, which is earlier than most plugins register their

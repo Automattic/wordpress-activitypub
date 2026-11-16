@@ -1432,6 +1432,66 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Likes and reposts are reactions, a quote has its own content and is not.
+	 *
+	 * @covers ::get_comment_type_slugs
+	 */
+	public function test_get_comment_type_slugs_by_reaction() {
+		global $activitypub_comment_types;
+
+		$reactions = Comment::get_comment_type_slugs( array( 'reaction' => true ) );
+		$this->assertContains( 'like', $reactions );
+		$this->assertContains( 'repost', $reactions );
+		$this->assertNotContains( 'quote', $reactions );
+		$this->assertContains( 'quote', Comment::get_comment_type_slugs( array( 'reaction' => false ) ) );
+
+		// A type registered without the argument stays a reaction, as all types were before.
+		\Activitypub\register_comment_type( 'test_reaction' );
+		$this->assertContains( 'test_reaction', Comment::get_comment_type_slugs( array( 'reaction' => true ) ) );
+
+		unset( $activitypub_comment_types['test_reaction'] );
+	}
+
+	/**
+	 * Replies to a quote are shown under it, and the count matches the list.
+	 *
+	 * @covers ::comment_query
+	 * @covers ::pre_wp_update_comment_count_now
+	 */
+	public function test_replies_to_quote_are_listed_and_counted() {
+		$post_id = self::factory()->post->create();
+
+		$comment = array(
+			'comment_post_ID'  => $post_id,
+			'comment_approved' => '1',
+		);
+
+		$quote_id  = self::factory()->comment->create( \array_merge( $comment, array( 'comment_type' => 'quote' ) ) );
+		$reply_id  = self::factory()->comment->create( \array_merge( $comment, array( 'comment_parent' => $quote_id ) ) );
+		$answer_id = self::factory()->comment->create( \array_merge( $comment, array( 'comment_parent' => $reply_id ) ) );
+		$like_id   = self::factory()->comment->create( \array_merge( $comment, array( 'comment_type' => 'like' ) ) );
+
+		$this->go_to( \get_permalink( $post_id ) );
+
+		// The threaded walker drops every comment whose parent is not in the list.
+		$html = \wp_list_comments(
+			array(
+				'echo'      => false,
+				'max_depth' => 5,
+			),
+			\get_comments( array( 'post_id' => $post_id ) )
+		);
+
+		foreach ( array( $quote_id, $reply_id, $answer_id ) as $comment_id ) {
+			$this->assertStringContainsString( 'id="comment-' . $comment_id . '"', $html );
+		}
+		$this->assertStringNotContainsString( 'id="comment-' . $like_id . '"', $html );
+
+		$this->assertSame( 3, \substr_count( $html, 'id="comment-' ) );
+		$this->assertEquals( 3, \get_comments_number( $post_id ) );
+	}
+
+	/**
 	 * Regression: get_comment_types() must coerce null to an empty array.
 	 *
 	 * $activitypub_comment_types can be null until comment types are registered
@@ -1560,6 +1620,26 @@ class Test_Comment extends \WP_UnitTestCase {
 		\clean_comment_cache( $comment_id );
 		$this->assertEquals( 1, \get_comment( $comment_id, 'ARRAY_A' )['comment_approved'] );
 
+		// A quote is shown with its content in the comment list, so it is moderated like a reply.
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
+		\remove_filter( 'wp_is_comment_flood', 'wp_check_comment_flood' );
+		$quote_id = \wp_new_comment(
+			\array_merge(
+				$comment_data,
+				array(
+					'comment_type'    => 'quote',
+					'comment_content' => 'This is a quote.',
+					'comment_meta'    => array(
+						'protocol'                     => 'activitypub',
+						'_activitypub_remote_actor_id' => 1,
+					),
+				)
+			)
+		);
+		$this->assertEquals( 0, \get_comment( $quote_id, 'ARRAY_A' )['comment_approved'] );
+		\wp_delete_comment( $quote_id, true );
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+
 		\delete_option( 'activitypub_auto_approve_reactions' );
 		\wp_delete_comment( $comment_id, true );
 
@@ -1585,6 +1665,10 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		$comment_types = \array_merge( $activitypub_comment_types, $core_comment_types );
 
+		// Reactions are left out, types with their own content (quotes) are comments.
+		$visible_types = \array_merge( $core_comment_types, Comment::get_comment_type_slugs( array( 'reaction' => false ) ) );
+		$this->assertContains( 'quote', $visible_types );
+
 		foreach ( $comment_types as $comment_type ) {
 			self::factory()->comment->create(
 				array(
@@ -1603,8 +1687,8 @@ class Test_Comment extends \WP_UnitTestCase {
 			)
 		);
 
-		$this->assertSame( count( $core_comment_types ), $query->comment_count );
-		$this->assertEqualSets( $core_comment_types, \wp_list_pluck( $query->comments, 'comment_type' ) );
+		$this->assertSame( count( $visible_types ), $query->comment_count );
+		$this->assertEqualSets( $visible_types, \wp_list_pluck( $query->comments, 'comment_type' ) );
 
 		// Test what would happen if we don't filter comment_feed_where.
 		\remove_filter( 'comment_feed_where', array( Comment::class, 'comment_feed_where' ) );
@@ -1629,8 +1713,8 @@ class Test_Comment extends \WP_UnitTestCase {
 		\set_query_var( 'type', 'foo_bar_baz_not_a_real_type' );
 		$query->get_posts();
 
-		$this->assertSame( count( $core_comment_types ), $query->comment_count );
-		$this->assertEqualSets( $core_comment_types, \wp_list_pluck( $query->comments, 'comment_type' ) );
+		$this->assertSame( count( $visible_types ), $query->comment_count );
+		$this->assertEqualSets( $visible_types, \wp_list_pluck( $query->comments, 'comment_type' ) );
 
 		// Clean up.
 		\set_query_var( 'type', null );
