@@ -491,6 +491,9 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	 * @covers ::create_item
 	 */
 	public function test_user_inbox_post_verification() {
+		// The test sends the request to the inbox path, which needs pretty permalinks.
+		$this->set_permalink_structure( '/%postname%/' );
+
 		$remote_object_filter = function ( $json, $actor ) {
 			$public_key = Actors::get_public_key( self::$user_id );
 
