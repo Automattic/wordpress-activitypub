@@ -153,7 +153,7 @@ class Signature {
 			$headers['(request-target)'][0] = \strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
 		}
 
-		$signature = isset( $headers['signature_input'] ) ? new Http_Message_Signature() : new Http_Signature_Draft();
+		$signature = self::get_verifier( $headers );
 		$result    = $signature->verify( $headers, $body ?? null );
 
 		/*
@@ -193,18 +193,8 @@ class Signature {
 	/**
 	 * Extract every keyId that {@see Signature::verify_http_signature()} would try.
 	 *
-	 * The key that verifies a request is always one of these, so this mirrors the verifier's
-	 * header choice rather than scanning headers in an arbitrary order:
-	 *
-	 * - When a `Signature-Input` header is present, even an empty one, the RFC 9421 verifier
-	 *   is used, so the keyIds are those of its labels and a draft `Signature` header (which the
-	 *   verifier ignores) is not consulted.
-	 * - Otherwise the draft HTTP Signatures form is used, taking the `keyId` from the
-	 *   `Signature` header or, failing that, the `Authorization` header — matching the draft
-	 *   verifier, which reads `signature ?? authorization`.
-	 *
-	 * Both forms are read with the verifier's own parser and from the same header value, so the
-	 * same labels and fields count.
+	 * The key that verifies a request is always one of these: the verifier the request selects
+	 * reads them with its own parser.
 	 *
 	 * @since unreleased
 	 *
@@ -214,23 +204,20 @@ class Signature {
 	 */
 	public static function get_key_ids( $request ) {
 		$headers = $request->get_headers();
-		$key_ids = array();
 
-		if ( isset( $headers['signature_input'] ) ) {
-			foreach ( Http_Message_Signature::parse_signatures( $headers['signature_input'][0], $headers['signature'][0] ?? null ) as $input ) {
-				if ( ! empty( $input['params']['keyid'] ) && \is_string( $input['params']['keyid'] ) ) {
-					$key_ids[] = $input['params']['keyid'];
-				}
-			}
+		return self::get_verifier( $headers )->get_key_ids( $headers );
+	}
 
-			return \array_values( \array_unique( $key_ids ) );
-		}
-
-		// A draft signature may arrive in the Signature header or, less commonly, Authorization.
-		$signature = $headers['signature'] ?? $headers['authorization'] ?? array( '' );
-		$key_id    = Http_Signature_Draft::parse_signature_header( $signature[0] ?? '' )['keyId'] ?? '';
-
-		return '' === $key_id ? array() : array( $key_id );
+	/**
+	 * The verifier a request selects: RFC 9421 when a `Signature-Input` header is present, even an
+	 * empty one, otherwise the draft HTTP Signatures form.
+	 *
+	 * @param array $headers The HTTP headers.
+	 *
+	 * @return Http_Message_Signature|Http_Signature_Draft The verifier.
+	 */
+	private static function get_verifier( $headers ) {
+		return isset( $headers['signature_input'] ) ? new Http_Message_Signature() : new Http_Signature_Draft();
 	}
 
 	/**

@@ -103,7 +103,7 @@ class Http_Signature_Draft implements Http_Signature {
 		}
 
 		$header = $headers['signature'] ?? $headers['authorization'];
-		$parsed = self::parse_signature_header( $header[0] );
+		$parsed = $this->parse_signature_header( $header[0] );
 
 		if ( empty( $parsed['keyId'] ) ) {
 			return new \WP_Error( 'activitypub_signature', 'No Key ID present.' );
@@ -259,15 +259,29 @@ class Http_Signature_Draft implements Http_Signature {
 	}
 
 	/**
-	 * Parses the Signature header.
+	 * The keyId this verifier checks, from the Signature header or, failing that, Authorization.
 	 *
-	 * @since unreleased Public and static.
+	 * @since unreleased
+	 *
+	 * @param array $headers The HTTP headers.
+	 *
+	 * @return string[] The keyId, empty when none is present.
+	 */
+	public function get_key_ids( array $headers ) {
+		$header = $headers['signature'] ?? $headers['authorization'] ?? array( '' );
+		$key_id = $this->parse_signature_header( $header[0] ?? '' )['keyId'] ?? '';
+
+		return '' === $key_id ? array() : array( $key_id );
+	}
+
+	/**
+	 * Parses the Signature header.
 	 *
 	 * @param string $signature The signature header.
 	 *
 	 * @return array Signature parts.
 	 */
-	public static function parse_signature_header( $signature ) {
+	private function parse_signature_header( $signature ) {
 		$parsed_header = array();
 		$fields        = array(
 			'keyid'     => 'keyId',

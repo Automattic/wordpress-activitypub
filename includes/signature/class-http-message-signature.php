@@ -172,7 +172,7 @@ class Http_Message_Signature implements Http_Signature {
 	 * @return string|\WP_Error The id of the actor that owns the verified key on success, WP_Error on failure.
 	 */
 	public function verify( array $headers, $body = null ) {
-		$parsed = self::parse_signatures( $headers['signature_input'][0], $headers['signature'][0] ?? null );
+		$parsed = $this->parse_signatures( $headers['signature_input'][0], $headers['signature'][0] ?? null );
 		if ( empty( $parsed ) ) {
 			return new \WP_Error( 'no_valid_labels', 'No valid signature labels found.' );
 		}
@@ -209,6 +209,26 @@ class Http_Message_Signature implements Http_Signature {
 	}
 
 	/**
+	 * The keyIds of the labels this verifier checks.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $headers The HTTP headers.
+	 *
+	 * @return string[] The distinct keyIds, empty when none is present.
+	 */
+	public function get_key_ids( array $headers ) {
+		$key_ids = array();
+		foreach ( $this->parse_signatures( $headers['signature_input'][0] ?? '', $headers['signature'][0] ?? null ) as $input ) {
+			if ( ! empty( $input['params']['keyid'] ) && \is_string( $input['params']['keyid'] ) ) {
+				$key_ids[] = $input['params']['keyid'];
+			}
+		}
+
+		return \array_values( \array_unique( $key_ids ) );
+	}
+
+	/**
 	 * Parse the Signature-Input and Signature headers into the labels that carry a signature.
 	 *
 	 * Both headers are Structured Field dictionaries (RFC 8941), read member by member with one
@@ -216,13 +236,11 @@ class Http_Message_Signature implements Http_Signature {
 	 * so a label is never checked with some of its parameters left out. A label defined twice keeps
 	 * its last definition. Only the first labels up to MAX_LABELS count, in header order.
 	 *
-	 * @since unreleased
-	 *
 	 * @param string      $signature_input The Signature-Input header.
 	 * @param string|null $signature       The Signature header.
 	 * @return array[] The components, params and signature of each label, keyed by label.
 	 */
-	public static function parse_signatures( $signature_input, $signature ) {
+	private function parse_signatures( $signature_input, $signature ) {
 		\preg_match_all( '/\G\s*(' . self::SF_KEY . ')=:([A-Za-z0-9+\/]*+=*+):' . self::SF_PARAMS . '\s*(?:,|\z)/', (string) $signature, $members, PREG_SET_ORDER );
 		$signatures = \array_column( $members, 2, 1 );
 
