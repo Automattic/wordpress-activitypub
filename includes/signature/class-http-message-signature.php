@@ -89,28 +89,29 @@ class Http_Message_Signature implements Http_Signature {
 	 *
 	 * @var int
 	 */
-	const MAX_LABELS = 3;
+	private const MAX_LABELS = 3;
 
 	/**
-	 * A Structured Field key (RFC 8941), the name of a label or a parameter.
+	 * The name of a label or a parameter: a Structured Field key (RFC 8941). RFC 8941 keys are
+	 * lowercase; uppercase is accepted, as before, and parameter names are lowercased.
 	 *
 	 * @var string
 	 */
-	const SF_KEY = '[a-z*][a-z0-9_.*-]*+';
+	private const SF_KEY = '[A-Za-z*][A-Za-z0-9_.*-]*+';
 
 	/**
 	 * A Structured Field bare item: a quoted string, or a token, integer, decimal, boolean or byte sequence.
 	 *
 	 * @var string
 	 */
-	const SF_VALUE = '(?:"(?:[^"\\\\]++|\\\\.)*+"|[^\s;,()"]++)';
+	private const SF_VALUE = '(?:"(?:[^"\\\\]++|\\\\.)*+"|[^\s;,()"]++)';
 
 	/**
 	 * Structured Field parameters.
 	 *
 	 * @var string
 	 */
-	const SF_PARAMS = '(?:;\s*' . self::SF_KEY . '(?:=' . self::SF_VALUE . ')?)*+';
+	private const SF_PARAMS = '(?:;\s*' . self::SF_KEY . '(?:=' . self::SF_VALUE . ')?)*+';
 
 	/**
 	 * Generate RFC-9421 compliant Signature-Input and Signature headers for an outgoing HTTP request.
@@ -172,7 +173,7 @@ class Http_Message_Signature implements Http_Signature {
 	 * @return string|\WP_Error The id of the actor that owns the verified key on success, WP_Error on failure.
 	 */
 	public function verify( array $headers, $body = null ) {
-		$parsed = $this->parse_signatures( $headers['signature_input'][0], $headers['signature'][0] ?? null );
+		$parsed = $this->parse_signatures( $headers['signature_input'][0] ?? '', $headers['signature'][0] ?? null );
 		if ( empty( $parsed ) ) {
 			return new \WP_Error( 'no_valid_labels', 'No valid signature labels found.' );
 		}
@@ -234,7 +235,8 @@ class Http_Message_Signature implements Http_Signature {
 	 * Both headers are Structured Field dictionaries (RFC 8941), read member by member with one
 	 * grammar for labels and parameters. Reading stops at the first member that does not follow it,
 	 * so a label is never checked with some of its parameters left out. A label defined twice keeps
-	 * its last definition. Only the first labels up to MAX_LABELS count, in header order.
+	 * its first position and its last definition. Only the first labels up to MAX_LABELS count, in
+	 * header order.
 	 *
 	 * @param string      $signature_input The Signature-Input header.
 	 * @param string|null $signature       The Signature header.
@@ -257,14 +259,14 @@ class Http_Message_Signature implements Http_Signature {
 			\preg_match_all( '/\G\s*(' . self::SF_VALUE . self::SF_PARAMS . ')/', $inner_list, $components );
 			\preg_match_all( '/\G;\s*(' . self::SF_KEY . ')(?:=(' . self::SF_VALUE . '))?/', $params_string, $pairs, PREG_SET_ORDER );
 
-			// A parameter without a value is true; a quoted value loses its quotes and escapes.
+			// Parameter names count in lowercase. A parameter without a value is true; a quoted value loses its quotes and escapes.
 			$params = array();
 			foreach ( $pairs as $pair ) {
 				$param = $pair[2] ?? true;
 				if ( \is_string( $param ) && '"' === $param[0] ) {
 					$param = \preg_replace( '/\\\\(.)/', '$1', \substr( $param, 1, -1 ) );
 				}
-				$params[ $pair[1] ] = $param;
+				$params[ \strtolower( $pair[1] ) ] = $param;
 			}
 
 			$labels[ $label ] = array(

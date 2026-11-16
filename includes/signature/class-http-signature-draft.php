@@ -98,12 +98,12 @@ class Http_Signature_Draft implements Http_Signature {
 	 * @return string|\WP_Error The id of the actor that owns the verified key on success, WP_Error on failure.
 	 */
 	public function verify( array $headers, $body = null ) {
-		if ( ! isset( $headers['signature'] ) && ! isset( $headers['authorization'] ) ) {
+		$header = $this->get_signature_header( $headers );
+		if ( null === $header ) {
 			return new \WP_Error( 'missing_signature', 'No Signature or Authorization header present.' );
 		}
 
-		$header = $headers['signature'] ?? $headers['authorization'];
-		$parsed = $this->parse_signature_header( $header[0] );
+		$parsed = $this->parse_signature_header( $header );
 
 		if ( empty( $parsed['keyId'] ) ) {
 			return new \WP_Error( 'activitypub_signature', 'No Key ID present.' );
@@ -268,10 +268,22 @@ class Http_Signature_Draft implements Http_Signature {
 	 * @return string[] The keyId, empty when none is present.
 	 */
 	public function get_key_ids( array $headers ) {
-		$header = $headers['signature'] ?? $headers['authorization'] ?? array( '' );
-		$key_id = $this->parse_signature_header( $header[0] ?? '' )['keyId'] ?? '';
+		$key_id = $this->parse_signature_header( $this->get_signature_header( $headers ) )['keyId'] ?? '';
 
 		return '' === $key_id ? array() : array( $key_id );
+	}
+
+	/**
+	 * The header the signature is read from: Signature or, failing that, Authorization.
+	 *
+	 * @param array $headers The HTTP headers.
+	 *
+	 * @return string|null The header value, or null when neither is present.
+	 */
+	private function get_signature_header( array $headers ) {
+		$header = $headers['signature'] ?? $headers['authorization'] ?? null;
+
+		return null === $header ? null : (string) ( $header[0] ?? '' );
 	}
 
 	/**
@@ -296,7 +308,7 @@ class Http_Signature_Draft implements Http_Signature {
 		 * The header is a list of `name="value"` pairs, read in order up to the first that is not
 		 * one. In the Authorization header the pairs follow the `Signature` scheme.
 		 */
-		$signature = \preg_replace( '/^\s*Signature\s+/i', '', (string) $signature );
+		$signature = \preg_replace( '/^\s*Signature\s+(?=[A-Za-z0-9_-]+\s*=)/i', '', (string) $signature );
 		\preg_match_all( '/\G\s*+,?\s*+([A-Za-z0-9_-]++)\s*+=\s*+("[^"]*"|\'[^\']*\'|[^\s,"\']*)/', $signature, $pairs, PREG_SET_ORDER );
 
 		foreach ( $pairs as $pair ) {
@@ -305,7 +317,12 @@ class Http_Signature_Draft implements Http_Signature {
 				continue;
 			}
 
-			$value = \trim( \trim( $pair[2], '"\'' ) );
+			// A quoted value loses its enclosing quotes only.
+			$value = $pair[2];
+			if ( '' !== $value && ( '"' === $value[0] || "'" === $value[0] ) ) {
+				$value = \substr( $value, 1, -1 );
+			}
+			$value = \trim( $value );
 
 			// The timestamps are digits only.
 			if ( \in_array( $field, array( '(created)', '(expires)' ), true ) && ! \ctype_digit( $value ) ) {

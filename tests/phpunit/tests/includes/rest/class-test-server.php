@@ -1203,6 +1203,33 @@ class Test_Server extends \WP_Test_REST_TestCase {
 	}
 
 	/**
+	 * A delivery from a blocked actor is stopped early, whatever keys it names.
+	 *
+	 * @covers ::reject_blocked_sender
+	 */
+	public function test_reject_blocked_actor_with_other_keys() {
+		\update_option( Moderation::OPTION_KEYS[ Moderation::TYPE_DOMAIN ], array( 'blocked.example' ) );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'content-type', 'application/activity+json' );
+		$request->set_header( 'signature-input', 'sig1=("@method");keyid="https://one.example/users/test#main-key", sig2=("@method");keyid="https://two.example/users/test#main-key"' );
+		$request->set_header( 'signature', 'sig1=:AAAA:, sig2=:BBBB:' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'  => 'Create',
+					'actor' => 'https://blocked.example/users/test',
+				)
+			)
+		);
+		$result = Server::reject_blocked_sender( null, new \WP_REST_Server(), $request );
+
+		\delete_option( Moderation::OPTION_KEYS[ Moderation::TYPE_DOMAIN ] );
+
+		$this->assertEquals( Server::accepted_response(), $result );
+	}
+
+	/**
 	 * Inbox deliveries are answered with an empty 202.
 	 *
 	 * @covers ::accepted_response

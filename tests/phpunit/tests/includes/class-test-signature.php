@@ -1956,11 +1956,28 @@ class Test_Signature extends \WP_UnitTestCase {
 				'sig1=("@method");keyid="https://remote.example/key";tag=", sig2=(\\"@method\\");keyid=\\"https://other.example/key\\""',
 				'https://remote.example/key',
 			),
-			// Parameter names are lowercase.
+			// Parameter names count in lowercase, and the last one wins, as in the verifier.
 			'uppercase parameter name'          => array(
 				'sig1=:AAAA:',
-				'sig1=("@method");keyid="https://remote.example/key";KEYID="https://other.example/key"',
+				'sig1=("@method");keyid="https://other.example/key";KEYID="https://remote.example/key"',
+				'https://remote.example/key',
+			),
+			'camel case keyId'                  => array(
+				'sig1=:AAAA:',
+				'sig1=("@method");keyId="https://remote.example/key"',
+				'https://remote.example/key',
+			),
+			// A field named signature first is a field, not the Authorization scheme.
+			'draft signature field first'       => array(
+				'signature ="abc", keyId="https://remote.example/key"',
 				null,
+				'https://remote.example/key',
+			),
+			// A quoted draft value loses its enclosing quotes only.
+			'draft quote inside the keyId'      => array(
+				'keyId="https://remote.example/key\'",signature="abc"',
+				null,
+				"https://remote.example/key'",
 			),
 			// Other draft fields before the keyId do not stop the reading.
 			'draft other fields first'          => array(
