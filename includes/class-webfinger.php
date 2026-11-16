@@ -40,7 +40,7 @@ class Webfinger {
 			return false;
 		}
 
-		return (bool) \preg_match( '/^(?:acct:)?@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/iu', $value );
+		return (bool) \preg_match( '/^(?:acct:)?@?' . ACTIVITYPUB_USERNAME_REGEXP . '\z/iu', $value );
 	}
 
 	/**
