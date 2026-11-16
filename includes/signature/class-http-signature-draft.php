@@ -98,12 +98,12 @@ class Http_Signature_Draft implements Http_Signature {
 	 * @return string|\WP_Error The id of the actor that owns the verified key on success, WP_Error on failure.
 	 */
 	public function verify( array $headers, $body = null ) {
-		if ( ! isset( $headers['signature'] ) && ! isset( $headers['authorization'] ) ) {
+		$header = $this->get_signature_header( $headers );
+		if ( null === $header ) {
 			return new \WP_Error( 'missing_signature', 'No Signature or Authorization header present.' );
 		}
 
-		$header = $headers['signature'] ?? $headers['authorization'];
-		$parsed = $this->parse_signature_header( $header[0] );
+		$parsed = $this->parse_signature_header( $header );
 
 		if ( empty( $parsed['keyId'] ) ) {
 			return new \WP_Error( 'activitypub_signature', 'No Key ID present.' );
@@ -259,6 +259,34 @@ class Http_Signature_Draft implements Http_Signature {
 	}
 
 	/**
+	 * The keyId this verifier checks, from the Signature header or, failing that, Authorization.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $headers The HTTP headers.
+	 *
+	 * @return string[] The keyId, empty when none is present.
+	 */
+	public function get_key_ids( array $headers ) {
+		$key_id = $this->parse_signature_header( $this->get_signature_header( $headers ) )['keyId'] ?? '';
+
+		return '' === $key_id ? array() : array( $key_id );
+	}
+
+	/**
+	 * The header the signature is read from: Signature or, failing that, Authorization.
+	 *
+	 * @param array $headers The HTTP headers.
+	 *
+	 * @return string|null The header value, or null when neither is present.
+	 */
+	private function get_signature_header( array $headers ) {
+		$header = $headers['signature'] ?? $headers['authorization'] ?? null;
+
+		return null === $header ? null : (string) ( $header[0] ?? '' );
+	}
+
+	/**
 	 * Parses the Signature header.
 	 *
 	 * @param string $signature The signature header.
@@ -267,29 +295,52 @@ class Http_Signature_Draft implements Http_Signature {
 	 */
 	private function parse_signature_header( $signature ) {
 		$parsed_header = array();
-		$matches       = array();
+		$fields        = array(
+			'keyid'     => 'keyId',
+			'created'   => '(created)',
+			'expires'   => '(expires)',
+			'algorithm' => 'algorithm',
+			'headers'   => 'headers',
+			'signature' => 'signature',
+		);
 
-		if ( \preg_match( '/keyId="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['keyId'] = \trim( $matches[1] );
-		}
-		if ( \preg_match( '/created=["|\']*([0-9]*)["|\']*/im', $signature, $matches ) ) {
-			$parsed_header['(created)'] = \trim( $matches[1] );
-		}
-		if ( \preg_match( '/expires=["|\']*([0-9]*)["|\']*/im', $signature, $matches ) ) {
-			$parsed_header['(expires)'] = \trim( $matches[1] );
-		}
-		if ( \preg_match( '/algorithm="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['algorithm'] = \trim( $matches[1] );
-		}
-		if ( \preg_match( '/headers="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['headers'] = \explode( ' ', \trim( $matches[1] ) );
-		}
-		if ( \preg_match( '/signature="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['signature'] = \base64_decode( \preg_replace( '/\s+/', '', \trim( $matches[1] ) ) );
+		/*
+		 * The header is a list of `name="value"` pairs, read in order up to the first that is not
+		 * one. In the Authorization header the pairs follow the `Signature` scheme.
+		 */
+		$signature = \preg_replace( '/^\s*Signature\s+(?=[A-Za-z0-9_-]+\s*=)/i', '', (string) $signature );
+		\preg_match_all( '/\G\s*+,?\s*+([A-Za-z0-9_-]++)\s*+=\s*+("[^"]*"|\'[^\']*\'|[^\s,"\']*)/', $signature, $pairs, PREG_SET_ORDER );
+
+		foreach ( $pairs as $pair ) {
+			$field = $fields[ \strtolower( $pair[1] ) ] ?? null;
+			if ( ! $field || isset( $parsed_header[ $field ] ) ) {
+				continue;
+			}
+
+			/*
+			 * The fields are double-quoted; the timestamps may also be single-quoted or bare, and are
+			 * digits only. A quoted value loses its enclosing quotes only.
+			 */
+			$value     = $pair[2];
+			$timestamp = \in_array( $field, array( '(created)', '(expires)' ), true );
+			if ( '' !== $value && ( '"' === $value[0] || ( $timestamp && "'" === $value[0] ) ) ) {
+				$value = \substr( $value, 1, -1 );
+			} elseif ( ! $timestamp ) {
+				continue;
+			}
+			$value = \trim( $value );
+
+			if ( $timestamp && ! \ctype_digit( $value ) ) {
+				$value = '';
+			}
+
+			$parsed_header[ $field ] = $value;
 		}
 
-		if ( empty( $parsed_header['headers'] ) ) {
-			$parsed_header['headers'] = array( 'date' );
+		$parsed_header['headers'] = isset( $parsed_header['headers'] ) ? \explode( ' ', $parsed_header['headers'] ) : array( 'date' );
+
+		if ( isset( $parsed_header['signature'] ) ) {
+			$parsed_header['signature'] = \base64_decode( \preg_replace( '/\s+/', '', $parsed_header['signature'] ) );
 		}
 
 		return $parsed_header;

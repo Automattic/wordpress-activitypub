@@ -130,4 +130,5 @@ Only `CONFIRMED` findings may appear under Critical and High.
 - Reference specific file paths and line numbers.
 - For each finding, assess exploitability: theoretical vs practical, authenticated vs unauthenticated, impact severity.
 - Check the `activitypub_` filter/action hooks that could weaken security if hooked by other plugins.
+- Check every regex that reads remote input for a security decision: it matches exactly the field it names and the whole value it validates. When two places parse the same value, they must agree on every input, or the one that decides must be the one that verified.
 - Do NOT report issues that are already fixed in the current codebase — verify against `trunk`.

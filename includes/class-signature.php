@@ -153,7 +153,7 @@ class Signature {
 			$headers['(request-target)'][0] = \strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
 		}
 
-		$signature = isset( $headers['signature_input'] ) ? new Http_Message_Signature() : new Http_Signature_Draft();
+		$signature = self::get_verifier( $headers );
 		$result    = $signature->verify( $headers, $body ?? null );
 
 		/*
@@ -175,18 +175,8 @@ class Signature {
 	/**
 	 * Extract the signing keyId that {@see Signature::verify_http_signature()} would verify against.
 	 *
-	 * The returned keyId is only trustworthy if it identifies the key the signature is
-	 * actually checked with, so this mirrors the verifier's header choice rather than
-	 * scanning headers in an arbitrary order:
-	 *
-	 * - When a `Signature-Input` header is present the RFC 9421 verifier is used, so the
-	 *   keyId is taken from there and a draft `Signature` header (which the verifier ignores)
-	 *   is not consulted. The RFC 9421 verifier accepts whichever of several signature labels
-	 *   validates, so a `Signature-Input` carrying more than one keyId is ambiguous: we cannot
-	 *   know in advance which key will verify and must not guess, so `null` is returned.
-	 * - Otherwise the draft HTTP Signatures form is used, taking the first `keyId` from the
-	 *   `Signature` header or, failing that, the `Authorization` header — matching the draft
-	 *   verifier, which reads `signature ?? authorization`.
+	 * The verifier accepts whichever of several keyIds validates, so more than one is ambiguous:
+	 * we cannot know in advance which key will verify and must not guess, so `null` is returned.
 	 *
 	 * @since 9.0.0
 	 *
@@ -195,29 +185,39 @@ class Signature {
 	 * @return string|null The keyId, or null when none is present or the choice is ambiguous.
 	 */
 	public static function get_key_id( $request ) {
-		$signature_input = $request->get_header( 'signature-input' );
-		if ( $signature_input ) {
-			/*
-			 * keyid is a `;`-delimited parameter whose value may be quoted or unquoted.
-			 * Anchoring on `;` (or string start) avoids matching a `keyid=` substring inside
-			 * another parameter's value. Count every label's keyId: more than one is ambiguous.
-			 */
-			$count = \preg_match_all( '/(?:^|;)\s*keyid="?([^";,\s]+)/i', $signature_input, $matches );
+		$key_ids = self::get_key_ids( $request );
 
-			return 1 === $count ? $matches[1][0] : null;
-		}
+		return 1 === \count( $key_ids ) ? $key_ids[0] : null;
+	}
 
-		// A draft signature may arrive in the Signature header or, less commonly, Authorization.
-		$signature = $request->get_header( 'signature' );
-		if ( ! $signature ) {
-			$signature = $request->get_header( 'authorization' );
-		}
+	/**
+	 * Extract every keyId that {@see Signature::verify_http_signature()} would try.
+	 *
+	 * The key that verifies a request is always one of these: the verifier the request selects
+	 * reads them with its own parser.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 *
+	 * @return string[] The distinct keyIds, empty when none is present.
+	 */
+	public static function get_key_ids( $request ) {
+		$headers = $request->get_headers();
 
-		if ( $signature && \preg_match( '/keyId="([^"]+)"/i', $signature, $matches ) ) {
-			return $matches[1];
-		}
+		return self::get_verifier( $headers )->get_key_ids( $headers );
+	}
 
-		return null;
+	/**
+	 * The verifier a request selects: RFC 9421 when a `Signature-Input` header is present, even an
+	 * empty one, otherwise the draft HTTP Signatures form.
+	 *
+	 * @param array $headers The HTTP headers.
+	 *
+	 * @return Http_Message_Signature|Http_Signature_Draft The verifier.
+	 */
+	private static function get_verifier( $headers ) {
+		return isset( $headers['signature_input'] ) ? new Http_Message_Signature() : new Http_Signature_Draft();
 	}
 
 	/**
