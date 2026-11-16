@@ -166,6 +166,7 @@ class Statistics {
 				'most_active_month_name' => $most_active_month_name,
 				'followers_text'         => $followers_text,
 				'supporter_text'         => $supporter_text,
+				'stats_url'              => \admin_url( 'index.php#activitypub_stats' ),
 				'user_id'                => $user_id,
 			)
 		);
@@ -195,6 +196,10 @@ class Statistics {
 			/* translators: %s: Month name */
 			$alt_body .= \sprintf( \__( "Most active month: %s\n", 'activitypub' ), $most_active_month_name );
 		}
+
+		$alt_body .= "\n";
+		/* translators: %s: URL of the Fediverse Stats dashboard widget */
+		$alt_body .= \sprintf( \__( "View your stats: %s\n", 'activitypub' ), $args['stats_url'] );
 
 		Mailer::send( $user_id, $subject, 'stats-report', $args, $alt_body );
 	}
@@ -268,6 +273,7 @@ class Statistics {
 				'closing'        => \__( 'Keep sharing great content on the Fediverse!', 'activitypub' ),
 				'followers_text' => $followers_text,
 				'supporter_text' => $supporter_text,
+				'stats_url'      => \admin_url( 'index.php#activitypub_stats' ),
 				'user_id'        => $user_id,
 			)
 		);
@@ -292,6 +298,10 @@ class Statistics {
 			/* translators: %d: New follower count */
 			$alt_body .= \sprintf( \__( "New followers: %+d\n", 'activitypub' ), $stats['followers_count'] );
 		}
+
+		$alt_body .= "\n";
+		/* translators: %s: URL of the Fediverse Stats dashboard widget */
+		$alt_body .= \sprintf( \__( "View your stats: %s\n", 'activitypub' ), $args['stats_url'] );
 
 		Mailer::send( $user_id, $subject, 'stats-report', $args, $alt_body );
 	}

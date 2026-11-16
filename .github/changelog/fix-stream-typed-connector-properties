@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed a fatal error when Stream 4.5.0 or newer is active.

@@ -22,23 +22,22 @@ use function Activitypub\url_to_commentid;
  */
 class Connector extends \WP_Stream\Connector {
 	/**
-	 * Connector slug.
+	 * Set the connector slug and the actions registered for this connector.
 	 *
-	 * @var string
+	 * These are assigned here rather than redeclared as properties. Stream 4.5.0
+	 * added native types to the parent class properties, and PHP requires a
+	 * redeclared property to match the parent's type exactly. Assigning them
+	 * keeps the connector compatible with Stream versions before and after 4.5.0.
 	 */
-	public $name = 'activitypub';
-
-	/**
-	 * Actions registered for this connector.
-	 *
-	 * @var array
-	 */
-	public $actions = array(
-		'activitypub_handled_follow',
-		'activitypub_sent_to_inbox',
-		'activitypub_outbox_processing_complete',
-		'activitypub_outbox_processing_batch_complete',
-	);
+	public function __construct() {
+		$this->name    = 'activitypub';
+		$this->actions = array(
+			'activitypub_handled_follow',
+			'activitypub_sent_to_inbox',
+			'activitypub_outbox_processing_complete',
+			'activitypub_outbox_processing_batch_complete',
+		);
+	}
 
 	/**
 	 * Return translated connector label.
