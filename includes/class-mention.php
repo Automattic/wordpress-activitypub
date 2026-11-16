@@ -47,6 +47,15 @@ class Mention {
 			$object_array['content'] = self::the_content( $object_array['content'] );
 		}
 
+		// The maps hold the same text in other languages, so they get the same links.
+		if ( ! empty( $object_array['summaryMap'] ) && \is_array( $object_array['summaryMap'] ) ) {
+			$object_array['summaryMap'] = \array_map( array( self::class, 'the_content' ), $object_array['summaryMap'] );
+		}
+
+		if ( ! empty( $object_array['contentMap'] ) && \is_array( $object_array['contentMap'] ) ) {
+			$object_array['contentMap'] = \array_map( array( self::class, 'the_content' ), $object_array['contentMap'] );
+		}
+
 		return $object_array;
 	}
 

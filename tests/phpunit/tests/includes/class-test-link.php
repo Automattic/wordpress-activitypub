@@ -113,4 +113,37 @@ ENDPRE;
 			)
 		);
 	}
+
+	/**
+	 * The language maps get the same URL links as `summary` and `content`.
+	 *
+	 * @covers ::filter_activity_object
+	 */
+	public function test_filter_activity_object_links_language_maps() {
+		$fields = array(
+			'summary'    => 'see https://example.com/page',
+			'summaryMap' => array(
+				'en' => 'see https://example.com/page',
+				'de' => 'siehe https://example.com/page',
+			),
+			'content'    => '<p>see https://example.com/page</p>',
+			'contentMap' => array(
+				'en' => '<p>see https://example.com/page</p>',
+				'de' => '<p>siehe https://example.com/page</p>',
+			),
+		);
+
+		$actor = \Activitypub\Link::filter_activity_object( \array_merge( array( 'type' => 'Person' ), $fields ) );
+
+		$this->assertSame( $actor['summary'], $actor['summaryMap']['en'] );
+		$this->assertSame( $actor['content'], $actor['contentMap']['en'] );
+		$this->assertStringContainsString( 'href="https://example.com/page"', $actor['summaryMap']['de'] );
+		$this->assertStringContainsString( 'href="https://example.com/page"', $actor['contentMap']['de'] );
+
+		// The summary of a post stays plain text, in every language.
+		$note = \Activitypub\Link::filter_activity_object( \array_merge( array( 'type' => 'Note' ), $fields ) );
+
+		$this->assertSame( $fields['summaryMap'], $note['summaryMap'] );
+		$this->assertSame( $note['content'], $note['contentMap']['en'] );
+	}
 }
