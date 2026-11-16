@@ -115,6 +115,7 @@ class Blocks {
 			'noteLength'            => ACTIVITYPUB_NOTE_LENGTH,
 			'statsImageUrlEndpoint' => Stats_Image::is_available() ? \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image-url/{user_id}/{year}' ) : '',
 			'reactionTypes'         => self::get_reaction_types(),
+			'useHashtags'           => '1' === \get_option( 'activitypub_use_hashtags', '0' ),
 		);
 		\wp_localize_script( 'wp-editor', '_activityPubOptions', $data );
 
@@ -132,6 +133,7 @@ class Blocks {
 		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/pre-publish-panel/plugin.asset.php';
 		$plugin_url = \plugins_url( 'build/pre-publish-panel/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
 		\wp_enqueue_script( 'activitypub-pre-publish-panel', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
+		\wp_set_script_translations( 'activitypub-pre-publish-panel', 'activitypub', ACTIVITYPUB_PLUGIN_DIR . 'languages' );
 	}
 
 	/**
