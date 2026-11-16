@@ -857,6 +857,7 @@ class Test_Webfinger extends \WP_UnitTestCase {
 			'host only'       => array( '@example.com' ),
 			'no tld'          => array( 'user@host' ),
 			'trailing slash'  => array( 'user@example.com/' ),
+			'trailing line'   => array( "user@example.com\n" ),
 			'null'            => array( null ),
 			'integer'         => array( 42 ),
 			'array'           => array( array( 'user@example.com' ) ),

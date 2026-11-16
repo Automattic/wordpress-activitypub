@@ -103,7 +103,7 @@ class Http_Signature_Draft implements Http_Signature {
 		}
 
 		$header = $headers['signature'] ?? $headers['authorization'];
-		$parsed = $this->parse_signature_header( $header[0] );
+		$parsed = self::parse_signature_header( $header[0] );
 
 		if ( empty( $parsed['keyId'] ) ) {
 			return new \WP_Error( 'activitypub_signature', 'No Key ID present.' );
@@ -261,35 +261,50 @@ class Http_Signature_Draft implements Http_Signature {
 	/**
 	 * Parses the Signature header.
 	 *
+	 * @since unreleased Public and static.
+	 *
 	 * @param string $signature The signature header.
 	 *
 	 * @return array Signature parts.
 	 */
-	private function parse_signature_header( $signature ) {
+	public static function parse_signature_header( $signature ) {
 		$parsed_header = array();
-		$matches       = array();
+		$fields        = array(
+			'keyid'     => 'keyId',
+			'created'   => '(created)',
+			'expires'   => '(expires)',
+			'algorithm' => 'algorithm',
+			'headers'   => 'headers',
+			'signature' => 'signature',
+		);
 
-		if ( \preg_match( '/keyId="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['keyId'] = \trim( $matches[1] );
-		}
-		if ( \preg_match( '/created=["|\']*([0-9]*)["|\']*/im', $signature, $matches ) ) {
-			$parsed_header['(created)'] = \trim( $matches[1] );
-		}
-		if ( \preg_match( '/expires=["|\']*([0-9]*)["|\']*/im', $signature, $matches ) ) {
-			$parsed_header['(expires)'] = \trim( $matches[1] );
-		}
-		if ( \preg_match( '/algorithm="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['algorithm'] = \trim( $matches[1] );
-		}
-		if ( \preg_match( '/headers="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['headers'] = \explode( ' ', \trim( $matches[1] ) );
-		}
-		if ( \preg_match( '/signature="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['signature'] = \base64_decode( \preg_replace( '/\s+/', '', \trim( $matches[1] ) ) );
+		/*
+		 * The header is a list of `name="value"` pairs, read in order up to the first that is not
+		 * one. In the Authorization header the pairs follow the `Signature` scheme.
+		 */
+		$signature = \preg_replace( '/^\s*Signature\s+/i', '', (string) $signature );
+		\preg_match_all( '/\G\s*+,?\s*+([A-Za-z0-9_-]++)\s*+=\s*+("[^"]*"|\'[^\']*\'|[^\s,"\']*)/', $signature, $pairs, PREG_SET_ORDER );
+
+		foreach ( $pairs as $pair ) {
+			$field = $fields[ \strtolower( $pair[1] ) ] ?? null;
+			if ( ! $field || isset( $parsed_header[ $field ] ) ) {
+				continue;
+			}
+
+			$value = \trim( \trim( $pair[2], '"\'' ) );
+
+			// The timestamps are digits only.
+			if ( \in_array( $field, array( '(created)', '(expires)' ), true ) && ! \ctype_digit( $value ) ) {
+				$value = '';
+			}
+
+			$parsed_header[ $field ] = $value;
 		}
 
-		if ( empty( $parsed_header['headers'] ) ) {
-			$parsed_header['headers'] = array( 'date' );
+		$parsed_header['headers'] = isset( $parsed_header['headers'] ) ? \explode( ' ', $parsed_header['headers'] ) : array( 'date' );
+
+		if ( isset( $parsed_header['signature'] ) ) {
+			$parsed_header['signature'] = \base64_decode( \preg_replace( '/\s+/', '', $parsed_header['signature'] ) );
 		}
 
 		return $parsed_header;

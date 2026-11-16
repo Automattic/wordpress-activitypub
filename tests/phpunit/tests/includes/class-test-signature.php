@@ -1012,7 +1012,7 @@ class Test_Signature extends \WP_UnitTestCase {
 	 *
 	 * @covers ::verify_http_signature
 	 * @covers \Activitypub\Signature\Http_Message_Signature::verify
-	 * @covers \Activitypub\Signature\Http_Message_Signature::parse_signature_labels
+	 * @covers \Activitypub\Signature\Http_Message_Signature::parse_signatures
 	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
 	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_content_digest
 	 * @covers \Activitypub\Signature\Http_Message_Signature::get_signature_base_string
@@ -1257,6 +1257,66 @@ class Test_Signature extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * RFC 9421: Signature::get_key_id() returns the key the verifier checks.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers ::get_key_id
+	 * @covers \Activitypub\Signature\Http_Message_Signature::parse_signatures
+	 */
+	public function test_get_key_id_matches_the_verified_key() {
+		\update_option( 'activitypub_rfc9421_signature', '1' );
+		$callback = $this->mock_remote_key();
+
+		$args = \apply_filters(
+			'http_request_args',
+			array(
+				'method'      => 'GET',
+				'headers'     => array(
+					'Date' => \gmdate( 'D, d M Y H:i:s T' ),
+					'Host' => 'example.org',
+				),
+				'key_id'      => 'https://example.org/author/admin#main-key',
+				'private_key' => Actors::get_private_key( 1 ),
+				'user_id'     => 1,
+			),
+			'https://example.org/wp-json/activitypub/1.0/actors/1/followers/sync'
+		);
+
+		$headers                    = $args['headers'];
+		$headers['Signature-Input'] = \str_replace( ';keyid="', ';keyid="https://victim.example/users/victim#main-key";x-keyid="', $headers['Signature-Input'] );
+
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+		$_SERVER['REQUEST_URI']    = '/wp-json/activitypub/1.0/actors/1/followers/sync';
+		$_SERVER['HTTP_HOST']      = 'example.org';
+		$_SERVER['HTTPS']          = 'on';
+
+		$request = new \WP_REST_Request( 'GET', ACTIVITYPUB_REST_NAMESPACE . '/actors/1/followers/sync' );
+		$request->set_headers( $headers );
+
+		$result = Signature::verify_http_signature( $request );
+		$key_id = Signature::get_key_id( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $callback );
+		\delete_option( 'activitypub_rfc9421_signature' );
+
+		$this->assertSame( 'https://victim.example/users/victim#main-key', $key_id );
+		$this->assertWPError( $result, 'The signature is checked against the key in keyid.' );
+	}
+
+	/**
+	 * A repeated header is read like the verifier reads it: its first value.
+	 *
+	 * @covers ::get_key_id
+	 */
+	public function test_get_key_id_reads_the_first_header_value() {
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'signature-input', array( 'sig1=("@method");keyid="https://remote.example/key"', 'sig2=("@method");keyid="https://other.example/key"' ) );
+		$request->set_header( 'signature', 'sig1=:AAAA:, sig2=:BBBB:' );
+
+		$this->assertSame( 'https://remote.example/key', Signature::get_key_id( $request ) );
+	}
+
+	/**
 	 * Test double knock with unrelated requests.
 	 *
 	 * @covers ::maybe_double_knock
@@ -1298,7 +1358,7 @@ class Test_Signature extends \WP_UnitTestCase {
 	 *
 	 * @covers ::verify_http_signature
 	 * @covers \Activitypub\Signature\Http_Message_Signature::verify
-	 * @covers \Activitypub\Signature\Http_Message_Signature::parse_signature_labels
+	 * @covers \Activitypub\Signature\Http_Message_Signature::parse_signatures
 	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
 	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_content_digest
 	 * @covers \Activitypub\Signature\Http_Message_Signature::get_signature_base_string
@@ -1376,7 +1436,7 @@ class Test_Signature extends \WP_UnitTestCase {
 	 *
 	 * @covers ::verify_http_signature
 	 * @covers \Activitypub\Signature\Http_Message_Signature::verify
-	 * @covers \Activitypub\Signature\Http_Message_Signature::parse_signature_labels
+	 * @covers \Activitypub\Signature\Http_Message_Signature::parse_signatures
 	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
 	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_content_digest
 	 * @covers \Activitypub\Signature\Http_Message_Signature::get_signature_base_string
@@ -1819,40 +1879,112 @@ class Test_Signature extends \WP_UnitTestCase {
 	 */
 	public function get_key_id_provider() {
 		return array(
-			'draft Signature header'           => array(
+			'draft Signature header'            => array(
 				'keyId="https://remote.example/users/curator#main-key",algorithm="rsa-sha256",signature="abc"',
 				null,
 				'https://remote.example/users/curator#main-key',
 			),
-			'RFC 9421 Signature-Input'         => array(
-				null,
+			'RFC 9421 Signature-Input'          => array(
+				'sig1=:AAAA:',
 				'sig1=("@method" "@target-uri");keyid="https://remote.example/users/curator#main-key";created=1700000000',
 				'https://remote.example/users/curator#main-key',
 			),
-			'no signature headers'             => array( null, null, null ),
-			// Signature-Input wins over a draft Signature header, matching the verifier's choice.
-			'mixed headers prefer RFC 9421'    => array(
-				'keyId="https://victim.example/users/victim#main-key",signature="abc"',
+			'no signature headers'              => array( null, null, null ),
+			// Signature-Input wins over a draft keyId in the Signature header, matching the verifier's choice.
+			'mixed headers prefer RFC 9421'     => array(
+				'sig1=:AAAA:, keyId="https://victim.example/users/victim#main-key"',
 				'sig1=("@method");keyid="https://attacker.example/users/attacker#main-key";created=1700000000',
 				'https://attacker.example/users/attacker#main-key',
 			),
 			// The verifier accepts whichever label validates, so multiple keyIds are ambiguous.
-			'ambiguous multiple keyIds'        => array(
-				null,
+			'ambiguous multiple keyIds'         => array(
+				'sig1=:AAAA:, sig2=:BBBB:',
 				'sig1=("@method");keyid="https://victim.example/users/victim#main-key", sig2=("@method");keyid="https://attacker.example/users/attacker#main-key";created=1700000000',
 				null,
 			),
+			// One key in several labels is not ambiguous.
+			'same keyId in two labels'          => array(
+				'sig1=:AAAA:, sig2=:BBBB:',
+				'sig1=("@method");keyid="https://remote.example/key", sig2=("@authority");keyid="https://remote.example/key"',
+				'https://remote.example/key',
+			),
+			// Only labels with a signature are verified, so only those count.
+			'label without signature'           => array(
+				'sig1=:AAAA:',
+				'sig1=("@method");keyid="https://remote.example/key", sig2=("@method");keyid="https://other.example/key"',
+				'https://remote.example/key',
+			),
 			// RFC 9421 allows an unquoted keyid value.
-			'RFC 9421 unquoted keyid'          => array(
-				null,
+			'RFC 9421 unquoted keyid'           => array(
+				'sig1=:AAAA:',
 				'sig1=("@method");keyid=https://evil.example/actor#key;alg="rsa-v1_5-sha256"',
 				'https://evil.example/actor#key',
 			),
-			// A `keyid=` smuggled inside another parameter's quoted value must not be picked up.
-			'keyid inside other param ignored' => array(
-				null,
+			// A `keyid=` inside another parameter's quoted value is part of that value.
+			'keyid inside other param ignored'  => array(
+				'sig1=:AAAA:',
 				'sig1=("@method");tag="keyid=https://victim.example/key";keyid=https://evil.example/key',
 				'https://evil.example/key',
+			),
+			// The keyId of every label counts, also one written without a semicolon.
+			'RFC 9421 keyid as first parameter' => array(
+				'sig1=:AAAA:, sig2=:BBBB:',
+				'sig1=("@method")keyid="https://evil.example/key", sig2=("@method");keyid="https://victim.example/key"',
+				null,
+			),
+			// Only the first labels count, as the verifier checks no more.
+			'labels beyond the limit'           => array(
+				'sig1=:AAAA:, sig2=:BBBB:, sig3=:CCCC:, sig4=:DDDD:',
+				'sig1=("@method");keyid="https://remote.example/key", sig2=("@method");keyid="https://remote.example/key", sig3=("@method");keyid="https://remote.example/key", sig4=("@method");keyid="https://other.example/key"',
+				'https://remote.example/key',
+			),
+			// Labels and their signatures are matched by their whole name.
+			'RFC 9421 label names'              => array(
+				'sig1=:AAAA:',
+				'ig1=("@method");keyid="https://other.example/key"',
+				null,
+			),
+			// Fields are matched by their whole name.
+			'draft field names'                 => array(
+				'xkeyId="https://other.example/key",keyId="https://remote.example/key",signature="abc"',
+				null,
+				'https://remote.example/key',
+			),
+			// A comma inside a quoted value does not start another label.
+			'comma inside a quoted value'       => array(
+				'sig1=:AAAA:, sig2=:BBBB:',
+				'sig1=("@method");keyid="https://remote.example/key";tag=", sig2=(\\"@method\\");keyid=\\"https://other.example/key\\""',
+				'https://remote.example/key',
+			),
+			// Parameter names are lowercase.
+			'uppercase parameter name'          => array(
+				'sig1=:AAAA:',
+				'sig1=("@method");keyid="https://remote.example/key";KEYID="https://other.example/key"',
+				null,
+			),
+			// Other draft fields before the keyId do not stop the reading.
+			'draft other fields first'          => array(
+				'x-custom="1", keyId = "https://remote.example/key",signature="abc"',
+				null,
+				'https://remote.example/key',
+			),
+			// An empty Signature-Input still selects the RFC 9421 verifier.
+			'empty Signature-Input'             => array(
+				'keyId="https://other.example/key",signature="abc"',
+				'',
+				null,
+			),
+			// The draft verifier trims the keyId.
+			'draft keyId with spaces'           => array(
+				'keyId=" https://remote.example/key ",signature="abc"',
+				null,
+				'https://remote.example/key',
+			),
+			// The draft verifier reads the first keyId, even an empty one.
+			'draft empty keyId first'           => array(
+				'keyId="",keyId="https://other.example/key",signature="abc"',
+				null,
+				null,
 			),
 		);
 	}

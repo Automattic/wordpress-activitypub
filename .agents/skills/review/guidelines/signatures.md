@@ -15,6 +15,7 @@ Applies to: `includes/class-signature.php`, `includes/signature/**`, `includes/r
 Files: `includes/class-signature.php`, `includes/signature/class-http-signature-draft.php`, `includes/signature/class-http-message-signature.php`.
 
 - Every rule holds for both verifiers. A binding is only in place when both enforce it.
+- Code that reads a signature parameter outside the verifier uses that verifier's parser (`Http_Message_Signature::parse_signatures()`, `Http_Signature_Draft::parse_signature_header()`) and picks the header the same way, never with a regex of its own.
 - The key's owner is the activity actor; sharing its host is not enough (Mastodon's `different_actor?`). Take the owner from where the key was resolved: the stored actor the keyId points to, else the key as its host serves it (`Proxy::get()`). Compare the owner, not the keyId string, so key aliases on the same host keep working.
 - Each verifier requires a signed component that names this site (draft: `host`; RFC 9421: `@target-uri`, `@authority` or `host`; each checked by `is_signature_host()`) and, with a body, a signed `digest` / `content-digest` whose header is present. A signed but absent header enters the signed data empty and vouches for any body.
 - POST requests without `date` or the digest are rejected. The clock skew window is minutes, not hours.

@@ -175,18 +175,8 @@ class Signature {
 	/**
 	 * Extract the signing keyId that {@see Signature::verify_http_signature()} would verify against.
 	 *
-	 * The returned keyId is only trustworthy if it identifies the key the signature is
-	 * actually checked with, so this mirrors the verifier's header choice rather than
-	 * scanning headers in an arbitrary order:
-	 *
-	 * - When a `Signature-Input` header is present the RFC 9421 verifier is used, so the
-	 *   keyId is taken from there and a draft `Signature` header (which the verifier ignores)
-	 *   is not consulted. The RFC 9421 verifier accepts whichever of several signature labels
-	 *   validates, so a `Signature-Input` carrying more than one keyId is ambiguous: we cannot
-	 *   know in advance which key will verify and must not guess, so `null` is returned.
-	 * - Otherwise the draft HTTP Signatures form is used, taking the first `keyId` from the
-	 *   `Signature` header or, failing that, the `Authorization` header — matching the draft
-	 *   verifier, which reads `signature ?? authorization`.
+	 * The verifier accepts whichever of several keyIds validates, so more than one is ambiguous:
+	 * we cannot know in advance which key will verify and must not guess, so `null` is returned.
 	 *
 	 * @since 9.0.0
 	 *
@@ -195,29 +185,52 @@ class Signature {
 	 * @return string|null The keyId, or null when none is present or the choice is ambiguous.
 	 */
 	public static function get_key_id( $request ) {
-		$signature_input = $request->get_header( 'signature-input' );
-		if ( $signature_input ) {
-			/*
-			 * keyid is a `;`-delimited parameter whose value may be quoted or unquoted.
-			 * Anchoring on `;` (or string start) avoids matching a `keyid=` substring inside
-			 * another parameter's value. Count every label's keyId: more than one is ambiguous.
-			 */
-			$count = \preg_match_all( '/(?:^|;)\s*keyid="?([^";,\s]+)/i', $signature_input, $matches );
+		$key_ids = self::get_key_ids( $request );
 
-			return 1 === $count ? $matches[1][0] : null;
+		return 1 === \count( $key_ids ) ? $key_ids[0] : null;
+	}
+
+	/**
+	 * Extract every keyId that {@see Signature::verify_http_signature()} would try.
+	 *
+	 * The key that verifies a request is always one of these, so this mirrors the verifier's
+	 * header choice rather than scanning headers in an arbitrary order:
+	 *
+	 * - When a `Signature-Input` header is present, even an empty one, the RFC 9421 verifier
+	 *   is used, so the keyIds are those of its labels and a draft `Signature` header (which the
+	 *   verifier ignores) is not consulted.
+	 * - Otherwise the draft HTTP Signatures form is used, taking the `keyId` from the
+	 *   `Signature` header or, failing that, the `Authorization` header — matching the draft
+	 *   verifier, which reads `signature ?? authorization`.
+	 *
+	 * Both forms are read with the verifier's own parser and from the same header value, so the
+	 * same labels and fields count.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 *
+	 * @return string[] The distinct keyIds, empty when none is present.
+	 */
+	public static function get_key_ids( $request ) {
+		$headers = $request->get_headers();
+		$key_ids = array();
+
+		if ( isset( $headers['signature_input'] ) ) {
+			foreach ( Http_Message_Signature::parse_signatures( $headers['signature_input'][0], $headers['signature'][0] ?? null ) as $input ) {
+				if ( ! empty( $input['params']['keyid'] ) && \is_string( $input['params']['keyid'] ) ) {
+					$key_ids[] = $input['params']['keyid'];
+				}
+			}
+
+			return \array_values( \array_unique( $key_ids ) );
 		}
 
 		// A draft signature may arrive in the Signature header or, less commonly, Authorization.
-		$signature = $request->get_header( 'signature' );
-		if ( ! $signature ) {
-			$signature = $request->get_header( 'authorization' );
-		}
+		$signature = $headers['signature'] ?? $headers['authorization'] ?? array( '' );
+		$key_id    = Http_Signature_Draft::parse_signature_header( $signature[0] ?? '' )['keyId'] ?? '';
 
-		if ( $signature && \preg_match( '/keyId="([^"]+)"/i', $signature, $matches ) ) {
-			return $matches[1];
-		}
-
-		return null;
+		return '' === $key_id ? array() : array( $key_id );
 	}
 
 	/**
