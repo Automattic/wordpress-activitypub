@@ -475,4 +475,32 @@ ENDPRE;
 
 		$this->assertSame( array( 'https://mention.example/@alice' ), Mention::extract_mention_links( $content ) );
 	}
+
+	/**
+	 * The language maps get the same mention links as `summary` and `content`.
+	 *
+	 * @covers ::filter_activity_object
+	 */
+	public function test_filter_activity_object_links_language_maps() {
+		$object = Mention::filter_activity_object(
+			array(
+				'type'       => 'Note',
+				'summary'    => 'Hello @username@example.org',
+				'summaryMap' => array(
+					'en' => 'Hello @username@example.org',
+					'de' => 'Hallo @username@example.org',
+				),
+				'content'    => '<p>Hello @username@example.org</p>',
+				'contentMap' => array(
+					'en' => '<p>Hello @username@example.org</p>',
+					'de' => '<p>Hallo @username@example.org</p>',
+				),
+			)
+		);
+
+		$this->assertSame( $object['summary'], $object['summaryMap']['en'] );
+		$this->assertSame( $object['content'], $object['contentMap']['en'] );
+		$this->assertStringContainsString( 'href="https://example.org/users/username"', $object['summaryMap']['de'] );
+		$this->assertStringContainsString( 'href="https://example.org/users/username"', $object['contentMap']['de'] );
+	}
 }
