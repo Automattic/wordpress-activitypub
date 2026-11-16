@@ -487,6 +487,16 @@ describe( 'Tags suggestion', () => {
 		);
 	} );
 
+	test( 'adds a note on hashtags to the suggestion text before WordPress 6.9', () => {
+		expect(
+			__(
+				'Tags help users and search engines navigate your site and find your content. Add a few keywords to describe your post.'
+			)
+		).toBe(
+			'Tags help users and search engines navigate your site and find your content. Add a few keywords to describe your post. Tags are also shared as hashtags, which help people on the Fediverse find your post.'
+		);
+	} );
+
 	test( 'mentions hashtags in the content when they are enabled', () => {
 		window._activityPubOptions.useHashtags = true;
 

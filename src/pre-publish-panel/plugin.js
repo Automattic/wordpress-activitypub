@@ -116,6 +116,14 @@ const CORE_TAGS_TEXT =
 	'%s help users and search engines navigate your site and find your content. Add a few keywords to describe your post.';
 
 /**
+ * The text of core's tags suggestion before WordPress 6.9, which names the taxonomy itself.
+ *
+ * @type {string}
+ */
+const CORE_TAGS_TEXT_BEFORE_6_9 =
+	'Tags help users and search engines navigate your site and find your content. Add a few keywords to describe your post.';
+
+/**
  * The text of core's post format suggestion, which gets a note on the Fediverse.
  *
  * @type {string}
@@ -137,7 +145,7 @@ addFilter( 'i18n.gettext_default', 'activitypub/tags-suggestion', ( translation,
 		);
 	}
 
-	if ( CORE_TAGS_TEXT !== text ) {
+	if ( CORE_TAGS_TEXT !== text && CORE_TAGS_TEXT_BEFORE_6_9 !== text ) {
 		return translation;
 	}
 
@@ -154,8 +162,8 @@ addFilter( 'i18n.gettext_default', 'activitypub/tags-suggestion', ( translation,
 			__( 'Any #hashtag you write in your post is added as a tag too.', 'activitypub' );
 	}
 
-	// Core fills in the taxonomy name with sprintf(), so a percent sign in the note must stay literal.
-	return translation + ' ' + note.replace( /%/g, '%%' );
+	// Since 6.9 core fills in the taxonomy name with sprintf(), so a percent sign in the note must stay literal.
+	return translation + ' ' + ( CORE_TAGS_TEXT === text ? note.replace( /%/g, '%%' ) : note );
 } );
 
 registerPlugin( 'activitypub-pre-publish', {
