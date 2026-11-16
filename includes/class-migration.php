@@ -18,6 +18,7 @@ use Activitypub\Collection\Following;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\OAuth\Token;
 use Activitypub\Transformer\Factory;
 
 use function Activitypub\unescape_guid;
@@ -240,6 +241,10 @@ class Migration {
 		if ( \version_compare( $version_from_db, '9.4.0', '<' ) && ! \wp_next_scheduled( 'activitypub_remove_duplicate_cache_files' ) ) {
 			// A filesystem walk, so off the upgrade request and onto cron.
 			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_remove_duplicate_cache_files' );
+		}
+
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			self::migrate_oauth_token_keys();
 		}
 
 		/*
@@ -1441,5 +1446,59 @@ class Migration {
 		foreach ( $items as $item_id ) {
 			\wp_delete_post( $item_id, true );
 		}
+	}
+
+	/**
+	 * Move OAuth tokens to keys that carry the site's table prefix.
+	 *
+	 * On a single site the tokens move, so connected apps keep working. On a multisite network
+	 * the user meta is shared by all sites and a token does not name the site it was issued on,
+	 * so the tokens are deleted and apps have to be connected again.
+	 *
+	 * @since unreleased
+	 *
+	 * @return void
+	 */
+	public static function migrate_oauth_token_keys() {
+		global $wpdb;
+
+		$token_like   = $wpdb->esc_like( Token::META_PREFIX ) . '%';
+		$refresh_like = $wpdb->esc_like( Token::REFRESH_INDEX_PREFIX ) . '%';
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$user_ids = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT DISTINCT user_id FROM {$wpdb->usermeta} WHERE meta_key LIKE %s OR meta_key LIKE %s",
+				$token_like,
+				$refresh_like
+			)
+		);
+
+		if ( empty( $user_ids ) ) {
+			return;
+		}
+
+		if ( \is_multisite() ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->query(
+				$wpdb->prepare(
+					"DELETE FROM {$wpdb->usermeta} WHERE meta_key LIKE %s OR meta_key LIKE %s",
+					$token_like,
+					$refresh_like
+				)
+			);
+		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->query(
+				$wpdb->prepare(
+					"UPDATE {$wpdb->usermeta} SET meta_key = CONCAT( %s, meta_key ) WHERE meta_key LIKE %s OR meta_key LIKE %s",
+					$wpdb->get_blog_prefix(),
+					$token_like,
+					$refresh_like
+				)
+			);
+		}
+
+		\wp_cache_delete_multiple( $user_ids, 'user_meta' );
 	}
 }

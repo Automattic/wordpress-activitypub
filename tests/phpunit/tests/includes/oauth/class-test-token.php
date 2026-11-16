@@ -550,12 +550,12 @@ class Test_Token extends \WP_UnitTestCase {
 		$all_meta = \get_user_meta( $this->user_id );
 		$count    = 0;
 		foreach ( $all_meta as $meta_key => $meta_values ) {
-			if ( 0 === strpos( $meta_key, Token::META_PREFIX ) ) {
+			if ( 0 === strpos( $meta_key, Token::get_token_key() ) ) {
 				++$count;
 			}
 		}
 
-		$this->assertLessThanOrEqual( Token::MAX_TOKENS_PER_USER, $count );
+		$this->assertSame( Token::MAX_TOKENS_PER_USER, $count );
 
 		// The most recently created token should still be valid.
 		$latest = end( $tokens );
@@ -581,5 +581,35 @@ class Test_Token extends \WP_UnitTestCase {
 		 */
 		$count = Token::cleanup_expired();
 		$this->assertIsInt( $count );
+	}
+
+	/**
+	 * A token only exists on the site that issued it.
+	 *
+	 * The key carries the site's table prefix, so a token stored for another site of the network is
+	 * not found here.
+	 *
+	 * @covers ::validate
+	 */
+	public function test_token_is_bound_to_its_site() {
+		global $wpdb;
+
+		$token = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+
+		$this->assertNotWPError( Token::validate( $token['access_token'] ) );
+
+		// Move the token to the keys another site of the network would use.
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"UPDATE {$wpdb->usermeta} SET meta_key = REPLACE( meta_key, %s, %s ) WHERE user_id = %d",
+				$wpdb->get_blog_prefix() . '_activitypub_oauth_',
+				$wpdb->base_prefix . '2__activitypub_oauth_',
+				$this->user_id
+			)
+		);
+		\wp_cache_delete( $this->user_id, 'user_meta' );
+
+		$this->assertWPError( Token::validate( $token['access_token'] ) );
+		$this->assertWPError( Token::refresh( $token['refresh_token'], $this->client_id ) );
 	}
 }
