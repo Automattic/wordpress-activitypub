@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.4.4] - 2026-11-17
+### Security
+- Connected apps now only have access to the site they were connected on. On multisite networks, apps have to be connected again after the update. [#4079]
+- Improve how content from other servers is matched by its address. [#4024]
+- Improve how signatures of incoming requests are read. [#4076]
+
+### Fixed
+- Fix remote profiles with special characters in their address showing up twice after they were updated. [#4048]
+- Fix the post sidebar on the Social Web screen running into the window edges on WordPress 7.2, and a console error when the screen loads. [#4056]
+- Fixed a fatal error when Stream 4.5.0 or newer is active. [#4067]
+- Live updates in apps connected through the ActivityPub API now reach every open app or browser tab, not only the first one. [#4028]
+- Mentions, hashtags and links are now linked the same way in every language version of a post or profile. [#4065]
+- Rate limit new follower notification emails to prevent repeated notifications when an actor cycles follow and unfollow. [#4025]
+- The blog profile can be found by its Fediverse handle again when an author uses the same name in the WebFinger plugin. [#4038]
+- The page for connecting apps is no longer shown while the ActivityPub API is turned off. [#4081]
+- WooCommerce order notes and other comments of single items show in the admin again while ActivityPub is active. [#4039]
+
 ## [9.4.3] - 2026-11-05
 ### Security
 - Improve how custom emoji are shown in names and replies. [#4017]
@@ -2177,6 +2194,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[9.4.4]: https://github.com/Automattic/wordpress-activitypub/compare/9.4.3...9.4.4
 [9.4.3]: https://github.com/Automattic/wordpress-activitypub/compare/9.4.2...9.4.3
 [9.4.2]: https://github.com/Automattic/wordpress-activitypub/compare/9.4.1...9.4.2
 [9.4.1]: https://github.com/Automattic/wordpress-activitypub/compare/9.4.0...9.4.1

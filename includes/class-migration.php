@@ -244,7 +244,7 @@ class Migration {
 			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_remove_duplicate_cache_files' );
 		}
 
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+		if ( \version_compare( $version_from_db, '9.4.4', '<' ) ) {
 			self::migrate_oauth_token_keys();
 		}
 
@@ -1457,7 +1457,7 @@ class Migration {
 	 * not name the site it was issued on, so the tokens are deleted and apps have to be connected
 	 * again.
 	 *
-	 * @since unreleased
+	 * @since 9.4.4
 	 *
 	 * @return void
 	 */
