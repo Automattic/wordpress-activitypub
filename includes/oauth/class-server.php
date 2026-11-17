@@ -382,6 +382,11 @@ class Server {
 	 * @return void
 	 */
 	public static function login_form_authorize() {
+		// The consent page belongs to the API, like the OAuth routes.
+		if ( ! \get_option( 'activitypub_api', false ) ) {
+			return;
+		}
+
 		// Require user to be logged in.
 		if ( ! \is_user_logged_in() ) {
 			\auth_redirect();

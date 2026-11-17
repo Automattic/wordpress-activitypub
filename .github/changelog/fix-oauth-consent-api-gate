@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+The page for connecting apps is no longer shown while the ActivityPub API is turned off.
