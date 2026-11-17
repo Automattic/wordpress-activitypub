@@ -728,6 +728,29 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that deleting all clients also revokes their tokens.
+	 *
+	 * @covers ::delete_all
+	 */
+	public function test_delete_all_revokes_tokens() {
+		$client  = Client::register(
+			array(
+				'name'          => 'Delete All Test Client',
+				'redirect_uris' => array( 'https://example.com/callback' ),
+			)
+		);
+		$user_id = $this->factory->user->create( array( 'role' => 'editor' ) );
+		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
+		$token = Token::create( $user_id, $client['client_id'], array( Scope::READ ) );
+
+		$this->assertNotWPError( Token::validate( $token['access_token'] ) );
+
+		Client::delete_all();
+
+		$this->assertSame( array(), Token::get_all_for_user( $user_id ) );
+	}
+
+	/**
 	 * Test delete method with non-existent client.
 	 *
 	 * @covers ::delete

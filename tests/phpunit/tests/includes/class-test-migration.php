@@ -16,6 +16,10 @@ use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Comment;
 use Activitypub\Migration;
+use Activitypub\OAuth\Client;
+use Activitypub\OAuth\Scope;
+use Activitypub\OAuth\Token;
+use Activitypub\Post_Types;
 use Activitypub\Scheduler;
 use Activitypub\Tombstone;
 
@@ -1634,5 +1638,109 @@ class Test_Migration extends \WP_UnitTestCase {
 		$remaining = \get_option( 'activitypub_tombstone_urls', false );
 		$this->assertIsArray( $remaining, 'Legacy option must remain to back exists_local().' );
 		$this->assertEqualsCanonicalizing( $urls, $remaining );
+	}
+
+	/**
+	 * Tests that the migration moves OAuth tokens to the site's keys on a single site.
+	 *
+	 * @covers ::migrate_oauth_token_keys
+	 */
+	public function test_migrate_oauth_token_keys() {
+		if ( \is_multisite() ) {
+			$this->markTestSkipped( 'Single site only.' );
+		}
+
+		$token = $this->create_legacy_oauth_token();
+
+		$this->assertWPError( Token::validate( $token['access_token'] ), 'An unprefixed token is not valid.' );
+
+		Migration::migrate_oauth_token_keys();
+		$this->assertNotWPError( Token::validate( $token['access_token'] ) );
+
+		// A second run leaves the moved keys alone.
+		Migration::migrate_oauth_token_keys();
+		$this->assertNotWPError( Token::validate( $token['access_token'] ) );
+		$this->assertNotWPError( Token::refresh( $token['refresh_token'], $token['client_id'] ) );
+	}
+
+	/**
+	 * Tests that the migration deletes OAuth tokens on a multisite network.
+	 *
+	 * @covers ::migrate_oauth_token_keys
+	 */
+	public function test_migrate_oauth_token_keys_multisite() {
+		global $wpdb;
+
+		if ( ! \is_multisite() ) {
+			$this->markTestSkipped( 'Multisite only.' );
+		}
+
+		$legacy  = $this->create_legacy_oauth_token();
+		$current = $this->create_legacy_oauth_token();
+		$post_id = Client::get( $legacy['client_id'] )->get_post_id();
+
+		$this->assertNotEmpty( \get_post_meta( $post_id, Token::USER_META_KEY, false ) );
+
+		// Store one token with the site prefix again, as tokens issued after the update are.
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"UPDATE {$wpdb->usermeta} SET meta_key = CONCAT( %s, meta_key ) WHERE user_id = %d AND meta_key LIKE %s",
+				$wpdb->get_blog_prefix(),
+				$current['user_id'],
+				$wpdb->esc_like( '_activitypub_oauth_' ) . '%'
+			)
+		);
+		\wp_cache_delete( $current['user_id'], 'user_meta' );
+
+		Migration::migrate_oauth_token_keys();
+
+		$this->assertNotWPError( Token::validate( $current['access_token'] ), 'A token with the site prefix is kept.' );
+		$this->assertEmpty( \get_post_meta( $post_id, Token::USER_META_KEY, false ), 'Users of deleted tokens are no longer tracked.' );
+		$this->assertSame(
+			'0',
+			$wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->prepare(
+					"SELECT COUNT(*) FROM {$wpdb->usermeta} WHERE meta_key LIKE %s",
+					$wpdb->esc_like( '_activitypub_oauth_' ) . '%'
+				)
+			)
+		);
+	}
+
+	/**
+	 * Create an OAuth token and store it the way earlier versions did, without the site prefix.
+	 *
+	 * @return array The token response, with the client and user ID.
+	 */
+	private function create_legacy_oauth_token() {
+		global $wpdb;
+
+		Post_Types::register_oauth_post_types();
+
+		$user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
+
+		$client = Client::register(
+			array(
+				'name'          => 'Test Client',
+				'redirect_uris' => array( 'https://example.com/callback' ),
+			)
+		);
+		$token  = Token::create( $user_id, $client['client_id'], array( Scope::READ ) );
+
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"UPDATE {$wpdb->usermeta} SET meta_key = SUBSTRING( meta_key, %d ) WHERE user_id = %d AND meta_key LIKE %s",
+				\strlen( $wpdb->get_blog_prefix() ) + 1,
+				$user_id,
+				$wpdb->esc_like( $wpdb->get_blog_prefix() . '_activitypub_oauth_' ) . '%'
+			)
+		);
+		\wp_cache_delete( $user_id, 'user_meta' );
+
+		$token['client_id'] = $client['client_id'];
+		$token['user_id']   = $user_id;
+
+		return $token;
 	}
 }
