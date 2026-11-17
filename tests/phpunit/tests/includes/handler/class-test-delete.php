@@ -638,7 +638,7 @@ class Test_Delete extends \WP_UnitTestCase {
 	 * @covers ::maybe_delete_interaction
 	 * @covers ::maybe_delete_post
 	 *
-	 * @param string $target  The local copy: 'comment' or 'post'.
+	 * @param string $target  The local copy: 'comment', 'post' or 'both'.
 	 * @param string $signer  The actor whose key signs the request.
 	 * @param string $actor   The actor of the Delete.
 	 * @param bool   $deleted Whether the local copy is deleted.
@@ -672,9 +672,11 @@ class Test_Delete extends \WP_UnitTestCase {
 			'type' => 'Note',
 		);
 
-		$owner_id = Remote_Actors::get_by_uri( $owner )->ID;
-		if ( 'comment' === $target ) {
-			$object_id = self::factory()->comment->create(
+		$owner_id   = Remote_Actors::get_by_uri( $owner )->ID;
+		$comment_id = null;
+		$post_id    = null;
+		if ( 'post' !== $target ) {
+			$comment_id = self::factory()->comment->create(
 				array(
 					'comment_post_ID' => self::factory()->post->create(),
 					'comment_meta'    => array(
@@ -684,8 +686,9 @@ class Test_Delete extends \WP_UnitTestCase {
 					),
 				)
 			);
-		} else {
-			$object_id = self::factory()->post->create(
+		}
+		if ( 'comment' !== $target ) {
+			$post_id = self::factory()->post->create(
 				array(
 					'post_type'  => \Activitypub\Collection\Remote_Posts::POST_TYPE,
 					'guid'       => $note,
@@ -731,8 +734,12 @@ class Test_Delete extends \WP_UnitTestCase {
 		$this->unstub_remote_requests();
 		\delete_option( 'activitypub_rfc9421_signature' );
 
-		$exists = 'comment' === $target ? \get_comment( $object_id ) instanceof \WP_Comment : \get_post( $object_id ) instanceof \WP_Post;
-		$this->assertSame( ! $deleted, $exists );
+		if ( $comment_id ) {
+			$this->assertSame( ! $deleted, \get_comment( $comment_id ) instanceof \WP_Comment );
+		}
+		if ( $post_id ) {
+			$this->assertSame( ! $deleted, \get_post( $post_id ) instanceof \WP_Post );
+		}
 	}
 
 	/**
@@ -751,6 +758,8 @@ class Test_Delete extends \WP_UnitTestCase {
 			'post, signed by the owner'        => array( 'post', $alice, $alice, true ),
 			'post, signed by another actor'    => array( 'post', $bob, $bob, false ),
 			'post, signer is not the actor'    => array( 'post', $bob, $alice, false ),
+			'both, signed by the owner'        => array( 'both', $alice, $alice, true ),
+			'both, signed by another actor'    => array( 'both', $bob, $bob, false ),
 		);
 	}
 

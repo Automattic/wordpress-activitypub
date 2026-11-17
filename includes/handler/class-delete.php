@@ -206,8 +206,10 @@ class Delete {
 	public static function delete_object( $activity, $user_ids ) {
 		$result = self::maybe_delete_interaction( $activity );
 
-		if ( ! $result ) {
-			$result = self::maybe_delete_post( $activity );
+		// An object can be both, for example a reply of a followed actor is also in the reader.
+		if ( ! $result || ! \is_wp_error( Remote_Posts::get_by_guid( object_to_uri( $activity['object'] ) ) ) ) {
+			$post_result = self::maybe_delete_post( $activity );
+			$result      = $result ? $result : $post_result;
 		}
 
 		$success = ( $result && ! \is_wp_error( $result ) );
