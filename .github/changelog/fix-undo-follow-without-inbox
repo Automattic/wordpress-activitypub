@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Unfollowing now also works for accounts that followed a long time ago.

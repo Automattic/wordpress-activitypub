@@ -7,6 +7,8 @@
 
 namespace Activitypub\Handler;
 
+use Activitypub\Collection\Actors;
+use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox as Inbox_Collection;
 
 use function Activitypub\object_to_uri;
@@ -52,6 +54,29 @@ class Undo {
 			);
 		} else {
 			$result = Inbox_Collection::undo( object_to_uri( $activity['object'] ), $actor );
+
+			/*
+			 * The Follow may be gone from the inbox (purged or wiped). An embedded Follow names the
+			 * follower and the followed actor, so the follow is removed by those. Only the actor of
+			 * the Undo can end its own follow.
+			 */
+			if (
+				\is_wp_error( $result ) &&
+				'activitypub_inbox_item_not_found' === $result->get_error_code() &&
+				'Follow' === ( $activity['object']['type'] ?? '' ) &&
+				null !== $actor &&
+				object_to_uri( $activity['object']['actor'] ?? '' ) === $actor
+			) {
+				$user_id = Actors::get_id_by_resource( object_to_uri( $activity['object']['object'] ?? '' ) );
+
+				if ( ! \is_wp_error( $user_id ) ) {
+					$follower = Followers::get_by_uri( $user_id, $actor );
+
+					if ( ! \is_wp_error( $follower ) ) {
+						$result = Followers::remove( $follower, $user_id );
+					}
+				}
+			}
 		}
 
 		if ( $result && ! \is_wp_error( $result ) ) {
