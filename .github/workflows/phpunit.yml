@@ -22,6 +22,7 @@ on:
       - '!build/**/*.asset.php'
 jobs:
   phpunit:
+    name: phpunit (${{ matrix.php-versions }}${{ matrix.multisite && ', multisite' || '' }})
     runs-on: ubuntu-latest
     services:
       mysql:
