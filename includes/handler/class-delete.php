@@ -557,6 +557,8 @@ class Delete {
 	 * @since unreleased
 	 *
 	 * @param \WP_REST_Request|null $request Optional. The request of a Delete of an object. Default null.
+	 *
+	 * @return void
 	 */
 	private static function reset( $request = null ) {
 		self::$request = $request;
