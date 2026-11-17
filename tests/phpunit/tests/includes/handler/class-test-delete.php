@@ -18,6 +18,7 @@ use Activitypub\Tests\Uri_Test_Cases;
 use Activitypub\Tombstone;
 
 use function Activitypub\get_object_id;
+use function Activitypub\home_host;
 use function Activitypub\object_to_uri;
 
 /**
@@ -625,6 +626,132 @@ class Test_Delete extends \WP_UnitTestCase {
 		foreach ( $comments as $comment_id ) {
 			$this->assertInstanceOf( 'WP_Comment', \get_comment( $comment_id ) );
 		}
+	}
+
+	/**
+	 * Test that a Delete signed by the owner removes the object without fetching it.
+	 *
+	 * The remote server may still answer with a cached copy right after the deletion.
+	 *
+	 * @dataProvider signed_delete_provider
+	 * @covers ::defer_signature_verification
+	 * @covers ::maybe_delete_interaction
+	 * @covers ::maybe_delete_post
+	 *
+	 * @param string $target  The local copy: 'comment' or 'post'.
+	 * @param string $signer  The actor whose key signs the request.
+	 * @param string $actor   The actor of the Delete.
+	 * @param bool   $deleted Whether the local copy is deleted.
+	 */
+	public function test_signed_delete_by_owner( $target, $signer, $actor, $deleted ) {
+		\update_option( 'activitypub_rfc9421_signature', '0' );
+
+		$owner = 'https://example.com/users/alice';
+		$note  = 'https://example.com/users/alice/statuses/1';
+		$keys  = \Activitypub\Collection\Actors::get_keypair( 1 );
+
+		$this->stub_remote_requests();
+		foreach ( array( $owner, 'https://example.com/users/bob' ) as $uri ) {
+			$this->responses[ $uri ] = array(
+				'id'                => $uri,
+				'type'              => 'Person',
+				'preferredUsername' => \basename( $uri ),
+				'inbox'             => $uri . '/inbox',
+				'publicKey'         => array(
+					'id'           => $uri . '#main-key',
+					'owner'        => $uri,
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+			Remote_Actors::fetch_by_uri( $uri );
+		}
+
+		// The object still resolves, like a cached copy.
+		$this->responses[ $note ] = array(
+			'id'   => $note,
+			'type' => 'Note',
+		);
+
+		$owner_id = Remote_Actors::get_by_uri( $owner )->ID;
+		if ( 'comment' === $target ) {
+			$object_id = self::factory()->comment->create(
+				array(
+					'comment_post_ID' => self::factory()->post->create(),
+					'comment_meta'    => array(
+						'protocol'                     => 'activitypub',
+						'source_id'                    => $note,
+						'_activitypub_remote_actor_id' => $owner_id,
+					),
+				)
+			);
+		} else {
+			$object_id = self::factory()->post->create(
+				array(
+					'post_type'  => \Activitypub\Collection\Remote_Posts::POST_TYPE,
+					'guid'       => $note,
+					'meta_input' => array( '_activitypub_remote_actor_id' => $owner_id ),
+				)
+			);
+		}
+
+		$delete = array(
+			'id'     => $actor . '#delete',
+			'type'   => 'Delete',
+			'actor'  => $actor,
+			'object' => array(
+				'id'   => $note,
+				'type' => 'Tombstone',
+			),
+		);
+
+		$args = \apply_filters(
+			'http_request_args',
+			array(
+				'method'      => 'POST',
+				'body'        => \wp_json_encode( $delete ),
+				'key_id'      => $signer . '#main-key',
+				'private_key' => \Activitypub\Collection\Actors::get_private_key( 1 ),
+				'user_id'     => 1,
+				'headers'     => array(
+					'Content-Type' => 'application/activity+json',
+					'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
+					'Host'         => home_host(),
+				),
+			),
+			\sprintf( 'https://%s/wp-json/activitypub/1.0/inbox', home_host() )
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
+		$request->set_body( $args['body'] );
+		$request->set_headers( $args['headers'] );
+
+		$this->assertTrue( Delete::defer_signature_verification( false, $request, false ) );
+		Delete::handle_delete( $delete, array( self::$user_id ) );
+
+		$this->unstub_remote_requests();
+		\delete_option( 'activitypub_rfc9421_signature' );
+
+		$exists = 'comment' === $target ? \get_comment( $object_id ) instanceof \WP_Comment : \get_post( $object_id ) instanceof \WP_Post;
+		$this->assertSame( ! $deleted, $exists );
+	}
+
+	/**
+	 * Signed Deletes of a comment and a reader post.
+	 *
+	 * @return array[] Test cases: [ target, signer, actor, deleted ].
+	 */
+	public function signed_delete_provider() {
+		$alice = 'https://example.com/users/alice';
+		$bob   = 'https://example.com/users/bob';
+
+		return array(
+			'comment, signed by the owner'     => array( 'comment', $alice, $alice, true ),
+			'comment, signed by another actor' => array( 'comment', $bob, $bob, false ),
+			'comment, signer is not the actor' => array( 'comment', $bob, $alice, false ),
+			'post, signed by the owner'        => array( 'post', $alice, $alice, true ),
+			'post, signed by another actor'    => array( 'post', $bob, $bob, false ),
+			'post, signer is not the actor'    => array( 'post', $bob, $alice, false ),
+		);
 	}
 
 	/**

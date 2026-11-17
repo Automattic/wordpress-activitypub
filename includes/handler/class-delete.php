@@ -12,17 +12,26 @@ use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
 use Activitypub\Proxy;
+use Activitypub\Signature;
 use Activitypub\Tombstone;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
+use function Activitypub\unescape_guid;
 
 /**
  * Handles Delete requests.
  */
 class Delete {
+	/**
+	 * The actor that signed the Delete of the current request, once its signature verified.
+	 *
+	 * @var string|null
+	 */
+	private static $signer = null;
+
 	/**
 	 * Initialize the class, registering WordPress hooks.
 	 *
@@ -356,7 +365,16 @@ class Delete {
 		$id       = object_to_uri( $activity['object'] );
 		$comments = Interactions::get_by_id( $id );
 
-		if ( $comments && Tombstone::exists( $id ) ) {
+		if ( ! $comments ) {
+			return false;
+		}
+
+		$owner_ids = array();
+		foreach ( $comments as $comment ) {
+			$owner_ids[] = (int) \get_comment_meta( $comment->comment_ID, '_activitypub_remote_actor_id', true );
+		}
+
+		if ( self::is_signed_by_owner( $activity, $owner_ids ) || Tombstone::exists( $id ) ) {
 			// The object is gone from its own host, so the cached copy goes with it.
 			Proxy::purge( $id );
 
@@ -379,10 +397,13 @@ class Delete {
 	 * @return bool|\WP_Error True on success, false or WP_Error on failure.
 	 */
 	public static function maybe_delete_post( $activity ) {
-		$id = object_to_uri( $activity['object'] );
+		$id   = object_to_uri( $activity['object'] );
+		$post = Remote_Posts::get_by_guid( $id );
 
-		// Check if the object exists and is a tombstone.
-		if ( Tombstone::exists( $id ) ) {
+		$signed = ! \is_wp_error( $post ) && self::is_signed_by_owner( $activity, array( (int) \get_post_meta( $post->ID, '_activitypub_remote_actor_id', true ) ) );
+
+		// The owner signed the Delete, or the object is gone from its own host.
+		if ( $signed || Tombstone::exists( $id ) ) {
 			// The object is gone from its own host, so the cached copy goes with it.
 			Proxy::purge( $id );
 
@@ -447,10 +468,52 @@ class Delete {
 		$json = $request->get_json_params();
 
 		if ( isset( $json['type'] ) && 'Delete' === $json['type'] ) {
+			self::$signer = null;
+
+			/*
+			 * The actor of a Delete of an object still exists, so the signature can be checked here,
+			 * without making it a requirement. A verified signer may delete its own objects without
+			 * the object being fetched, see is_signed_by_owner().
+			 */
+			$actor = object_to_uri( $json['actor'] ?? '' );
+			if ( $actor && object_to_uri( $json['object'] ?? '' ) !== $actor ) {
+				$signer = Signature::verify_http_signature( $request );
+
+				if ( $signer === $actor ) {
+					self::$signer = $signer;
+				}
+			}
+
 			return true;
 		}
 
 		return $defer;
+	}
+
+	/**
+	 * Check whether the actor that signed the Delete owns all the objects.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $activity  The Delete activity.
+	 * @param int[] $owner_ids The IDs of the remote actors that own the objects.
+	 *
+	 * @return bool True if the signer of the Delete owns all the objects.
+	 */
+	private static function is_signed_by_owner( $activity, $owner_ids ) {
+		$actor = object_to_uri( $activity['actor'] ?? '' );
+
+		if ( ! $actor || self::$signer !== $actor || ! $owner_ids ) {
+			return false;
+		}
+
+		foreach ( $owner_ids as $owner_id ) {
+			if ( ! $owner_id || unescape_guid( \get_post_field( 'guid', $owner_id, 'raw' ) ) !== $actor ) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	/**
