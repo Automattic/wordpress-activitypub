@@ -33,6 +33,7 @@ Repo knowledge lives in `guidelines/`, one file per area: past issues first, the
 | [supply-chain](guidelines/supply-chain.md) | dependencies | `package.json`, `composer.json` and their lock files |
 | [cron](guidelines/cron.md) | callbacks that must not run twice | `includes/scheduler/`, `class-scheduler.php`, any new `wp_schedule_*` call |
 | [accessibility](guidelines/accessibility.md) | keyboard, focus, labels, semantics | `src/`, `templates/`, `includes/wp-admin/`, `assets/` |
+| [multisite](guidelines/multisite.md) | per-site data in tables a network shares | any `*_user_meta()`, `*_user_option()`, `*_site_option()` or `*_network_option()` call, `$wpdb->usermeta` queries, `class-migration.php` |
 
 ## Read the code after the change
 
