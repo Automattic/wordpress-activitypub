@@ -650,13 +650,7 @@ class Test_Delete extends \WP_UnitTestCase {
 	public function test_signed_delete_by_owner( $target, $signer, $actor, $deleted ) {
 		$note = 'https://example.com/users/alice/statuses/1';
 
-		$this->stub_remote_requests();
-
-		// The object still resolves, like a cached copy.
-		$this->responses[ $note ] = array(
-			'id'   => $note,
-			'type' => 'Note',
-		);
+		$this->stub_cached_note( $note );
 
 		$owner_id = $this->store_signing_actor( 'https://example.com/users/alice' );
 		$this->store_signing_actor( 'https://example.com/users/bob' );
@@ -664,16 +658,7 @@ class Test_Delete extends \WP_UnitTestCase {
 		$comment_id = null;
 		$post_id    = null;
 		if ( 'post' !== $target ) {
-			$comment_id = self::factory()->comment->create(
-				array(
-					'comment_post_ID' => self::factory()->post->create(),
-					'comment_meta'    => array(
-						'protocol'                     => 'activitypub',
-						'source_id'                    => $note,
-						'_activitypub_remote_actor_id' => $owner_id,
-					),
-				)
-			);
+			$comment_id = $this->create_owned_comment( $note, $owner_id );
 		}
 		if ( 'comment' !== $target ) {
 			$post_id = self::factory()->post->create(
@@ -723,7 +708,6 @@ class Test_Delete extends \WP_UnitTestCase {
 		);
 
 		// The actor is not stored, so a signature check would have to fetch its key.
-		$this->requests = 0;
 		$this->sign_delete( $delete, 'https://example.com/users/carol' );
 		Delete::handle_delete( $delete, array( self::$user_id ) );
 
@@ -739,23 +723,10 @@ class Test_Delete extends \WP_UnitTestCase {
 	public function test_signature_does_not_carry_over_to_the_next_delete() {
 		$note = 'https://example.com/users/alice/statuses/2';
 
-		$this->stub_remote_requests();
-		$this->responses[ $note ] = array(
-			'id'   => $note,
-			'type' => 'Note',
-		);
+		$this->stub_cached_note( $note );
 
 		$owner_id   = $this->store_signing_actor( 'https://example.com/users/alice' );
-		$comment_id = self::factory()->comment->create(
-			array(
-				'comment_post_ID' => self::factory()->post->create(),
-				'comment_meta'    => array(
-					'protocol'                     => 'activitypub',
-					'source_id'                    => $note,
-					'_activitypub_remote_actor_id' => $owner_id,
-				),
-			)
-		);
+		$comment_id = $this->create_owned_comment( $note, $owner_id );
 
 		// A signed Delete of something else, then an unsigned Delete of the comment.
 		$other = array(
@@ -789,15 +760,48 @@ class Test_Delete extends \WP_UnitTestCase {
 	 */
 	private function store_signing_actor( $uri ) {
 		return Remote_Actors::upsert(
+			\array_merge(
+				$this->actor_for_uri( $uri ),
+				array(
+					'publicKey' => array(
+						'id'           => $uri . '#main-key',
+						'owner'        => $uri,
+						'publicKeyPem' => Actors::get_keypair( 1 )['public_key'],
+					),
+				)
+			)
+		);
+	}
+
+	/**
+	 * Answer remote requests, with a Note that still resolves like a cached copy.
+	 *
+	 * @param string $note The ID of the Note.
+	 */
+	private function stub_cached_note( $note ) {
+		$this->stub_remote_requests();
+		$this->responses[ $note ] = array(
+			'id'   => $note,
+			'type' => 'Note',
+		);
+	}
+
+	/**
+	 * Create a comment for a remote Note, owned by a remote actor.
+	 *
+	 * @param string $note     The ID of the Note.
+	 * @param int    $owner_id The ID of the remote actor post.
+	 *
+	 * @return int The comment ID.
+	 */
+	private function create_owned_comment( $note, $owner_id ) {
+		return self::factory()->comment->create(
 			array(
-				'id'                => $uri,
-				'type'              => 'Person',
-				'preferredUsername' => \basename( $uri ),
-				'inbox'             => $uri . '/inbox',
-				'publicKey'         => array(
-					'id'           => $uri . '#main-key',
-					'owner'        => $uri,
-					'publicKeyPem' => Actors::get_keypair( 1 )['public_key'],
+				'comment_post_ID' => self::factory()->post->create(),
+				'comment_meta'    => array(
+					'protocol'                     => 'activitypub',
+					'source_id'                    => $note,
+					'_activitypub_remote_actor_id' => $owner_id,
 				),
 			)
 		);
@@ -860,23 +864,10 @@ class Test_Delete extends \WP_UnitTestCase {
 	public function test_signed_delete_through_the_shared_inbox() {
 		$note = 'https://example.com/users/alice/statuses/3';
 
-		$this->stub_remote_requests();
-		$this->responses[ $note ] = array(
-			'id'   => $note,
-			'type' => 'Note',
-		);
+		$this->stub_cached_note( $note );
 
 		$owner_id   = $this->store_signing_actor( 'https://example.com/users/alice' );
-		$comment_id = self::factory()->comment->create(
-			array(
-				'comment_post_ID' => self::factory()->post->create(),
-				'comment_meta'    => array(
-					'protocol'                     => 'activitypub',
-					'source_id'                    => $note,
-					'_activitypub_remote_actor_id' => $owner_id,
-				),
-			)
-		);
+		$comment_id = $this->create_owned_comment( $note, $owner_id );
 
 		$delete = array(
 			'id'     => $note . '#delete',

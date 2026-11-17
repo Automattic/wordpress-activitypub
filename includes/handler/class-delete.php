@@ -134,8 +134,7 @@ class Delete {
 		}
 
 		// The request belongs to this Delete only.
-		self::$request = null;
-		self::$signer  = false;
+		self::reset();
 	}
 
 	/**
@@ -417,7 +416,8 @@ class Delete {
 		$id   = object_to_uri( $activity['object'] );
 		$post = $post ?? Remote_Posts::get_by_guid( $id );
 
-		$signed = ! \is_wp_error( $post ) && self::is_signed_by_owner( $activity, array( (int) \get_post_meta( $post->ID, '_activitypub_remote_actor_id', true ) ) );
+		$owner_id = \is_wp_error( $post ) ? 0 : (int) \get_post_meta( $post->ID, '_activitypub_remote_actor_id', true );
+		$signed   = self::is_signed_by_owner( $activity, array( $owner_id ) );
 
 		// The owner signed the Delete, or the object is gone from its own host.
 		if ( $signed || Tombstone::exists( $id ) ) {
@@ -489,18 +489,13 @@ class Delete {
 		$json = $request->get_json_params();
 
 		if ( isset( $json['type'] ) && 'Delete' === $json['type'] ) {
-			self::$request = null;
-			self::$signer  = false;
-
 			/*
 			 * The actor of a Delete of an object still exists, so its signature can be checked,
 			 * without making it a requirement. It is checked only when a local copy is about to be
 			 * deleted, see is_signed_by().
 			 */
 			$actor = object_to_uri( $json['actor'] ?? '' );
-			if ( $actor && object_to_uri( $json['object'] ?? '' ) !== $actor ) {
-				self::$request = $request;
-			}
+			self::reset( ( $actor && object_to_uri( $json['object'] ?? '' ) !== $actor ) ? $request : null );
 
 			return true;
 		}
@@ -519,19 +514,17 @@ class Delete {
 	 * @return bool True if the signer of the Delete owns all the objects.
 	 */
 	private static function is_signed_by_owner( $activity, $owner_ids ) {
-		$actor = object_to_uri( $activity['actor'] ?? '' );
-
 		if ( ! $owner_ids ) {
 			return false;
 		}
 
 		foreach ( $owner_ids as $owner_id ) {
-			if ( ! Remote_Actors::has_uri( $owner_id, $actor ) ) {
+			if ( ! Remote_Actors::has_uri( $owner_id, $activity['actor'] ?? '' ) ) {
 				return false;
 			}
 		}
 
-		return self::is_signed_by( $actor );
+		return self::is_signed_by( $activity['actor'] ?? '' );
 	}
 
 	/**
@@ -541,12 +534,12 @@ class Delete {
 	 *
 	 * @since unreleased
 	 *
-	 * @param string $actor The actor URI.
+	 * @param array|string $actor The actor.
 	 *
 	 * @return bool True if the signature verified and its key belongs to the actor.
 	 */
 	private static function is_signed_by( $actor ) {
-		if ( ! self::$request || ! $actor ) {
+		if ( ! self::$request ) {
 			return false;
 		}
 
@@ -555,7 +548,19 @@ class Delete {
 			self::$signer = \is_string( $signer ) ? $signer : '';
 		}
 
-		return self::$signer === $actor;
+		return is_same_actor( self::$signer, $actor );
+	}
+
+	/**
+	 * Set the request of the current Delete and forget the signer of the previous one.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_REST_Request|null $request Optional. The request of a Delete of an object. Default null.
+	 */
+	private static function reset( $request = null ) {
+		self::$request = $request;
+		self::$signer  = false;
 	}
 
 	/**

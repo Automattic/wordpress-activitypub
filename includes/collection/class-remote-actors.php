@@ -16,6 +16,7 @@ use Activitypub\Webfinger;
 use function Activitypub\get_id_hash;
 use function Activitypub\get_stored_id_forms;
 use function Activitypub\is_actor;
+use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 use function Activitypub\unescape_guid;
@@ -261,13 +262,13 @@ class Remote_Actors {
 	 *
 	 * @since unreleased
 	 *
-	 * @param int    $post_id   The ID of the remote actor post.
-	 * @param string $actor_uri The actor URI.
+	 * @param int          $post_id The ID of the remote actor post.
+	 * @param array|string $actor   The actor.
 	 *
-	 * @return bool True if the post belongs to the actor URI.
+	 * @return bool True if the post belongs to the actor.
 	 */
-	public static function has_uri( $post_id, $actor_uri ) {
-		return $post_id && \is_string( $actor_uri ) && '' !== $actor_uri && unescape_guid( \get_post_field( 'guid', $post_id, 'raw' ) ) === $actor_uri;
+	public static function has_uri( $post_id, $actor ) {
+		return $post_id && is_same_actor( unescape_guid( \get_post_field( 'guid', $post_id, 'raw' ) ), $actor );
 	}
 
 	/**

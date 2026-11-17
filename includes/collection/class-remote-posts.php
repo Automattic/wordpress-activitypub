@@ -191,7 +191,7 @@ class Remote_Posts {
 		 * payload's attributedTo, because only the actor is bound to the HTTP signature.
 		 */
 		if ( isset( $activity['actor'] ) ) {
-			if ( ! Remote_Actors::has_uri( (int) \get_post_meta( $post->ID, '_activitypub_remote_actor_id', true ), object_to_uri( $activity['actor'] ) ) ) {
+			if ( ! Remote_Actors::has_uri( (int) \get_post_meta( $post->ID, '_activitypub_remote_actor_id', true ), $activity['actor'] ) ) {
 				return new \WP_Error(
 					'activitypub_update_forbidden',
 					\__( 'Update failed: the actor does not own this post.', 'activitypub' ),

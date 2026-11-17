@@ -166,7 +166,7 @@ class Interactions {
 		 * handled-update success flag stays false.
 		 */
 		$owner_id = (int) \get_comment_meta( $comment_data['comment_ID'], '_activitypub_remote_actor_id', true );
-		if ( $owner_id ? ! Remote_Actors::has_uri( $owner_id, object_to_uri( $activity['actor'] ) ) : ! is_same_host( $activity['actor'], $object_id ) ) {
+		if ( $owner_id ? ! Remote_Actors::has_uri( $owner_id, $activity['actor'] ) : ! is_same_host( $activity['actor'], $object_id ) ) {
 			return new \WP_Error(
 				'activitypub_update_forbidden',
 				\__( 'The Update actor does not own the target comment.', 'activitypub' )
