@@ -327,6 +327,36 @@ class Test_Server extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The consent page does nothing while the API is off.
+	 *
+	 * A logged-out visitor is sent to the login screen when the page is handled, so the redirect
+	 * shows whether the handler ran.
+	 *
+	 * @covers ::login_form_authorize
+	 */
+	public function test_login_form_authorize_needs_the_api() {
+		\delete_option( 'activitypub_api' );
+		\wp_set_current_user( 0 );
+
+		$stop = static function () {
+			throw new \Exception( 'redirect' );
+		};
+		\add_filter( 'wp_redirect', $stop );
+
+		$result = 'nothing';
+
+		try {
+			Server::login_form_authorize();
+		} catch ( \Exception $e ) {
+			$result = $e->getMessage();
+		}
+
+		\remove_filter( 'wp_redirect', $stop );
+
+		$this->assertSame( 'nothing', $result );
+	}
+
+	/**
 	 * The authorization form provides a logout URL that keeps the OAuth request.
 	 *
 	 * The request parameters must survive the logout round trip exactly, even
