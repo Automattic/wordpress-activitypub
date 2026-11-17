@@ -12,17 +12,17 @@ use Activitypub\Collection\Actors;
 /**
  * Token class for managing OAuth 2.0 access and refresh tokens.
  *
- * Tokens are stored as user metadata with hashed values for security.
+ * Tokens are stored as user options with hashed values for security.
  * This follows the IndieAuth pattern for efficient token management.
  */
 class Token {
 	/**
-	 * User meta key prefix for OAuth tokens.
+	 * User option name prefix for OAuth tokens.
 	 */
 	const META_PREFIX = '_activitypub_oauth_token_';
 
 	/**
-	 * User meta key prefix for refresh token index (maps refresh hash to access hash).
+	 * User option name prefix for refresh token index (maps refresh hash to access hash).
 	 */
 	const REFRESH_INDEX_PREFIX = '_activitypub_oauth_refresh_';
 
@@ -88,6 +88,41 @@ class Token {
 	}
 
 	/**
+	 * The stored user meta key of an access token on this site.
+	 *
+	 * Tokens are user options, so on a multisite network a token only exists on the site that
+	 * issued it. Core has no lookup of a user by option name and no listing of a user's options,
+	 * so the token lookup and the token lists use the stored key. Reads use it too, because
+	 * get_user_option() falls back to the key without the site prefix.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $hash Optional. The access token hash. Default empty, for the key prefix.
+	 *
+	 * @return string The meta key.
+	 */
+	public static function get_token_key( $hash = '' ) {
+		global $wpdb;
+
+		return $wpdb->get_blog_prefix() . self::META_PREFIX . $hash;
+	}
+
+	/**
+	 * The stored user meta key of a refresh token index on this site.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $hash Optional. The refresh token hash. Default empty, for the key prefix.
+	 *
+	 * @return string The meta key.
+	 */
+	public static function get_refresh_key( $hash = '' ) {
+		global $wpdb;
+
+		return $wpdb->get_blog_prefix() . self::REFRESH_INDEX_PREFIX . $hash;
+	}
+
+	/**
 	 * Create a new access token.
 	 *
 	 * @param int    $user_id   WordPress user ID.
@@ -122,10 +157,9 @@ class Token {
 			'last_used_at'       => null,
 		);
 
-		// Store in user meta with access token hash as key.
+		// Store as a user option with access token hash as key.
 		$access_hash = self::hash_token( $access_token );
-		$meta_key    = self::META_PREFIX . $access_hash;
-		$result      = \update_user_meta( $user_id, $meta_key, $token_data );
+		$result      = \update_user_option( $user_id, self::META_PREFIX . $access_hash, $token_data );
 
 		if ( false === $result ) {
 			return new \WP_Error(
@@ -136,8 +170,7 @@ class Token {
 		}
 
 		// Store refresh token index for O(1) lookup during refresh.
-		$refresh_index_key = self::REFRESH_INDEX_PREFIX . self::hash_token( $refresh_token );
-		\update_user_meta( $user_id, $refresh_index_key, $access_hash );
+		\update_user_option( $user_id, self::REFRESH_INDEX_PREFIX . self::hash_token( $refresh_token ), $access_hash );
 
 		// Track user on the client post for cleanup.
 		self::track_user( $user_id, $client_id );
@@ -183,7 +216,7 @@ class Token {
 		$user_id = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT user_id FROM $wpdb->usermeta WHERE meta_key = %s LIMIT 1",
-				$meta_key
+				self::get_token_key( $token_hash )
 			)
 		);
 
@@ -195,7 +228,7 @@ class Token {
 			);
 		}
 
-		$token_data = \get_user_meta( (int) $user_id, $meta_key, true );
+		$token_data = \get_user_meta( (int) $user_id, self::get_token_key( $token_hash ), true );
 
 		if ( empty( $token_data ) || ! \is_array( $token_data ) ) {
 			return new \WP_Error(
@@ -233,7 +266,7 @@ class Token {
 		$last_used = $token_data['last_used_at'] ?? 0;
 		if ( empty( $last_used ) || ( \time() - $last_used ) > 5 * MINUTE_IN_SECONDS ) {
 			$token_data['last_used_at'] = \time();
-			\update_user_meta( (int) $user_id, $meta_key, $token_data );
+			\update_user_option( (int) $user_id, $meta_key, $token_data );
 		}
 
 		return new self( (int) $user_id, $token_hash, $token_data );
@@ -256,7 +289,7 @@ class Token {
 		$user_id = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT user_id FROM $wpdb->usermeta WHERE meta_key = %s LIMIT 1",
-				$refresh_index_key
+				self::get_refresh_key( $refresh_hash )
 			)
 		);
 
@@ -271,7 +304,7 @@ class Token {
 		$user_id = (int) $user_id;
 
 		// Get the access token hash from the index.
-		$access_hash = \get_user_meta( $user_id, $refresh_index_key, true );
+		$access_hash = \get_user_meta( $user_id, self::get_refresh_key( $refresh_hash ), true );
 		if ( empty( $access_hash ) ) {
 			return new \WP_Error(
 				'activitypub_invalid_refresh_token',
@@ -282,7 +315,7 @@ class Token {
 
 		// Get the full token data.
 		$meta_key   = self::META_PREFIX . $access_hash;
-		$token_data = \get_user_meta( $user_id, $meta_key, true );
+		$token_data = \get_user_meta( $user_id, self::get_token_key( $access_hash ), true );
 
 		if ( empty( $token_data ) || ! \is_array( $token_data ) ) {
 			return new \WP_Error(
@@ -315,8 +348,8 @@ class Token {
 		if ( isset( $token_data['refresh_expires_at'] ) &&
 			$token_data['refresh_expires_at'] < \time() ) {
 			// Delete the expired token and index.
-			\delete_user_meta( $user_id, $meta_key );
-			\delete_user_meta( $user_id, $refresh_index_key );
+			\delete_user_option( $user_id, $meta_key );
+			\delete_user_option( $user_id, $refresh_index_key );
 
 			return new \WP_Error(
 				'activitypub_refresh_token_expired',
@@ -332,8 +365,8 @@ class Token {
 		}
 
 		// Delete the old token and index.
-		\delete_user_meta( $user_id, $meta_key );
-		\delete_user_meta( $user_id, $refresh_index_key );
+		\delete_user_option( $user_id, $meta_key );
+		\delete_user_option( $user_id, $refresh_index_key );
 
 		// Create a new token.
 		return self::create( $user_id, $client_id, $token_data['scopes'] );
@@ -388,13 +421,13 @@ class Token {
 		$user_id         = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT user_id FROM $wpdb->usermeta WHERE meta_key = %s LIMIT 1",
-				$access_meta_key
+				self::get_token_key( $token_hash )
 			)
 		);
 
 		if ( $user_id ) {
 			$user_id    = (int) $user_id;
-			$token_data = \get_user_meta( $user_id, $access_meta_key, true );
+			$token_data = \get_user_meta( $user_id, self::get_token_key( $token_hash ), true );
 			$client_id  = \is_array( $token_data ) ? ( $token_data['client_id'] ?? '' ) : '';
 
 			if ( ! self::caller_owns_token( $user_id, $client_id, $caller_user_id, $caller_client_id ) ) {
@@ -402,12 +435,11 @@ class Token {
 			}
 
 			// Delete the token.
-			\delete_user_meta( $user_id, $access_meta_key );
+			\delete_user_option( $user_id, $access_meta_key );
 
 			// Also delete the refresh token index if it exists.
 			if ( \is_array( $token_data ) && isset( $token_data['refresh_token_hash'] ) ) {
-				$refresh_index_key = self::REFRESH_INDEX_PREFIX . $token_data['refresh_token_hash'];
-				\delete_user_meta( $user_id, $refresh_index_key );
+				\delete_user_option( $user_id, self::REFRESH_INDEX_PREFIX . $token_data['refresh_token_hash'] );
 			}
 
 			self::maybe_untrack_user( $user_id, $client_id );
@@ -419,17 +451,17 @@ class Token {
 		$user_id           = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT user_id FROM $wpdb->usermeta WHERE meta_key = %s LIMIT 1",
-				$refresh_index_key
+				self::get_refresh_key( $token_hash )
 			)
 		);
 
 		if ( $user_id ) {
 			$user_id     = (int) $user_id;
-			$access_hash = \get_user_meta( $user_id, $refresh_index_key, true );
+			$access_hash = \get_user_meta( $user_id, self::get_refresh_key( $token_hash ), true );
 			$client_id   = '';
 
 			if ( $access_hash ) {
-				$token_data = \get_user_meta( $user_id, self::META_PREFIX . $access_hash, true );
+				$token_data = \get_user_meta( $user_id, self::get_token_key( $access_hash ), true );
 				$client_id  = \is_array( $token_data ) ? ( $token_data['client_id'] ?? '' ) : '';
 			}
 
@@ -438,9 +470,9 @@ class Token {
 			}
 
 			if ( $access_hash ) {
-				\delete_user_meta( $user_id, self::META_PREFIX . $access_hash );
+				\delete_user_option( $user_id, self::META_PREFIX . $access_hash );
 			}
-			\delete_user_meta( $user_id, $refresh_index_key );
+			\delete_user_option( $user_id, $refresh_index_key );
 
 			self::maybe_untrack_user( $user_id, $client_id );
 			return true;
@@ -526,7 +558,7 @@ class Token {
 
 		foreach ( $all_meta as $meta_key => $meta_values ) {
 			// Delete token entries and collect client IDs.
-			if ( 0 === \strpos( $meta_key, self::META_PREFIX ) ) {
+			if ( 0 === \strpos( $meta_key, self::get_token_key() ) ) {
 				$token_data = \maybe_unserialize( $meta_values[0] );
 				if ( \is_array( $token_data ) && ! empty( $token_data['client_id'] ) ) {
 					$client_ids[] = $token_data['client_id'];
@@ -535,7 +567,7 @@ class Token {
 				++$count;
 			}
 			// Delete refresh token indices.
-			if ( 0 === \strpos( $meta_key, self::REFRESH_INDEX_PREFIX ) ) {
+			if ( 0 === \strpos( $meta_key, self::get_refresh_key() ) ) {
 				\delete_user_meta( $user_id, $meta_key );
 			}
 		}
@@ -580,7 +612,7 @@ class Token {
 			$all_meta = \get_user_meta( $user_id );
 
 			foreach ( $all_meta as $meta_key => $meta_values ) {
-				if ( 0 !== \strpos( $meta_key, self::META_PREFIX ) ) {
+				if ( 0 !== \strpos( $meta_key, self::get_token_key() ) ) {
 					continue;
 				}
 
@@ -595,7 +627,7 @@ class Token {
 					\delete_user_meta( $user_id, $meta_key );
 					// Also delete refresh token index.
 					if ( isset( $token_data['refresh_token_hash'] ) ) {
-						\delete_user_meta( $user_id, self::REFRESH_INDEX_PREFIX . $token_data['refresh_token_hash'] );
+						\delete_user_option( $user_id, self::REFRESH_INDEX_PREFIX . $token_data['refresh_token_hash'] );
 					}
 					++$count;
 				}
@@ -619,7 +651,7 @@ class Token {
 		$tokens   = array();
 
 		foreach ( $all_meta as $meta_key => $meta_values ) {
-			if ( 0 !== \strpos( $meta_key, self::META_PREFIX ) ) {
+			if ( 0 !== \strpos( $meta_key, self::get_token_key() ) ) {
 				continue;
 			}
 
@@ -770,7 +802,7 @@ class Token {
 		$tokens   = array();
 
 		foreach ( $all_meta as $meta_key => $meta_values ) {
-			if ( 0 !== \strpos( $meta_key, self::META_PREFIX ) ) {
+			if ( 0 !== \strpos( $meta_key, self::get_token_key() ) ) {
 				continue;
 			}
 
@@ -804,7 +836,7 @@ class Token {
 
 			// Also delete the refresh token index.
 			if ( isset( $token_data['refresh_token_hash'] ) ) {
-				\delete_user_meta( $user_id, self::REFRESH_INDEX_PREFIX . $token_data['refresh_token_hash'] );
+				\delete_user_option( $user_id, self::REFRESH_INDEX_PREFIX . $token_data['refresh_token_hash'] );
 			}
 
 			--$to_remove;
@@ -902,7 +934,7 @@ class Token {
 			$client_ids = array();
 
 			foreach ( $all_meta as $meta_key => $meta_values ) {
-				if ( 0 !== \strpos( $meta_key, self::META_PREFIX ) ) {
+				if ( 0 !== \strpos( $meta_key, self::get_token_key() ) ) {
 					continue;
 				}
 
@@ -924,7 +956,7 @@ class Token {
 					\delete_user_meta( $user_id, $meta_key );
 					// Also delete refresh token index.
 					if ( isset( $token_data['refresh_token_hash'] ) ) {
-						\delete_user_meta( $user_id, self::REFRESH_INDEX_PREFIX . $token_data['refresh_token_hash'] );
+						\delete_user_option( $user_id, self::REFRESH_INDEX_PREFIX . $token_data['refresh_token_hash'] );
 					}
 					++$count;
 

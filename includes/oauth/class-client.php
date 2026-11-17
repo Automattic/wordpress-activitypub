@@ -927,6 +927,9 @@ class Client {
 	 * @return int The number of clients deleted.
 	 */
 	public static function delete_all() {
+		// Revoke the tokens first, the users are found through the client posts.
+		Token::revoke_all();
+
 		$post_ids = \get_posts(
 			array(
 				'post_type'   => self::POST_TYPE,
@@ -939,9 +942,6 @@ class Client {
 		foreach ( $post_ids as $post_id ) {
 			\wp_delete_post( $post_id, true );
 		}
-
-		// Also revoke all tokens stored in user meta.
-		Token::revoke_all();
 
 		return \count( $post_ids );
 	}

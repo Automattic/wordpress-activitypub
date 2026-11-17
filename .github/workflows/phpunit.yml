@@ -20,8 +20,11 @@ on:
       - 'phpcs.xml'
       - '.github/workflows/phpunit.yml'
       - '!build/**/*.asset.php'
+permissions:
+  contents: read
 jobs:
   phpunit:
+    name: phpunit (${{ matrix.php-versions }}${{ matrix.multisite && ', multisite' || '' }})
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -34,12 +37,16 @@ jobs:
     strategy:
       matrix:
         php-versions: ['7.4', '8.3', '8.5']
+        multisite: [false]
         include:
           - wp-version: latest
           - wp-version: '6.5'
             php-versions: '7.4'
           - wp-version: trunk
             php-versions: '8.5'
+          - php-versions: '8.3'
+            wp-version: latest
+            multisite: true
     steps:
       - name: Install svn
         run: |
@@ -67,6 +74,7 @@ jobs:
         env:
           PHP_VERSION: ${{ matrix.php-versions }}
           WP_ENVIRONMENT_TYPE: production
+          WP_MULTISITE: ${{ matrix.multisite && '1' || '0' }}
 
   coverage:
     runs-on: ubuntu-latest

@@ -1352,7 +1352,7 @@ class Admin {
 		$meta_key = \sanitize_text_field( \wp_unslash( $_POST['meta_key'] ?? '' ) ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Not a DB query parameter.
 
 		// Verify the meta key belongs to our token prefix.
-		if ( 0 !== \strpos( $meta_key, Token::META_PREFIX ) ) {
+		if ( 0 !== \strpos( $meta_key, Token::get_token_key() ) ) {
 			\wp_send_json_error( array( 'message' => \__( 'Invalid token.', 'activitypub' ) ) );
 		}
 
@@ -1369,7 +1369,7 @@ class Admin {
 
 		// Delete the associated refresh token index.
 		if ( ! empty( $token_data['refresh_token_hash'] ) ) {
-			\delete_user_meta( $user_id, Token::REFRESH_INDEX_PREFIX . $token_data['refresh_token_hash'] );
+			\delete_user_option( $user_id, Token::REFRESH_INDEX_PREFIX . $token_data['refresh_token_hash'] );
 		}
 
 		\wp_send_json_success( array( 'deleted' => true ) );

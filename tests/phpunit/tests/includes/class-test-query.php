@@ -479,7 +479,7 @@ class Test_Query extends \WP_UnitTestCase {
 	 * @covers ::should_negotiate_content
 	 */
 	public function test_should_negotiate_content() {
-		\add_option( 'permalink_structure', '/%postname%/' );
+		$this->set_permalink_structure( '/%postname%/' );
 
 		$this->assertTrue( Query::get_instance()->should_negotiate_content() );
 
