@@ -612,4 +612,28 @@ class Test_Token extends \WP_UnitTestCase {
 		$this->assertWPError( Token::validate( $token['access_token'] ) );
 		$this->assertWPError( Token::refresh( $token['refresh_token'], $this->client_id ) );
 	}
+
+	/**
+	 * Test that token data is only read from the keys of the current site.
+	 *
+	 * @covers ::refresh
+	 */
+	public function test_token_data_is_read_from_the_site_keys() {
+		global $wpdb;
+
+		$token = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+
+		// Keep the refresh index, store the token data without the site prefix.
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"UPDATE {$wpdb->usermeta} SET meta_key = SUBSTRING( meta_key, %d ) WHERE user_id = %d AND meta_key LIKE %s",
+				\strlen( $wpdb->get_blog_prefix() ) + 1,
+				$this->user_id,
+				$wpdb->esc_like( Token::get_token_key() ) . '%'
+			)
+		);
+		\wp_cache_delete( $this->user_id, 'user_meta' );
+
+		$this->assertWPError( Token::refresh( $token['refresh_token'], $this->client_id ) );
+	}
 }

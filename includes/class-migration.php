@@ -18,6 +18,7 @@ use Activitypub\Collection\Following;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\OAuth\Client;
 use Activitypub\OAuth\Token;
 use Activitypub\Transformer\Factory;
 
@@ -1451,9 +1452,10 @@ class Migration {
 	/**
 	 * Move OAuth tokens to keys that carry the site's table prefix.
 	 *
-	 * On a single site the tokens move, so connected apps keep working. On a multisite network
-	 * the user meta is shared by all sites and a token does not name the site it was issued on,
-	 * so the tokens are deleted and apps have to be connected again.
+	 * On a single site the tokens move, so connected apps keep working. On a multisite network,
+	 * or when sites share the user tables, the user meta is shared by all sites and a token does
+	 * not name the site it was issued on, so the tokens are deleted and apps have to be connected
+	 * again.
 	 *
 	 * @since unreleased
 	 *
@@ -1461,6 +1463,24 @@ class Migration {
 	 */
 	public static function migrate_oauth_token_keys() {
 		global $wpdb;
+
+		$shared = \is_multisite() || \defined( 'CUSTOM_USER_META_TABLE' );
+
+		if ( $shared ) {
+			// The first site deletes the tokens of all sites, so every site removes its own user tracking.
+			$client_post_ids = \get_posts(
+				array(
+					'post_type'   => Client::POST_TYPE,
+					'post_status' => 'any',
+					'numberposts' => -1,
+					'fields'      => 'ids',
+				)
+			);
+
+			foreach ( $client_post_ids as $client_post_id ) {
+				\delete_post_meta( $client_post_id, Token::USER_META_KEY );
+			}
+		}
 
 		$token_like   = $wpdb->esc_like( Token::META_PREFIX ) . '%';
 		$refresh_like = $wpdb->esc_like( Token::REFRESH_INDEX_PREFIX ) . '%';
@@ -1478,7 +1498,7 @@ class Migration {
 			return;
 		}
 
-		if ( \is_multisite() ) {
+		if ( $shared ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->query(
 				$wpdb->prepare(

@@ -92,7 +92,8 @@ class Token {
 	 *
 	 * Tokens are user options, so on a multisite network a token only exists on the site that
 	 * issued it. Core has no lookup of a user by option name and no listing of a user's options,
-	 * so the token lookup and the token lists use the stored key.
+	 * so the token lookup and the token lists use the stored key. Reads use it too, because
+	 * get_user_option() falls back to the key without the site prefix.
 	 *
 	 * @since unreleased
 	 *
@@ -227,7 +228,7 @@ class Token {
 			);
 		}
 
-		$token_data = \get_user_option( $meta_key, (int) $user_id );
+		$token_data = \get_user_meta( (int) $user_id, self::get_token_key( $token_hash ), true );
 
 		if ( empty( $token_data ) || ! \is_array( $token_data ) ) {
 			return new \WP_Error(
@@ -303,7 +304,7 @@ class Token {
 		$user_id = (int) $user_id;
 
 		// Get the access token hash from the index.
-		$access_hash = \get_user_option( $refresh_index_key, $user_id );
+		$access_hash = \get_user_meta( $user_id, self::get_refresh_key( $refresh_hash ), true );
 		if ( empty( $access_hash ) ) {
 			return new \WP_Error(
 				'activitypub_invalid_refresh_token',
@@ -314,7 +315,7 @@ class Token {
 
 		// Get the full token data.
 		$meta_key   = self::META_PREFIX . $access_hash;
-		$token_data = \get_user_option( $meta_key, $user_id );
+		$token_data = \get_user_meta( $user_id, self::get_token_key( $access_hash ), true );
 
 		if ( empty( $token_data ) || ! \is_array( $token_data ) ) {
 			return new \WP_Error(
@@ -426,7 +427,7 @@ class Token {
 
 		if ( $user_id ) {
 			$user_id    = (int) $user_id;
-			$token_data = \get_user_option( $access_meta_key, $user_id );
+			$token_data = \get_user_meta( $user_id, self::get_token_key( $token_hash ), true );
 			$client_id  = \is_array( $token_data ) ? ( $token_data['client_id'] ?? '' ) : '';
 
 			if ( ! self::caller_owns_token( $user_id, $client_id, $caller_user_id, $caller_client_id ) ) {
@@ -456,11 +457,11 @@ class Token {
 
 		if ( $user_id ) {
 			$user_id     = (int) $user_id;
-			$access_hash = \get_user_option( $refresh_index_key, $user_id );
+			$access_hash = \get_user_meta( $user_id, self::get_refresh_key( $token_hash ), true );
 			$client_id   = '';
 
 			if ( $access_hash ) {
-				$token_data = \get_user_option( self::META_PREFIX . $access_hash, $user_id );
+				$token_data = \get_user_meta( $user_id, self::get_token_key( $access_hash ), true );
 				$client_id  = \is_array( $token_data ) ? ( $token_data['client_id'] ?? '' ) : '';
 			}
 

@@ -20,6 +20,8 @@ on:
       - 'phpcs.xml'
       - '.github/workflows/phpunit.yml'
       - '!build/**/*.asset.php'
+permissions:
+  contents: read
 jobs:
   phpunit:
     name: phpunit (${{ matrix.php-versions }}${{ matrix.multisite && ', multisite' || '' }})

@@ -1675,8 +1675,11 @@ class Test_Migration extends \WP_UnitTestCase {
 			$this->markTestSkipped( 'Multisite only.' );
 		}
 
-		$this->create_legacy_oauth_token();
+		$legacy  = $this->create_legacy_oauth_token();
 		$current = $this->create_legacy_oauth_token();
+		$post_id = Client::get( $legacy['client_id'] )->get_post_id();
+
+		$this->assertNotEmpty( \get_post_meta( $post_id, Token::USER_META_KEY, false ) );
 
 		// Store one token with the site prefix again, as tokens issued after the update are.
 		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
@@ -1692,6 +1695,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		Migration::migrate_oauth_token_keys();
 
 		$this->assertNotWPError( Token::validate( $current['access_token'] ), 'A token with the site prefix is kept.' );
+		$this->assertEmpty( \get_post_meta( $post_id, Token::USER_META_KEY, false ), 'Users of deleted tokens are no longer tracked.' );
 		$this->assertSame(
 			'0',
 			$wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
