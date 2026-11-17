@@ -9,7 +9,9 @@ namespace Activitypub\Tests\Handler;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\Handler\Delete;
 use Activitypub\Proxy;
 use Activitypub\Tests\Quote_Post_Fixtures;
@@ -67,6 +69,8 @@ class Test_Delete extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		\remove_filter( 'pre_get_remote_metadata_by_actor', array( self::class, 'get_remote_metadata_by_actor' ) );
+		$this->unstub_remote_requests();
+		\delete_option( 'activitypub_rfc9421_signature' );
 		$this->remove_quoted_object_mock();
 
 		parent::tear_down();
@@ -644,27 +648,9 @@ class Test_Delete extends \WP_UnitTestCase {
 	 * @param bool   $deleted Whether the local copy is deleted.
 	 */
 	public function test_signed_delete_by_owner( $target, $signer, $actor, $deleted ) {
-		\update_option( 'activitypub_rfc9421_signature', '0' );
-
-		$owner = 'https://example.com/users/alice';
-		$note  = 'https://example.com/users/alice/statuses/1';
-		$keys  = \Activitypub\Collection\Actors::get_keypair( 1 );
+		$note = 'https://example.com/users/alice/statuses/1';
 
 		$this->stub_remote_requests();
-		foreach ( array( $owner, 'https://example.com/users/bob' ) as $uri ) {
-			$this->responses[ $uri ] = array(
-				'id'                => $uri,
-				'type'              => 'Person',
-				'preferredUsername' => \basename( $uri ),
-				'inbox'             => $uri . '/inbox',
-				'publicKey'         => array(
-					'id'           => $uri . '#main-key',
-					'owner'        => $uri,
-					'publicKeyPem' => $keys['public_key'],
-				),
-			);
-			Remote_Actors::fetch_by_uri( $uri );
-		}
 
 		// The object still resolves, like a cached copy.
 		$this->responses[ $note ] = array(
@@ -672,7 +658,9 @@ class Test_Delete extends \WP_UnitTestCase {
 			'type' => 'Note',
 		);
 
-		$owner_id   = Remote_Actors::get_by_uri( $owner )->ID;
+		$owner_id = $this->store_signing_actor( 'https://example.com/users/alice' );
+		$this->store_signing_actor( 'https://example.com/users/bob' );
+
 		$comment_id = null;
 		$post_id    = null;
 		if ( 'post' !== $target ) {
@@ -690,7 +678,7 @@ class Test_Delete extends \WP_UnitTestCase {
 		if ( 'comment' !== $target ) {
 			$post_id = self::factory()->post->create(
 				array(
-					'post_type'  => \Activitypub\Collection\Remote_Posts::POST_TYPE,
+					'post_type'  => Remote_Posts::POST_TYPE,
 					'guid'       => $note,
 					'meta_input' => array( '_activitypub_remote_actor_id' => $owner_id ),
 				)
@@ -707,13 +695,142 @@ class Test_Delete extends \WP_UnitTestCase {
 			),
 		);
 
+		$this->sign_delete( $delete, $signer );
+		Delete::handle_delete( $delete, array( self::$user_id ) );
+
+		if ( $comment_id ) {
+			$this->assertSame( ! $deleted, \get_comment( $comment_id ) instanceof \WP_Comment );
+		}
+		if ( $post_id ) {
+			$this->assertSame( ! $deleted, \get_post( $post_id ) instanceof \WP_Post );
+		}
+	}
+
+	/**
+	 * Test that the signature of a Delete is only checked for a local copy.
+	 *
+	 * @covers ::defer_signature_verification
+	 * @covers ::delete_object
+	 */
+	public function test_signed_delete_without_local_copy_skips_the_signature() {
+		$this->stub_remote_requests();
+
+		$delete = array(
+			'id'     => 'https://example.com/users/carol#delete',
+			'type'   => 'Delete',
+			'actor'  => 'https://example.com/users/carol',
+			'object' => 'https://example.com/users/carol/statuses/1',
+		);
+
+		// The actor is not stored, so a signature check would have to fetch its key.
+		$this->requests = 0;
+		$this->sign_delete( $delete, 'https://example.com/users/carol' );
+		Delete::handle_delete( $delete, array( self::$user_id ) );
+
+		// Only the tombstone check of the object.
+		$this->assertSame( 1, $this->requests );
+	}
+
+	/**
+	 * Test that a verified signature only counts for its own Delete.
+	 *
+	 * @covers ::handle_delete
+	 */
+	public function test_signature_does_not_carry_over_to_the_next_delete() {
+		$note = 'https://example.com/users/alice/statuses/2';
+
+		$this->stub_remote_requests();
+		$this->responses[ $note ] = array(
+			'id'   => $note,
+			'type' => 'Note',
+		);
+
+		$owner_id   = $this->store_signing_actor( 'https://example.com/users/alice' );
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => self::factory()->post->create(),
+				'comment_meta'    => array(
+					'protocol'                     => 'activitypub',
+					'source_id'                    => $note,
+					'_activitypub_remote_actor_id' => $owner_id,
+				),
+			)
+		);
+
+		// A signed Delete of something else, then an unsigned Delete of the comment.
+		$other = array(
+			'id'     => 'https://example.com/users/alice#delete-1',
+			'type'   => 'Delete',
+			'actor'  => 'https://example.com/users/alice',
+			'object' => 'https://example.com/users/alice/statuses/1',
+		);
+		$this->sign_delete( $other, 'https://example.com/users/alice' );
+		Delete::handle_delete( $other, array( self::$user_id ) );
+
+		Delete::handle_delete(
+			array(
+				'id'     => 'https://example.com/users/alice#delete-2',
+				'type'   => 'Delete',
+				'actor'  => 'https://example.com/users/alice',
+				'object' => $note,
+			),
+			array( self::$user_id )
+		);
+
+		$this->assertInstanceOf( \WP_Comment::class, \get_comment( $comment_id ) );
+	}
+
+	/**
+	 * Store a remote actor whose key signs the test requests.
+	 *
+	 * @param string $uri The actor URI.
+	 *
+	 * @return int The ID of the remote actor post.
+	 */
+	private function store_signing_actor( $uri ) {
+		return Remote_Actors::upsert(
+			array(
+				'id'                => $uri,
+				'type'              => 'Person',
+				'preferredUsername' => \basename( $uri ),
+				'inbox'             => $uri . '/inbox',
+				'publicKey'         => array(
+					'id'           => $uri . '#main-key',
+					'owner'        => $uri,
+					'publicKeyPem' => Actors::get_keypair( 1 )['public_key'],
+				),
+			)
+		);
+	}
+
+	/**
+	 * Pass a signed inbox request for a Delete through the signature deferral.
+	 *
+	 * @param array  $delete The Delete activity.
+	 * @param string $signer The actor whose key signs the request.
+	 */
+	private function sign_delete( $delete, $signer ) {
+		$this->assertTrue( Delete::defer_signature_verification( false, $this->build_signed_request( $delete, $signer ), false ) );
+	}
+
+	/**
+	 * Build a signed shared inbox request for a Delete.
+	 *
+	 * @param array  $delete The Delete activity.
+	 * @param string $signer The actor whose key signs the request.
+	 *
+	 * @return \WP_REST_Request The request.
+	 */
+	private function build_signed_request( $delete, $signer ) {
+		\update_option( 'activitypub_rfc9421_signature', '0' );
+
 		$args = \apply_filters(
 			'http_request_args',
 			array(
 				'method'      => 'POST',
 				'body'        => \wp_json_encode( $delete ),
 				'key_id'      => $signer . '#main-key',
-				'private_key' => \Activitypub\Collection\Actors::get_private_key( 1 ),
+				'private_key' => Actors::get_private_key( 1 ),
 				'user_id'     => 1,
 				'headers'     => array(
 					'Content-Type' => 'application/activity+json',
@@ -728,18 +845,54 @@ class Test_Delete extends \WP_UnitTestCase {
 		$request->set_body( $args['body'] );
 		$request->set_headers( $args['headers'] );
 
-		$this->assertTrue( Delete::defer_signature_verification( false, $request, false ) );
-		Delete::handle_delete( $delete, array( self::$user_id ) );
+		return $request;
+	}
 
-		$this->unstub_remote_requests();
-		\delete_option( 'activitypub_rfc9421_signature' );
+	/**
+	 * Test that a signed Delete through the shared inbox removes the owner's comment.
+	 *
+	 * The inbox runs the permission check first and the handler for every recipient, then once
+	 * for the shared inbox, so the request has to survive until that call.
+	 *
+	 * @covers ::defer_signature_verification
+	 * @covers ::handle_delete
+	 */
+	public function test_signed_delete_through_the_shared_inbox() {
+		$note = 'https://example.com/users/alice/statuses/3';
 
-		if ( $comment_id ) {
-			$this->assertSame( ! $deleted, \get_comment( $comment_id ) instanceof \WP_Comment );
-		}
-		if ( $post_id ) {
-			$this->assertSame( ! $deleted, \get_post( $post_id ) instanceof \WP_Post );
-		}
+		$this->stub_remote_requests();
+		$this->responses[ $note ] = array(
+			'id'   => $note,
+			'type' => 'Note',
+		);
+
+		$owner_id   = $this->store_signing_actor( 'https://example.com/users/alice' );
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => self::factory()->post->create(),
+				'comment_meta'    => array(
+					'protocol'                     => 'activitypub',
+					'source_id'                    => $note,
+					'_activitypub_remote_actor_id' => $owner_id,
+				),
+			)
+		);
+
+		$delete = array(
+			'id'     => $note . '#delete',
+			'type'   => 'Delete',
+			'actor'  => 'https://example.com/users/alice',
+			'to'     => array( Actors::get_by_id( self::$user_id )->get_id() ),
+			'object' => array(
+				'id'   => $note,
+				'type' => 'Tombstone',
+			),
+		);
+
+		$response = \rest_do_request( $this->build_signed_request( $delete, 'https://example.com/users/alice' ) );
+
+		$this->assertSame( 202, $response->get_status() );
+		$this->assertNull( \get_comment( $comment_id ) );
 	}
 
 	/**
@@ -1311,6 +1464,31 @@ class Test_Delete extends \WP_UnitTestCase {
 
 		$this->assertSame( 'https://remote.example/stamps/1', \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
 		$this->assertSame( $before, $this->count_updates( $post_id ) );
+	}
+
+	/**
+	 * A Delete signed by the quoted author revokes the stamp while it still resolves.
+	 *
+	 * @covers ::revoke_quote_authorization
+	 */
+	public function test_signed_stamp_delete_revokes_while_stamp_still_resolves() {
+		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+		$before = $this->count_updates( $post_id );
+
+		$filter = $this->mock_stamp( $post_id );
+		$alive  = $this->mock_stamp_response( 200, \wp_json_encode( array( 'type' => 'QuoteAuthorization' ) ) );
+		$this->store_signing_actor( 'https://remote.example/users/alice' );
+
+		$delete = $this->build_stamp_delete();
+		$this->sign_delete( $delete, 'https://remote.example/users/alice' );
+		Delete::handle_delete( $delete, self::$user_id );
+
+		\remove_filter( 'pre_http_request', $alive );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertSame( '', \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( $before + 1, $this->count_updates( $post_id ) );
 	}
 
 	/**

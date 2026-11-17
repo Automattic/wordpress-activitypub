@@ -255,6 +255,22 @@ class Remote_Actors {
 	}
 
 	/**
+	 * Check whether a stored remote actor is the actor with the given URI.
+	 *
+	 * The guid of a remote actor post is its actor URI, see get_by_uri().
+	 *
+	 * @since unreleased
+	 *
+	 * @param int    $post_id   The ID of the remote actor post.
+	 * @param string $actor_uri The actor URI.
+	 *
+	 * @return bool True if the post belongs to the actor URI.
+	 */
+	public static function has_uri( $post_id, $actor_uri ) {
+		return $post_id && \is_string( $actor_uri ) && '' !== $actor_uri && unescape_guid( \get_post_field( 'guid', $post_id, 'raw' ) ) === $actor_uri;
+	}
+
+	/**
 	 * Get a remote actor post by actor URI (guid).
 	 *
 	 * @param string $actor_uri The actor URI.
