@@ -252,7 +252,12 @@ class Attachments {
 		}
 
 		// Optimize images before sideloading (resize and convert to WebP).
-		$tmp_file = self::optimize_image( $tmp_file, self::MAX_IMAGE_DIMENSION );
+		$optimized = self::optimize_image( $tmp_file, self::MAX_IMAGE_DIMENSION );
+		if ( false === $optimized ) {
+			$filesystem->delete( $tmp_file );
+			return new \WP_Error( 'invalid_image', \__( 'The image could not be processed and was not imported.', 'activitypub' ) );
+		}
+		$tmp_file = $optimized;
 
 		// Update filename extension to match optimized file.
 		$new_ext = \pathinfo( $tmp_file, PATHINFO_EXTENSION );
@@ -401,10 +406,10 @@ class Attachments {
 	 * @param string $file_path     Path to the image file.
 	 * @param int    $max_dimension Maximum width/height in pixels.
 	 *
-	 * @return string The optimized file path.
+	 * @return string|false The optimized file path, or false for a claimed image the editor cannot read or write.
 	 */
 	private static function optimize_image( $file_path, $max_dimension ) {
-		// Check if it's an image.
+		// A non-image (audio, video) is left for media_handle_sideload() to accept or reject by type.
 		$mime_type = \wp_check_filetype( $file_path )['type'] ?? '';
 		if ( ! $mime_type || ! \str_starts_with( $mime_type, 'image/' ) ) {
 			return $file_path;
@@ -415,16 +420,14 @@ class Attachments {
 			return $file_path;
 		}
 
+		// An image the editor cannot read is not imported, and the editor always writes the result below.
 		$editor = \wp_get_image_editor( $file_path );
 		if ( \is_wp_error( $editor ) ) {
-			return $file_path;
+			return false;
 		}
 
-		$size         = $editor->get_size();
-		$needs_resize = $size['width'] > $max_dimension || $size['height'] > $max_dimension;
-
-		// Resize if needed.
-		if ( $needs_resize ) {
+		$size = $editor->get_size();
+		if ( $size['width'] > $max_dimension || $size['height'] > $max_dimension ) {
 			$editor->resize( $max_dimension, $max_dimension, false );
 		}
 
@@ -437,11 +440,7 @@ class Attachments {
 			$new_path = self::get_unique_path( \preg_replace( '/\.[^.]+$/', '.webp', $file_path ) );
 			$result   = $editor->save( $new_path, 'image/webp' );
 		} elseif ( \in_array( $mime_type, array( 'image/png', 'image/webp' ), true ) ) {
-			// Keep original format for potentially transparent images when WebP not available.
-			if ( ! $needs_resize ) {
-				// No changes needed.
-				return $file_path;
-			}
+			// Keep the format of potentially transparent images when WebP is not available.
 			$result = $editor->save( $file_path );
 		} else {
 			// Convert to JPEG when WebP not available.
@@ -449,12 +448,11 @@ class Attachments {
 			$result   = $editor->save( $new_path, 'image/jpeg' );
 		}
 
-		if ( \is_wp_error( $result ) ) {
-			return $file_path;
+		if ( \is_wp_error( $result ) || empty( $result['path'] ) ) {
+			return false;
 		}
 
-		// Handle result - $result is always an array from $editor->save().
-		$result_path = $result['path'] ?? $file_path;
+		$result_path = $result['path'];
 
 		// If path changed (format conversion), delete the original file.
 		if ( $result_path !== $file_path ) {

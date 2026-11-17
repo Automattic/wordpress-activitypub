@@ -8,12 +8,15 @@
 namespace Activitypub\Tests\Cache;
 
 use Activitypub\Cache\Avatar;
+use Activitypub\Tests\Image_Download_Stub;
 use WP_UnitTestCase;
 
 /**
  * Test class for Avatar cache.
  */
 class Test_Avatar extends WP_UnitTestCase {
+	use Image_Download_Stub;
+
 
 	/**
 	 * Test that get_type returns correct value.
@@ -100,13 +103,7 @@ class Test_Avatar extends WP_UnitTestCase {
 		// Mock the file download to return a local fixture.
 		$mock_download = function ( $result, $download_url ) use ( $url ) {
 			if ( $download_url === $url ) {
-				$tmp_file = \wp_tempnam( 'test-avatar.jpg' );
-				copy( AP_TESTS_DIR . '/data/assets/test.jpg', $tmp_file );
-
-				return array(
-					'file'      => $tmp_file,
-					'mime_type' => 'image/jpeg',
-				);
+				return self::image_download();
 			}
 
 			return $result;
