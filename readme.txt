@@ -125,6 +125,7 @@ For reasons of data protection, it is not possible to see the followers of other
 - Improve how incoming activities and profiles are read.
 - Improve how signatures of incoming requests are read.
 - Improve how the follow, reply and reaction buttons look up Fediverse profiles.
+- Only remove a profile or post when a deleted ID matches it exactly.
 
 #### Fixed
 - Fix remote profiles with special characters in their address showing up twice after they were updated.

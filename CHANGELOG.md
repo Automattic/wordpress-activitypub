@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improve how incoming activities and profiles are read. [#4090]
 - Improve how signatures of incoming requests are read. [#4076]
 - Improve how the follow, reply and reaction buttons look up Fediverse profiles. [#4088]
+- Only remove a profile or post when a deleted ID matches it exactly. [#4091]
 
 ### Fixed
 - Fix remote profiles with special characters in their address showing up twice after they were updated. [#4048]
