@@ -349,12 +349,6 @@ parameters:
 			path: includes/handler/class-delete.php
 
 		-
-			message: '#^@param string\|WP_Comment \$result does not accept actual type of parameter\: bool\|WP_Error\.$#'
-			identifier: parameter.phpDocType
-			count: 1
-			path: includes/handler/class-undo.php
-
-		-
 			message: '#^Action callback returns bool but should not return anything\.$#'
 			identifier: return.void
 			count: 1
