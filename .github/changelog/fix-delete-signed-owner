@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Replies and posts deleted on another server are now also removed when that server still shows a cached copy.
