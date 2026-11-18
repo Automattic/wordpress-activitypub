@@ -14,6 +14,7 @@ use Activitypub\Comment;
 use Activitypub\Moderation;
 use Activitypub\Proxy;
 
+use function Activitypub\camel_to_snake_case;
 use function Activitypub\is_activity;
 use function Activitypub\is_activity_public;
 use function Activitypub\is_same_host;
@@ -143,7 +144,13 @@ class Announce {
 			return;
 		}
 
-		$type = \strtolower( $object['type'] );
+		// A request asks the owner of an object in their own inbox, an Announce of it asks nobody.
+		if ( \str_ends_with( $object['type'], 'Request' ) ) {
+			return;
+		}
+
+		// The same hook name as the inbox controllers, so `QuoteRequest` and `quote_request` match.
+		$type = camel_to_snake_case( $object['type'] );
 
 		/**
 		 * Fires after an Announce has been received.
