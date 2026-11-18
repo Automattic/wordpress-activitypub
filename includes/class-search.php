@@ -7,13 +7,15 @@
 
 namespace Activitypub;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Interactions;
 
 /**
  * ActivityPub Search Enhancement Class
  *
  * This class enhances WordPress search functionality to detect URLs in search queries
- * and attempt to import ActivityPub objects if found, otherwise falls back to classic search.
+ * and lead to the reply stored under that URL, otherwise falls back to classic search.
+ * A reply that is not stored yet can be imported from the comments screen.
  */
 class Search {
 
@@ -25,6 +27,7 @@ class Search {
 	public static function init() {
 		\add_filter( 'pre_get_posts', array( self::class, 'enhance_public_search' ) );
 		\add_action( 'load-edit-comments.php', array( self::class, 'enhance_admin_comment_search' ) );
+		\add_action( 'admin_post_activitypub_import_reply', array( self::class, 'import_reply' ) );
 	}
 
 	/**
@@ -54,26 +57,13 @@ class Search {
 			return $query;
 		}
 
-		// Try to import ActivityPub object.
-		$imported = self::try_import_activitypub_object( $search_term );
-
-		if ( $imported ) {
-			// The comment keeps the status moderation gave it; a search must not approve it.
-			if ( '1' !== \get_comment( $imported )->comment_approved && \current_user_can( 'moderate_comments' ) ) {
-				// Admin::edit_comment() sends received replies on to their moderation view.
-				\wp_safe_redirect( \admin_url( 'comment.php?action=editcomment&c=' . $imported ) );
-				exit;
-			}
-
-			$comment_link   = \get_comment_link( $imported );
-			$validated_link = \wp_validate_redirect( $comment_link, \home_url() );
-			if ( $validated_link ) {
-				\wp_safe_redirect( $validated_link );
-				exit;
-			}
+		// Only a reply that is already stored, a search does not fetch.
+		$existing = Comment::url_to_commentid( $search_term );
+		if ( $existing ) {
+			self::redirect_to_comment( $existing );
 		}
 
-		// Fall back to classic search if import failed or no redirect.
+		// Fall back to classic search if no reply is stored under the URL or no redirect.
 		return $query;
 	}
 
@@ -100,23 +90,112 @@ class Search {
 			return;
 		}
 
-		// Try to import ActivityPub object.
-		$imported = self::try_import_activitypub_object( $search_term );
+		$existing = Comment::url_to_commentid( $search_term );
+		if ( $existing ) {
+			self::redirect_to_comment( $existing );
+			return;
+		}
 
-		if ( $imported ) {
-			// The comment keeps the status moderation gave it; a search must not approve it.
-			if ( '1' !== \get_comment( $imported )->comment_approved && \current_user_can( 'moderate_comments' ) ) {
-				// Admin::edit_comment() sends received replies on to their moderation view.
-				\wp_safe_redirect( \admin_url( 'comment.php?action=editcomment&c=' . $imported ) );
-				exit;
-			}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$failed = isset( $_GET['activitypub_import'] ) && 'failed' === $_GET['activitypub_import'];
 
-			$comment_link   = \get_comment_link( $imported );
-			$validated_link = \wp_validate_redirect( $comment_link, \home_url() );
-			if ( $validated_link ) {
-				\wp_safe_redirect( $validated_link );
-				exit;
+		// A reply that is not stored yet is only imported on request, see import_reply().
+		\add_action(
+			'admin_notices',
+			static function () use ( $search_term, $failed ) {
+				if ( $failed ) {
+					\wp_admin_notice(
+						\esc_html__( 'No reply from the Fediverse could be imported from this URL.', 'activitypub' ),
+						array( 'type' => 'error' )
+					);
+					return;
+				}
+
+				$import_url = \wp_nonce_url(
+					\add_query_arg(
+						array(
+							'action' => 'activitypub_import_reply',
+							'url'    => \rawurlencode( $search_term ),
+						),
+						\admin_url( 'admin-post.php' )
+					),
+					'activitypub_import_reply'
+				);
+
+				\wp_admin_notice(
+					\sprintf(
+						/* translators: 1: The host of the URL, 2: The import link. */
+						\esc_html__( 'No reply from %1$s is stored under this URL yet. %2$s', 'activitypub' ),
+						\sprintf( '<code>%s</code>', \esc_html( \wp_parse_url( $search_term, PHP_URL_HOST ) ) ),
+						\sprintf( '<a href="%s" class="button">%s</a>', \esc_url( $import_url ), \esc_html__( 'Import this reply', 'activitypub' ) )
+					),
+					array(
+						'type'           => 'info',
+						'paragraph_wrap' => true,
+					)
+				);
 			}
+		);
+	}
+
+	/**
+	 * Import a reply from the Fediverse, requested from the comments screen.
+	 *
+	 * @since unreleased
+	 *
+	 * @return void
+	 */
+	public static function import_reply() {
+		\check_admin_referer( 'activitypub_import_reply' );
+
+		if ( ! \current_user_can( 'activitypub' ) ) {
+			\wp_die( \esc_html__( 'Sorry, you are not allowed to import replies.', 'activitypub' ), '', array( 'response' => 403 ) );
+		}
+
+		$url = isset( $_GET['url'] ) ? \sanitize_url( \wp_unslash( $_GET['url'] ) ) : '';
+
+		if ( \wp_http_validate_url( $url ) ) {
+			$imported = self::try_import_activitypub_object( $url );
+
+			if ( $imported ) {
+				self::redirect_to_comment( $imported );
+			}
+		}
+
+		\wp_safe_redirect(
+			\add_query_arg(
+				array(
+					's'                  => \rawurlencode( $url ),
+					'activitypub_import' => 'failed',
+				),
+				\admin_url( 'edit-comments.php' )
+			)
+		);
+		exit;
+	}
+
+	/**
+	 * Redirect to a comment, or to its moderation view when it is not approved.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $comment_id The comment ID.
+	 *
+	 * @return void Exits when it redirects.
+	 */
+	private static function redirect_to_comment( $comment_id ) {
+		// The comment keeps the status moderation gave it; a search must not approve it.
+		if ( '1' !== \get_comment( $comment_id )->comment_approved && \current_user_can( 'moderate_comments' ) ) {
+			// Admin::edit_comment() sends received replies on to their moderation view.
+			\wp_safe_redirect( \admin_url( 'comment.php?action=editcomment&c=' . $comment_id ) );
+			exit;
+		}
+
+		$comment_link   = \get_comment_link( $comment_id );
+		$validated_link = \wp_validate_redirect( $comment_link, \home_url() );
+		if ( $validated_link ) {
+			\wp_safe_redirect( $validated_link );
+			exit;
 		}
 	}
 
@@ -150,6 +229,15 @@ class Search {
 			'actor'  => $object['attributedTo'],
 			'object' => $object,
 		);
+
+		// The checks the inbox runs before a received reply is stored, see Handler\Create::handle_create().
+		if (
+			ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === get_activity_visibility( $activity ) ||
+			is_self_ping( $object['id'] ?? '' ) ||
+			Moderation::activity_is_blocked( Activity::init_from_array( $activity ) )
+		) {
+			return false;
+		}
 
 		// Import the reply as a comment; a failed import is no comment to lead to.
 		$imported = Interactions::add_comment( $activity );

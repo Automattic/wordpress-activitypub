@@ -7,6 +7,8 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Comment;
+use Activitypub\Moderation;
 use Activitypub\Search;
 
 /**
@@ -144,40 +146,153 @@ class Test_Search extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * A reply that cannot be stored leads nowhere, instead of breaking the search.
+	 * Set up a remote reply to a local post, served by the fetch filter.
+	 *
+	 * @param string $url   The reply's URL.
+	 * @param array  $extra Properties that replace the reply's defaults.
+	 *
+	 * @return callable[] The filters to remove again, keyed by hook name.
+	 */
+	private function serve_reply( $url, $extra = array() ) {
+		$actor = 'https://1.1.1.1/users/test';
+		$reply = \array_merge(
+			array(
+				'id'           => $url,
+				'type'         => 'Note',
+				'attributedTo' => $actor,
+				'content'      => 'Hello',
+				'to'           => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+				'inReplyTo'    => \get_permalink( self::factory()->post->create() ),
+			),
+			$extra
+		);
+
+		$filters = array(
+			'activitypub_pre_http_get_remote_object' => static function ( $pre, $url_or_object ) use ( $url, $reply, $actor ) {
+				if ( $actor === $url_or_object ) {
+					return array(
+						'id'                => $actor,
+						'type'              => 'Person',
+						'name'              => 'Test',
+						'preferredUsername' => 'test',
+						'inbox'             => \sprintf( '%s/inbox', $actor ),
+					);
+				}
+
+				return $url === $url_or_object ? $reply : $pre;
+			},
+			'pre_get_remote_metadata_by_actor'       => static function () use ( $actor ) {
+				return array(
+					'id'                => $actor,
+					'name'              => 'Test',
+					'preferredUsername' => 'test',
+					'url'               => $actor,
+				);
+			},
+		);
+
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filters['activitypub_pre_http_get_remote_object'], 10, 2 );
+		\add_filter( 'pre_get_remote_metadata_by_actor', $filters['pre_get_remote_metadata_by_actor'] );
+
+		return $filters;
+	}
+
+	/**
+	 * Remove the filters of serve_reply().
+	 *
+	 * @param callable[] $filters The filters, keyed by hook name.
+	 */
+	private function stop_serving( $filters ) {
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filters['activitypub_pre_http_get_remote_object'], 10 );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $filters['pre_get_remote_metadata_by_actor'] );
+	}
+
+	/**
+	 * Searching for a URL with no stored reply fetches nothing, on the comments screen and on the front end.
+	 *
+	 * The comments screen offers the import as a link with a nonce instead.
 	 *
 	 * @covers \Activitypub\Search::enhance_admin_comment_search
+	 * @covers \Activitypub\Search::enhance_public_search
 	 */
-	public function test_search_with_failed_import() {
+	public function test_search_does_not_fetch() {
 		$user = \get_user_by( 'id', self::factory()->user->create( array( 'role' => 'editor' ) ) );
 		$user->add_cap( 'activitypub' );
 		\wp_set_current_user( $user->ID );
 
 		// A public IP, so wp_http_validate_url() accepts the URL without a DNS lookup.
-		$url   = 'https://1.1.1.1/notes/2';
-		$actor = 'https://1.1.1.1/users/test';
-		$fetch = static function ( $pre, $url_or_object ) use ( $url, $actor ) {
-			return $url === $url_or_object ? array(
-				'id'           => $url,
-				'type'         => 'Note',
-				'attributedTo' => $actor,
-				'content'      => 'Hello',
-				'inReplyTo'    => \get_permalink( self::factory()->post->create() ),
-			) : $pre;
+		$url     = 'https://1.1.1.1/notes/3';
+		$fetched = 0;
+		$fetch   = static function ( $pre ) use ( &$fetched ) {
+			++$fetched;
+			return $pre;
 		};
-		$meta  = static function () use ( $actor ) {
-			return array(
-				'id'                => $actor,
-				'name'              => 'Test',
-				'preferredUsername' => 'test',
-				'url'               => $actor,
-			);
-		};
-		$fail  = static function () {
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fetch );
+
+		$_GET['s'] = $url;
+		Search::enhance_admin_comment_search();
+		unset( $_GET['s'] );
+
+		\ob_start();
+		\do_action( 'admin_notices' );
+		$notice = \ob_get_clean();
+
+		// The front end runs the search as the main query.
+		$this->go_to( \add_query_arg( 's', \rawurlencode( $url ), \home_url( '/' ) ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch );
+
+		$this->assertSame( 0, $fetched, 'A search must not fetch.' );
+		$this->assertStringContainsString( 'action=activitypub_import_reply', $notice );
+		$this->assertStringContainsString( '_wpnonce=', $notice );
+		$this->assertStringContainsString( \rawurlencode( $url ), \html_entity_decode( $notice ) );
+	}
+
+	/**
+	 * The import needs the nonce of its link.
+	 *
+	 * @covers \Activitypub\Search::import_reply
+	 */
+	public function test_import_reply_requires_nonce() {
+		$user = \get_user_by( 'id', self::factory()->user->create( array( 'role' => 'editor' ) ) );
+		$user->add_cap( 'activitypub' );
+		\wp_set_current_user( $user->ID );
+
+		$url     = 'https://1.1.1.1/notes/4';
+		$filters = $this->serve_reply( $url );
+
+		$_GET['url']          = $url;
+		$_REQUEST['_wpnonce'] = 'invalid';
+
+		$died = false;
+		try {
+			Search::import_reply();
+		} catch ( \WPDieException $e ) {
+			$died = true;
+		}
+
+		unset( $_GET['url'], $_REQUEST['_wpnonce'] );
+		$this->stop_serving( $filters );
+
+		$this->assertTrue( $died, 'An import without a valid nonce must stop.' );
+		$this->assertEmpty( Comment::url_to_commentid( $url ), 'Nothing may be stored without a valid nonce.' );
+	}
+
+	/**
+	 * A reply that cannot be stored leads back to the search with a notice, instead of breaking.
+	 *
+	 * @covers \Activitypub\Search::import_reply
+	 */
+	public function test_import_reply_with_failed_import() {
+		$user = \get_user_by( 'id', self::factory()->user->create( array( 'role' => 'editor' ) ) );
+		$user->add_cap( 'activitypub' );
+		\wp_set_current_user( $user->ID );
+
+		$url     = 'https://1.1.1.1/notes/2';
+		$filters = $this->serve_reply( $url );
+		$fail    = static function () {
 			return new \WP_Error( 'comment_duplicate', 'Duplicate comment.' );
 		};
-		\add_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10, 2 );
-		\add_filter( 'pre_get_remote_metadata_by_actor', $meta );
 		\add_filter( 'pre_comment_approved', $fail, 99 );
 
 		$redirect = static function ( $location ) {
@@ -185,21 +300,85 @@ class Test_Search extends \WP_UnitTestCase {
 		};
 		\add_filter( 'wp_redirect', $redirect );
 
-		$_GET['s']  = $url;
+		$_GET['url']          = $url;
+		$_REQUEST['_wpnonce'] = \wp_create_nonce( 'activitypub_import_reply' );
+
 		$redirected = '';
 		try {
-			Search::enhance_admin_comment_search();
+			Search::import_reply();
 		} catch ( \Exception $e ) {
 			$redirected = $e->getMessage();
 		}
-		unset( $_GET['s'] );
 
+		unset( $_GET['url'], $_REQUEST['_wpnonce'] );
 		\remove_filter( 'wp_redirect', $redirect );
 		\remove_filter( 'pre_comment_approved', $fail, 99 );
-		\remove_filter( 'pre_get_remote_metadata_by_actor', $meta );
-		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10 );
+		$this->stop_serving( $filters );
 
-		$this->assertSame( '', $redirected, 'A failed import must not redirect.' );
+		$this->assertStringStartsWith( \admin_url( 'edit-comments.php' ), $redirected );
+		$this->assertStringContainsString( 'activitypub_import=failed', $redirected );
+	}
+
+	/**
+	 * The import refuses what the inbox refuses, and stores what the inbox stores.
+	 *
+	 * @dataProvider data_import_refusals
+	 * @covers \Activitypub\Search::try_import_activitypub_object
+	 *
+	 * @param string $block  The site block as "type value", or an empty string.
+	 * @param array  $extra  Properties that replace the reply's defaults.
+	 * @param bool   $stored Whether the reply is stored.
+	 */
+	public function test_import_runs_the_inbox_checks( $block, $extra, $stored ) {
+		$url = 'https://1.1.1.1/notes/5';
+		if ( isset( $extra['id'] ) ) {
+			$url = \home_url( $extra['id'] );
+		}
+		if ( isset( $extra['attributedTo'] ) ) {
+			$extra['attributedTo'] = \get_author_posts_url( 1 );
+		}
+		$extra   = \array_merge( $extra, array( 'id' => $url ) );
+		$filters = $this->serve_reply( $url, $extra );
+
+		if ( $block ) {
+			list( $type, $value ) = \explode( ' ', $block, 2 );
+			$this->assertTrue( Moderation::add_site_block( $type, $value ), 'The block has to be in place.' );
+		}
+
+		$result = $this->try_import_activitypub_object_accessible( $url );
+
+		$this->stop_serving( $filters );
+
+		if ( $stored ) {
+			$this->assertIsInt( $result, 'An allowed reply has to be stored.' );
+		} else {
+			$this->assertFalse( $result );
+			$this->assertEmpty( Comment::url_to_commentid( $url ), 'A refused reply must not be stored.' );
+		}
+	}
+
+	/**
+	 * The cases of the inbox checks.
+	 *
+	 * @return array[] Site block, reply properties, whether the reply is stored.
+	 */
+	public function data_import_refusals() {
+		return array(
+			'allowed'        => array( '', array(), true ),
+			'blocked actor'  => array( 'actor https://1.1.1.1/users/test', array(), false ),
+			'blocked domain' => array( 'domain 1.1.1.1', array(), false ),
+			'keyword'        => array( 'keyword forbidden', array( 'content' => 'A forbidden word' ), false ),
+			'private'        => array( '', array( 'to' => array( 'https://1.1.1.1/users/someone' ) ), false ),
+			// One of the site's own comments: object and actor on the site's host.
+			'self ping'      => array(
+				'',
+				array(
+					'id'           => '/?c=1',
+					'attributedTo' => 'local',
+				),
+				false,
+			),
+		);
 	}
 
 	/**
