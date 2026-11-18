@@ -403,6 +403,70 @@ class Test_Delete extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A Delete of an actor that is gone only deletes the actor stored under exactly that ID.
+	 *
+	 * @covers ::maybe_delete_follower
+	 * @dataProvider lookalike_uri_provider
+	 * @dataProvider escaped_uri_provider
+	 *
+	 * @param string $stored    The stored actor ID.
+	 * @param string $requested The ID that is gone.
+	 */
+	public function test_maybe_delete_follower_matches_exact_id( $stored, $requested ) {
+		$actor_id = Remote_Actors::upsert( $this->actor_for_uri( $stored ) );
+		$this->assertIsInt( $actor_id );
+
+		$this->stub_remote_requests();
+		$this->responses[ $requested ] = 410;
+
+		$delete = array(
+			'type'   => 'Delete',
+			'actor'  => $requested,
+			'object' => $requested,
+		);
+
+		$this->assertFalse( Delete::maybe_delete_follower( $delete ) );
+		$this->assertInstanceOf( 'WP_Post', \get_post( $actor_id ), 'The stored actor must stay.' );
+
+		$this->unstub_remote_requests();
+	}
+
+	/**
+	 * A Delete of an object that is gone only deletes the reader post stored under exactly that ID.
+	 *
+	 * @covers ::maybe_delete_post
+	 * @dataProvider lookalike_uri_provider
+	 * @dataProvider escaped_uri_provider
+	 *
+	 * @param string $stored    The stored object ID.
+	 * @param string $requested The ID that is gone.
+	 */
+	public function test_maybe_delete_post_matches_exact_id( $stored, $requested ) {
+		$post_id = \wp_insert_post(
+			array(
+				'post_type'   => \Activitypub\Collection\Remote_Posts::POST_TYPE,
+				'post_title'  => 'Note',
+				'post_status' => 'publish',
+				'guid'        => \esc_url_raw( $stored ),
+			)
+		);
+
+		$this->stub_remote_requests();
+		$this->responses[ $requested ] = 410;
+
+		$delete = array(
+			'type'   => 'Delete',
+			'actor'  => \sprintf( 'https://%s/users/author', \wp_parse_url( $requested, PHP_URL_HOST ) ),
+			'object' => $requested,
+		);
+
+		$this->assertFalse( Delete::maybe_delete_post( $delete ) );
+		$this->assertInstanceOf( 'WP_Post', \get_post( $post_id ), 'The stored post must stay.' );
+
+		$this->unstub_remote_requests();
+	}
+
+	/**
 	 * Test delete_object with Tombstone type for post deletion.
 	 *
 	 * Tests deleting a post from the Posts collection using a Tombstone object.

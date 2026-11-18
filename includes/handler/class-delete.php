@@ -19,6 +19,7 @@ use function Activitypub\add_to_outbox;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
+use function Activitypub\unescape_guid;
 
 /**
  * Handles Delete requests.
@@ -281,7 +282,8 @@ class Delete {
 
 		$follower = Remote_Actors::get_by_uri( $actor );
 
-		if ( ! \is_wp_error( $follower ) ) {
+		// Only the actor stored under exactly the URL that is gone, not one the lookup also matches.
+		if ( ! \is_wp_error( $follower ) && unescape_guid( $follower->guid ) === $actor ) {
 			self::maybe_delete_interactions( $follower->ID );
 			self::maybe_delete_posts( $follower->ID );
 			$state = Remote_Actors::delete( $follower->ID );
@@ -424,7 +426,10 @@ class Delete {
 			// The object is deleted, so the cached copy goes with it.
 			Proxy::purge( $id );
 
-			return \is_wp_error( $post ) ? $post : Remote_Posts::delete( $post->ID );
+			// Only the post stored under exactly the URL that is gone, not one the lookup also matches.
+			if ( ! \is_wp_error( $post ) && unescape_guid( $post->guid ) === $id ) {
+				return Remote_Posts::delete( $post->ID );
+			}
 		}
 
 		return false;

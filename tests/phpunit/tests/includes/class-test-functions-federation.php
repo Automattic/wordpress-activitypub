@@ -42,12 +42,12 @@ class Test_Functions_Federation extends ActivityPub_TestCase_Cache_HTTP {
 		);
 
 		$actor_array = array(
-			'id'                 => 'https://example.com/users/test',
-			'type'               => 'Person',
-			'name'               => 'Test Follower',
-			'preferred_username' => 'Follower',
-			'summary'            => '<p>HTML content</p>',
-			'endpoints'          => array(
+			'id'                => 'https://example.com/users/test',
+			'type'              => 'Person',
+			'name'              => 'Test Follower',
+			'preferredUsername' => 'Follower',
+			'summary'           => '<p>HTML content</p>',
+			'endpoints'         => array(
 				'sharedInbox' => 'https://example.com/inbox',
 			),
 		);

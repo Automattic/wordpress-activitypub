@@ -518,12 +518,12 @@ class Test_Migration extends \WP_UnitTestCase {
 	 */
 	public function test_update_actor_json_slashing() {
 		$follower = array(
-			'id'                 => 'https://example.com/users/test',
-			'type'               => 'Person',
-			'name'               => 'Test Follower',
-			'preferred_username' => 'Follower',
-			'summary'            => '<p>unescaped backslash 04\2024</p>',
-			'endpoints'          => array(
+			'id'                => 'https://example.com/users/test',
+			'type'              => 'Person',
+			'name'              => 'Test Follower',
+			'preferredUsername' => 'Follower',
+			'summary'           => '<p>unescaped backslash 04\2024</p>',
+			'endpoints'         => array(
 				'sharedInbox' => 'https://example.com/inbox',
 			),
 		);
@@ -716,12 +716,12 @@ class Test_Migration extends \WP_UnitTestCase {
 	 */
 	public function test_update_actor_json_storage() {
 		$actor_array = array(
-			'id'                 => 'https://example.com/users/test',
-			'type'               => 'Person',
-			'name'               => 'Test Follower',
-			'preferred_username' => 'Follower',
-			'summary'            => '<p>HTML content</p>',
-			'endpoints'          => array(
+			'id'                => 'https://example.com/users/test',
+			'type'              => 'Person',
+			'name'              => 'Test Follower',
+			'preferredUsername' => 'Follower',
+			'summary'           => '<p>HTML content</p>',
+			'endpoints'         => array(
 				'sharedInbox' => 'https://example.com/inbox',
 			),
 		);
@@ -785,12 +785,12 @@ class Test_Migration extends \WP_UnitTestCase {
 	 */
 	public function test_update_actor_json_storage_broken_json() {
 		$actor_array = array(
-			'id'                 => 'https://example.com/users/test',
-			'type'               => 'Person',
-			'name'               => 'Test Follower',
-			'preferred_username' => 'Follower',
-			'summary'            => '<p>HTML content</p>',
-			'endpoints'          => array(
+			'id'                => 'https://example.com/users/test',
+			'type'              => 'Person',
+			'name'              => 'Test Follower',
+			'preferredUsername' => 'Follower',
+			'summary'           => '<p>HTML content</p>',
+			'endpoints'         => array(
 				'sharedInbox' => 'https://example.com/inbox',
 			),
 		);
