@@ -705,4 +705,46 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 		$this->assertTrue( $data['active'], 'An administrator must be able to introspect any token.' );
 		$this->assertEquals( $this->client_id, $data['client_id'] );
 	}
+
+	/**
+	 * A token of an administrator is held to its own client, like any other token.
+	 *
+	 * @covers ::revoke
+	 * @covers ::introspect
+	 */
+	public function test_admin_token_is_limited_to_its_client() {
+		$admin_id            = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		$other_client_result = Client::register(
+			array(
+				'name'          => 'Other Client',
+				'redirect_uris' => array( $this->redirect_uri ),
+			)
+		);
+		$other_client_id     = $other_client_result['client_id'];
+
+		$caller_token_data = Token::create( $admin_id, $other_client_id, array( Scope::PUSH ) );
+		$target_token_data = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+
+		$caller_token = Token::validate( $caller_token_data['access_token'] );
+		$this->assertInstanceOf( Token::class, $caller_token );
+
+		$this->set_oauth_current_token( $caller_token );
+		\wp_set_current_user( $admin_id );
+
+		try {
+			$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/introspect' );
+			$request->set_param( 'token', $target_token_data['access_token'] );
+
+			$data = \rest_get_server()->dispatch( $request )->get_data();
+			$this->assertFalse( $data['active'], 'A token must not introspect a token of another client.' );
+
+			$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/revoke' );
+			$request->set_param( 'token', $target_token_data['access_token'] );
+
+			$this->assertEquals( 200, \rest_get_server()->dispatch( $request )->get_status() );
+			$this->assertNotWPError( Token::validate( $target_token_data['access_token'] ), 'A token must not revoke a token of another client.' );
+		} finally {
+			Client::delete( $other_client_id );
+		}
+	}
 }
