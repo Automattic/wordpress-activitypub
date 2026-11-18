@@ -7,11 +7,20 @@
 
 namespace Activitypub\Tests\Activity;
 
+use Activitypub\Activity\Activity;
+use Activitypub\Activity\Actor;
 use Activitypub\Activity\Base_Object;
+use Activitypub\Activity\Extended_Object\Event;
+use Activitypub\Activity\Extended_Object\Feature_Authorization;
+use Activitypub\Activity\Extended_Object\Place;
+use Activitypub\Activity\Extended_Object\Quote_Authorization;
 use Activitypub\Activity\Generic_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Model\Blog;
 use WP_UnitTestCase;
+
+use function Activitypub\camel_to_snake_case;
+use function Activitypub\snake_to_camel_case;
 
 /**
  * Test cases for the Generic_Object class.
@@ -84,6 +93,70 @@ class Test_Generic_Object extends WP_UnitTestCase {
 		$this->assertEmpty( $object->get_name() );
 		$this->assertNull( $object->get_summary() );
 		$this->assertFalse( $object->get_content() );
+	}
+
+	/**
+	 * A property is only set from its own spelling, keys are case-sensitive.
+	 *
+	 * @dataProvider data_other_spellings
+	 *
+	 * @covers Activitypub\Activity\Generic_Object::from_array
+	 *
+	 * @param string $key   The key as ActivityStreams spells it.
+	 * @param string $other Another spelling that folds onto the same property.
+	 */
+	public function test_init_from_array_ignores_other_spellings( $key, $other ) {
+		$getter = 'get_' . camel_to_snake_case( $key );
+
+		$object = Generic_Object::init_from_array(
+			array(
+				$key   => 'https://a.example/1',
+				$other => 'https://b.example/2',
+			)
+		);
+		$this->assertSame( 'https://a.example/1', $object->$getter(), 'The other spelling after the key.' );
+
+		$object = Generic_Object::init_from_array(
+			array(
+				$other => 'https://b.example/2',
+				$key   => 'https://a.example/1',
+			)
+		);
+		$this->assertSame( 'https://a.example/1', $object->$getter(), 'The other spelling before the key.' );
+
+		$object = Generic_Object::init_from_array( array( $other => 'https://b.example/2' ) );
+		$this->assertNull( $object->$getter(), 'The other spelling alone.' );
+	}
+
+	/**
+	 * Every property of the activity classes, each with the spellings that fold onto it.
+	 *
+	 * The properties are read from the classes, so a new one is covered without a change here.
+	 *
+	 * @return array[]
+	 */
+	public function data_other_spellings() {
+		$classes = array( Generic_Object::class, Base_Object::class, Activity::class, Actor::class, Event::class, Place::class, Feature_Authorization::class, Quote_Authorization::class );
+		$data    = array();
+
+		foreach ( $classes as $class ) {
+			foreach ( ( new \ReflectionClass( $class ) )->getProperties() as $property ) {
+				if ( $property->isStatic() ) {
+					continue;
+				}
+
+				$name = $property->getName();
+				$key  = \str_starts_with( $name, '_' ) ? $name : snake_to_camel_case( $name );
+
+				foreach ( \array_unique( array( \ucfirst( $key ), \ucwords( $key, '_' ), camel_to_snake_case( $key ) ) ) as $other ) {
+					if ( $other !== $key ) {
+						$data[ "$key/$other" ] = array( $key, $other );
+					}
+				}
+			}
+		}
+
+		return $data;
 	}
 
 	/**

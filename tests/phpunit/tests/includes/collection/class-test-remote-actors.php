@@ -73,6 +73,21 @@ class Test_Remote_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An actor is stored under its `id`, keys are case-sensitive.
+	 *
+	 * @covers ::upsert
+	 */
+	public function test_upsert_stores_the_actor_under_its_id() {
+		$other   = Remote_Actors::upsert( $this->actor_for_uri( 'https://b.example/users/two' ) );
+		$actor   = $this->actor_for_uri( 'https://a.example/users/one' );
+		$post_id = Remote_Actors::upsert( \array_merge( $actor, array( 'Id' => 'https://b.example/users/two' ) ) );
+
+		$this->assertIsInt( $post_id );
+		$this->assertNotSame( $other, $post_id, 'Each actor keeps its own entry.' );
+		$this->assertSame( 'https://a.example/users/one', \get_post_field( 'guid', $post_id, 'raw' ) );
+	}
+
+	/**
 	 * An actor is still found after an update, which stores the guid in its `esc_url()` form.
 	 *
 	 * @covers ::get_by_uri
