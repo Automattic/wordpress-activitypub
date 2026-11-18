@@ -347,4 +347,51 @@ class Test_Trait_Rate_Limit extends \WP_UnitTestCase {
 		$this->assertSame( '0', $headers['RateLimit-Remaining'], 'Nothing is left.' );
 		$this->assertArrayHasKey( 'Retry-After', $headers, 'A refusal says when to come back.' );
 	}
+
+	/**
+	 * Test that every route taking a `resource` or `uri` the caller names is counted.
+	 *
+	 * Such a route makes this site send a request to a host of the caller's choosing, so how often
+	 * one caller may ask is its only gate. The local WebFinger route answers from this site's own
+	 * data and sends nothing. A new route with one of these arguments fails here until it is
+	 * counted or listed as local. Routes that take the target under another name are not found
+	 * by this check.
+	 *
+	 * @covers ::rate_limit
+	 */
+	public function test_every_resource_lookup_route_is_counted() {
+		$local   = array( '/' . ACTIVITYPUB_REST_NAMESPACE . '/webfinger' );
+		$counted = array();
+
+		\add_filter( 'activitypub_rate_limit', '__return_zero' );
+
+		foreach ( \rest_get_server()->get_routes( ACTIVITYPUB_REST_NAMESPACE ) as $route => $endpoints ) {
+			if ( \in_array( $route, $local, true ) ) {
+				continue;
+			}
+
+			foreach ( $endpoints as $endpoint ) {
+				if ( ! isset( $endpoint['args']['resource'] ) && ! isset( $endpoint['args']['uri'] ) ) {
+					continue;
+				}
+
+				$answer = \call_user_func( $endpoint['permission_callback'], new \WP_REST_Request( 'GET', $route ) );
+
+				$this->assertWPError( $answer, "{$route} must be counted." );
+				$this->assertSame( 429, $answer->get_error_data()['status'], "{$route} must be counted." );
+
+				$counted[] = $route;
+			}
+		}
+
+		$this->assertEqualsCanonicalizing(
+			array(
+				'/' . ACTIVITYPUB_REST_NAMESPACE . '/(?:users|actors)\/(?P<user_id>[-]?\d+)/remote-follow',
+				'/' . ACTIVITYPUB_REST_NAMESPACE . '/comments/(?P<comment_id>[\d]+)/remote-reply',
+				'/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[\d]+)/remote-intent',
+				'/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions',
+			),
+			$counted
+		);
+	}
 }
