@@ -16,6 +16,7 @@ use function Activitypub\is_activity_reply;
 use function Activitypub\is_quote_activity;
 use function Activitypub\is_self_ping;
 use function Activitypub\object_id_to_comment;
+use function Activitypub\object_to_uri;
 
 /**
  * Handle Create requests.
@@ -78,7 +79,8 @@ class Create {
 	 * @return \WP_Comment|\WP_Error|false The created comment, WP_Error on failure, false if already exists or not processed.
 	 */
 	public static function create_interaction( $activity, $user_ids, $activity_object = null ) {
-		$existing_comment = object_id_to_comment( $activity['object']['id'] );
+		// Look the object up by the identifier it is stored under, as Update does.
+		$existing_comment = object_id_to_comment( \esc_url_raw( object_to_uri( $activity['object'] ) ) );
 
 		// If comment exists, call update action.
 		if ( $existing_comment ) {

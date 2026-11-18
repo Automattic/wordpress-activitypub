@@ -97,6 +97,11 @@ class Announce {
 			return;
 		}
 
+		// Only one level: an announced Announce is not handed on, so a chain of them ends here.
+		if ( 'Announce' === $object['type'] ) {
+			return;
+		}
+
 		/*
 		 * Only an actor's own server may vouch for an activity attributed to it, so the
 		 * host it was fetched from must equal its actor's host — the same key-host ==

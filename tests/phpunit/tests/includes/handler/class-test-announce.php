@@ -602,6 +602,60 @@ class Test_Announce extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An announced Announce is not fetched further or handed on.
+	 *
+	 * A chain of Announces, each pointing at the next, goes through the registered Announce
+	 * handler. Only the first one is fetched, and nothing is relayed.
+	 *
+	 * @covers ::handle_announce
+	 */
+	public function test_handle_announce_does_not_relay_an_announce() {
+		$fetched = array();
+		$fetch   = function ( $pre, $url_or_object ) use ( &$fetched ) {
+			$prefix = 'https://chain.example/announces/';
+
+			if ( ! \is_string( $url_or_object ) || 0 !== \strpos( $url_or_object, $prefix ) ) {
+				return $pre;
+			}
+
+			$fetched[] = $url_or_object;
+			$level     = (int) \substr( $url_or_object, \strlen( $prefix ) );
+
+			// Ends the chain, so a missing bound fails the assertions below instead of the run.
+			if ( $level > 10 ) {
+				return new \WP_Error( 'http_request_failed', 'not found' );
+			}
+
+			return array(
+				'id'     => $url_or_object,
+				'type'   => 'Announce',
+				'actor'  => 'https://chain.example/users/alice',
+				'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+				'object' => \sprintf( '%s%d', $prefix, $level + 1 ),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10, 2 );
+
+		$inbox = new \MockAction();
+		\add_action( 'activitypub_inbox', array( $inbox, 'action' ) );
+
+		$announce = array(
+			'actor'  => 'https://booster.example/user',
+			'type'   => 'Announce',
+			'id'     => 'https://booster.example/a/1',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => 'https://chain.example/announces/1',
+		);
+		\do_action( 'activitypub_inbox_announce', $announce, array( $this->user_id ), Activity::init_from_array( $announce ) );
+
+		\remove_action( 'activitypub_inbox', array( $inbox, 'action' ) );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10 );
+
+		$this->assertSame( array( 'https://chain.example/announces/1' ), $fetched, 'Only the announced Announce may be fetched.' );
+		$this->assertSame( 0, $inbox->get_call_count(), 'An announced Announce must not be relayed.' );
+	}
+
+	/**
 	 * Test maybe save announce.
 	 *
 	 * @covers ::maybe_save_announce

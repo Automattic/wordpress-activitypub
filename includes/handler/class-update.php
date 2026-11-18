@@ -13,6 +13,7 @@ use Activitypub\Collection\Remote_Posts;
 use Activitypub\Proxy;
 
 use function Activitypub\is_activity_reply;
+use function Activitypub\is_quote_activity;
 use function Activitypub\object_to_uri;
 
 /**
@@ -95,8 +96,8 @@ class Update {
 		$result  = new \WP_Error( 'activitypub_update_failed', 'Update failed' );
 		$updated = true;
 
-		// Check for private and/or direct messages.
-		if ( is_activity_reply( $activity ) ) {
+		// Replies and quotes are stored as comments, as Create decides.
+		if ( is_activity_reply( $activity ) || is_quote_activity( $activity ) ) {
 			$comment_data = Interactions::update_comment( $activity );
 
 			if ( false === $comment_data ) {
