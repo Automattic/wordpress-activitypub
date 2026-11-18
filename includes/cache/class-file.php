@@ -39,6 +39,21 @@ abstract class File {
 	);
 
 	/**
+	 * The formats the cache writes its images in, with their extensions.
+	 *
+	 * Every cached file is written by the image editor in one of these, under a name the cache
+	 * gives it, so these are also the only files it serves.
+	 *
+	 * @since 9.4.4
+	 *
+	 * @var array
+	 */
+	const OUTPUT_FORMATS = array(
+		'image/jpeg' => 'jpg',
+		'image/png'  => 'png',
+	);
+
+	/**
 	 * Cached finfo instance for MIME type detection.
 	 *
 	 * Using a cached instance avoids repeated finfo_open() calls and
@@ -144,18 +159,34 @@ abstract class File {
 			return false;
 		}
 
-		$paths = static::get_storage_paths( $entity_id );
-
-		if ( ! \is_dir( $paths['basedir'] ) ) {
+		$file = static::get_cached_file( $url, $entity_id );
+		if ( ! $file ) {
 			return false;
 		}
 
-		$hash    = static::generate_hash( $url );
-		$pattern = static::escape_glob_pattern( $paths['basedir'] . '/' . $hash ) . '.*';
-		$matches = \glob( $pattern );
+		return static::get_storage_paths( $entity_id )['baseurl'] . '/' . \basename( $file );
+	}
 
-		if ( ! empty( $matches ) && \is_file( $matches[0] ) ) {
-			return $paths['baseurl'] . '/' . \basename( $matches[0] );
+	/**
+	 * Get the path of the cached copy of a URL.
+	 *
+	 * Only the names cache() gives its files are looked up: the hash of the URL with the extension
+	 * of one of the output formats.
+	 *
+	 * @since 9.4.4
+	 *
+	 * @param string     $url       The remote URL.
+	 * @param string|int $entity_id The entity identifier.
+	 *
+	 * @return string|false The file path if cached, false otherwise.
+	 */
+	protected static function get_cached_file( $url, $entity_id ) {
+		$base = static::get_storage_paths( $entity_id )['basedir'] . '/' . static::generate_hash( $url );
+
+		foreach ( self::OUTPUT_FORMATS as $extension ) {
+			if ( \is_file( $base . '.' . $extension ) ) {
+				return $base . '.' . $extension;
+			}
 		}
 
 		return false;
@@ -180,23 +211,21 @@ abstract class File {
 		// Check if already cached.
 		$cached_url = static::get( $url, $entity_id );
 		if ( $cached_url ) {
-			// Check for staleness if updated timestamp provided.
-			if ( ! empty( $options['updated'] ) ) {
-				$paths       = static::get_storage_paths( $entity_id );
-				$hash        = static::generate_hash( $url );
-				$pattern     = static::escape_glob_pattern( $paths['basedir'] . '/' . $hash ) . '.*';
-				$matches     = \glob( $pattern );
-				$file_path   = ( $matches && \is_file( $matches[0] ) ) ? $matches[0] : null;
-				$local_time  = $file_path ? \filemtime( $file_path ) : 0;
-				$remote_time = \strtotime( $options['updated'] );
-
-				if ( $remote_time && $local_time >= $remote_time ) {
-					return $cached_url;
-				}
-				// Stale - continue to re-download.
-			} else {
+			/*
+			 * Only a valid `updated` time that is newer than the cached file downloads it again.
+			 * A time in the future, or one that cannot be read, would make every render download.
+			 */
+			$remote_time = empty( $options['updated'] ) ? false : \strtotime( $options['updated'] );
+			if ( ! $remote_time || $remote_time > \time() ) {
 				return $cached_url;
 			}
+
+			$file       = static::get_cached_file( $url, $entity_id );
+			$local_time = $file ? \filemtime( $file ) : 0;
+			if ( $local_time >= $remote_time ) {
+				return $cached_url;
+			}
+			// Stale - continue to re-download.
 		}
 
 		/*
@@ -235,29 +264,28 @@ abstract class File {
 			return false;
 		}
 
-		$tmp_file = $result['file'];
-		$paths    = static::get_storage_paths( $entity_id );
-
 		/*
-		 * The image is optimized while it is still a temporary file, so the name it is published
-		 * under is the format it ends up in. Converting it afterwards would rename the file the
-		 * lookup has just been told about.
+		 * The image editor writes the copy that is stored, and nothing else is: a file the editor
+		 * cannot read or write is not cached. The image is optimized while it is still a temporary
+		 * file, so the name it is published under is the format it ends up in.
 		 */
 		$max_dimension = $options['max_dimension'] ?? static::get_max_dimension();
-		$tmp_file      = static::optimize_image( $tmp_file, $max_dimension );
+		$tmp_file      = static::optimize_image( $result['file'], $max_dimension );
+		if ( ! $tmp_file ) {
+			\wp_delete_file( $result['file'] );
+			return false;
+		}
 
-		// Create directory if it doesn't exist.
-		if ( ! \wp_mkdir_p( $paths['basedir'] ) ) {
+		// The extension comes from the format the editor wrote, and only an output format has one.
+		$ext   = self::OUTPUT_FORMATS[ static::get_file_mime_type( $tmp_file ) ] ?? '';
+		$paths = static::get_storage_paths( $entity_id );
+		if ( ! $ext || ! \wp_mkdir_p( $paths['basedir'] ) ) {
 			\wp_delete_file( $tmp_file );
 			return false;
 		}
 
 		// Generate hash-based filename.
-		$hash = static::generate_hash( $url );
-		$ext  = \pathinfo( $tmp_file, PATHINFO_EXTENSION );
-		if ( empty( $ext ) ) {
-			$ext = \wp_get_default_extension_for_mime_type( $result['mime_type'] );
-		}
+		$hash      = static::generate_hash( $url );
 		$file_name = $hash . '.' . $ext;
 		$file_path = $paths['basedir'] . '/' . $file_name;
 
@@ -271,6 +299,13 @@ abstract class File {
 			if ( ! \wp_mkdir_p( $paths['basedir'] ) || ! static::get_filesystem()->move( $tmp_file, $file_path, true ) ) {
 				\wp_delete_file( $tmp_file );
 				return false;
+			}
+		}
+
+		// A copy in the other format, from before the source changed, would still be found first.
+		foreach ( self::OUTPUT_FORMATS as $extension ) {
+			if ( $extension !== $ext ) {
+				\wp_delete_file( $paths['basedir'] . '/' . $hash . '.' . $extension );
 			}
 		}
 
@@ -635,14 +670,34 @@ abstract class File {
 			return new \WP_Error( 'invalid_url', \__( 'URL is not allowed.', 'activitypub' ) );
 		}
 
-		if ( ! \function_exists( 'download_url' ) ) {
+		if ( ! \function_exists( 'wp_tempnam' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/file.php';
 		}
 
-		$tmp_file = \download_url( $url, 15 ); // 15 second timeout.
+		// At most one byte past the limit is written, so the size check below rejects an oversized download.
+		$tmp_file = \wp_tempnam( 'activitypub-cache' );
+		if ( ! $tmp_file ) {
+			return new \WP_Error( 'http_no_file', \__( 'Could not create a temporary file.', 'activitypub' ) );
+		}
 
-		if ( \is_wp_error( $tmp_file ) ) {
-			return $tmp_file;
+		$response = \wp_safe_remote_get(
+			$url,
+			array(
+				'timeout'             => 15,
+				'stream'              => true,
+				'filename'            => $tmp_file,
+				'limit_response_size' => static::MAX_FILE_SIZE + 1,
+			)
+		);
+
+		if ( \is_wp_error( $response ) ) {
+			\wp_delete_file( $tmp_file );
+			return $response;
+		}
+
+		if ( 200 !== \wp_remote_retrieve_response_code( $response ) ) {
+			\wp_delete_file( $tmp_file );
+			return new \WP_Error( 'http_404', \trim( \wp_remote_retrieve_response_message( $response ) ) );
 		}
 
 		// Validate file size.
@@ -720,7 +775,7 @@ abstract class File {
 		 */
 		$expected_ext = \wp_get_default_extension_for_mime_type( $mime );
 
-		// Use the detected extension since temp files from download_url() have a .tmp extension.
+		// Use the detected extension, since a downloaded temp file has a .tmp extension.
 		$file_name = \pathinfo( \wp_basename( $file_path ), PATHINFO_FILENAME ) . '.' . $expected_ext;
 		$file_info = \wp_check_filetype_and_ext( $file_path, $file_name );
 
@@ -733,14 +788,15 @@ abstract class File {
 		$ext = \pathinfo( $file_path, PATHINFO_EXTENSION );
 
 		if ( \strtolower( $ext ) !== $expected_ext ) {
-			$new_path = \preg_replace( '/\.[^.]+$/', '.' . $expected_ext, $file_path );
-			if ( empty( $new_path ) || $new_path === $file_path ) {
-				$new_path = $file_path . '.' . $expected_ext;
+			// Name the file after its content type, and stop if it can't be renamed.
+			$dir      = \dirname( $file_path );
+			$new_path = $dir . '/' . \wp_unique_filename( $dir, \md5( $file_path ) . '.' . $expected_ext );
+
+			if ( ! static::get_filesystem()->move( $file_path, $new_path, true ) ) {
+				return new \WP_Error( 'invalid_file_type', \__( 'File type validation failed.', 'activitypub' ) );
 			}
 
-			if ( static::get_filesystem()->move( $file_path, $new_path, true ) ) {
-				return $new_path;
-			}
+			return $new_path;
 		}
 
 		return $file_path;
@@ -766,74 +822,63 @@ abstract class File {
 	}
 
 	/**
-	 * Optimize an image file by resizing and converting to WebP.
+	 * Write a resized copy of an image in one of the output formats.
 	 *
-	 * Uses WordPress image editor to resize large images and convert them
-	 * to WebP format for better compression while maintaining quality.
+	 * A JPEG or PNG keeps its format, anything else becomes a PNG. Every image is written again by
+	 * the editor. An animated image keeps its first frame.
 	 *
 	 * @param string $file_path     Path to the image file.
 	 * @param int    $max_dimension Maximum width/height in pixels.
 	 *
-	 * @return string The optimized file path.
+	 * @return string|false The path of the file the editor wrote, false if it could not read or write it.
 	 */
 	protected static function optimize_image( $file_path, $max_dimension ) {
 		// Check if it's an image.
 		$mime_type = static::get_file_mime_type( $file_path );
 		if ( ! $mime_type || ! \str_starts_with( $mime_type, 'image/' ) ) {
-			return $file_path;
+			return false;
 		}
 
 		$editor = \wp_get_image_editor( $file_path );
 		if ( \is_wp_error( $editor ) ) {
-			return $file_path;
+			return false;
 		}
 
-		$size         = $editor->get_size();
-		$needs_resize = $size['width'] > $max_dimension || $size['height'] > $max_dimension;
-
 		// Resize if needed.
-		if ( $needs_resize ) {
+		$size = $editor->get_size();
+		if ( $size['width'] > $max_dimension || $size['height'] > $max_dimension ) {
 			$editor->resize( $max_dimension, $max_dimension, false );
 		}
 
-		// Check if WebP is supported.
-		$can_webp = $editor->supports_mime_type( 'image/webp' );
+		// The source format is kept when the cache writes it, anything else becomes a PNG.
+		$output   = isset( self::OUTPUT_FORMATS[ $mime_type ] ) && $editor->supports_mime_type( $mime_type ) ? $mime_type : 'image/png';
+		$dir      = \dirname( $file_path );
+		$new_name = \wp_unique_filename( $dir, \pathinfo( $file_path, PATHINFO_FILENAME ) . '-cached.' . self::OUTPUT_FORMATS[ $output ] );
 
-		// Determine output format and save.
-		$dir = \dirname( $file_path );
-
-		if ( $can_webp ) {
-			// Convert to WebP.
-			$new_name = \wp_unique_filename( $dir, \preg_replace( '/\.[^.]+$/', '.webp', \basename( $file_path ) ) );
-			$result   = $editor->save( $dir . '/' . $new_name, 'image/webp' );
-		} elseif ( \in_array( $mime_type, array( 'image/png', 'image/webp' ), true ) ) {
-			// Keep original format for potentially transparent images when WebP not available.
-			if ( ! $needs_resize ) {
-				return $file_path;
-			}
-			$result = $editor->save( $file_path );
-		} else {
-			// Convert to JPEG when WebP not available.
-			$new_name = \wp_unique_filename( $dir, \preg_replace( '/\.[^.]+$/', '.jpg', \basename( $file_path ) ) );
-			$result   = $editor->save( $dir . '/' . $new_name, 'image/jpeg' );
+		// The site's output format mapping is meant for its media library, not for this cache.
+		$no_mapping = static function () {
+			return array();
+		};
+		\add_filter( 'image_editor_output_format', $no_mapping, PHP_INT_MAX );
+		try {
+			$result = $editor->save( $dir . '/' . $new_name, $output );
+		} finally {
+			\remove_filter( 'image_editor_output_format', $no_mapping, PHP_INT_MAX );
 		}
 
-		if ( \is_wp_error( $result ) ) {
-			return $file_path;
+		if ( \is_wp_error( $result ) || empty( $result['path'] ) ) {
+			return false;
 		}
-
-		// Handle result.
-		$result_path = $result['path'] ?? $file_path;
 
 		/*
-		 * If the path changed (format conversion), delete the original file. It may already be
-		 * gone: invalidating the entity deletes its whole directory, and that can land while this
-		 * file is being converted. Deleting it again is not an error worth a diagnostic.
+		 * The copy has a name of its own, so the original is deleted. It may already be gone:
+		 * invalidating the entity deletes its whole directory, and that can land while this file
+		 * is being converted. Deleting it again is not an error worth a diagnostic.
 		 */
-		if ( $result_path !== $file_path && \file_exists( $file_path ) ) {
+		if ( \file_exists( $file_path ) ) {
 			\wp_delete_file( $file_path );
 		}
 
-		return $result_path;
+		return $result['path'];
 	}
 }
