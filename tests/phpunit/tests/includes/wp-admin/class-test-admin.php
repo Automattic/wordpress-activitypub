@@ -136,4 +136,120 @@ class Test_Admin extends \WP_UnitTestCase {
 
 		unset( $_REQUEST['_apnonce'], $_POST['activitypub_header_image'] );
 	}
+
+	/**
+	 * Every ActivityPub bulk action on the users screen requires the bulk-users nonce.
+	 *
+	 * Loops over all bulk actions the plugin registers, so a new one is covered as soon as it is added.
+	 *
+	 * @covers ::handle_bulk_request
+	 */
+	public function test_bulk_actions_require_nonce() {
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $admin_id );
+
+		$actions   = \array_keys( Admin::user_bulk_options( array() ) );
+		$actions[] = 'delete_actor_confirmed';
+
+		foreach ( $actions as $action ) {
+			$user_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+			$died    = false;
+
+			try {
+				Admin::handle_bulk_request( 'users.php', $action, array( $user_id ) );
+			} catch ( \WPDieException $e ) {
+				$died = true;
+			}
+
+			$this->assertTrue( $died, \sprintf( 'Bulk action "%s" ran without a nonce.', $action ) );
+			$this->assertFalse( \user_can( $user_id, 'activitypub' ), \sprintf( 'Bulk action "%s" changed the user without a nonce.', $action ) );
+		}
+	}
+
+	/**
+	 * An ActivityPub bulk action requires the capability to promote users.
+	 *
+	 * @covers ::handle_bulk_request
+	 */
+	public function test_bulk_action_requires_promote_users() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$user_id   = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		\wp_set_current_user( $editor_id );
+
+		$_REQUEST['_wpnonce'] = \wp_create_nonce( 'bulk-users' );
+
+		$died = false;
+		try {
+			Admin::handle_bulk_request( 'users.php', 'add_activitypub_cap', array( $user_id ) );
+		} catch ( \WPDieException $e ) {
+			$died = true;
+		}
+
+		unset( $_REQUEST['_wpnonce'] );
+
+		$this->assertTrue( $died );
+		$this->assertFalse( \user_can( $user_id, 'activitypub' ) );
+	}
+
+	/**
+	 * An administrator with a valid nonce can enable users for ActivityPub.
+	 *
+	 * @covers ::handle_bulk_request
+	 */
+	public function test_bulk_action_with_nonce_adds_capability() {
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$user_id  = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		\wp_set_current_user( $admin_id );
+
+		$_REQUEST['_wpnonce'] = \wp_create_nonce( 'bulk-users' );
+
+		$result = Admin::handle_bulk_request( 'users.php', 'add_activitypub_cap', array( $user_id ) );
+
+		unset( $_REQUEST['_wpnonce'] );
+
+		$this->assertSame( 'users.php', $result );
+		$this->assertTrue( \user_can( $user_id, 'activitypub' ) );
+	}
+
+	/**
+	 * Bulk actions of other plugins pass through untouched, with or without a nonce.
+	 *
+	 * @covers ::handle_bulk_request
+	 */
+	public function test_other_bulk_actions_pass_through() {
+		$user_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		\wp_set_current_user( $user_id );
+
+		$this->assertSame( 'users.php', Admin::handle_bulk_request( 'users.php', 'another_plugin_action', array( $user_id ) ) );
+	}
+
+	/**
+	 * The one-time self-destruct notice is kept for users who cannot manage the site.
+	 *
+	 * @covers ::admin_notices
+	 */
+	public function test_self_destruct_notice_is_kept_for_users_without_manage_options() {
+		\set_current_screen( 'dashboard' );
+		\update_option( 'activitypub_self_destruct_complete', true );
+
+		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		\ob_start();
+		Admin::admin_notices();
+		$output = \ob_get_clean();
+
+		$this->assertStringNotContainsString( 'Self-Destruct Complete', $output );
+		$this->assertNotEmpty( \get_option( 'activitypub_self_destruct_complete' ) );
+
+		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		\ob_start();
+		Admin::admin_notices();
+		$output = \ob_get_clean();
+
+		$this->assertStringContainsString( 'Self-Destruct Complete', $output );
+		$this->assertFalse( \get_option( 'activitypub_self_destruct_complete' ) );
+
+		\set_current_screen( 'front' );
+	}
 }

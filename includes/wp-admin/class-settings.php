@@ -149,6 +149,10 @@ class Settings {
 				\update_option( 'activitypub_checklist_settings_visited', '1' );
 				break;
 			default:
+				if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ?? '' ) ), 'activitypub_help_tab' ) ) {
+					break;
+				}
+
 				if ( isset( $_GET['help-tab'] ) && 'getting-started' === $_GET['help-tab'] ) { // phpcs:ignore WordPress.Security.NonceVerification
 					\update_option( 'activitypub_checklist_fediverse_intro_visited', '1' );
 				} elseif ( isset( $_GET['help-tab'] ) && 'editor-blocks' === $_GET['help-tab'] ) { // phpcs:ignore WordPress.Security.NonceVerification
@@ -330,7 +334,8 @@ class Settings {
 	public static function handle_welcome_query_arg() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( isset( $_GET['welcome'] ) ) {
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			\check_admin_referer( 'activitypub_welcome' );
+
 			$welcome_checked = empty( \sanitize_text_field( \wp_unslash( $_GET['welcome'] ) ) ) ? 0 : 1;
 			\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', $welcome_checked );
 			\wp_safe_redirect( \admin_url( 'options-general.php?page=activitypub&tab=settings' ) );

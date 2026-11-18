@@ -106,7 +106,7 @@ class Admin {
 
 		// Check for self-destruct completion notice.
 		$self_destruct_complete = \get_option( 'activitypub_self_destruct_complete' );
-		if ( $self_destruct_complete ) {
+		if ( $self_destruct_complete && \current_user_can( 'manage_options' ) ) {
 			// Show the notice only once, then remove it.
 			\delete_option( 'activitypub_self_destruct_complete' );
 			?>
@@ -763,6 +763,18 @@ class Admin {
 	 * @return string The URL to send the user back to.
 	 */
 	public static function handle_bulk_request( $send_back, $action, $users ) {
+		$actions   = \array_keys( self::user_bulk_options( array() ) );
+		$actions[] = 'delete_actor_confirmed';
+
+		// Core does not verify the nonce or the capability for bulk actions added by plugins.
+		if ( \in_array( $action, $actions, true ) ) {
+			\check_admin_referer( 'bulk-users' );
+
+			if ( ! \current_user_can( 'promote_users' ) ) {
+				\wp_die( \esc_html__( 'You do not have sufficient permissions to perform this action.', 'activitypub' ), 403 );
+			}
+		}
+
 		switch ( $action ) {
 			case 'add_activitypub_cap':
 				foreach ( $users as $user_id ) {
