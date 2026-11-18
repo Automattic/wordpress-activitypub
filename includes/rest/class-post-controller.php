@@ -23,6 +23,7 @@ use function Activitypub\get_rest_url_by_path;
  * @package Activitypub\Rest
  */
 class Post_Controller extends \WP_REST_Controller {
+	use Rate_Limit;
 
 	/**
 	 * The namespace of this controller's route.
@@ -100,7 +101,10 @@ class Post_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_remote_intent_template' ),
-					'permission_callback' => '__return_true',
+					// Unauthenticated, and it WebFingers a host the caller names, so the only gate is how often one caller may ask.
+					'permission_callback' => function ( $request ) {
+						return $this->rate_limit( 'remote_intent', 10, $request );
+					},
 					'args'                => array(
 						'resource' => array(
 							'description'       => 'The Fediverse profile handle or URL.',

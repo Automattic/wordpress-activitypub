@@ -100,10 +100,7 @@ class Webfinger {
 			return new \WP_Error(
 				'webfinger_missing_links',
 				\__( 'No valid Link elements found.', 'activitypub' ),
-				array(
-					'status' => 400,
-					'data'   => $data,
-				)
+				array( 'status' => 400 )
 			);
 		}
 
@@ -124,10 +121,7 @@ class Webfinger {
 		return new \WP_Error(
 			'webfinger_url_no_activitypub',
 			\__( 'The Site supports WebFinger but not ActivityPub', 'activitypub' ),
-			array(
-				'status' => 400,
-				'data'   => $data,
-			)
+			array( 'status' => 400 )
 		);
 	}
 
@@ -168,10 +162,7 @@ class Webfinger {
 		return new \WP_Error(
 			'webfinger_url_no_acct',
 			\__( 'No acct URI found.', 'activitypub' ),
-			array(
-				'status' => 400,
-				'data'   => $data,
-			)
+			array( 'status' => 400 )
 		);
 	}
 
@@ -419,10 +410,7 @@ class Webfinger {
 			return new \WP_Error(
 				'webfinger_missing_links',
 				\__( 'No valid Link elements found.', 'activitypub' ),
-				array(
-					'status' => 400,
-					'data'   => $data,
-				)
+				array( 'status' => 400 )
 			);
 		}
 
@@ -472,10 +460,7 @@ class Webfinger {
 			return new \WP_Error(
 				'webfinger_missing_intent_endpoint',
 				\__( 'No valid Intent endpoint found.', 'activitypub' ),
-				array(
-					'status' => 400,
-					'data'   => $data,
-				)
+				array( 'status' => 400 )
 			);
 		}
 
@@ -506,10 +491,7 @@ class Webfinger {
 			return new \WP_Error(
 				'webfinger_missing_intent_endpoint',
 				\__( 'No valid Intent endpoint found.', 'activitypub' ),
-				array(
-					'status' => 400,
-					'data'   => $data,
-				)
+				array( 'status' => 400 )
 			);
 		}
 
