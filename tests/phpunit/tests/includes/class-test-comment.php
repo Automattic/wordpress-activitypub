@@ -9,6 +9,7 @@ namespace Activitypub\Tests;
 
 use Activitypub\Collection\Remote_Posts;
 use Activitypub\Comment;
+use Activitypub\Emoji;
 
 use function Activitypub\generate_image_block;
 use function Activitypub\process_remote_images;
@@ -19,6 +20,7 @@ use function Activitypub\process_remote_images;
  * @coversDefaultClass \Activitypub\Comment
  */
 class Test_Comment extends \WP_UnitTestCase {
+	use Equal_Html;
 	use Uri_Test_Cases;
 
 	/**
@@ -2969,10 +2971,10 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that hostile markup on an ActivityPub comment is stripped by the allowlist.
+	 * Test that markup in the name of an ActivityPub comment stays escaped.
 	 *
 	 * On comments carrying a remote actor, `comment_author` comes from the remote actor's name.
-	 * The decode there is deliberate, so the KSES allowlist is the only thing standing behind it.
+	 * Only the emoji the plugin writes are restored, anything else is left as text.
 	 *
 	 * @covers ::unescape_emoji
 	 */
@@ -2983,9 +2985,7 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		$result = Comment::unescape_emoji( \esc_html( $hostile ), $comment_id );
 
-		$this->assertStringNotContainsString( 'onerror', $result, 'Event handlers must not survive.' );
-		$this->assertStringNotContainsString( '<script', $result, 'Script elements must not survive.' );
-		$this->assertStringNotContainsString( 'evil.example', $result, 'A remote emoji source must not survive the source callback.' );
+		$this->assertSame( \esc_html( $hostile ), $result, 'The name should stay escaped.' );
 	}
 
 	/**
@@ -3029,34 +3029,110 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Only the emoji the plugin writes for a name are restored, other markup stays escaped.
+	 *
+	 * Goes through core's comment_author(), so the escaping is the one core applies.
+	 *
+	 * @covers ::unescape_emoji
+	 * @covers ::render_emoji
+	 */
+	public function test_unescape_emoji_restores_only_its_own_emoji() {
+		list( , $img ) = $this->emoji_img();
+		$other         = \str_replace( 'party', 'other', $img );
+
+		list( $comment_id ) = $this->create_activitypub_comment( 'Party :party: ' . $other . ' &lt;b&gt;' );
+
+		$output = \get_echo( 'comment_author', array( $comment_id ) );
+
+		// Only the emoji the plugin wrote is markup, the other img and the entities stay text.
+		$this->assert_equal_html( 'Party ' . $img . ' ' . \esc_html( $other ) . ' &lt;b&gt;', $output );
+	}
+
+	/**
+	 * An img with the name of one of the actor's emoji gets the source of that emoji, not its own.
+	 *
+	 * @covers ::unescape_emoji
+	 */
+	public function test_unescape_emoji_takes_the_source_from_the_emoji() {
+		list( , $img ) = $this->emoji_img();
+		$other         = \str_replace( 'party.png', 'other.png', $img );
+
+		list( $comment_id ) = $this->create_activitypub_comment( 'Party ' . $other );
+
+		$output = \get_echo( 'comment_author', array( $comment_id ) );
+
+		$this->assert_equal_html( 'Party ' . $img, $output, 'The img should carry the source of the emoji.' );
+	}
+
+	/**
+	 * A stored comment with an emoji block in an attribute renders it as text.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_render_blocks_renders_no_emoji_in_attributes() {
+		$block   = '<!-- wp:activitypub/emoji {"url":"https://example.com/emoji/blobcat.png"} -->:blobcat:<!-- /wp:activitypub/emoji -->';
+		$content = '<p><a href="https://example.com/" title="' . $block . '">x</a> ' . $block . '</p>';
+
+		list( $comment_id ) = $this->create_activitypub_comment();
+		$output             = Comment::render_blocks( $content, \get_comment( $comment_id ) );
+
+		$processor = new \WP_HTML_Tag_Processor( $output );
+		$this->assertTrue( $processor->next_tag( 'a' ) );
+		$this->assertSame( ':blobcat:', $processor->get_attribute( 'title' ) );
+		$this->assertStringNotContainsString( 'wp:activitypub/emoji', $output, 'The block in text is still rendered.' );
+	}
+
+	/**
 	 * Create a comment that looks like it came from a remote actor.
+	 *
+	 * @param string $author Optional. The stored author name. Default 'Party :party:'.
 	 *
 	 * @return array The comment ID and the remote actor's post ID.
 	 */
-	protected function create_activitypub_comment() {
+	protected function create_activitypub_comment( $author = 'Party :party:' ) {
 		$post_id       = self::factory()->post->create();
 		$actor_post_id = self::factory()->post->create();
-		$comment_id    = self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) );
+		$comment_id    = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'comment_author'  => $author,
+			)
+		);
 
 		\add_comment_meta( $comment_id, '_activitypub_remote_actor_id', $actor_post_id );
+
+		list( $src ) = $this->emoji_img();
+		\add_post_meta(
+			$actor_post_id,
+			'_activitypub_emoji',
+			\wp_slash(
+				\wp_json_encode(
+					array(
+						array(
+							'type' => 'Emoji',
+							'name' => ':party:',
+							'icon' => array( 'url' => $src ),
+						),
+					)
+				)
+			)
+		);
 
 		return array( $comment_id, $actor_post_id );
 	}
 
 	/**
-	 * Build a custom emoji img tag and its source URL.
+	 * Build the custom emoji img tag render_emoji() writes, and its source URL.
+	 *
+	 * The source is already local, so the cache keeps it as it is.
 	 *
 	 * @return array The source URL and the img tag.
 	 */
 	protected function emoji_img() {
 		$upload_dir = \wp_upload_dir();
 		$src        = $upload_dir['baseurl'] . '/activitypub/emoji/party.png';
-		$img        = \sprintf(
-			'<img src="%s" alt=":party:" title=":party:" class="emoji" width="20" height="20" draggable="false" />',
-			$src
-		);
 
-		return array( $src, $img );
+		return array( $src, Emoji::get_img_tag( $src, 'party' ) );
 	}
 
 	/**
