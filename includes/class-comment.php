@@ -62,7 +62,7 @@ class Comment {
 			return $content;
 		}
 
-		$blocks         = \parse_blocks( $content );
+		$blocks         = \parse_blocks( Emoji::remove_blocks_in_tags( $content ) );
 		$output         = '';
 		$allowed_blocks = array( 'activitypub/emoji' );
 		$context_filter = null;
@@ -1239,14 +1239,12 @@ class Comment {
 			return $author;
 		}
 
-		if ( ! \get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true ) ) {
+		$remote_actor_id = \get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true );
+		if ( ! $remote_actor_id ) {
 			return $author;
 		}
 
-		// Decode entities so we can selectively restore emoji <img> tags.
-		$decoded = \html_entity_decode( $author, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
-
-		// Use strict KSES validation to only allow valid emoji img tags.
-		return \wp_kses( $decoded, Emoji::get_kses_allowed_html() );
+		// Only the emoji of this actor, in the form render_emoji() writes them. The rest of the name stays escaped.
+		return Emoji::restore_img_tags( $author, \get_post_meta( $remote_actor_id, '_activitypub_emoji', true ) );
 	}
 }
