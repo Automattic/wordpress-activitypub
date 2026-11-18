@@ -20,6 +20,7 @@ use function Activitypub\process_remote_images;
  * @coversDefaultClass \Activitypub\Comment
  */
 class Test_Comment extends \WP_UnitTestCase {
+	use Equal_Html;
 	use Uri_Test_Cases;
 
 	/**
@@ -3043,10 +3044,8 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		$output = \get_echo( 'comment_author', array( $comment_id ) );
 
-		$this->assertStringContainsString( $img, $output, 'The emoji the plugin wrote should be restored.' );
-		$this->assertSame( 1, \substr_count( $output, '<img' ), 'Only that one img should be markup.' );
-		$this->assertStringContainsString( \esc_html( $other ), $output, 'Other markup in the name stays escaped.' );
-		$this->assertStringNotContainsString( '<b>', $output, 'Other entities in the name are not decoded.' );
+		// Only the emoji the plugin wrote is markup, the other img and the entities stay text.
+		$this->assert_equal_html( 'Party ' . $img . ' ' . \esc_html( $other ) . ' &lt;b&gt;', $output );
 	}
 
 	/**
@@ -3062,8 +3061,7 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		$output = \get_echo( 'comment_author', array( $comment_id ) );
 
-		$this->assertStringContainsString( $img, $output, 'The img should carry the source of the emoji.' );
-		$this->assertStringNotContainsString( 'other.png', $output, 'The source in the name must not be used.' );
+		$this->assert_equal_html( 'Party ' . $img, $output, 'The img should carry the source of the emoji.' );
 	}
 
 	/**
