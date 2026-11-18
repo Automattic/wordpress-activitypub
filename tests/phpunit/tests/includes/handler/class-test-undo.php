@@ -137,8 +137,9 @@ class Test_Undo extends \WP_UnitTestCase {
 	 * @param array|string $undo_object The object of the Undo, the followed actor is filled in.
 	 * @param bool         $removed     Whether the follower is removed.
 	 * @param bool         $blog        Whether the blog actor is followed instead of the user.
+	 * @param string|null  $inbox_actor The actor of a Follow with the same ID in the inbox, if any.
 	 */
-	public function test_handle_undo_follow_without_inbox_item( $undo_actor, $undo_object, $removed, $blog = false ) {
+	public function test_handle_undo_follow_without_inbox_item( $undo_actor, $undo_object, $removed, $blog = false, $inbox_actor = null ) {
 		$follower = 'https://example.com/users/follower';
 		$other    = 'https://example.com/users/other';
 
@@ -163,6 +164,21 @@ class Test_Undo extends \WP_UnitTestCase {
 
 		if ( \is_array( $undo_object ) && ! isset( $undo_object['object'] ) ) {
 			$undo_object['object'] = Actors::get_by_id( $user_id )->get_id();
+		}
+
+		// A Follow with the same ID by another actor is in the inbox.
+		if ( $inbox_actor ) {
+			Inbox_Collection::add(
+				Activity::init_from_array(
+					array(
+						'id'     => $undo_object['id'],
+						'type'   => 'Follow',
+						'actor'  => $inbox_actor,
+						'object' => $undo_object['object'],
+					)
+				),
+				$user_id
+			);
 		}
 
 		Undo::handle_undo(
@@ -204,6 +220,7 @@ class Test_Undo extends \WP_UnitTestCase {
 			'other actor in embedded follow' => array( $follower, \array_merge( $follow, array( 'actor' => $other ) ), false ),
 			'followed actor is not local'    => array( $follower, \array_merge( $follow, array( 'object' => 'https://example.net/users/someone' ) ), false ),
 			'bare follow id'                 => array( $follower, 'https://example.com/follows/1', false ),
+			'follow id of another actor'     => array( $follower, $follow, false, false, $other ),
 		);
 	}
 

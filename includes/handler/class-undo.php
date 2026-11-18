@@ -89,7 +89,7 @@ class Undo {
 		 * @param array              $activity The ActivityPub activity data.
 		 * @param int[]              $user_ids The local user IDs.
 		 * @param bool               $success  True on success, false on failure.
-		 * @param \WP_Comment|string $result   The target, based on the activity that is being undone.
+		 * @param bool|\WP_Error     $result   Whether the follower or the comment was removed, or the error why not.
 		 */
 		\do_action( 'activitypub_handled_undo', $activity, (array) $user_ids, $success, $result );
 	}
