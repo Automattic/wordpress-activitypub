@@ -1904,4 +1904,21 @@ class Test_Blocks extends \WP_UnitTestCase {
 			$data['activitypub_quote']
 		);
 	}
+
+	/**
+	 * Test that a post with an emoji block in an attribute renders it as text.
+	 *
+	 * Blocks::init() turns such blocks back into text before do_blocks() renders them.
+	 *
+	 * @covers \Activitypub\Emoji::remove_blocks_in_tags
+	 */
+	public function test_the_content_renders_no_emoji_in_attributes() {
+		$block   = '<!-- wp:activitypub/emoji {"url":"https://example.com/emoji/blobcat.png"} -->:blobcat:<!-- /wp:activitypub/emoji -->';
+		$content = \apply_filters( 'the_content', '<p><a href="https://example.com/" title="' . $block . '">x</a></p>' );
+
+		$processor = new \WP_HTML_Tag_Processor( $content );
+		$this->assertTrue( $processor->next_tag( 'a' ) );
+		$this->assertSame( ':blobcat:', $processor->get_attribute( 'title' ) );
+		$this->assertFalse( $processor->next_tag( 'img' ) );
+	}
 }

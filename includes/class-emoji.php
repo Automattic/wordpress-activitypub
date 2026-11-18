@@ -214,10 +214,22 @@ class Emoji {
 	 * @return string The processed text with emoji replacements.
 	 */
 	public static function replace_from_json( $text, $emoji_json ) {
+		return self::replace_names( $text, self::get_replacements( $emoji_json, $text ) );
+	}
+
+	/**
+	 * Get the img tags for the emoji a text uses.
+	 *
+	 * @param string $emoji_json JSON-encoded emoji tag data.
+	 * @param string $text       The text, only emoji it names as `:shortcode:` are looked up.
+	 *
+	 * @return string[] The img tags, keyed by the lowercase shortcode without colons.
+	 */
+	private static function get_replacements( $emoji_json, $text ) {
 		$tags = \json_decode( $emoji_json, true );
 
 		if ( empty( $tags ) || ! \is_array( $tags ) ) {
-			return $text;
+			return array();
 		}
 
 		$replacements = array();
@@ -260,7 +272,102 @@ class Emoji {
 			$replacements[ $key ] = self::get_img_tag( $cached_url ?: $url, $name );
 		}
 
-		return self::replace_names( $text, $replacements );
+		return $replacements;
+	}
+
+	/**
+	 * Restore the emoji img tags in an escaped text.
+	 *
+	 * An img in the form get_img_tag() writes, as esc_html() leaves it, is replaced by the img of
+	 * the emoji with that name, built from the emoji data, and has to pass the emoji rules.
+	 * Anything else stays escaped.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $text       The escaped text.
+	 * @param string $emoji_json JSON-encoded emoji tag data.
+	 *
+	 * @return string The text with the emoji img tags restored.
+	 */
+	public static function restore_img_tags( $text, $emoji_json ) {
+		$pattern = \sprintf(
+			'/&lt;img src=&quot;\S*?&quot; alt=&quot;(%s)&quot; title=&quot;\1&quot; class=&quot;emoji&quot; width=&quot;20&quot; height=&quot;20&quot; draggable=&quot;false&quot; \/&gt;/',
+			self::SHORTCODE
+		);
+
+		if ( ! \preg_match_all( $pattern, $text, $matches ) ) {
+			return $text;
+		}
+
+		// Look up only the emoji the text names.
+		$shortcodes   = \array_map(
+			static function ( $name ) {
+				return \sprintf( ':%s:', $name );
+			},
+			$matches[1]
+		);
+		$replacements = self::get_replacements( $emoji_json, \implode( ' ', $shortcodes ) );
+		if ( empty( $replacements ) ) {
+			return $text;
+		}
+
+		$allowed_html = self::get_kses_allowed_html();
+
+		return \preg_replace_callback(
+			$pattern,
+			static function ( $found ) use ( $replacements, $allowed_html ) {
+				$img = $replacements[ \strtolower( $found[1] ) ] ?? null;
+
+				if ( null === $img ) {
+					return $found[0];
+				}
+
+				// An img the rules reject leaves its shortcode, so the name stays readable.
+				return \wp_kses( $img, $allowed_html ) ?: \sprintf( ':%s:', $found[1] );
+			},
+			$text
+		) ?? $text;
+	}
+
+	/**
+	 * Turn emoji blocks inside a tag or an HTML comment back into their shortcode text.
+	 *
+	 * Emoji blocks only belong in text, which is where wrap_in_content() puts them. This runs
+	 * before the blocks are rendered: for comments in Comment::render_blocks(), for posts before
+	 * do_blocks().
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $content The content.
+	 *
+	 * @return string The content with emoji blocks only in text.
+	 */
+	public static function remove_blocks_in_tags( $content ) {
+		if ( ! \is_string( $content ) || ! \str_contains( $content, '<!-- wp:activitypub/emoji' ) ) {
+			return $content;
+		}
+
+		// Each block becomes a placeholder without `<` or `>`, so splitting the HTML does not see the block comments.
+		$token  = \md5( $content );
+		$blocks = array();
+		$text   = array();
+		$marked = \preg_replace_callback(
+			'#<!-- wp:activitypub/emoji\s[^>]*[^/]-->([^<]*)<!-- /wp:activitypub/emoji -->#',
+			static function ( $matches ) use ( $token, &$blocks, &$text ) {
+				$key            = \sprintf( '%1$s%2$d%1$s', $token, \count( $blocks ) );
+				$blocks[ $key ] = $matches[0];
+				$text[ $key ]   = $matches[1];
+				return $key;
+			},
+			$content
+		);
+
+		if ( null === $marked || empty( $blocks ) ) {
+			return $content;
+		}
+
+		// Placeholders in tags and comments become text, the ones left are blocks again.
+		return \strtr( \wp_replace_in_html_tags( $marked, $text ), $blocks );
 	}
 
 	/**
@@ -286,15 +393,20 @@ class Emoji {
 	}
 
 	/**
-	 * Replace emoji shortcodes in one pass over the original text.
+	 * Replace emoji shortcodes in the text between tags.
 	 *
 	 * Scans for `:shortcode:` with a fixed pattern and looks each one up, case-insensitively, so
-	 * the pattern does not grow with the emoji.
+	 * the pattern does not grow with the emoji. A replacement is markup, so it only goes into
+	 * text: a shortcode inside a tag or an HTML comment stays as it is. The text is split the way
+	 * kses splits HTML. In plain text (a name), a `<` starts what the split takes for a tag, and
+	 * shortcodes after it stay as text.
+	 *
+	 * @since unreleased Only replaces shortcodes outside of tags and HTML comments.
 	 *
 	 * @param string $text         The text to process.
 	 * @param array  $replacements The replacements, keyed by the lowercase shortcode without colons.
 	 *
-	 * @return string The text with the shortcodes replaced, or unchanged if PCRE bails.
+	 * @return string The text with the shortcodes replaced. A part PCRE bails on stays unchanged.
 	 */
 	private static function replace_names( $text, $replacements ) {
 		if ( empty( $replacements ) ) {
@@ -302,13 +414,22 @@ class Emoji {
 		}
 
 		// A shortcode needs a boundary on both sides: no letter, digit or colon next to it.
-		return \preg_replace_callback(
-			\sprintf( '/(?<![\p{L}\p{N}:]):(%s):(?![\p{L}\p{N}:])/u', self::SHORTCODE ),
-			function ( $matches ) use ( $replacements ) {
-				return $replacements[ \strtolower( $matches[1] ) ] ?? $matches[0];
-			},
-			$text
-		) ?? $text;
+		$pattern  = \sprintf( '/(?<![\p{L}\p{N}:]):(%s):(?![\p{L}\p{N}:])/u', self::SHORTCODE );
+		$callback = static function ( $matches ) use ( $replacements ) {
+			return $replacements[ \strtolower( $matches[1] ) ] ?? $matches[0];
+		};
+
+		$parts = \wp_html_split( $text );
+		foreach ( $parts as $i => $part ) {
+			// Tags and comments start with `<`, text never does.
+			if ( \str_starts_with( $part, '<' ) ) {
+				continue;
+			}
+
+			$parts[ $i ] = \preg_replace_callback( $pattern, $callback, $part ) ?? $part;
+		}
+
+		return \implode( '', $parts );
 	}
 
 	/**
