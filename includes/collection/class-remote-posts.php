@@ -16,7 +16,6 @@ use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 use function Activitypub\process_remote_media;
-use function Activitypub\unescape_guid;
 
 /**
  * Remote Posts collection.
@@ -192,8 +191,7 @@ class Remote_Posts {
 		 * payload's attributedTo, because only the actor is bound to the HTTP signature.
 		 */
 		if ( isset( $activity['actor'] ) ) {
-			$owner = \get_post( (int) \get_post_meta( $post->ID, '_activitypub_remote_actor_id', true ) );
-			if ( ! $owner instanceof \WP_Post || object_to_uri( $activity['actor'] ) !== unescape_guid( $owner->guid ) ) {
+			if ( ! Remote_Actors::has_uri( (int) \get_post_meta( $post->ID, '_activitypub_remote_actor_id', true ), $activity['actor'] ) ) {
 				return new \WP_Error(
 					'activitypub_update_forbidden',
 					\__( 'Update failed: the actor does not own this post.', 'activitypub' ),

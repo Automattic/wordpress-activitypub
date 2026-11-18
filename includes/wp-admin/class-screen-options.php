@@ -161,7 +161,8 @@ class Screen_Options {
 		}
 
 		foreach ( $screen_options as $option => $label ) {
-			if ( isset( $_POST[ $option ] ) ) {
+			// A set nonce was verified above; without one, nothing is saved.
+			if ( isset( $_POST['screenoptionnonce'], $_POST[ $option ] ) ) {
 				$value = \sanitize_text_field( \wp_unslash( $_POST[ $option ] ) );
 				\update_user_meta( \get_current_user_id(), $option, empty( $value ) ? 0 : 1 );
 			}

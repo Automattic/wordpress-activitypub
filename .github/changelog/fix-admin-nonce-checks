@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Add security checks to the bulk actions on the Users screen and to a few settings links in the admin.
