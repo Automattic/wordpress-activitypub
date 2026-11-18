@@ -59,6 +59,7 @@ class Admin {
 		\add_filter( 'manage_users_custom_column', array( self::class, 'manage_users_custom_column' ), 10, 3 );
 		\add_filter( 'bulk_actions-users', array( self::class, 'user_bulk_options' ) );
 		\add_filter( 'handle_bulk_actions-users', array( self::class, 'handle_bulk_request' ), 10, 3 );
+		\add_action( 'load-users.php', array( self::class, 'keep_bulk_nonce' ) );
 
 		\add_action( 'admin_post_delete_actor_confirmed', array( self::class, 'handle_bulk_actor_delete_confirmation' ) );
 		\add_action( 'admin_action_activitypub_confirm_removal', array( self::class, 'handle_bulk_actor_delete_page' ) );
@@ -750,6 +751,28 @@ class Admin {
 	}
 
 	/**
+	 * Keep the nonce of an ActivityPub bulk action in the request that runs it.
+	 *
+	 * For a bulk action it does not know, users.php first redirects to the same URL without
+	 * `_wpnonce` whenever the form sent `_wp_http_referer`, and runs the action on the second
+	 * request, where handle_bulk_request() could not verify the nonce anymore. Without the
+	 * field in `$_GET` it runs the action right away. `wp_get_referer()` reads the field from
+	 * `$_REQUEST`, so the URL to send the user back to stays the same.
+	 *
+	 * @since unreleased
+	 *
+	 * @return void
+	 */
+	public static function keep_bulk_nonce() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The nonce is verified in handle_bulk_request().
+		$action = \sanitize_key( \wp_unslash( $_REQUEST['action'] ?? '' ) );
+
+		if ( \array_key_exists( $action, self::user_bulk_options( array() ) ) ) {
+			unset( $_GET['_wp_http_referer'] );
+		}
+	}
+
+	/**
 	 * Handle bulk activitypub requests.
 	 *
 	 * * `add_activitypub_cap` - Add the activitypub capability to the selected users.
@@ -843,7 +866,7 @@ class Admin {
 	public static function handle_bulk_actor_delete_page() {
 
 		// Check permissions.
-		if ( ! \current_user_can( 'edit_users' ) ) {
+		if ( ! \current_user_can( 'promote_users' ) ) {
 			\wp_die( \esc_html__( 'You do not have sufficient permissions to access this page.', 'activitypub' ) );
 		}
 
@@ -887,7 +910,7 @@ class Admin {
 		}
 
 		// Check permissions.
-		if ( ! \current_user_can( 'edit_users' ) ) {
+		if ( ! \current_user_can( 'promote_users' ) ) {
 			\wp_die( \esc_html__( 'You do not have sufficient permissions to perform this action.', 'activitypub' ) );
 		}
 

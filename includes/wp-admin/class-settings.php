@@ -153,9 +153,9 @@ class Settings {
 					break;
 				}
 
-				if ( isset( $_GET['help-tab'] ) && 'getting-started' === $_GET['help-tab'] ) { // phpcs:ignore WordPress.Security.NonceVerification
+				if ( isset( $_GET['help-tab'] ) && 'getting-started' === $_GET['help-tab'] ) {
 					\update_option( 'activitypub_checklist_fediverse_intro_visited', '1' );
-				} elseif ( isset( $_GET['help-tab'] ) && 'editor-blocks' === $_GET['help-tab'] ) { // phpcs:ignore WordPress.Security.NonceVerification
+				} elseif ( isset( $_GET['help-tab'] ) && 'editor-blocks' === $_GET['help-tab'] ) {
 					\update_option( 'activitypub_checklist_blocks_visited', '1' );
 				}
 				break;

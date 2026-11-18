@@ -212,6 +212,98 @@ class Test_Admin extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A bulk action sent from the users screen runs in the request that carries its nonce.
+	 *
+	 * Replays users.php: the list form sends `_wpnonce` and `_wp_http_referer`. For an action
+	 * it does not know, core redirects without both when `$_GET['_wp_http_referer']` is set,
+	 * otherwise it passes `wp_get_referer()` to the `handle_bulk_actions-users` filter.
+	 *
+	 * @covers ::keep_bulk_nonce
+	 * @covers ::handle_bulk_request
+	 */
+	public function test_bulk_action_from_users_screen_keeps_its_nonce() {
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$user_id  = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		\wp_set_current_user( $admin_id );
+
+		$original_get           = $_GET; // phpcs:ignore WordPress.Security.NonceVerification -- Remembered only to be put back.
+		$original_request       = $_REQUEST; // phpcs:ignore WordPress.Security.NonceVerification -- Remembered only to be put back.
+		$request_uri            = $_SERVER['REQUEST_URI'] ?? null; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- Remembered only to be put back.
+		$_SERVER['REQUEST_URI'] = '/wp-admin/users.php?action=add_activitypub_cap';
+
+		$form = array(
+			'action'           => 'add_activitypub_cap',
+			'users'            => array( $user_id ),
+			'_wpnonce'         => \wp_create_nonce( 'bulk-users' ),
+			'_wp_http_referer' => '/wp-admin/users.php?role=subscriber',
+		);
+
+		try {
+			$_GET     = $form;
+			$_REQUEST = $form;
+
+			Admin::keep_bulk_nonce();
+
+			// With the field set, users.php would redirect without the nonce.
+			$this->assertArrayNotHasKey( '_wp_http_referer', $_GET ); // phpcs:ignore WordPress.Security.NonceVerification
+
+			$send_back = Admin::handle_bulk_request( \wp_get_referer(), 'add_activitypub_cap', array( $user_id ) );
+
+			$this->assertSame( '/wp-admin/users.php?role=subscriber', $send_back );
+			$this->assertTrue( \user_can( $user_id, 'activitypub' ) );
+
+			// Bulk actions of other plugins keep the redirect of core.
+			$_GET     = \array_merge( $form, array( 'action' => 'another_plugin_action' ) );
+			$_REQUEST = $_GET; // phpcs:ignore WordPress.Security.NonceVerification
+
+			Admin::keep_bulk_nonce();
+
+			$this->assertArrayHasKey( '_wp_http_referer', $_GET ); // phpcs:ignore WordPress.Security.NonceVerification
+		} finally {
+			$_GET     = $original_get;
+			$_REQUEST = $original_request;
+
+			if ( null === $request_uri ) {
+				unset( $_SERVER['REQUEST_URI'] );
+			} else {
+				$_SERVER['REQUEST_URI'] = $request_uri;
+			}
+		}
+	}
+
+	/**
+	 * Confirming the removal requires the same capability as the bulk action that leads to it.
+	 *
+	 * @covers ::handle_bulk_actor_delete_confirmation
+	 */
+	public function test_bulk_delete_confirmation_requires_promote_users() {
+		$user_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		\get_userdata( $user_id )->add_cap( 'edit_users' );
+		\wp_set_current_user( $user_id );
+
+		$_POST['_wpnonce'] = \wp_create_nonce( 'bulk-users' );
+
+		$redirect = static function () {
+			throw new \Exception( 'redirect' );
+		};
+		\add_filter( 'wp_redirect', $redirect );
+
+		try {
+			Admin::handle_bulk_actor_delete_confirmation();
+			$result = 'returned';
+		} catch ( \WPDieException $e ) {
+			$result = 'died';
+		} catch ( \Exception $e ) {
+			$result = $e->getMessage();
+		} finally {
+			\remove_filter( 'wp_redirect', $redirect );
+			unset( $_POST['_wpnonce'] );
+		}
+
+		$this->assertSame( 'died', $result );
+	}
+
+	/**
 	 * Bulk actions of other plugins pass through untouched, with or without a nonce.
 	 *
 	 * @covers ::handle_bulk_request
