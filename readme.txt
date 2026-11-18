@@ -117,7 +117,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
-### 9.4.4 - 2026-11-17
+### 9.4.4 - 2026-11-18
 #### Security
 - Connected apps now only have access to the site they were connected on. On multisite networks, apps have to be connected again after the update.
 - Improve how content from other servers is matched by its address.
