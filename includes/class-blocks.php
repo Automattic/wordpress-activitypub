@@ -88,6 +88,9 @@ class Blocks {
 		\add_filter( 'activitypub_import_mastodon_post_data', array( self::class, 'filter_import_mastodon_post_data' ), 10, 2 );
 		\add_filter( 'activitypub_attachments', array( self::class, 'add_stats_image_attachment' ), 10, 2 );
 
+		// Before do_blocks() at 9.
+		\add_filter( 'the_content', array( Emoji::class, 'remove_blocks_in_tags' ), 8 );
+
 		\add_action( 'activitypub_before_get_content', array( self::class, 'add_post_transformation_callbacks' ) );
 		\add_filter( 'activitypub_the_content', array( self::class, 'remove_post_transformation_callbacks' ) );
 	}
