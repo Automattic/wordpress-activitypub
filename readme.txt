@@ -122,6 +122,7 @@ For reasons of data protection, it is not possible to see the followers of other
 - Connected apps now only have access to the site they were connected on. On multisite networks, apps have to be connected again after the update.
 - Improve how content from other servers is matched by its address.
 - Improve how signatures of incoming requests are read.
+- Improve how the follow, reply and reaction buttons look up Fediverse profiles.
 
 #### Fixed
 - Fix remote profiles with special characters in their address showing up twice after they were updated.

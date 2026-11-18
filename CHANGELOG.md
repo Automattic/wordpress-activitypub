@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Connected apps now only have access to the site they were connected on. On multisite networks, apps have to be connected again after the update. [#4079]
 - Improve how content from other servers is matched by its address. [#4024]
 - Improve how signatures of incoming requests are read. [#4076]
+- Improve how the follow, reply and reaction buttons look up Fediverse profiles. [#4088]
 
 ### Fixed
 - Fix remote profiles with special characters in their address showing up twice after they were updated. [#4048]
