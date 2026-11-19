@@ -233,21 +233,32 @@ class Search {
 
 		/*
 		 * The checks the inbox runs before a received reply is stored, see Handler\Create::handle_create().
-		 * The blocks are checked as the Scheduler checks them: the disallowed list reads the address
-		 * of the current request, which here is the admin's, not the author's.
+		 * The current request is the admin's, not the author's, so its address and user agent
+		 * are left out of the disallowed list here and when the comment is stored.
 		 */
 		$ap_activity = Activity::init_from_array( $activity );
 		if (
 			ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === get_activity_visibility( $activity ) ||
 			is_self_ping( $object['id'] ?? '' ) ||
 			Moderation::activity_is_blocked_site_wide( $ap_activity ) ||
-			Moderation::activity_is_blocked_by_content_owner( $ap_activity )
+			Moderation::activity_is_blocked_by_content_owner( $ap_activity ) ||
+			\wp_check_comment_disallowed_list( $ap_activity->to_json( false ), '', '', $ap_activity->get_content(), '', '' )
 		) {
 			return false;
 		}
 
+		$no_address = static function ( $comment_data ) {
+			$comment_data['comment_author_IP'] = '';
+			$comment_data['comment_agent']     = '';
+
+			return $comment_data;
+		};
+		\add_filter( 'preprocess_comment', $no_address );
+
 		// Import the reply as a comment; a failed import is no comment to lead to.
 		$imported = Interactions::add_comment( $activity );
+
+		\remove_filter( 'preprocess_comment', $no_address );
 
 		return \is_wp_error( $imported ) ? false : $imported;
 	}

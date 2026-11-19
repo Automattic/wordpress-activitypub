@@ -366,21 +366,43 @@ class Test_Search extends \WP_UnitTestCase {
 		$url     = 'https://1.1.1.1/notes/6';
 		$filters = $this->serve_reply( $url );
 
-		$remote_addr            = $_SERVER['REMOTE_ADDR'] ?? null; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- Remembered only to be put back.
-		$_SERVER['REMOTE_ADDR'] = '192.0.2.10';
-		\update_option( 'disallowed_keys', '192.0.2.10' );
+		$server                     = $_SERVER;
+		$_SERVER['REMOTE_ADDR']     = '192.0.2.10';
+		$_SERVER['HTTP_USER_AGENT'] = 'Admin Browser';
+		\update_option( 'disallowed_keys', "192.0.2.10\nAdmin Browser" );
 
 		$result = $this->try_import_activitypub_object_accessible( $url );
 
 		\delete_option( 'disallowed_keys' );
-		if ( null === $remote_addr ) {
-			unset( $_SERVER['REMOTE_ADDR'] );
-		} else {
-			$_SERVER['REMOTE_ADDR'] = $remote_addr;
-		}
+		$_SERVER = $server;
 		$this->stop_serving( $filters );
 
 		$this->assertIsInt( $result, 'The admin\'s address must not block the reply.' );
+
+		$comment = \get_comment( $result );
+		$this->assertNotContains( $comment->comment_approved, array( 'spam', 'trash' ), 'The admin\'s address must not mark the reply as spam.' );
+		$this->assertSame( '', $comment->comment_author_IP, 'The admin\'s address must not be stored with the reply.' );
+		$this->assertSame( '', $comment->comment_agent, 'The admin\'s user agent must not be stored with the reply.' );
+	}
+
+	/**
+	 * The disallowed list is checked against the whole reply, as in the inbox.
+	 *
+	 * @covers \Activitypub\Search::try_import_activitypub_object
+	 */
+	public function test_import_checks_the_disallowed_list_against_the_reply() {
+		$url     = 'https://1.1.1.1/notes/disallowed-word';
+		$filters = $this->serve_reply( $url );
+
+		\update_option( 'disallowed_keys', 'disallowed-word' );
+
+		$result = $this->try_import_activitypub_object_accessible( $url );
+
+		\delete_option( 'disallowed_keys' );
+		$this->stop_serving( $filters );
+
+		$this->assertFalse( $result );
+		$this->assertEmpty( Comment::url_to_commentid( $url ), 'A refused reply must not be stored.' );
 	}
 
 	/**
