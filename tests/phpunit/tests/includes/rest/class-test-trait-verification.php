@@ -977,6 +977,46 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An actor that is present but has no id is rejected, as an object or already sanitized to null.
+	 *
+	 * @covers ::verify_activity_id
+	 */
+	public function test_verify_activity_id_rejects_actor_without_id() {
+		$method = new \ReflectionMethod( $this->instance, 'verify_activity_id' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$actors = array(
+			array(
+				'type' => 'Person',
+				'url'  => 'https://remote.example/users/alice',
+			),
+			null,
+		);
+
+		foreach ( $actors as $actor ) {
+			$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
+			$request->set_header( 'Content-Type', 'application/json' );
+			$request->set_body(
+				\wp_json_encode(
+					array(
+						'type'  => 'Create',
+						'id'    => 'https://remote.example/activity/1',
+						'actor' => $actor,
+					)
+				)
+			);
+
+			$result = $method->invoke( $this->instance, $request );
+
+			$this->assertWPError( $result );
+			$this->assertEquals( 'activitypub_actor_without_id', $result->get_error_code() );
+			$this->assertEquals( 400, $result->get_error_data()['status'] );
+		}
+	}
+
+	/**
 	 * A deferred request must still be turned away when its id names another host.
 	 *
 	 * Deferring skips the signature, not the body checks. `Delete` is the type we defer, and it

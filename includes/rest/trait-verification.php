@@ -131,9 +131,11 @@ trait Verification {
 	 * the named object. A body that cannot even name itself consistently should not buy a request
 	 * to another host.
 	 *
-	 * Passes when the body carries no id or no actor. An authorized-fetch GET has neither, and a
-	 * body missing either field is rejected by the route's own argument validation, which runs
-	 * after the permission callback.
+	 * Passes when the body carries no id or no actor. An authorized-fetch GET has neither, and on
+	 * the inbox routes core rejects a body missing either field before the permission callback
+	 * runs. Core also sanitizes before it, so the actor read here is already reduced to its id. An
+	 * actor that is present but has no id is rejected, because no check after this one could bind
+	 * it to the signing key.
 	 *
 	 * @since 9.3.0
 	 *
@@ -144,6 +146,15 @@ trait Verification {
 		$json  = $request->get_json_params();
 		$id    = isset( $json['id'] ) ? object_to_id( $json['id'] ) : null;
 		$actor = isset( $json['actor'] ) ? object_to_id( $json['actor'] ) : null;
+
+		// The sanitized actor is null when it has no id, so the key decides, not isset().
+		if ( \is_array( $json ) && \array_key_exists( 'actor', $json ) && ! $actor ) {
+			return new \WP_Error(
+				'activitypub_actor_without_id',
+				\__( 'The activity actor has no id.', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
 
 		if ( ! $id || ! $actor ) {
 			return true;

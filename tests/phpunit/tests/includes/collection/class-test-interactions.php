@@ -911,6 +911,21 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An empty ID finds no interaction, even one stored with an empty source_url.
+	 *
+	 * @covers ::get_by_id
+	 */
+	public function test_get_by_id_with_empty_id() {
+		$comment_id = self::factory()->comment->create( array( 'comment_post_ID' => self::$post_id ) );
+		\add_comment_meta( $comment_id, 'protocol', 'activitypub' );
+		\add_comment_meta( $comment_id, 'source_id', 'https://remote.example/notes/1' );
+		\add_comment_meta( $comment_id, 'source_url', '' );
+
+		$this->assertSame( array(), Interactions::get_by_id( '' ) );
+		$this->assertSame( array(), Interactions::get_by_id( null ) );
+	}
+
+	/**
 	 * Test get interaction by actor with remote actor optimization.
 	 *
 	 * @covers ::get_by_actor

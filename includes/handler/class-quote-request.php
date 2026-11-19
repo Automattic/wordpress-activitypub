@@ -19,7 +19,6 @@ use function Activitypub\get_meta_ids_by_value;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_id;
-use function Activitypub\object_to_uri;
 use function Activitypub\user_can_activitypub;
 
 /**
@@ -53,7 +52,7 @@ class Quote_Request {
 	 */
 	public static function handle_quote_request( $activity, $user_ids, $activity_object = null, $context = null ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$state   = true;
-		$post_id = \url_to_postid( object_to_uri( $activity['object'] ) );
+		$post_id = \url_to_postid( object_to_id( $activity['object'] ) );
 		$post    = $post_id ? \get_post( $post_id ) : null;
 
 		if ( ! $post ) {

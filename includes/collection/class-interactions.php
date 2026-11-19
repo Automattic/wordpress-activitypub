@@ -259,6 +259,11 @@ class Interactions {
 	 * @return array The interactions as WP_Comment objects.
 	 */
 	public static function get_by_id( $url ) {
+		// An empty ID would match every interaction stored with an empty source_id or source_url.
+		if ( ! $url ) {
+			return array();
+		}
+
 		$args = array(
 			'nopaging'   => true,
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
