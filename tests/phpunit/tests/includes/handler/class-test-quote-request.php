@@ -299,6 +299,7 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 			'private visibility' => array( array(), array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), 'Reject' ),
 			// A type no test enables, post type support is global and outlives a test.
 			'not federated type' => array( array( 'post_type' => 'ap_not_federated' ), array(), 'Reject' ),
+			'cached remote post' => array( array( 'post_type' => 'ap_post' ), array(), 'Reject' ),
 		);
 	}
 
