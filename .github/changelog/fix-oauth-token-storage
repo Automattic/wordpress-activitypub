@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Connected apps now only have access to the site they were connected on. On multisite networks, apps have to be connected again after the update.

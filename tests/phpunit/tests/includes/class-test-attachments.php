@@ -119,6 +119,16 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 * @return mixed The mocked response or original response.
 	 */
 	public function mock_download_url( $response, $parsed_args, $url ) {
+		// A file that claims to be a WebP but the image editor cannot read.
+		if ( 'https://example.com/unreadable.webp' === $url && isset( $parsed_args['filename'] ) ) {
+			\file_put_contents( $parsed_args['filename'], "RIFF\x16\x00\x00\x00WEBPVP8X\x0a\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+
+			return array(
+				'response' => array( 'code' => 200 ),
+				'headers'  => array( 'content-type' => 'image/webp' ),
+			);
+		}
+
 		// Accept any URL that matches the example.com domain pattern (except missing.jpg).
 		if ( preg_match( '#^https://example\.com/(?!missing\.jpg).+#', $url ) && isset( $parsed_args['filename'] ) ) {
 			copy( AP_TESTS_DIR . '/data/assets/test.jpg', $parsed_args['filename'] );
@@ -250,6 +260,32 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$this->assertEquals( '', $result['mediaType'] );
 		$this->assertEquals( '', $result['name'] );
 		$this->assertEquals( 'Document', $result['type'] );
+	}
+
+	/**
+	 * A download the image editor cannot read is not imported, so nothing is sideloaded.
+	 *
+	 * @covers ::import
+	 * @covers ::save_attachment
+	 * @covers ::optimize_image
+	 */
+	public function test_import_skips_an_image_the_editor_cannot_read() {
+		$before = \wp_count_posts( 'attachment' )->inherit;
+
+		$result = Attachments::import(
+			array(
+				array(
+					'url'       => 'https://example.com/unreadable.webp',
+					'mediaType' => 'image/webp',
+					'type'      => 'Image',
+				),
+			),
+			self::$post_id,
+			self::$author_id
+		);
+
+		$this->assertSame( array(), $result );
+		$this->assertEquals( $before, \wp_count_posts( 'attachment' )->inherit );
 	}
 
 	/**
@@ -945,11 +981,11 @@ class Test_Attachments extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test optimize_image returns original for non-existent file.
+	 * Test optimize_image rejects a file that claims to be an image but the editor cannot read.
 	 *
 	 * @covers ::optimize_image
 	 */
-	public function test_optimize_image_handles_nonexistent_file() {
+	public function test_optimize_image_rejects_unreadable_image() {
 		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
 		if ( \PHP_VERSION_ID < 80100 ) {
 			$method->setAccessible( true );
@@ -958,8 +994,8 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$fake_path = '/tmp/nonexistent-image-12345.jpg';
 		$result    = $method->invoke( null, $fake_path, 1200 );
 
-		// Should return original path when file doesn't exist or can't be processed.
-		$this->assertEquals( $fake_path, $result );
+		// A claimed image the editor cannot read is rejected, so it is never sideloaded.
+		$this->assertFalse( $result );
 	}
 
 	/**

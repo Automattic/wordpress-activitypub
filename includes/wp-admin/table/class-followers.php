@@ -324,7 +324,12 @@ class Followers extends \WP_List_Table {
 	 * @return string
 	 */
 	public function column_cb( $item ) {
-		return \sprintf( '<input type="checkbox" name="followers[]" value="%s" />', \esc_attr( $item['id'] ) );
+		return \sprintf(
+			'<input id="cb-select-%1$s" type="checkbox" name="followers[]" value="%1$s" /><label for="cb-select-%1$s"><span class="screen-reader-text">%2$s</span></label>',
+			\esc_attr( $item['id'] ),
+			/* translators: %s: Follower's username. */
+			\esc_html( \sprintf( \__( 'Select %s', 'activitypub' ), $item['username'] ) )
+		);
 	}
 
 	/**
@@ -436,7 +441,7 @@ class Followers extends \WP_List_Table {
 					'<a href="%s" aria-label="%s">%s</a>',
 					$this->get_action_url( 'follow', $item['id'] ),
 					/* translators: %s: username. */
-					\esc_attr( \sprintf( \__( 'Follow %s', 'activitypub' ), $item['username'] ) ),
+					\esc_attr( \sprintf( \__( 'Follow back %s', 'activitypub' ), $item['username'] ) ),
 					\esc_html__( 'Follow back', 'activitypub' )
 				);
 			}
