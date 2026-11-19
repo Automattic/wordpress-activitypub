@@ -16,6 +16,12 @@
 	margin: 1em 0;
 }
 
+/* oEmbed iframes have a fixed width, keep them inside small screens. */
+.activitypub-reply-block iframe,
+.activitypub-quote-block iframe {
+	max-width: 100%;
+}
+
 .activitypub-embed-header {
 	padding: 15px;
 	display: flex;
