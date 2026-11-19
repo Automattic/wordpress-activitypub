@@ -1054,6 +1054,13 @@ class Blocks {
 		);
 
 		$args = \wp_parse_args( $args, $defaults );
+
+		$has_header = ! $args['is_compact'] || ! empty( $args['title'] ) || ! empty( $args['title_binding'] );
+		$title_id   = '';
+		if ( $has_header ) {
+			// The dialog is named by its heading, so the heading always needs an id.
+			$title_id = ! empty( $args['id'] ) ? $args['id'] . '-title' : \wp_unique_id( 'activitypub-modal-title-' );
+		}
 		?>
 
 		<div
@@ -1065,16 +1072,17 @@ class Blocks {
 			<?php endif; ?>
 			role="dialog"
 			aria-modal="true"
+			<?php if ( $title_id ) : ?>
+				aria-labelledby="<?php echo \esc_attr( $title_id ); ?>"
+			<?php endif; ?>
 			hidden
 		>
 			<div class="activitypub-modal__frame">
-				<?php if ( ! $args['is_compact'] || ! empty( $args['title'] ) || ! empty( $args['title_binding'] ) ) : ?>
+				<?php if ( $has_header ) : ?>
 					<div class="activitypub-modal__header">
 						<h2
 							class="activitypub-modal__title"
-							<?php if ( ! empty( $args['id'] ) ) : ?>
-								id="<?php echo \esc_attr( $args['id'] . '-title' ); ?>"
-							<?php endif; ?>
+							id="<?php echo \esc_attr( $title_id ); ?>"
 							<?php if ( ! empty( $args['title_binding'] ) ) : ?>
 								data-wp-text="<?php echo \esc_attr( $args['title_binding'] ); ?>"
 							<?php endif; ?>
