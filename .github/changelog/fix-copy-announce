@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Copying your handle in the Follow dialog is now announced to screen readers.

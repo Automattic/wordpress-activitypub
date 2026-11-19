@@ -72,6 +72,7 @@ $wrapper_context = wp_interactivity_data_wp_context(
 		'blockId'         => $block_id,
 		'buttonStyle'     => $button_style,
 		'copyButtonText'  => __( 'Copy', 'activitypub' ),
+		'copyStatus'      => '',
 		'errorMessage'    => '',
 		'isError'         => false,
 		'isLoading'       => false,
@@ -140,6 +141,7 @@ ob_start();
 		>
 			<span data-wp-text="context.copyButtonText"></span>
 		</button>
+		<span class="screen-reader-text" data-wp-text="context.copyStatus" role="status"></span>
 	</div>
 </div>
 <div class="activitypub-dialog__section">
