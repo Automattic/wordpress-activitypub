@@ -12,7 +12,6 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox as Inbox_Collection;
 
 use function Activitypub\object_to_id;
-use function Activitypub\object_to_uri;
 
 /**
  * Handle Undo requests.
@@ -45,7 +44,7 @@ class Undo {
 		 * present yet unparseable must be rejected rather than skipping the check — passing
 		 * null there would re-open the undo-by-id attack.
 		 */
-		$actor = isset( $activity['actor'] ) ? object_to_uri( $activity['actor'] ) : null;
+		$actor = isset( $activity['actor'] ) ? object_to_id( $activity['actor'] ) : null;
 
 		if ( isset( $activity['actor'] ) && empty( $actor ) ) {
 			$result = new \WP_Error(
@@ -66,7 +65,7 @@ class Undo {
 				'activitypub_inbox_item_not_found' === $result->get_error_code() &&
 				'Follow' === ( $activity['object']['type'] ?? '' ) &&
 				null !== $actor &&
-				object_to_uri( $activity['object']['actor'] ?? '' ) === $actor
+				object_to_id( $activity['object']['actor'] ?? '' ) === $actor
 			) {
 				$user_id = Actors::get_id_by_resource( object_to_id( $activity['object']['object'] ?? '' ) );
 

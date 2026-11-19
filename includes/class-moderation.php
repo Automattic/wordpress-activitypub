@@ -604,7 +604,7 @@ class Moderation {
 		}
 
 		// Extract actor information.
-		$actor_id = object_to_uri( $activity->get_actor() );
+		$actor_id = object_to_id( $activity->get_actor() );
 
 		/*
 		 * Domains are checked before anything that goes to the network: the webfinger lookup
@@ -615,7 +615,7 @@ class Moderation {
 			$hosts = array(
 				Webfinger::get_host( $actor_id ),
 				Webfinger::get_host( $activity->get_id() ),
-				Webfinger::get_host( object_to_uri( $activity->get_object() ) ),
+				Webfinger::get_host( object_to_id( $activity->get_object() ) ),
 			);
 
 			if ( self::hosts_are_blocked( $hosts, $blocks['domains'] ) ) {

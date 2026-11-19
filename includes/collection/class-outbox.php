@@ -17,7 +17,7 @@ use Activitypub\Webfinger;
 use function Activitypub\add_to_outbox;
 use function Activitypub\get_stored_id_forms;
 use function Activitypub\is_activity;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 use function Activitypub\user_can_act_as_blog;
 
 /**
@@ -81,7 +81,7 @@ class Outbox {
 			$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
 		}
 
-		$object_id = object_to_uri( self::get_object_id( $activity ) );
+		$object_id = object_to_id( self::get_object_id( $activity ) );
 		$title     = self::get_object_title( $activity->get_object() );
 
 		if ( ! $object_id || ! \is_string( $object_id ) ) {
@@ -550,7 +550,7 @@ class Outbox {
 			return $data->get_id();
 		}
 
-		return object_to_uri( $data->get_actor() );
+		return object_to_id( $data->get_actor() );
 	}
 
 	/**

@@ -366,7 +366,7 @@ function unescape_guid( $guid ) {
 /**
  * Check whether two references point at the same actor.
  *
- * Both values are resolved to their canonical URI via object_to_uri() before
+ * Both values are resolved to their ID via object_to_id() before
  * comparison. Empty references never match, so a missing actor can never be
  * mistaken for a match.
  *
@@ -376,8 +376,8 @@ function unescape_guid( $guid ) {
  * @return bool True when both resolve to the same non-empty URI.
  */
 function is_same_actor( $a, $b ) {
-	$a = object_to_uri( $a );
-	$b = object_to_uri( $b );
+	$a = object_to_id( $a );
+	$b = object_to_id( $b );
 
 	return ! empty( $a ) && ! empty( $b ) && $a === $b;
 }
@@ -385,7 +385,7 @@ function is_same_actor( $a, $b ) {
 /**
  * Check whether two references live on the same host.
  *
- * Both values are resolved to their canonical URI via object_to_uri(), then
+ * Both values are resolved to their ID via object_to_id(), then
  * their hosts are compared case-insensitively. Empty references, or references
  * without a host, never match.
  *
@@ -395,8 +395,8 @@ function is_same_actor( $a, $b ) {
  * @return bool True when both resolve to a URI on the same host.
  */
 function is_same_host( $a, $b ) {
-	$host_a = \wp_parse_url( (string) object_to_uri( $a ), PHP_URL_HOST );
-	$host_b = \wp_parse_url( (string) object_to_uri( $b ), PHP_URL_HOST );
+	$host_a = \wp_parse_url( (string) object_to_id( $a ), PHP_URL_HOST );
+	$host_b = \wp_parse_url( (string) object_to_id( $b ), PHP_URL_HOST );
 
 	return ! empty( $host_a ) && ! empty( $host_b ) && \strtolower( $host_a ) === \strtolower( $host_b );
 }

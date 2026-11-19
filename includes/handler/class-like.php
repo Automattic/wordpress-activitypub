@@ -11,7 +11,6 @@ use Activitypub\Collection\Interactions;
 use Activitypub\Comment;
 
 use function Activitypub\object_to_id;
-use function Activitypub\object_to_uri;
 
 /**
  * Handle Like requests.
@@ -52,7 +51,7 @@ class Like {
 		 * duplicate check. Match any status, so a like that was marked as spam or trashed
 		 * still counts as seen. See https://github.com/Automattic/wordpress-activitypub/issues/3215.
 		 */
-		$exists = Comment::object_id_to_comment( \esc_url_raw( (string) object_to_uri( $like ) ), array( 'status' => 'any' ) );
+		$exists = Comment::object_id_to_comment( \esc_url_raw( (string) object_to_id( $like ) ), array( 'status' => 'any' ) );
 		if ( $exists ) {
 			return;
 		}
@@ -84,7 +83,7 @@ class Like {
 	 */
 	public static function outbox_activity( $activity ) {
 		if ( 'Like' === $activity->get_type() ) {
-			$activity->set_object( object_to_uri( $activity->get_object() ) );
+			$activity->set_object( object_to_id( $activity->get_object() ) );
 		}
 
 		return $activity;

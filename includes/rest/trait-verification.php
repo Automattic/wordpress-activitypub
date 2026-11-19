@@ -13,7 +13,7 @@ use Activitypub\OAuth\Server as OAuth_Server;
 use Activitypub\Signature;
 
 use function Activitypub\is_same_host;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 use function Activitypub\use_authorized_fetch;
 use function Activitypub\user_can_act_as_blog;
 
@@ -142,8 +142,8 @@ trait Verification {
 	 */
 	private function verify_activity_id( $request ) {
 		$json  = $request->get_json_params();
-		$id    = isset( $json['id'] ) ? object_to_uri( $json['id'] ) : null;
-		$actor = isset( $json['actor'] ) ? object_to_uri( $json['actor'] ) : null;
+		$id    = isset( $json['id'] ) ? object_to_id( $json['id'] ) : null;
+		$actor = isset( $json['actor'] ) ? object_to_id( $json['actor'] ) : null;
 
 		if ( ! $id || ! $actor ) {
 			return true;
@@ -184,7 +184,7 @@ trait Verification {
 	 */
 	private function verify_key_id( $request, $owner ) {
 		$json  = $request->get_json_params();
-		$actor = isset( $json['actor'] ) ? object_to_uri( $json['actor'] ) : null;
+		$actor = isset( $json['actor'] ) ? object_to_id( $json['actor'] ) : null;
 
 		// A signed request without a body actor (e.g. an authorized-fetch GET) has nothing to bind.
 		if ( ! $actor ) {

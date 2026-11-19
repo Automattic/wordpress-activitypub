@@ -14,7 +14,6 @@ use Activitypub\Proxy;
 use function Activitypub\get_id_hash;
 use function Activitypub\get_stored_id_forms;
 use function Activitypub\object_to_id;
-use function Activitypub\object_to_uri;
 
 /**
  * Handle Move requests.
@@ -175,11 +174,11 @@ class Move {
 	 */
 	private static function extract_origin( $activity ) {
 		if ( ! empty( $activity['origin'] ) ) {
-			return object_to_uri( $activity['origin'] );
+			return object_to_id( $activity['origin'] );
 		}
 
 		if ( ! empty( $activity['actor'] ) ) {
-			return object_to_uri( $activity['actor'] );
+			return object_to_id( $activity['actor'] );
 		}
 
 		return null;

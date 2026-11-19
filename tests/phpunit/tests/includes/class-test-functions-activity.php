@@ -273,6 +273,25 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Objects are compared by their id, not by the url a media object names.
+	 *
+	 * @covers \Activitypub\is_same_host
+	 * @covers \Activitypub\is_same_actor
+	 */
+	public function test_objects_are_compared_by_their_id() {
+		$image = array(
+			'id'   => 'https://remote.example/users/alice',
+			'type' => 'Image',
+			'url'  => 'https://cdn.example/users/alice',
+		);
+
+		$this->assertTrue( \Activitypub\is_same_host( $image, 'https://remote.example/notes/1' ) );
+		$this->assertFalse( \Activitypub\is_same_host( $image, 'https://cdn.example/notes/1' ) );
+		$this->assertTrue( \Activitypub\is_same_actor( $image, 'https://remote.example/users/alice' ) );
+		$this->assertFalse( \Activitypub\is_same_actor( $image, 'https://cdn.example/users/alice' ) );
+	}
+
+	/**
 	 * Test is_activity with array input.
 	 *
 	 * @covers \Activitypub\is_activity

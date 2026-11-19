@@ -93,7 +93,7 @@ class Quote_Request {
 				$state = false;
 				break;
 			case ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS:
-				$follower = Remote_Actors::get_by_uri( object_to_uri( $activity['actor'] ) );
+				$follower = Remote_Actors::get_by_uri( object_to_id( $activity['actor'] ) );
 				$state    = ! \is_wp_error( $follower ) && Followers::follows( $follower->ID, $user_id );
 				break;
 			case ACTIVITYPUB_INTERACTION_POLICY_ANYONE:
@@ -302,7 +302,7 @@ class Quote_Request {
 		$activity->set_actor( $actor->get_id() );
 		$activity->set_object( $activity_object );
 		$activity->set_result( $url );
-		$activity->add_to( object_to_uri( $activity_object['actor'] ) );
+		$activity->add_to( object_to_id( $activity_object['actor'] ) );
 
 		add_to_outbox( $activity, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
 	}
@@ -347,7 +347,7 @@ class Quote_Request {
 		$activity->set_type( 'Reject' );
 		$activity->set_actor( $actor->get_id() );
 		$activity->set_object( $activity_object );
-		$activity->add_to( object_to_uri( $activity_object['actor'] ) );
+		$activity->add_to( object_to_id( $activity_object['actor'] ) );
 
 		add_to_outbox( $activity, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
 	}

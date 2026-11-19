@@ -481,7 +481,7 @@ class Interactions {
 	 * @return array|false The prepared fields, or false when actor data is unavailable.
 	 */
 	private static function prepare_remote_comment_data( $activity ) {
-		$actor_id = object_to_uri( $activity['actor'] ?? null );
+		$actor_id = object_to_id( $activity['actor'] ?? null );
 		$actor    = get_remote_metadata_by_actor( $actor_id );
 
 		if ( ! $actor || \is_wp_error( $actor ) ) {
@@ -589,7 +589,7 @@ class Interactions {
 			'source_id' => \esc_url_raw( object_to_id( $activity['object'] ) ),
 		);
 
-		$actor_uri = object_to_uri( $activity['actor'] ?? null );
+		$actor_uri = object_to_id( $activity['actor'] ?? null );
 		if ( $actor_uri ) {
 			$remote_actor = Remote_Actors::get_by_uri( $actor_uri );
 			if ( ! \is_wp_error( $remote_actor ) ) {

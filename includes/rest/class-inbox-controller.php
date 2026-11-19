@@ -20,7 +20,7 @@ use function Activitypub\extract_recipients_from_activity;
 use function Activitypub\is_activity_public;
 use function Activitypub\is_collection;
 use function Activitypub\is_same_domain;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 use function Activitypub\user_can_activitypub;
 
 /**
@@ -385,7 +385,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 		$max_remote_fetches = (int) \apply_filters( 'activitypub_max_remote_recipient_fetches', 10 );
 
 		// AS2 allows actor and followers to be either an IRI string or an inline object; normalize to a URI.
-		$actor_uri           = ! empty( $activity['actor'] ) ? object_to_uri( $activity['actor'] ) : null;
+		$actor_uri           = ! empty( $activity['actor'] ) ? object_to_id( $activity['actor'] ) : null;
 		$actor_followers_url = $this->get_cached_followers_url( $actor_uri );
 
 		if ( is_activity_public( $activity ) ) {
@@ -524,6 +524,6 @@ class Inbox_Controller extends \WP_REST_Controller {
 			return null;
 		}
 
-		return object_to_uri( $actor_data['followers'] );
+		return object_to_id( $actor_data['followers'] );
 	}
 }

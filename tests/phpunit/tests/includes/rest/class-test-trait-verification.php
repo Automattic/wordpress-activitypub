@@ -809,6 +809,25 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 				array( 'id' => 'https://remote.example/users/alice' ),
 				false,
 			),
+			// An actor is bound by its id, whatever type it claims: the url is not the actor.
+			'media actor by its id'   => array(
+				'https://remote.example/users/alice',
+				array(
+					'id'   => 'https://remote.example/users/alice',
+					'type' => 'Image',
+					'url'  => 'https://cdn.example/users/bob',
+				),
+				true,
+			),
+			'media actor by its url'  => array(
+				'https://cdn.example/users/bob',
+				array(
+					'id'   => 'https://remote.example/users/alice',
+					'type' => 'Image',
+					'url'  => 'https://cdn.example/users/bob',
+				),
+				false,
+			),
 		);
 	}
 
@@ -863,44 +882,54 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	 */
 	public function data_verify_activity_id() {
 		return array(
-			'matching hosts'           => array(
+			'matching hosts'             => array(
 				'https://remote.example/activity/1',
 				'https://remote.example/users/alice',
 				true,
 			),
 			// The collision this guards: a valid signer filing an activity under another host's id.
-			'id on a foreign host'     => array(
+			'id on a foreign host'       => array(
 				'https://victim.example/activity/1',
 				'https://attacker.example/users/mallory',
 				false,
 			),
-			'case-insensitive hosts'   => array(
+			'case-insensitive hosts'     => array(
 				'https://Remote.Example/activity/1',
 				'https://remote.example/users/alice',
 				true,
 			),
 			// An id with no parsable host cannot be tied to the actor, so it must fail closed.
-			'hostless id'              => array(
+			'hostless id'                => array(
 				'urn:uuid:8f5d1c2e',
 				'https://remote.example/users/alice',
 				false,
 			),
 			// Nothing to bind: argument validation rejects an id-less inbox delivery later.
-			'no id in body'            => array(
+			'no id in body'              => array(
 				null,
 				'https://remote.example/users/alice',
 				true,
 			),
 			// An authorized-fetch GET carries neither field.
-			'no actor in body'         => array(
+			'no actor in body'           => array(
 				'https://remote.example/activity/1',
 				null,
 				true,
 			),
-			'id as object with nested' => array(
+			'id as object with nested'   => array(
 				array( 'id' => 'https://remote.example/activity/1' ),
 				'https://remote.example/users/alice',
 				true,
+			),
+			// The host of the actor's id counts, not the host of a url it names.
+			'media actor url on id host' => array(
+				'https://victim.example/activity/1',
+				array(
+					'id'   => 'https://attacker.example/users/mallory',
+					'type' => 'Image',
+					'url'  => 'https://victim.example/users/mallory',
+				),
+				false,
 			),
 		);
 	}

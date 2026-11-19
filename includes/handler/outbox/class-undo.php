@@ -12,7 +12,6 @@ use Activitypub\Collection\Outbox as Outbox_Collection;
 use Activitypub\Moderation;
 
 use function Activitypub\object_to_id;
-use function Activitypub\object_to_uri;
 use function Activitypub\unfollow;
 
 /**
@@ -42,7 +41,7 @@ class Undo {
 	 */
 	public static function handle_undo( $data, $user_id = null ) {
 		$object = $data['object'] ?? '';
-		$id     = object_to_uri( $object );
+		$id     = object_to_id( $object );
 
 		if ( empty( $id ) ) {
 			/*
@@ -53,7 +52,7 @@ class Undo {
 			 * bodies don't bypass the local unfollow logic.
 			 */
 			if ( \is_array( $object ) && 'Follow' === ( $object['type'] ?? '' ) ) {
-				$embedded_actor = object_to_uri( $object['actor'] ?? '' );
+				$embedded_actor = object_to_id( $object['actor'] ?? '' );
 				$user_actor     = Actors::get_by_id( $user_id );
 
 				if ( \is_wp_error( $user_actor ) || ! $embedded_actor || $embedded_actor !== $user_actor->get_id() ) {

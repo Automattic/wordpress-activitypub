@@ -16,7 +16,6 @@ use Activitypub\Http;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\object_to_id;
-use function Activitypub\object_to_uri;
 
 /**
  * Handle Follow requests.
@@ -159,7 +158,7 @@ class Follow {
 			return;
 		}
 
-		$actor        = object_to_uri( $activity['actor'] );
+		$actor        = object_to_id( $activity['actor'] );
 		$remote_actor = Remote_Actors::fetch_by_uri( $actor );
 
 		if ( \is_wp_error( $remote_actor ) ) {
