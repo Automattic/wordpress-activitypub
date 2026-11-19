@@ -14,7 +14,6 @@ use Activitypub\Transformer\Comment;
 use Activitypub\Transformer\Post;
 use Enable_Mastodon_Apps\Entity\Account;
 use Enable_Mastodon_Apps\Entity\Status;
-use ReflectionMethod;
 
 /**
  * Test class for Enable Mastodon Apps integration.
