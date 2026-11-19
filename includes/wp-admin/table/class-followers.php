@@ -436,7 +436,7 @@ class Followers extends \WP_List_Table {
 					'<a href="%s" aria-label="%s">%s</a>',
 					$this->get_action_url( 'follow', $item['id'] ),
 					/* translators: %s: username. */
-					\esc_attr( \sprintf( \__( 'Follow %s', 'activitypub' ), $item['username'] ) ),
+					\esc_attr( \sprintf( \__( 'Follow back %s', 'activitypub' ), $item['username'] ) ),
 					\esc_html__( 'Follow back', 'activitypub' )
 				);
 			}
