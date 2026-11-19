@@ -208,14 +208,11 @@ class Test_Search extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Searching for a URL with no stored reply fetches nothing, on the comments screen and on the front end.
+	 * Searching the front end for a URL with no stored reply fetches nothing.
 	 *
-	 * The comments screen offers the import as a link with a nonce instead.
-	 *
-	 * @covers \Activitypub\Search::enhance_admin_comment_search
 	 * @covers \Activitypub\Search::enhance_public_search
 	 */
-	public function test_search_does_not_fetch() {
+	public function test_public_search_does_not_fetch() {
 		$user = \get_user_by( 'id', self::factory()->user->create( array( 'role' => 'editor' ) ) );
 		$user->add_cap( 'activitypub' );
 		\wp_set_current_user( $user->ID );
@@ -229,23 +226,109 @@ class Test_Search extends \WP_UnitTestCase {
 		};
 		\add_filter( 'activitypub_pre_http_get_remote_object', $fetch );
 
-		$_GET['s'] = $url;
-		Search::enhance_admin_comment_search();
-		unset( $_GET['s'] );
-
-		\ob_start();
-		\do_action( 'admin_notices' );
-		$notice = \ob_get_clean();
-
 		// The front end runs the search as the main query.
 		$this->go_to( \add_query_arg( 's', \rawurlencode( $url ), \home_url( '/' ) ) );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch );
 
 		$this->assertSame( 0, $fetched, 'A search must not fetch.' );
+	}
+
+	/**
+	 * The comments screen checks a reply without storing it, and offers the import with a nonce.
+	 *
+	 * @covers \Activitypub\Search::enhance_admin_comment_search
+	 * @covers \Activitypub\Search::is_importable_reply
+	 */
+	public function test_admin_search_offers_an_importable_reply() {
+		$url     = 'https://1.1.1.1/notes/8';
+		$filters = $this->serve_reply( $url );
+
+		$notice = $this->admin_search_notice( $url );
+
+		$this->stop_serving( $filters );
+
+		$this->assertEmpty( Comment::url_to_commentid( $url ), 'A search must not store the reply.' );
+		$this->assertStringContainsString( 'https://1.1.1.1/users/test', $notice, 'The notice names the author.' );
 		$this->assertStringContainsString( 'action=activitypub_import_reply', $notice );
 		$this->assertStringContainsString( '_wpnonce=', $notice );
 		$this->assertStringContainsString( \rawurlencode( $url ), \html_entity_decode( $notice ) );
+	}
+
+	/**
+	 * The comments screen says why a reply cannot be imported, and offers no import.
+	 *
+	 * @covers \Activitypub\Search::enhance_admin_comment_search
+	 * @covers \Activitypub\Search::is_importable_reply
+	 */
+	public function test_admin_search_says_why_a_reply_cannot_be_imported() {
+		$url     = 'https://1.1.1.1/notes/9';
+		$filters = $this->serve_reply( $url, array( 'inReplyTo' => 'https://1.1.1.1/notes/elsewhere' ) );
+
+		$notice = $this->admin_search_notice( $url );
+
+		$this->stop_serving( $filters );
+
+		$this->assertStringContainsString( 'This is not a reply to one of your posts.', $notice );
+		$this->assertStringNotContainsString( 'action=activitypub_import_reply', $notice );
+	}
+
+	/**
+	 * After a failed import the comments screen says why storing the reply failed.
+	 *
+	 * @covers \Activitypub\Search::enhance_admin_comment_search
+	 */
+	public function test_admin_search_says_why_storing_failed() {
+		$url     = 'https://1.1.1.1/notes/10';
+		$filters = $this->serve_reply( $url );
+
+		$_GET['activitypub_import'] = 'comment_duplicate';
+		$notice                     = $this->admin_search_notice( $url );
+		unset( $_GET['activitypub_import'] );
+
+		$this->stop_serving( $filters );
+
+		$this->assertStringContainsString( 'The same comment from this author is already stored', $notice );
+		$this->assertStringContainsString( 'comment_status=moderated', $notice );
+	}
+
+	/**
+	 * A URL that leads to nothing from the Fediverse stays a plain search, without a notice.
+	 *
+	 * @covers \Activitypub\Search::enhance_admin_comment_search
+	 */
+	public function test_admin_search_stays_quiet_for_other_urls() {
+		$nothing = static function () {
+			return new \WP_Error( 'activitypub_not_found', 'Not found.' );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $nothing );
+
+		$notice = $this->admin_search_notice( 'https://1.1.1.1/a-page' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $nothing );
+
+		$this->assertSame( '', $notice );
+	}
+
+	/**
+	 * Search the comments screen for a URL as an editor and return the notices it shows.
+	 *
+	 * @param string $url The URL to search for.
+	 *
+	 * @return string The notices.
+	 */
+	private function admin_search_notice( $url ) {
+		$user = \get_user_by( 'id', self::factory()->user->create( array( 'role' => 'editor' ) ) );
+		$user->add_cap( 'activitypub' );
+		\wp_set_current_user( $user->ID );
+
+		$_GET['s'] = $url;
+		Search::enhance_admin_comment_search();
+		unset( $_GET['s'] );
+
+		\ob_start();
+		\do_action( 'admin_notices' );
+		return \ob_get_clean();
 	}
 
 	/**
@@ -316,7 +399,7 @@ class Test_Search extends \WP_UnitTestCase {
 		$this->stop_serving( $filters );
 
 		$this->assertStringStartsWith( \admin_url( 'edit-comments.php' ), $redirected );
-		$this->assertStringContainsString( 'activitypub_import=failed', $redirected );
+		$this->assertStringContainsString( 'activitypub_import=comment_duplicate', $redirected );
 	}
 
 	/**

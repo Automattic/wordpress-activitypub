@@ -96,16 +96,45 @@ class Search {
 			return;
 		}
 
+		// The reason a requested import failed, see import_reply().
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$failed = isset( $_GET['activitypub_import'] ) && 'failed' === $_GET['activitypub_import'];
+		$failed = isset( $_GET['activitypub_import'] ) ? \sanitize_key( $_GET['activitypub_import'] ) : '';
 
-		// A reply that is not stored yet is only imported on request, see import_reply().
+		/*
+		 * A reply that is not stored yet is only imported on request, see import_reply().
+		 * The search checks it without storing anything, so the import is only offered when it works.
+		 */
+		$reply = self::is_importable_reply( $search_term );
+
+		// A URL that leads to nothing from the Fediverse is a plain search.
+		if ( ! $failed && \is_wp_error( $reply ) && 'activitypub_import_not_found' === $reply->get_error_code() ) {
+			return;
+		}
+
 		\add_action(
 			'admin_notices',
-			static function () use ( $search_term, $failed ) {
-				if ( $failed ) {
+			static function () use ( $search_term, $failed, $reply ) {
+				if ( \is_wp_error( $reply ) || $failed ) {
+					if ( \is_wp_error( $reply ) ) {
+						$reason = \esc_html( $reply->get_error_message() );
+					} elseif ( 'comment_duplicate' === $failed ) {
+						$reason = \sprintf(
+							/* translators: %s: Link to the comments that wait for moderation. */
+							\esc_html__( 'The same comment from this author is already stored, maybe it is %s.', 'activitypub' ),
+							\sprintf( '<a href="%s">%s</a>', \esc_url( \admin_url( 'edit-comments.php?comment_status=moderated' ) ), \esc_html__( 'waiting for moderation', 'activitypub' ) )
+						);
+					} elseif ( 'comment_flood' === $failed ) {
+						$reason = \esc_html__( 'This author sent too many comments in a short time.', 'activitypub' );
+					} else {
+						$reason = \esc_html__( 'Storing it failed.', 'activitypub' );
+					}
+
 					\wp_admin_notice(
-						\esc_html__( 'No reply from the Fediverse could be imported from this URL.', 'activitypub' ),
+						\sprintf(
+							/* translators: %s: Why the reply cannot be imported. */
+							\esc_html__( '⁂ This reply cannot be imported: %s', 'activitypub' ),
+							$reason
+						),
 						array( 'type' => 'error' )
 					);
 					return;
@@ -124,10 +153,11 @@ class Search {
 
 				\wp_admin_notice(
 					\sprintf(
-						/* translators: 1: The host of the URL, 2: The import link. */
-						\esc_html__( 'No reply from %1$s is stored under this URL yet. %2$s', 'activitypub' ),
-						\sprintf( '<code>%s</code>', \esc_html( \wp_parse_url( $search_term, PHP_URL_HOST ) ) ),
-						\sprintf( '<a href="%s" class="button">%s</a>', \esc_url( $import_url ), \esc_html__( 'Import this reply', 'activitypub' ) )
+						/* translators: 1: The author of the reply, 2: The post it replies to, 3: The import link. */
+						\esc_html__( '⁂ Reply from %1$s to %2$s. %3$s', 'activitypub' ),
+						\sprintf( '<code>%s</code>', \esc_html( $reply['activity']['actor'] ) ),
+						\sprintf( '<a href="%s">%s</a>', \esc_url( \get_permalink( $reply['post_id'] ) ), \esc_html( \get_the_title( $reply['post_id'] ) ) ),
+						\sprintf( '<a href="%s" class="button">%s</a>', \esc_url( $import_url ), \esc_html__( 'Import reply', 'activitypub' ) )
 					),
 					array(
 						'type'           => 'info',
@@ -157,7 +187,7 @@ class Search {
 		if ( \wp_http_validate_url( $url ) ) {
 			$imported = self::try_import_activitypub_object( $url );
 
-			if ( $imported ) {
+			if ( $imported && ! \is_wp_error( $imported ) ) {
 				self::redirect_to_comment( $imported );
 			}
 		}
@@ -166,7 +196,7 @@ class Search {
 			\add_query_arg(
 				array(
 					's'                  => \rawurlencode( $url ),
-					'activitypub_import' => 'failed',
+					'activitypub_import' => isset( $imported ) && \is_wp_error( $imported ) ? $imported->get_error_code() : 'failed',
 				),
 				\admin_url( 'edit-comments.php' )
 			)
@@ -200,29 +230,38 @@ class Search {
 	}
 
 	/**
-	 * Try to import an ActivityPub reply from a URL.
+	 * Check whether the object at a URL can be imported as a reply, without storing anything.
 	 *
-	 * @param string $url The URL to check and import.
+	 * @since unreleased
 	 *
-	 * @return int|false The imported comment ID or false on failure.
+	 * @param string $url The URL to check.
+	 *
+	 * @return array|\WP_Error The Create activity and the ID of the post it replies to, or the reason it cannot be imported.
 	 */
-	private static function try_import_activitypub_object( $url ) {
-		// Check if it's already imported.
-		$existing = Comment::url_to_commentid( $url );
-		if ( $existing ) {
-			return $existing;
-		}
-
-		// Try to fetch as ActivityPub object.
+	private static function is_importable_reply( $url ) {
 		$object = Proxy::get( $url );
-		if ( \is_wp_error( $object ) ) {
-			return false;
+		if ( \is_wp_error( $object ) || ! \is_array( $object ) ) {
+			return new \WP_Error( 'activitypub_import_not_found', \__( 'This URL does not lead to anything from the Fediverse.', 'activitypub' ) );
 		}
 
-		// Check if it's a reply (has inReplyTo) with an author.
-		$actor = object_to_uri( $object['attributedTo'] ?? null );
-		if ( empty( $object['inReplyTo'] ) || ! $actor ) {
-			return false;
+		if ( empty( $object['inReplyTo'] ) ) {
+			return new \WP_Error( 'activitypub_import_not_a_reply', \__( 'This URL is not a reply.', 'activitypub' ) );
+		}
+
+		$actor = object_to_id( $object['attributedTo'] ?? null );
+		if ( ! $actor ) {
+			return new \WP_Error( 'activitypub_import_no_author', \__( 'This reply has no author.', 'activitypub' ) );
+		}
+
+		// Interactions::add_comment() refuses both, the check only says why.
+		if ( ! is_same_host( $actor, object_to_id( $object ) ) ) {
+			return new \WP_Error( 'activitypub_import_other_host', \__( 'The author of this reply is not on the server it comes from.', 'activitypub' ) );
+		}
+
+		$target  = object_to_id( $object['inReplyTo'] );
+		$post_id = get_target_post_id( $target, url_to_commentid( $target ) );
+		if ( ! $post_id ) {
+			return new \WP_Error( 'activitypub_import_not_here', \__( 'This is not a reply to one of your posts.', 'activitypub' ) );
 		}
 
 		$activity = array(
@@ -231,21 +270,54 @@ class Search {
 			'object' => $object,
 		);
 
+		// The checks the inbox runs before a received reply is stored, see Handler\Create::handle_create().
+		if ( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === get_activity_visibility( $activity ) ) {
+			return new \WP_Error( 'activitypub_import_not_public', \__( 'This reply is not public.', 'activitypub' ) );
+		}
+
+		if ( is_self_ping( $object['id'] ?? '' ) ) {
+			return new \WP_Error( 'activitypub_import_self', \__( 'This is a comment from your own site.', 'activitypub' ) );
+		}
+
 		/*
-		 * The checks the inbox runs before a received reply is stored, see Handler\Create::handle_create().
 		 * The current request is the admin's, not the author's, so its address and user agent
 		 * are left out of the disallowed list here and when the comment is stored.
 		 */
 		$ap_activity = Activity::init_from_array( $activity );
 		if (
-			ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === get_activity_visibility( $activity ) ||
-			is_self_ping( $object['id'] ?? '' ) ||
 			Moderation::activity_is_blocked_site_wide( $ap_activity ) ||
 			Moderation::activity_is_blocked_by_content_owner( $ap_activity ) ||
 			\wp_check_comment_disallowed_list( $ap_activity->to_json( false ), '', '', $ap_activity->get_content(), '', '' )
 		) {
+			return new \WP_Error( 'activitypub_import_blocked', \__( 'This reply is blocked by your moderation settings.', 'activitypub' ) );
+		}
+
+		return array(
+			'activity' => $activity,
+			'post_id'  => $post_id,
+		);
+	}
+
+	/**
+	 * Try to import an ActivityPub reply from a URL.
+	 *
+	 * @param string $url The URL to check and import.
+	 *
+	 * @return int|false|\WP_Error The imported comment ID, false when it cannot be imported, or the error storing it.
+	 */
+	private static function try_import_activitypub_object( $url ) {
+		// Check if it's already imported.
+		$existing = Comment::url_to_commentid( $url );
+		if ( $existing ) {
+			return $existing;
+		}
+
+		$reply = self::is_importable_reply( $url );
+		if ( \is_wp_error( $reply ) ) {
 			return false;
 		}
+
+		$activity = $reply['activity'];
 
 		$no_address = static function ( $comment_data ) {
 			$comment_data['comment_author_IP'] = '';
@@ -260,6 +332,6 @@ class Search {
 
 		\remove_filter( 'preprocess_comment', $no_address );
 
-		return \is_wp_error( $imported ) ? false : $imported;
+		return $imported;
 	}
 }
