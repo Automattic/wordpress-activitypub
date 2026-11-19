@@ -273,8 +273,8 @@ class Token_Controller extends \WP_REST_Controller {
 	public function revoke( \WP_REST_Request $request ) {
 		$token = $request->get_param( 'token' );
 
-		if ( \current_user_can( 'manage_options' ) ) {
-			// Site admins may revoke any token. Null-null disables the ownership check.
+		if ( \current_user_can( 'manage_options' ) && ! OAuth_Server::is_oauth_request() ) {
+			// Site admins may revoke any token, a client only its own. Null-null disables the ownership check.
 			Token::revoke( $token );
 		} else {
 			/*
@@ -313,13 +313,13 @@ class Token_Controller extends \WP_REST_Controller {
 		$response = Token::introspect( $token );
 
 		/*
-		 * Scope introspection for non-admins. An OAuth-authenticated caller may only
+		 * Scope introspection for non-admins and for every token caller, an admin's included. An OAuth-authenticated caller may only
 		 * introspect tokens issued to its own client; a cookie-authenticated caller may
 		 * only introspect its own tokens. Without the cookie branch, any logged-in user
 		 * could read metadata for any token string, because get_current_token() is null
 		 * for cookie sessions and the same-client check was skipped entirely.
 		 */
-		if ( $response['active'] && ! \current_user_can( 'manage_options' ) ) {
+		if ( $response['active'] && ( ! \current_user_can( 'manage_options' ) || OAuth_Server::is_oauth_request() ) ) {
 			$current_token = OAuth_Server::get_current_token();
 
 			if ( $current_token ) {

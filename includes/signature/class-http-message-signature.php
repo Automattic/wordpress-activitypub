@@ -212,7 +212,7 @@ class Http_Message_Signature implements Http_Signature {
 	/**
 	 * The keyIds of the labels this verifier checks.
 	 *
-	 * @since unreleased
+	 * @since 9.4.4
 	 *
 	 * @param array $headers The HTTP headers.
 	 *

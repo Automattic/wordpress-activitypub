@@ -282,7 +282,7 @@ class Emoji {
 	 * the emoji with that name, built from the emoji data, and has to pass the emoji rules.
 	 * Anything else stays escaped.
 	 *
-	 * @since unreleased
+	 * @since 9.4.4
 	 *
 	 * @param string $text       The escaped text.
 	 * @param string $emoji_json JSON-encoded emoji tag data.
@@ -336,7 +336,7 @@ class Emoji {
 	 * before the blocks are rendered: for comments in Comment::render_blocks(), for posts before
 	 * do_blocks().
 	 *
-	 * @since unreleased
+	 * @since 9.4.4
 	 *
 	 * @param string $content The content.
 	 *
@@ -401,7 +401,7 @@ class Emoji {
 	 * kses splits HTML. In plain text (a name), a `<` starts what the split takes for a tag, and
 	 * shortcodes after it stay as text.
 	 *
-	 * @since unreleased Only replaces shortcodes outside of tags and HTML comments.
+	 * @since 9.4.4 Only replaces shortcodes outside of tags and HTML comments.
 	 *
 	 * @param string $text         The text to process.
 	 * @param array  $replacements The replacements, keyed by the lowercase shortcode without colons.

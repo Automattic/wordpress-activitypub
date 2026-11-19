@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Cache;
 
 use Activitypub\Cache\Media;
+use Activitypub\Collection\Remote_Posts;
 use WP_UnitTestCase;
 
 /**
@@ -167,8 +168,10 @@ class Test_Media extends WP_UnitTestCase {
 		$remote_url = 'https://remote.example.com/image.jpg';
 		$content    = '<!-- wp:activitypub/image {"url":"' . $remote_url . '"} --><img src="' . $remote_url . '" alt="Test" /><!-- /wp:activitypub/image -->';
 
-		// Render the block.
-		$rendered = \do_blocks( $content );
+		// Render the block, as remote post content.
+		$GLOBALS['post'] = self::factory()->post->create_and_get( array( 'post_type' => Remote_Posts::POST_TYPE ) ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		$rendered        = \do_blocks( $content );
+		unset( $GLOBALS['post'] );
 
 		// URL should be transformed by CDN filter at render time.
 		$this->assertStringContainsString( 'https://cdn.example.com/', $rendered );

@@ -701,7 +701,15 @@ class Enable_Mastodon_Apps {
 						);}
 					return $media_attachment;
 				},
-				$object['attachment']
+				\array_values(
+					\array_filter(
+						$object['attachment'],
+						static function ( $attachment ) {
+							return ! empty( $attachment['url'] ) && \is_string( $attachment['url'] ) && ! empty( $attachment['mediaType'] )
+								&& \in_array( \strtok( $attachment['mediaType'], '/' ), array( 'image', 'video', 'audio' ), true );
+						}
+					)
+				)
 			);
 		}
 

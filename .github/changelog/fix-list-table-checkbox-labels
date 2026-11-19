@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Row checkboxes in the Followers, Following and Blocked accounts lists now have labels, so screen readers announce which account each one selects.

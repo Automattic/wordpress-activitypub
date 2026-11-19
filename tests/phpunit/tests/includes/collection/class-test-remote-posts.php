@@ -11,6 +11,7 @@ use Activitypub\Cache\Media;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
 use Activitypub\Post_Types;
+use Activitypub\Tests\Image_Download_Stub;
 use Activitypub\Tests\Uri_Test_Cases;
 
 use function Activitypub\get_id_hash;
@@ -22,6 +23,7 @@ use function Activitypub\object_to_uri;
  * @coversDefaultClass \Activitypub\Collection\Remote_Posts
  */
 class Test_Remote_Posts extends \WP_UnitTestCase {
+	use Image_Download_Stub;
 	use Uri_Test_Cases;
 
 	/**
@@ -340,14 +342,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	public function mock_file_download( $result, $url, $type ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Required for filter signature.
 		// Handle all example.com image URLs.
 		if ( str_starts_with( $url, 'https://example.com/' ) && preg_match( '/\.(jpg|jpeg|png|gif|webp)$/i', $url ) ) {
-			// Copy test asset to temp file.
-			$tmp_file = \wp_tempnam( 'test-image.jpg' );
-			copy( AP_TESTS_DIR . '/data/assets/test.jpg', $tmp_file );
-
-			return array(
-				'file'      => $tmp_file,
-				'mime_type' => 'image/jpeg',
-			);
+			return self::image_download();
 		}
 
 		return $result;

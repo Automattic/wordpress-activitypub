@@ -11,6 +11,7 @@ use Activitypub\Cache\Comment_Media;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Tests\Equal_Html;
+use Activitypub\Tests\Image_Download_Stub;
 use Activitypub\Tests\Uri_Test_Cases;
 
 use function Activitypub\get_id_hash;
@@ -23,6 +24,7 @@ use function Activitypub\object_id_to_comment;
  */
 class Test_Interactions extends \WP_UnitTestCase {
 	use Equal_Html;
+	use Image_Download_Stub;
 	use Uri_Test_Cases;
 
 	/**
@@ -258,12 +260,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$downloads = 0;
 		$download  = static function () use ( &$downloads ) {
 			++$downloads;
-			$file = \wp_tempnam( 'comment-image.jpg' );
-			\copy( AP_TESTS_DIR . '/data/assets/test.jpg', $file );
-			return array(
-				'file'      => $file,
-				'mime_type' => 'image/jpeg',
-			);
+			return self::image_download();
 		};
 		Comment_Media::init();
 		\add_filter( 'activitypub_pre_download_url', $download );
@@ -1375,7 +1372,16 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$emoji_data = get_post_meta( $actor_post_id, '_activitypub_emoji', true );
 		$this->assertNotEmpty( $emoji_data );
 
-		// Test emoji replacement on display via comment_text filter (blocks are rendered).
+		// A comment that is not approved yet shows the shortcodes as text.
+		\wp_set_comment_status( $comment_id, 'hold' );
+		$comment      = get_comment( $comment_id );
+		$pending_text = apply_filters( 'comment_text', $comment->comment_content, $comment );
+		$this->assertStringNotContainsString( '<img', $pending_text );
+		$this->assertStringContainsString( ':kappa:', $pending_text );
+
+		// Test emoji replacement on display via comment_text filter (blocks are rendered once approved).
+		\wp_set_comment_status( $comment_id, 'approve' );
+		$comment                 = get_comment( $comment_id );
 		$comment_text_with_emoji = apply_filters( 'comment_text', $comment->comment_content, $comment );
 		$this->assertStringContainsString( 'kappa.png" alt="kappa" title="kappa" class="emoji"', $comment_text_with_emoji );
 		$this->assertStringContainsString( 'smile.png" alt="smile" title="smile" class="emoji"', $comment_text_with_emoji );
