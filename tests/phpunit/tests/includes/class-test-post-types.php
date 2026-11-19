@@ -137,4 +137,51 @@ class Test_Post_Types extends \WP_UnitTestCase {
 
 		return \call_user_func( $callback, array( 'id' => $post_id ) );
 	}
+
+	/**
+	 * Nobody may create, edit, publish or delete posts of a post type only the plugin writes.
+	 *
+	 * Loops over every post type the plugin registers, so a new one fails until it is decided:
+	 * locked, or listed here as editable with the reason.
+	 *
+	 * @covers ::register_inbox_post_type
+	 * @covers ::register_outbox_post_type
+	 * @covers ::register_oauth_post_types
+	 * @covers ::register_tombstone_post_type
+	 */
+	public function test_internal_post_types_are_locked() {
+		$editable = array(
+			// Users manage their own profile fields.
+			'ap_extrafield',
+			'ap_extrafield_blog',
+			// The admin app reads them through the REST API in the edit context, which needs the edit caps.
+			'ap_post',
+			'ap_actor',
+		);
+
+		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$checked = 0;
+		foreach ( \get_post_types( array(), 'names' ) as $post_type ) {
+			if ( 0 !== \strpos( $post_type, 'ap_' ) || \in_array( $post_type, $editable, true ) ) {
+				continue;
+			}
+
+			$post_id = \wp_insert_post(
+				array(
+					'post_type'   => $post_type,
+					'post_status' => 'publish',
+					'post_title'  => 'internal',
+				)
+			);
+
+			$this->assertFalse( \current_user_can( \get_post_type_object( $post_type )->cap->create_posts ), $post_type );
+			$this->assertFalse( \current_user_can( 'edit_post', $post_id ), $post_type );
+			$this->assertFalse( \current_user_can( 'delete_post', $post_id ), $post_type );
+			$this->assertFalse( \current_user_can( 'publish_post', $post_id ), $post_type );
+			++$checked;
+		}
+
+		$this->assertSame( 4, $checked, 'Outbox, Inbox, OAuth Client and Tombstone are locked.' );
+	}
 }

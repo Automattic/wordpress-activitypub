@@ -295,10 +295,19 @@ class Dispatcher {
 
 		$outbox_item = \get_post( $outbox_item_id );
 
+		/*
+		 * A local inbox skips the signature check, so it only takes an activity in the name of the
+		 * actor the row is sent as, the actor whose key signs it for every other inbox.
+		 */
+		$sender   = Outbox::get_actor( $outbox_item );
+		$is_owner = ! \is_wp_error( $sender ) && object_to_uri( $activity->get_actor() ) === $sender->get_id();
+
 		foreach ( $inboxes as $inbox ) {
 			// Handle local inboxes via internal REST API, remote via HTTP.
 			if ( is_same_domain( $inbox ) ) {
-				$result = self::send_to_local_inbox( $inbox, $json );
+				$result = $is_owner
+					? self::send_to_local_inbox( $inbox, $json )
+					: new \WP_Error( 'activitypub_actor_mismatch', 'The activity is not in the name of the actor that sends it.', array( 'status' => 403 ) );
 			} else {
 				$result = safe_remote_post( $inbox, $json, (int) $outbox_item->post_author );
 			}
