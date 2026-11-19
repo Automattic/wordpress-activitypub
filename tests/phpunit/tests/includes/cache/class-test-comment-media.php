@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Cache;
 
 use Activitypub\Cache\Comment_Media;
+use Activitypub\Tests\Image_Download_Stub;
 use WP_UnitTestCase;
 
 use function Activitypub\generate_image_block;
@@ -18,6 +19,8 @@ use function Activitypub\generate_image_block;
  * @coversDefaultClass \Activitypub\Cache\Comment_Media
  */
 class Test_Comment_Media extends WP_UnitTestCase {
+	use Image_Download_Stub;
+
 
 	/**
 	 * Set up the hooks.
@@ -68,12 +71,7 @@ class Test_Comment_Media extends WP_UnitTestCase {
 	 */
 	private function cache_image( $comment_id ) {
 		$download = static function () {
-			$file = \wp_tempnam( 'comment-image.jpg' );
-			\copy( AP_TESTS_DIR . '/data/assets/test.jpg', $file );
-			return array(
-				'file'      => $file,
-				'mime_type' => 'image/jpeg',
-			);
+			return self::image_download();
 		};
 
 		// Comment IDs repeat across tests, start without a cached file.
