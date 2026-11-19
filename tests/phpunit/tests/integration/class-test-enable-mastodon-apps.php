@@ -12,7 +12,9 @@ use Activitypub\Collection\Remote_Actors;
 use Activitypub\Integration\Enable_Mastodon_Apps;
 use Activitypub\Transformer\Comment;
 use Activitypub\Transformer\Post;
+use Enable_Mastodon_Apps\Entity\Account;
 use Enable_Mastodon_Apps\Entity\Status;
+use ReflectionMethod;
 
 /**
  * Test class for Enable Mastodon Apps integration.
@@ -84,6 +86,52 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 			'preferredUsername' => 'error',
 		),
 	);
+
+	/**
+	 * Non-media attachments must not prevent a remote status from loading.
+	 */
+	public function test_activity_to_status_skips_non_media_attachments() {
+		$method = new ReflectionMethod( Enable_Mastodon_Apps::class, 'activity_to_status' );
+		$method->setAccessible( true );
+		$status = $method->invoke(
+			null,
+			array(
+				'id'         => 'https://example.org/posts/1',
+				'type'       => 'Note',
+				'published'  => '2026-01-01T12:00:00Z',
+				'content'    => 'A post with mixed attachments.',
+				'attachment' => array(
+					array(
+						'type'  => 'PropertyValue',
+						'name'  => 'Website',
+						'value' => 'https://example.org/',
+					),
+					array(
+						'type'      => 'Document',
+						'url'       => 'https://example.org/file.pdf',
+						'mediaType' => 'application/pdf',
+					),
+					array(
+						'type'      => 'Document',
+						'mediaType' => 'image/jpeg',
+					),
+					array(
+						'type'      => 'Document',
+						'url'       => 'https://example.org/image.jpg',
+						'mediaType' => 'image/jpeg',
+						'name'      => 'An image',
+					),
+				),
+			),
+			new Account()
+		);
+
+		$this->assertInstanceOf( Status::class, $status );
+		$this->assertSame( array( 0 ), array_keys( $status->media_attachments ) );
+		$this->assertSame( 'https://example.org/image.jpg', $status->media_attachments[0]->url );
+		$this->assertSame( 'image', $status->media_attachments[0]->type );
+		$this->assertSame( 'An image', $status->media_attachments[0]->description );
+	}
 
 	/**
 	 * Set up.
