@@ -40,7 +40,7 @@ class Webfinger {
 	 * can no longer be found. The blog handle comes first, as in Actors::get_id_by_username(),
 	 * so no user is looked up for it and the blog profile answers.
 	 *
-	 * @since unreleased
+	 * @since 9.4.4
 	 *
 	 * @param array  $args   The arguments of the user query.
 	 * @param string $uri    The WebFinger resource.

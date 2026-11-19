@@ -50,7 +50,8 @@ class Comment {
 	 * Render blocks in comment content.
 	 *
 	 * Comments don't automatically parse blocks like posts do.
-	 * This filter renders only leaf activitypub/emoji and activitypub/image blocks.
+	 * This filter renders only leaf activitypub/emoji and activitypub/image blocks, and only
+	 * in comments received via ActivityPub.
 	 *
 	 * @param string           $content The comment content.
 	 * @param \WP_Comment|null $comment Optional. The comment being rendered.
@@ -62,33 +63,56 @@ class Comment {
 			return $content;
 		}
 
+		/*
+		 * Only the inbox writes this plugin's blocks into comments, so a comment that was not
+		 * received renders none and stays as it was stored. The render callbacks also check where
+		 * a block comes from, see Blocks::is_activitypub_content(). Without a comment (a
+		 * one-argument `comment_text` call), get_comment() returns the comment in scope.
+		 */
+		$comment = \get_comment( $comment );
+		if ( ! $comment || ! self::was_received( $comment ) ) {
+			return $content;
+		}
+
+		/*
+		 * Only approved comments render their blocks, so showing a pending or spam comment, in the
+		 * moderation queue for example, downloads nothing. Emoji stay as their shortcode text.
+		 */
 		$blocks         = \parse_blocks( Emoji::remove_blocks_in_tags( $content ) );
 		$output         = '';
-		$allowed_blocks = array( 'activitypub/emoji' );
-		$context_filter = null;
-		if ( \get_option( 'activitypub_allow_comment_images' ) && $comment instanceof \WP_Comment && 'approved' === \wp_get_comment_status( $comment ) && self::was_received( $comment ) ) {
-			$allowed_blocks[] = 'activitypub/image';
+		$allowed_blocks = array();
+		if ( 'approved' === \wp_get_comment_status( $comment ) ) {
+			$allowed_blocks[] = 'activitypub/emoji';
 
-			// Images are cached per comment, so removing the comment removes them.
-			$context_filter = static function ( $context ) use ( $comment ) {
-				$context['commentId'] = (int) $comment->comment_ID;
-				return $context;
-			};
-			\add_filter( 'render_block_context', $context_filter );
-		}
-
-		foreach ( $blocks as $block ) {
-			// Rendering a parent also invokes its children's callbacks, so reject nested blocks.
-			if ( \in_array( $block['blockName'], $allowed_blocks, true ) && empty( $block['innerBlocks'] ) ) {
-				$output .= \render_block( $block );
-			} elseif ( 'activitypub/image' === $block['blockName'] ) {
-				// A hidden image is replaced by its description, so a stored img cannot show the remote image.
-				$output .= Blocks::render_image_description( $block['attrs'] );
-			} else {
-				$output .= \serialize_block( $block );
+			if ( \get_option( 'activitypub_allow_comment_images' ) ) {
+				$allowed_blocks[] = 'activitypub/image';
 			}
 		}
-		if ( $context_filter ) {
+
+		/*
+		 * The render callbacks only act on blocks of a received comment, see
+		 * Blocks::is_activitypub_content(), and images are cached per comment, so removing the
+		 * comment removes them.
+		 */
+		$context_filter = static function ( $context ) use ( $comment ) {
+			$context['activitypub/commentId'] = (int) $comment->comment_ID;
+			return $context;
+		};
+		\add_filter( 'render_block_context', $context_filter );
+
+		try {
+			foreach ( $blocks as $block ) {
+				// Rendering a parent also invokes its children's callbacks, so reject nested blocks.
+				if ( \in_array( $block['blockName'], $allowed_blocks, true ) && empty( $block['innerBlocks'] ) ) {
+					$output .= \render_block( $block );
+				} elseif ( 'activitypub/image' === $block['blockName'] ) {
+					// A hidden image is replaced by its description, so a stored img cannot show the remote image.
+					$output .= Blocks::render_image_description( $block['attrs'] );
+				} else {
+					$output .= \serialize_block( $block );
+				}
+			}
+		} finally {
 			\remove_filter( 'render_block_context', $context_filter );
 		}
 
@@ -995,6 +1019,19 @@ class Comment {
 	}
 
 	/**
+	 * Whether comment data that is about to be saved comes from the inbox.
+	 *
+	 * The data form of was_received(), for filters that run before the comment exists.
+	 *
+	 * @param array $comment_data The comment data.
+	 *
+	 * @return bool True if the inbox is saving the comment.
+	 */
+	private static function is_from_inbox( $comment_data ) {
+		return 'activitypub' === ( $comment_data['comment_meta']['protocol'] ?? '' );
+	}
+
+	/**
 	 * Restrict the history used for core's previous-author approval.
 	 *
 	 * @since 9.4.1
@@ -1023,7 +1060,7 @@ class Comment {
 		global $wpdb;
 
 		// Not from the Fediverse (comment form, reviews, Webmentions, any plugin): an email that is a Fediverse handle proves nothing.
-		if ( 'activitypub' !== ( $comment_data['comment_meta']['protocol'] ?? '' ) ) {
+		if ( ! self::is_from_inbox( $comment_data ) ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			return $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM $wpdb->comments c INNER JOIN $wpdb->commentmeta m ON m.comment_id = c.comment_ID AND m.meta_key = 'protocol' AND m.meta_value = 'activitypub' WHERE c.comment_author_email = %s AND c.comment_approved = '1' LIMIT 1", \wp_unslash( $comment_data['comment_author_email'] ) ) ) ? 0 : $approved;
 		}
@@ -1057,12 +1094,27 @@ class Comment {
 	 * @return int|string|\WP_Error The approval status.
 	 */
 	public static function pre_comment_approved( $approved, $comment_data ) {
+		// Respect 'trash' since it comes from the WordPress disallowed list.
+		if ( 'trash' === $approved || \is_wp_error( $approved ) ) {
+			return $approved;
+		}
+
 		/*
-		 * Only return early for already-approved comments, trash, or errors.
-		 * Don't short-circuit on 'spam' - we may want to override Akismet.
-		 * Respect 'trash' since it comes from the WordPress disallowed list.
+		 * Only the inbox writes the plugin's blocks into comments, so a comment from anywhere else
+		 * that contains one goes to spam, before an approval below can let it through. Other blocks
+		 * are fine: comment editors such as Verbum save core blocks.
+		 *
+		 * Checked with the namespace rather than has_blocks(), which needs exactly `<!-- wp:`.
 		 */
-		if ( 1 === $approved || '1' === $approved || 'trash' === $approved || \is_wp_error( $approved ) ) {
+		if ( ! self::is_from_inbox( $comment_data ) && \str_contains( (string) ( $comment_data['comment_content'] ?? '' ), 'wp:activitypub/' ) ) {
+			return 'spam';
+		}
+
+		/*
+		 * Only return early for already-approved comments.
+		 * Don't short-circuit on 'spam' - we may want to override Akismet.
+		 */
+		if ( 1 === $approved || '1' === $approved ) {
 			return $approved;
 		}
 

@@ -416,7 +416,7 @@ function is_importing() {
  *
  * Unlike a lookup by value through the metadata API, the value is matched byte for byte.
  *
- * @since unreleased
+ * @since 9.4.4
  *
  * @param string $meta_type  The object type: 'post', 'comment' or 'user'.
  * @param int    $object_id  The object ID.

@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Only remove a profile or post when a deleted ID matches it exactly.
