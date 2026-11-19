@@ -94,9 +94,10 @@ class Comments_Controller extends \WP_REST_Controller {
 		 * BEFORE the local-only guard below, so that any comment on a non-
 		 * publicly-queryable parent returns the same "not found" shape — we
 		 * never want an outsider to distinguish "comment exists but is local"
-		 * from "comment missing" when the parent post is private.
+		 * from "comment missing" when the parent post is private. An
+		 * unapproved, trashed or spam comment is not found either.
 		 */
-		if ( ! is_post_publicly_queryable( $comment->comment_post_ID ) ) {
+		if ( '1' !== $comment->comment_approved || ! is_post_publicly_queryable( $comment->comment_post_ID ) ) {
 			return new \WP_Error( 'activitypub_comment_not_found', \__( 'Comment not found', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
