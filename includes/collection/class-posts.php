@@ -12,7 +12,7 @@ use Activitypub\Hashtag;
 use Activitypub\Link;
 
 use function Activitypub\get_content_visibility;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 use function Activitypub\user_can_act_as_blog;
 
 /**
@@ -83,7 +83,7 @@ class Posts {
 
 		// The Reply block is what makes Transformer\Post::get_in_reply_to() emit inReplyTo.
 		if ( ! empty( $object['inReplyTo'] ) ) {
-			$content = self::reply_block( object_to_uri( $object['inReplyTo'] ) ) . $content;
+			$content = self::reply_block( object_to_id( $object['inReplyTo'] ) ) . $content;
 		}
 
 		// Use name as title for Articles, or generate from content for Notes.
@@ -157,7 +157,7 @@ class Posts {
 		// Process content: autop, autolink, hashtags, and convert to blocks.
 		$content = self::prepare_content( $content );
 
-		$in_reply_to = ! empty( $object['inReplyTo'] ) ? object_to_uri( $object['inReplyTo'] ) : '';
+		$in_reply_to = ! empty( $object['inReplyTo'] ) ? object_to_id( $object['inReplyTo'] ) : '';
 
 		// The reply target only lives in the stored Reply block, so an Update without inReplyTo keeps it.
 		if ( ! $in_reply_to ) {

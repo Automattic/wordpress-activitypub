@@ -18,7 +18,7 @@ use function Activitypub\camel_to_snake_case;
 use function Activitypub\is_activity;
 use function Activitypub\is_activity_public;
 use function Activitypub\is_same_host;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 
 /**
  * Handle Create requests.
@@ -61,7 +61,7 @@ class Announce {
 
 		self::maybe_save_announce( $announcement, $user_ids );
 
-		$object_url = object_to_uri( $announcement['object'] );
+		$object_url = object_to_id( $announcement['object'] );
 
 		/*
 		 * The filter below recognizes the request by its URL, and `Proxy::get()` drops the
@@ -95,6 +95,11 @@ class Announce {
 		}
 
 		if ( ! is_activity( $object ) ) {
+			return;
+		}
+
+		// Only one level: an announced Announce is not handed on, so a chain of them ends here.
+		if ( 'Announce' === $object['type'] ) {
 			return;
 		}
 
@@ -181,7 +186,7 @@ class Announce {
 	 * @return void
 	 */
 	public static function maybe_save_announce( $activity, $user_ids ) {
-		$url = object_to_uri( $activity );
+		$url = object_to_id( $activity );
 
 		if ( empty( $url ) ) {
 			return;
@@ -195,7 +200,7 @@ class Announce {
 
 		// If the object is a Create activity, extract the actual object from it.
 		if ( isset( $activity['object']['type'] ) && 'Create' === $activity['object']['type'] ) {
-			$activity['object'] = object_to_uri( $activity['object']['object'] );
+			$activity['object'] = object_to_id( $activity['object']['object'] );
 		}
 
 		$success = false;

@@ -479,7 +479,7 @@ class Dispatcher {
 				continue;
 			}
 
-			$actor = object_to_uri( $object['attributedTo'] );
+			$actor = object_to_id( $object['attributedTo'] );
 			$actor = Proxy::get( $actor );
 
 			if ( ! $actor || \is_wp_error( $actor ) ) {

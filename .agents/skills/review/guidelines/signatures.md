@@ -17,6 +17,7 @@ Files: `includes/class-signature.php`, `includes/signature/class-http-signature-
 - Every rule holds for both verifiers. A binding is only in place when both enforce it.
 - Code outside the verifiers reads signature parameters only through them: `Signature::get_key_ids()` picks the verifier the way `verify_http_signature()` does and asks it for its keyIds, never with a regex of its own.
 - The key's owner is the activity actor; sharing its host is not enough (Mastodon's `different_actor?`). Take the owner from where the key was resolved: the stored actor the keyId points to, else the key as its host serves it (`Proxy::get()`). Compare the owner, not the keyId string, so key aliases on the same host keep working.
+- The actor that is bound is read with `object_to_id()`, and every handler reads it the same way. An actor sent as an object is its `id`, never its `url`; a check on one form and a use of the other binds a value the handler does not act on.
 - Each verifier requires a signed component that names this site (draft: `host`; RFC 9421: `@target-uri`, `@authority` or `host`; each checked by `is_signature_host()`) and, with a body, a signed `digest` / `content-digest` whose header is present. A signed but absent header enters the signed data empty and vouches for any body.
 - POST requests without `date` or the digest are rejected. The clock skew window is minutes, not hours.
 - Weak algorithms are not accepted.

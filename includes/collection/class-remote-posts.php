@@ -14,6 +14,7 @@ use function Activitypub\get_id_hash;
 use function Activitypub\get_stored_id_forms;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
+use function Activitypub\object_to_id;
 use function Activitypub\object_to_uri;
 use function Activitypub\process_remote_media;
 
@@ -98,7 +99,7 @@ class Remote_Posts {
 		}
 
 		// Post doesn't exist, create new post.
-		$actor = Remote_Actors::fetch_by_uri( object_to_uri( $activity_object['attributedTo'] ) );
+		$actor = Remote_Actors::fetch_by_uri( object_to_id( $activity_object['attributedTo'] ) );
 
 		if ( \is_wp_error( $actor ) ) {
 			return $actor;

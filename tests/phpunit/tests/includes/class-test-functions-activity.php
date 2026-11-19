@@ -199,6 +199,99 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test object_to_id.
+	 *
+	 * @dataProvider object_to_id_provider
+	 * @covers \Activitypub\object_to_id
+	 *
+	 * @param mixed $input  The input to test.
+	 * @param mixed $output The expected output.
+	 */
+	public function test_object_to_id( $input, $output ) {
+		$this->assertSame( $output, \Activitypub\object_to_id( $input ) );
+	}
+
+	/**
+	 * Data provider for test_object_to_id.
+	 *
+	 * @return array[]
+	 */
+	public function object_to_id_provider() {
+		$object = new Base_Object();
+		$object->set_id( 'https://example.com/note' );
+		$image = new Base_Object();
+		$image->set_type( 'Image' );
+		$image->set_id( 'https://example.com/photo' );
+		$image->set_url( 'https://cdn.example/photo.jpg' );
+
+		return array(
+			'string'                => array( 'https://example.com/note', 'https://example.com/note' ),
+			'object'                => array( $object, 'https://example.com/note' ),
+			'list'                  => array( array( $object ), 'https://example.com/note' ),
+			'image object'          => array( $image, 'https://example.com/photo' ),
+			'image with id and url' => array(
+				array(
+					'id'   => 'https://example.com/photo',
+					'type' => 'Image',
+					'url'  => 'https://cdn.example/photo.jpg',
+				),
+				'https://example.com/photo',
+			),
+			'image without id'      => array(
+				array(
+					'type' => 'Image',
+					'url'  => 'https://cdn.example/photo.jpg',
+				),
+				null,
+			),
+			'note without id'       => array(
+				array(
+					'type' => 'Note',
+					'url'  => 'https://example.com/note',
+				),
+				null,
+			),
+			'link'                  => array(
+				array(
+					'type' => 'Link',
+					'href' => 'https://example.com/note',
+				),
+				'https://example.com/note',
+			),
+			'mention'               => array(
+				array(
+					'type' => 'Mention',
+					'href' => 'https://example.com/users/alice',
+				),
+				'https://example.com/users/alice',
+			),
+			'id is not a string'    => array( array( 'id' => 42 ), null ),
+			'empty array'           => array( array(), null ),
+			'integer'               => array( 42, null ),
+			'object without array'  => array( new \stdClass(), null ),
+		);
+	}
+
+	/**
+	 * Objects are compared by their id, not by the url a media object names.
+	 *
+	 * @covers \Activitypub\is_same_host
+	 * @covers \Activitypub\is_same_actor
+	 */
+	public function test_objects_are_compared_by_their_id() {
+		$image = array(
+			'id'   => 'https://remote.example/users/alice',
+			'type' => 'Image',
+			'url'  => 'https://cdn.example/users/alice',
+		);
+
+		$this->assertTrue( \Activitypub\is_same_host( $image, 'https://remote.example/notes/1' ) );
+		$this->assertFalse( \Activitypub\is_same_host( $image, 'https://cdn.example/notes/1' ) );
+		$this->assertTrue( \Activitypub\is_same_actor( $image, 'https://remote.example/users/alice' ) );
+		$this->assertFalse( \Activitypub\is_same_actor( $image, 'https://cdn.example/users/alice' ) );
+	}
+
+	/**
 	 * Test is_activity with array input.
 	 *
 	 * @covers \Activitypub\is_activity
