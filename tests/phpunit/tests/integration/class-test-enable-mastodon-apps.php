@@ -90,7 +90,7 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 	 * Non-media attachments must not prevent a remote status from loading.
 	 */
 	public function test_activity_to_status_skips_non_media_attachments() {
-		$method = new ReflectionMethod( Enable_Mastodon_Apps::class, 'activity_to_status' );
+		$method = new \ReflectionMethod( Enable_Mastodon_Apps::class, 'activity_to_status' );
 		$method->setAccessible( true );
 		$status = $method->invoke(
 			null,
