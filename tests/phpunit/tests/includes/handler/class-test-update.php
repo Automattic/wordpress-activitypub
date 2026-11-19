@@ -11,9 +11,12 @@ use Activitypub\Activity\Actor;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Handler\Create;
 use Activitypub\Handler\Update;
 use Activitypub\Proxy;
 use Activitypub\Tests\Remote_Request_Stub;
+
+use function Activitypub\object_to_id;
 
 /**
  * Update Handler Test Class.
@@ -447,6 +450,191 @@ class Test_Update extends \WP_UnitTestCase {
 		$this->assertNull( $caught );
 		$this->assertSame( 1, $depth, 'The Update has to be handled exactly once.' );
 		$this->assertSame( 'original', \get_comment( $comment_id )->comment_content, 'A disabled post must not be written to.' );
+	}
+
+	/**
+	 * Update falls back to Create at most once per activity, for every object type it handles.
+	 *
+	 * Create hands an object it already knows to Update, and Update hands an object it cannot
+	 * find to Create, so both have to find it the same way: under the identifier it is stored
+	 * under, and in the same collection. Every object type Update routes to update_object() is
+	 * sent as a reply and as a quote, with and without remote posts, entering through Update and
+	 * through Create; each has to be handled exactly once.
+	 *
+	 * @covers ::update_object
+	 */
+	public function test_update_object_falls_back_to_create_once() {
+		$post_id = self::factory()->post->create();
+		$actor   = 'https://remote.example/users/bob';
+
+		$metadata = function () use ( $actor ) {
+			return array(
+				'id'                => $actor,
+				'type'              => 'Person',
+				'name'              => 'bob',
+				'preferredUsername' => 'bob',
+				'inbox'             => \sprintf( '%s/inbox', $actor ),
+				'url'               => $actor,
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata );
+
+		// Both handlers look the object up on every pass, so a missing bound ends here instead of in a fatal error.
+		$lookups = 0;
+		$bound   = function () use ( &$lookups ) {
+			if ( ++$lookups > 50 ) {
+				throw new \RuntimeException( 'Update and Create are dispatching to each other.' );
+			}
+		};
+		\add_action( 'pre_get_comments', $bound );
+
+		$handled = new \MockAction();
+		\add_action( 'activitypub_handled_update', array( $handled, 'action' ) );
+
+		$types   = array( 'Note', 'Article', 'Image', 'Audio', 'Video', 'Event', 'Document' );
+		$shapes  = array( 'inReplyTo', 'quote' );
+		$entries = array( array( Update::class, 'handle_update' ), array( Create::class, 'handle_create' ) );
+		$number  = 0;
+
+		foreach ( $types as $type ) {
+			foreach ( $shapes as $shape ) {
+				foreach ( array( false, true ) as $create_posts ) {
+					foreach ( $entries as $entry ) {
+						++$number;
+						\update_option( 'activitypub_create_posts', $create_posts );
+
+						$id       = \sprintf( 'https://remote.example/objects/%d', $number );
+						$activity = array(
+							'type'   => 'Update',
+							'actor'  => $actor,
+							'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+							'object' => array(
+								'id'           => $id,
+								'type'         => $type,
+								'url'          => \sprintf( 'https://remote.example/media/%d', $number ),
+								'content'      => 'edited',
+								$shape         => \get_permalink( $post_id ),
+								'attributedTo' => $actor,
+								'to'           => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+							),
+						);
+
+						// Stored the way Interactions stores it.
+						$comment_id = self::factory()->comment->create(
+							array(
+								'comment_post_ID'  => $post_id,
+								'comment_approved' => '1',
+								'comment_content'  => 'original',
+							)
+						);
+						\add_comment_meta( $comment_id, 'source_id', \esc_url_raw( object_to_id( $activity['object'] ) ) );
+						\add_comment_meta( $comment_id, 'protocol', 'activitypub' );
+
+						$lookups = 0;
+						$before  = $handled->get_call_count();
+						$label   = \sprintf( '%s %s, remote posts %s, entering through %s', $type, $shape, $create_posts ? 'on' : 'off', $entry[0] );
+
+						$caught = null;
+						try {
+							\call_user_func( $entry, $activity, array( 1 ), null );
+						} catch ( \RuntimeException $e ) {
+							$caught = $e->getMessage();
+						}
+
+						$this->assertNull( $caught, $label );
+						$this->assertSame( 1, $handled->get_call_count() - $before, \sprintf( 'The Update has to be handled exactly once: %s.', $label ) );
+					}
+				}
+			}
+		}
+
+		\remove_action( 'activitypub_handled_update', array( $handled, 'action' ) );
+		\remove_action( 'pre_get_comments', $bound );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata );
+		\delete_option( 'activitypub_create_posts' );
+	}
+
+	/**
+	 * A media object is looked up by its id in Update and in Create, not by the url of its file.
+	 *
+	 * The file lives on another host, as on a CDN. Both handlers find the comment stored under the
+	 * object's id and update it, so they do not hand the activity back and forth.
+	 *
+	 * @covers ::update_object
+	 */
+	public function test_media_object_is_looked_up_by_id_in_both_handlers() {
+		$post_id = self::factory()->post->create();
+		$actor   = 'https://remote.example/users/bob';
+
+		$metadata = function () use ( $actor ) {
+			return array(
+				'id'                => $actor,
+				'type'              => 'Person',
+				'name'              => 'bob',
+				'preferredUsername' => 'bob',
+				'inbox'             => \sprintf( '%s/inbox', $actor ),
+				'url'               => $actor,
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata );
+
+		// A missing bound ends here instead of in a fatal error.
+		$lookups = 0;
+		$bound   = function () use ( &$lookups ) {
+			if ( ++$lookups > 50 ) {
+				throw new \RuntimeException( 'Update and Create are dispatching to each other.' );
+			}
+		};
+		\add_action( 'pre_get_comments', $bound );
+
+		$entries = array( array( Update::class, 'handle_update' ), array( Create::class, 'handle_create' ) );
+		$number  = 0;
+
+		foreach ( array( 'Image', 'Audio', 'Video', 'Document' ) as $type ) {
+			foreach ( $entries as $entry ) {
+				++$number;
+
+				$id         = \sprintf( 'https://remote.example/objects/media-%d', $number );
+				$comment_id = self::factory()->comment->create(
+					array(
+						'comment_post_ID'  => $post_id,
+						'comment_approved' => '1',
+						'comment_content'  => 'original',
+					)
+				);
+				\add_comment_meta( $comment_id, 'source_id', $id );
+				\add_comment_meta( $comment_id, 'protocol', 'activitypub' );
+
+				$activity = array(
+					'type'   => 'Update',
+					'actor'  => $actor,
+					'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+					'object' => array(
+						'id'           => $id,
+						'type'         => $type,
+						'url'          => \sprintf( 'https://cdn.example/media/%d', $number ),
+						'content'      => 'edited',
+						'inReplyTo'    => \get_permalink( $post_id ),
+						'attributedTo' => $actor,
+						'to'           => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+					),
+				);
+
+				$lookups = 0;
+				$caught  = null;
+				try {
+					\call_user_func( $entry, $activity, array( 1 ), null );
+				} catch ( \RuntimeException $e ) {
+					$caught = $e->getMessage();
+				}
+
+				$this->assertNull( $caught, \sprintf( '%s entering through %s', $type, $entry[0] ) );
+				$this->assertSame( 'edited', \get_comment( $comment_id )->comment_content, \sprintf( '%s entering through %s', $type, $entry[0] ) );
+			}
+		}
+
+		\remove_action( 'pre_get_comments', $bound );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata );
 	}
 
 	/**

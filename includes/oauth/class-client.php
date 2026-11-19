@@ -164,6 +164,15 @@ class Client {
 	 * @return Client|\WP_Error The client or error.
 	 */
 	public static function get( $client_id ) {
+		// Core ignores an empty meta value, so the query would match any client.
+		if ( ! $client_id ) {
+			return new \WP_Error(
+				'activitypub_client_not_found',
+				\__( 'OAuth client not found.', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
 		// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Client lookup by ID is necessary.
 		$posts = \get_posts(
 			array(

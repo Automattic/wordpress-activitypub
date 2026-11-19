@@ -16,7 +16,7 @@ use Activitypub\Moderation;
 use function Activitypub\camel_to_snake_case;
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 
 /**
  * Actors_Inbox_Controller class.
@@ -91,7 +91,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 							'description'       => 'The actor performing the activity.',
 							'type'              => 'string',
 							'required'          => true,
-							'sanitize_callback' => '\Activitypub\object_to_uri',
+							'sanitize_callback' => '\Activitypub\object_to_id',
 						),
 						'type'    => array(
 							'description'       => 'The type of the activity.',
@@ -463,7 +463,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			$skip = \apply_filters( 'activitypub_skip_inbox_storage', false, $data );
 
 			if ( ! $skip ) {
-				$activity_id = object_to_uri( $data );
+				$activity_id = object_to_id( $data );
 
 				Inbox::add( $activity, (array) $user_id );
 
