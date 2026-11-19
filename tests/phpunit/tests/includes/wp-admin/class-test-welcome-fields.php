@@ -273,4 +273,30 @@ class Test_Welcome_Fields extends \WP_UnitTestCase {
 	public function __return_option_zero() { // phpcs:ignore PHPCompatibility.FunctionNameRestrictions.ReservedFunctionNames.MethodDoubleUnderscore
 		return '0';
 	}
+
+	/**
+	 * The links that change settings carry a nonce for the handler that saves them.
+	 *
+	 * @covers ::render_step_fediverse_intro
+	 * @covers ::render_step_features
+	 * @covers ::render_welcome_footer_section
+	 */
+	public function test_setting_links_carry_a_nonce() {
+		\wp_set_current_user( self::$user_id );
+
+		$links = array(
+			'render_step_fediverse_intro'   => 'activitypub_help_tab',
+			'render_step_features'          => 'activitypub_help_tab',
+			'render_welcome_footer_section' => 'activitypub_welcome',
+		);
+
+		foreach ( $links as $method => $action ) {
+			\ob_start();
+			Welcome_Fields::$method();
+			$output = \ob_get_clean();
+
+			$this->assertSame( 1, \preg_match( '/_wpnonce=([a-f0-9]+)/', $output, $matches ), $method );
+			$this->assertNotFalse( \wp_verify_nonce( $matches[1], $action ), $method );
+		}
+	}
 }

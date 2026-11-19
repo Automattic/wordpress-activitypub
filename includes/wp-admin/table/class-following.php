@@ -343,7 +343,12 @@ class Following extends \WP_List_Table {
 	 * @return string
 	 */
 	public function column_cb( $item ) {
-		return \sprintf( '<input type="checkbox" name="following[]" value="%s" />', \esc_attr( $item['id'] ) );
+		return \sprintf(
+			'<input id="cb-select-%1$s" type="checkbox" name="following[]" value="%1$s" /><label for="cb-select-%1$s"><span class="screen-reader-text">%2$s</span></label>',
+			\esc_attr( $item['id'] ),
+			/* translators: %s: Username of the followed account. */
+			\esc_html( \sprintf( \__( 'Select %s', 'activitypub' ), $item['username'] ) )
+		);
 	}
 
 	/**
