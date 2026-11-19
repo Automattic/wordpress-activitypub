@@ -177,7 +177,8 @@ class Settings_Fields {
 			\esc_html__( 'Blocked Domains', 'activitypub' ),
 			array( self::class, 'render_site_blocked_domains_field' ),
 			'activitypub_settings',
-			'activitypub_moderation'
+			'activitypub_moderation',
+			array( 'label_for' => 'new_site_domain' )
 		);
 
 		\add_settings_field(
@@ -185,7 +186,8 @@ class Settings_Fields {
 			\esc_html__( 'Blocked Keywords', 'activitypub' ),
 			array( self::class, 'render_site_blocked_keywords_field' ),
 			'activitypub_settings',
-			'activitypub_moderation'
+			'activitypub_moderation',
+			array( 'label_for' => 'new_site_keyword' )
 		);
 
 		\add_settings_field(
@@ -193,7 +195,8 @@ class Settings_Fields {
 			\esc_html__( 'Blocklist Subscriptions', 'activitypub' ),
 			array( self::class, 'render_blocklist_subscriptions_field' ),
 			'activitypub_settings',
-			'activitypub_moderation'
+			'activitypub_moderation',
+			array( 'label_for' => 'new_blocklist_subscription_url' )
 		);
 	}
 

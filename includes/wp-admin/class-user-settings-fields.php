@@ -123,7 +123,8 @@ class User_Settings_Fields {
 			\esc_html__( 'Blocked Domains', 'activitypub' ),
 			array( self::class, 'blocked_domains_callback' ),
 			'activitypub_user_settings',
-			'activitypub_user_moderation'
+			'activitypub_user_moderation',
+			array( 'label_for' => 'new_user_domain' )
 		);
 
 		\add_settings_field(
@@ -131,7 +132,8 @@ class User_Settings_Fields {
 			\esc_html__( 'Blocked Keywords', 'activitypub' ),
 			array( self::class, 'blocked_keywords_callback' ),
 			'activitypub_user_settings',
-			'activitypub_user_moderation'
+			'activitypub_user_moderation',
+			array( 'label_for' => 'new_user_keyword' )
 		);
 	}
 
