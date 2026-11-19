@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Shared activities from other servers now reach the same handlers as activities sent to your site directly, and shared requests are no longer answered.
