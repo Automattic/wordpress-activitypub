@@ -95,7 +95,7 @@ class Token {
 	 * so the token lookup and the token lists use the stored key. Reads use it too, because
 	 * get_user_option() falls back to the key without the site prefix.
 	 *
-	 * @since unreleased
+	 * @since 9.4.4
 	 *
 	 * @param string $hash Optional. The access token hash. Default empty, for the key prefix.
 	 *
@@ -110,7 +110,7 @@ class Token {
 	/**
 	 * The stored user meta key of a refresh token index on this site.
 	 *
-	 * @since unreleased
+	 * @since 9.4.4
 	 *
 	 * @param string $hash Optional. The refresh token hash. Default empty, for the key prefix.
 	 *

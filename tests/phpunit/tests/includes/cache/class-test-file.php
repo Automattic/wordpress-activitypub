@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Cache;
 
 use Activitypub\Cache\Avatar;
 use Activitypub\Tests\Cache_Directory_Stream;
+use Activitypub\Tests\Image_Download_Stub;
 use Activitypub\Tests\Remote_Request_Stub;
 use WP_UnitTestCase;
 
@@ -19,6 +20,7 @@ use WP_UnitTestCase;
  * since the File class is abstract.
  */
 class Test_File extends WP_UnitTestCase {
+	use Image_Download_Stub;
 	use Remote_Request_Stub;
 
 	/**
@@ -45,6 +47,333 @@ class Test_File extends WP_UnitTestCase {
 		$this->assertFalse( $remembered );
 		$this->assertSame( 1, $requests );
 		$this->assertSame( 2, $this->requests );
+	}
+
+	/**
+	 * The stored file is the image editor's output, not the download.
+	 *
+	 * @covers \Activitypub\Cache\File::cache
+	 * @covers \Activitypub\Cache\File::optimize_image
+	 */
+	public function test_cache_stores_only_what_the_editor_wrote() {
+		$post_id  = self::factory()->post->create();
+		$url      = 'https://example.com/photo.jpg';
+		$download = static function () {
+			$download = self::image_download();
+			\file_put_contents( $download['file'], 'extra-bytes-after-the-image', FILE_APPEND ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+
+			return $download;
+		};
+
+		\add_filter( 'activitypub_pre_download_url', $download );
+		$cached = Avatar::cache( $url, $post_id );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+
+		$this->assertNotFalse( $cached );
+		$file = Avatar::get_storage_paths( $post_id )['basedir'] . '/' . \basename( $cached );
+		$this->assertStringNotContainsString( 'extra-bytes-after-the-image', (string) \file_get_contents( $file ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		$this->assertSame( \md5( $url ) . '.jpg', \basename( $file ) );
+
+		Avatar::invalidate_entity( $post_id );
+	}
+
+	/**
+	 * A JPEG is cached as a JPEG and every other image as a PNG, named after the URL.
+	 *
+	 * @dataProvider data_cache_output_formats
+	 *
+	 * @covers \Activitypub\Cache\File::cache
+	 * @covers \Activitypub\Cache\File::optimize_image
+	 *
+	 * @param string $format   The GD function suffix that writes the source image.
+	 * @param string $expected The extension of the cached file.
+	 */
+	public function test_cache_writes_jpeg_or_png( $format, $expected ) {
+		if ( ! \function_exists( 'image' . $format ) ) {
+			$this->markTestSkipped( "GD cannot write {$format}." );
+		}
+
+		$download = static function () use ( $format ) {
+			$file  = \get_temp_dir() . \wp_unique_filename( \get_temp_dir(), 'source.' . $format );
+			$image = \imagecreatetruecolor( 10, 10 );
+			\call_user_func( 'image' . $format, $image, $file );
+
+			return array(
+				'file'      => $file,
+				'mime_type' => \wp_check_filetype( $file )['type'],
+			);
+		};
+		$post_id  = self::factory()->post->create();
+		$url      = 'https://example.com/source.' . $format;
+
+		\add_filter( 'activitypub_pre_download_url', $download );
+		$cached = Avatar::cache( $url, $post_id );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+
+		if ( false === $cached && 'webp' === $format ) {
+			$this->markTestSkipped( 'The image editor cannot read WebP.' );
+		}
+
+		$this->assertStringEndsWith( '/' . \md5( $url ) . '.' . $expected, (string) $cached );
+		$this->assertSame( array( \md5( $url ) . '.' . $expected ), \array_map( 'basename', (array) \glob( Avatar::get_storage_paths( $post_id )['basedir'] . '/*' ) ) );
+
+		Avatar::invalidate_entity( $post_id );
+	}
+
+	/**
+	 * Source formats and the extension they are cached under.
+	 *
+	 * @return array[]
+	 */
+	public function data_cache_output_formats() {
+		return array(
+			'jpeg' => array( 'jpeg', 'jpg' ),
+			'png'  => array( 'png', 'png' ),
+			'gif'  => array( 'gif', 'png' ),
+			'webp' => array( 'webp', 'png' ),
+		);
+	}
+
+	/**
+	 * A newer copy in the other format replaces the old one, so it is found and not downloaded again.
+	 *
+	 * @covers \Activitypub\Cache\File::cache
+	 * @covers \Activitypub\Cache\File::get_or_cache
+	 */
+	public function test_cache_replaces_a_copy_in_the_other_format() {
+		$post_id   = self::factory()->post->create();
+		$url       = 'https://example.com/emoji';
+		$format    = 'jpeg';
+		$downloads = 0;
+		$download  = static function () use ( &$format, &$downloads ) {
+			++$downloads;
+			$file  = \get_temp_dir() . \wp_unique_filename( \get_temp_dir(), 'source.' . $format );
+			$image = \imagecreatetruecolor( 10, 10 );
+			\call_user_func( 'image' . $format, $image, $file );
+
+			return array(
+				'file'      => $file,
+				'mime_type' => \wp_check_filetype( $file )['type'],
+			);
+		};
+		$basedir   = Avatar::get_storage_paths( $post_id )['basedir'];
+
+		\add_filter( 'activitypub_pre_download_url', $download );
+		$first = Avatar::get_or_cache( $url, $post_id );
+		\touch( $basedir . '/' . \basename( $first ), \time() - HOUR_IN_SECONDS ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_touch
+		\clearstatcache();
+
+		// The source is now a PNG, updated after the first copy was made.
+		$format  = 'png';
+		$options = array( 'updated' => \gmdate( 'c', \time() - MINUTE_IN_SECONDS ) );
+		$second  = Avatar::get_or_cache( $url, $post_id, $options );
+		$third   = Avatar::get_or_cache( $url, $post_id, $options );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+
+		$this->assertStringEndsWith( '.jpg', (string) $first );
+		$this->assertStringEndsWith( '.png', (string) $second );
+		$this->assertSame( $second, $third );
+		$this->assertSame( 2, $downloads );
+		$this->assertSame( array( \md5( $url ) . '.png' ), \array_map( 'basename', (array) \glob( $basedir . '/*' ) ) );
+
+		Avatar::invalidate_entity( $post_id );
+	}
+
+	/**
+	 * A site that maps the editor's output to another format still gets the format the cache picks.
+	 *
+	 * @covers \Activitypub\Cache\File::cache
+	 * @covers \Activitypub\Cache\File::optimize_image
+	 */
+	public function test_cache_ignores_the_site_output_format() {
+		$editor = \wp_get_image_editor( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		if ( \is_wp_error( $editor ) || ! $editor->supports_mime_type( 'image/webp' ) ) {
+			$this->markTestSkipped( 'The image editor cannot write WebP.' );
+		}
+
+		$output_format = static function () {
+			return array( 'image/jpeg' => 'image/webp' );
+		};
+		$download      = static function () {
+			return self::image_download();
+		};
+		$post_id       = self::factory()->post->create();
+		$url           = 'https://example.com/photo.jpg';
+
+		\add_filter( 'image_editor_output_format', $output_format );
+		\add_filter( 'activitypub_pre_download_url', $download );
+		$cached = Avatar::cache( $url, $post_id );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+		\remove_filter( 'image_editor_output_format', $output_format );
+
+		$this->assertStringEndsWith( '/' . \md5( $url ) . '.jpg', (string) $cached );
+		$file = Avatar::get_storage_paths( $post_id )['basedir'] . '/' . \basename( (string) $cached );
+		$this->assertSame( 'image/jpeg', ( new \finfo( FILEINFO_MIME_TYPE ) )->file( $file ) );
+
+		Avatar::invalidate_entity( $post_id );
+	}
+
+	/**
+	 * A file with a valid image header that the editor cannot decode is not cached.
+	 *
+	 * @covers \Activitypub\Cache\File::cache
+	 * @covers \Activitypub\Cache\File::optimize_image
+	 */
+	public function test_cache_rejects_an_image_the_editor_cannot_decode() {
+		$header   = 'IHDR' . \pack( 'NN', 16, 16 ) . "\x08\x06\x00\x00\x00";
+		$tmp_file = \get_temp_dir() . \wp_unique_filename( \get_temp_dir(), 'header-only.png' );
+		\file_put_contents( $tmp_file, "\x89PNG\r\n\x1a\n" . \pack( 'N', 13 ) . $header . \pack( 'N', \crc32( $header ) ) . 'not-image-data' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		$download = static function () use ( $tmp_file ) {
+			return array(
+				'file'      => $tmp_file,
+				'mime_type' => 'image/png',
+			);
+		};
+		$post_id  = self::factory()->post->create();
+
+		\add_filter( 'activitypub_pre_download_url', $download );
+		$cached = Avatar::cache( 'https://example.com/header-only.png', $post_id );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+
+		$this->assertFalse( $cached );
+		$this->assertFileDoesNotExist( $tmp_file );
+		$this->assertSame( array(), (array) \glob( Avatar::get_storage_paths( $post_id )['basedir'] . '/*' ) );
+	}
+
+	/**
+	 * A file the image editor cannot read is not cached and leaves nothing behind.
+	 *
+	 * @covers \Activitypub\Cache\File::cache
+	 * @covers \Activitypub\Cache\File::optimize_image
+	 */
+	public function test_cache_rejects_what_the_editor_cannot_read() {
+		$post_id  = self::factory()->post->create();
+		$fake     = self::image_download();
+		$tmp_file = $fake['file'];
+		\file_put_contents( $tmp_file, 'not an image' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		$download = static function () use ( $fake ) {
+			return $fake;
+		};
+
+		\add_filter( 'activitypub_pre_download_url', $download );
+		$cached = Avatar::cache( 'https://example.com/fake.png', $post_id );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+
+		$this->assertFalse( $cached );
+		$this->assertFileDoesNotExist( $tmp_file );
+		$this->assertSame( array(), (array) \glob( Avatar::get_storage_paths( $post_id )['basedir'] . '/*' ) );
+	}
+
+	/**
+	 * A file whose extension does not match its content gets a name of its own, with the extension of its content.
+	 *
+	 * @covers \Activitypub\Cache\File::validate_mime_type
+	 */
+	public function test_validate_mime_type_gives_the_file_its_own_name() {
+		$download = self::image_download();
+		$file     = \preg_replace( '/\.jpg$/', '.txt', $download['file'] );
+		\rename( $download['file'], $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename
+
+		$method = new \ReflectionMethod( Avatar::class, 'validate_mime_type' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+		$result = $method->invoke( null, $file );
+
+		$this->assertIsString( $result );
+		$this->assertSame( 'jpg', \pathinfo( $result, PATHINFO_EXTENSION ) );
+		$this->assertStringNotContainsString( \pathinfo( $file, PATHINFO_FILENAME ), \basename( $result ) );
+		$this->assertFileExists( $result );
+		$this->assertFileDoesNotExist( $file );
+
+		\wp_delete_file( $result );
+	}
+
+	/**
+	 * Only the names the cache gives its files are served.
+	 *
+	 * @covers \Activitypub\Cache\File::get
+	 */
+	public function test_get_serves_only_the_names_the_cache_gives() {
+		$url  = 'https://example.com/image';
+		$dir  = Avatar::get_storage_paths( 'get-images' )['basedir'];
+		$hash = \md5( $url );
+		\wp_mkdir_p( $dir );
+		foreach ( array( 'txt', 'webp', 'gif', 'bmp' ) as $extension ) {
+			\file_put_contents( "{$dir}/{$hash}.{$extension}", 'file' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		}
+
+		$this->assertFalse( Avatar::get( $url, 'get-images' ) );
+
+		\file_put_contents( "{$dir}/{$hash}.png", 'file' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		$this->assertStringEndsWith( "/{$hash}.png", (string) Avatar::get( $url, 'get-images' ) );
+
+		Avatar::delete_directory( $dir );
+	}
+
+	/**
+	 * The download goes to a temporary file of the plugin's own, and stops one byte over the size limit.
+	 *
+	 * @covers \Activitypub\Cache\File::cache
+	 */
+	public function test_download_is_streamed_with_a_size_limit() {
+		$url     = 'https://example.com/image.jpg';
+		$request = array();
+		$respond = static function ( $pre, $args, $request_url ) use ( $url, &$request ) {
+			if ( $request_url !== $url ) {
+				return $pre;
+			}
+			$request = $args;
+
+			return new \WP_Error( 'http_request_failed', 'Stopped by the test.' );
+		};
+
+		\add_filter( 'activitypub_cache_is_safe_url', '__return_true' );
+		\add_filter( 'pre_http_request', $respond, 10, 3 );
+		$cached = Avatar::cache( $url, self::factory()->post->create() );
+		\remove_filter( 'pre_http_request', $respond );
+		\remove_filter( 'activitypub_cache_is_safe_url', '__return_true' );
+
+		$this->assertFalse( $cached );
+		$this->assertTrue( $request['stream'] );
+		$this->assertSame( Avatar::MAX_FILE_SIZE + 1, $request['limit_response_size'] );
+		$this->assertTrue( $request['reject_unsafe_urls'] );
+		$this->assertStringStartsWith( 'activitypub-cache', \basename( $request['filename'] ) );
+		$this->assertFileDoesNotExist( $request['filename'] );
+	}
+
+	/**
+	 * Only a valid `updated` newer than the cached file downloads it again, not one in the future or an invalid one.
+	 *
+	 * @covers \Activitypub\Cache\File::get_or_cache
+	 */
+	public function test_updated_in_the_future_does_not_download_again() {
+		$post_id   = self::factory()->post->create();
+		$url       = 'https://example.com/avatar.jpg';
+		$downloads = 0;
+		$download  = static function () use ( &$downloads ) {
+			++$downloads;
+
+			return self::image_download();
+		};
+
+		\add_filter( 'activitypub_pre_download_url', $download );
+		$cached = Avatar::get_or_cache( $url, $post_id );
+		foreach ( array( '2099-01-01T00:00:00Z', 'not a date' ) as $updated ) {
+			$this->assertSame( $cached, Avatar::get_or_cache( $url, $post_id, array( 'updated' => $updated ) ), $updated );
+		}
+		$this->assertSame( 1, $downloads );
+
+		// A real update downloads again.
+		$file = Avatar::get_storage_paths( $post_id )['basedir'] . '/' . \basename( $cached );
+		\touch( $file, \time() - HOUR_IN_SECONDS ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_touch
+		\clearstatcache();
+		Avatar::get_or_cache( $url, $post_id, array( 'updated' => \gmdate( 'c', \time() - MINUTE_IN_SECONDS ) ) );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+
+		$this->assertSame( 2, $downloads );
+
+		Avatar::invalidate_entity( $post_id );
 	}
 
 	/**
@@ -191,7 +520,7 @@ class Test_File extends WP_UnitTestCase {
 	/**
 	 * A converted file keeps the name the cache looks it up under.
 	 *
-	 * A WebP source is already named after its hash, and sidestepping that name leaves a copy
+	 * A WebP source can already be named after its hash, and sidestepping that name leaves a copy
 	 * behind on every request, because the lookup only finds the hash.
 	 *
 	 * @covers \Activitypub\Cache\File::optimize_image
@@ -207,7 +536,7 @@ class Test_File extends WP_UnitTestCase {
 		$url       = 'https://example.com/avatar.webp';
 		$downloads = 0;
 
-		// The remote file is a WebP, so the cached file is named `<hash>.webp` before it is optimized.
+		// The remote file is a WebP, named like the file the cache will look for.
 		$mock_download = function ( $result, $download_url ) use ( $url, $editor, &$downloads ) {
 			if ( $download_url !== $url ) {
 				return $result;
@@ -235,7 +564,7 @@ class Test_File extends WP_UnitTestCase {
 		$paths = Avatar::get_storage_paths( $post_id );
 		$files = \glob( $paths['basedir'] . '/*' );
 
-		$this->assertStringEndsWith( \md5( $url ) . '.webp', $cached, 'The cached file is named after the URL.' );
+		$this->assertStringEndsWith( \md5( $url ) . '.png', $cached, 'The cached file is named after the URL.' );
 		$this->assertSame( $cached, $again, 'The second request finds the cached file.' );
 		$this->assertSame( 1, $downloads, 'The file is downloaded once.' );
 		$this->assertCount( 1, $files, 'Only one copy of the file is kept.' );

@@ -201,7 +201,7 @@ class Generic_Object {
 	 *
 	 * A key sets a property only in its ActivityStreams spelling, keys are case-sensitive.
 	 *
-	 * @since unreleased Keys in another spelling of a property are ignored.
+	 * @since 9.4.4 Keys in another spelling of a property are ignored.
 	 *
 	 * @param array $data The array.
 	 *

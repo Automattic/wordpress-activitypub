@@ -196,7 +196,7 @@ class Signature {
 	 * The key that verifies a request is always one of these: the verifier the request selects
 	 * reads them with its own parser.
 	 *
-	 * @since unreleased
+	 * @since 9.4.4
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 *
