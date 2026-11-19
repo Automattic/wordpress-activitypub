@@ -219,22 +219,29 @@ class Search {
 			return false;
 		}
 
-		// Check if it's a reply (has inReplyTo).
-		if ( empty( $object['inReplyTo'] ) ) {
+		// Check if it's a reply (has inReplyTo) with an author.
+		$actor = object_to_uri( $object['attributedTo'] ?? null );
+		if ( empty( $object['inReplyTo'] ) || ! $actor ) {
 			return false;
 		}
 
 		$activity = array(
 			'type'   => 'Create',
-			'actor'  => $object['attributedTo'],
+			'actor'  => $actor,
 			'object' => $object,
 		);
 
-		// The checks the inbox runs before a received reply is stored, see Handler\Create::handle_create().
+		/*
+		 * The checks the inbox runs before a received reply is stored, see Handler\Create::handle_create().
+		 * The blocks are checked as the Scheduler checks them: the disallowed list reads the address
+		 * of the current request, which here is the admin's, not the author's.
+		 */
+		$ap_activity = Activity::init_from_array( $activity );
 		if (
 			ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === get_activity_visibility( $activity ) ||
 			is_self_ping( $object['id'] ?? '' ) ||
-			Moderation::activity_is_blocked( Activity::init_from_array( $activity ) )
+			Moderation::activity_is_blocked_site_wide( $ap_activity ) ||
+			Moderation::activity_is_blocked_by_content_owner( $ap_activity )
 		) {
 			return false;
 		}

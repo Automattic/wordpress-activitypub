@@ -358,6 +358,49 @@ class Test_Search extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The disallowed list is checked against the reply, not against the admin who imports it.
+	 *
+	 * @covers \Activitypub\Search::try_import_activitypub_object
+	 */
+	public function test_import_ignores_the_address_of_the_importing_admin() {
+		$url     = 'https://1.1.1.1/notes/6';
+		$filters = $this->serve_reply( $url );
+
+		$remote_addr            = $_SERVER['REMOTE_ADDR'] ?? null; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- Remembered only to be put back.
+		$_SERVER['REMOTE_ADDR'] = '192.0.2.10';
+		\update_option( 'disallowed_keys', '192.0.2.10' );
+
+		$result = $this->try_import_activitypub_object_accessible( $url );
+
+		\delete_option( 'disallowed_keys' );
+		if ( null === $remote_addr ) {
+			unset( $_SERVER['REMOTE_ADDR'] );
+		} else {
+			$_SERVER['REMOTE_ADDR'] = $remote_addr;
+		}
+		$this->stop_serving( $filters );
+
+		$this->assertIsInt( $result, 'The admin\'s address must not block the reply.' );
+	}
+
+	/**
+	 * A reply without an author is not imported.
+	 *
+	 * @covers \Activitypub\Search::try_import_activitypub_object
+	 */
+	public function test_import_requires_an_author() {
+		$url     = 'https://1.1.1.1/notes/7';
+		$filters = $this->serve_reply( $url, array( 'attributedTo' => array() ) );
+
+		$result = $this->try_import_activitypub_object_accessible( $url );
+
+		$this->stop_serving( $filters );
+
+		$this->assertFalse( $result );
+		$this->assertEmpty( Comment::url_to_commentid( $url ) );
+	}
+
+	/**
 	 * The cases of the inbox checks.
 	 *
 	 * @return array[] Site block, reply properties, whether the reply is stored.
