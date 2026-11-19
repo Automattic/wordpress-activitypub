@@ -208,11 +208,11 @@ class Test_Search extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Searching the front end for a URL with no stored reply fetches nothing.
+	 * Searching the front end for a URL leads to the comments screen, without fetching anything.
 	 *
 	 * @covers \Activitypub\Search::enhance_public_search
 	 */
-	public function test_public_search_does_not_fetch() {
+	public function test_public_search_leads_to_the_comments_screen() {
 		$user = \get_user_by( 'id', self::factory()->user->create( array( 'role' => 'editor' ) ) );
 		$user->add_cap( 'activitypub' );
 		\wp_set_current_user( $user->ID );
@@ -226,12 +226,24 @@ class Test_Search extends \WP_UnitTestCase {
 		};
 		\add_filter( 'activitypub_pre_http_get_remote_object', $fetch );
 
-		// The front end runs the search as the main query.
-		$this->go_to( \add_query_arg( 's', \rawurlencode( $url ), \home_url( '/' ) ) );
+		$redirect = static function ( $location ) {
+			throw new \Exception( \esc_url_raw( $location ) );
+		};
+		\add_filter( 'wp_redirect', $redirect );
 
+		// The front end runs the search as the main query.
+		$redirected = '';
+		try {
+			$this->go_to( \add_query_arg( 's', \rawurlencode( $url ), \home_url( '/' ) ) );
+		} catch ( \Exception $e ) {
+			$redirected = $e->getMessage();
+		}
+
+		\remove_filter( 'wp_redirect', $redirect );
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch );
 
 		$this->assertSame( 0, $fetched, 'A search must not fetch.' );
+		$this->assertSame( \add_query_arg( 's', \rawurlencode( $url ), \admin_url( 'edit-comments.php' ) ), $redirected );
 	}
 
 	/**

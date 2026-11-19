@@ -31,19 +31,19 @@ class Search {
 	}
 
 	/**
-	 * Enhance public search functionality to check for URLs and ActivityPub objects.
+	 * Send a search for a URL on to the comments screen, see enhance_admin_comment_search().
 	 *
 	 * @param \WP_Query $query The WP_Query instance.
-	 * @return \WP_Query The modified query.
+	 * @return \WP_Query The unchanged query, when it does not redirect.
 	 */
 	public static function enhance_public_search( $query ) {
-		// Check user capabilities.
-		if ( ! \current_user_can( 'activitypub' ) ) {
+		// Only enhance main search queries on frontend.
+		if ( ! $query->is_main_query() || ! $query->is_search() || \is_admin() ) {
 			return $query;
 		}
 
-		// Only enhance main search queries on frontend.
-		if ( ! $query->is_main_query() || ! $query->is_search() || \is_admin() ) {
+		// Check user capabilities.
+		if ( ! \current_user_can( 'activitypub' ) ) {
 			return $query;
 		}
 
@@ -57,19 +57,13 @@ class Search {
 			return $query;
 		}
 
-		// Only a reply that is already stored, a search does not fetch.
-		$existing = Comment::url_to_commentid( $search_term );
-		if ( $existing ) {
-			self::redirect_to_comment( $existing );
-		}
-
-		// Fall back to classic search if no reply is stored under the URL or no redirect.
-		return $query;
+		// The comments screen leads to a stored reply and offers to import one that is not stored yet.
+		\wp_safe_redirect( \add_query_arg( 's', \rawurlencode( $search_term ), \admin_url( 'edit-comments.php' ) ) );
+		exit;
 	}
 
 	/**
-	 * Handle admin comment search to check for URLs and ActivityPub objects.
-	 * Runs on admin_init to avoid infinite loops.
+	 * Lead a comment search for a URL to the stored reply, or offer to import it.
 	 *
 	 * @return void
 	 */
@@ -111,24 +105,24 @@ class Search {
 			return;
 		}
 
+		// Why the reply cannot be imported, or an empty string when it can.
+		$reason = '';
+		if ( \is_wp_error( $reply ) ) {
+			$reason = \esc_html( $reply->get_error_message() );
+		} elseif ( 'comment_duplicate' === $failed ) {
+			$reason = \sprintf(
+				/* translators: %s: Link to the comments that wait for moderation. */
+				\esc_html__( 'The same comment from this author is already stored, maybe it is %s.', 'activitypub' ),
+				\sprintf( '<a href="%s">%s</a>', \esc_url( \admin_url( 'edit-comments.php?comment_status=moderated' ) ), \esc_html__( 'waiting for moderation', 'activitypub' ) )
+			);
+		} elseif ( $failed ) {
+			$reason = \esc_html__( 'Storing it failed.', 'activitypub' );
+		}
+
 		\add_action(
 			'admin_notices',
-			static function () use ( $search_term, $failed, $reply ) {
-				if ( \is_wp_error( $reply ) || $failed ) {
-					if ( \is_wp_error( $reply ) ) {
-						$reason = \esc_html( $reply->get_error_message() );
-					} elseif ( 'comment_duplicate' === $failed ) {
-						$reason = \sprintf(
-							/* translators: %s: Link to the comments that wait for moderation. */
-							\esc_html__( 'The same comment from this author is already stored, maybe it is %s.', 'activitypub' ),
-							\sprintf( '<a href="%s">%s</a>', \esc_url( \admin_url( 'edit-comments.php?comment_status=moderated' ) ), \esc_html__( 'waiting for moderation', 'activitypub' ) )
-						);
-					} elseif ( 'comment_flood' === $failed ) {
-						$reason = \esc_html__( 'This author sent too many comments in a short time.', 'activitypub' );
-					} else {
-						$reason = \esc_html__( 'Storing it failed.', 'activitypub' );
-					}
-
+			static function () use ( $search_term, $reason, $reply ) {
+				if ( $reason ) {
 					\wp_admin_notice(
 						\sprintf(
 							/* translators: %s: Why the reply cannot be imported. */
@@ -184,6 +178,7 @@ class Search {
 
 		$url = isset( $_GET['url'] ) ? \sanitize_url( \wp_unslash( $_GET['url'] ) ) : '';
 
+		$imported = false;
 		if ( \wp_http_validate_url( $url ) ) {
 			$imported = self::try_import_activitypub_object( $url );
 
@@ -196,7 +191,7 @@ class Search {
 			\add_query_arg(
 				array(
 					's'                  => \rawurlencode( $url ),
-					'activitypub_import' => isset( $imported ) && \is_wp_error( $imported ) ? $imported->get_error_code() : 'failed',
+					'activitypub_import' => \is_wp_error( $imported ) ? $imported->get_error_code() : 'failed',
 				),
 				\admin_url( 'edit-comments.php' )
 			)
@@ -244,17 +239,22 @@ class Search {
 			return new \WP_Error( 'activitypub_import_not_found', \__( 'This URL does not lead to anything from the Fediverse.', 'activitypub' ) );
 		}
 
-		if ( empty( $object['inReplyTo'] ) ) {
+		$activity = array(
+			'type'   => 'Create',
+			'actor'  => object_to_id( $object['attributedTo'] ?? null ),
+			'object' => $object,
+		);
+
+		if ( ! is_activity_reply( $activity ) ) {
 			return new \WP_Error( 'activitypub_import_not_a_reply', \__( 'This URL is not a reply.', 'activitypub' ) );
 		}
 
-		$actor = object_to_id( $object['attributedTo'] ?? null );
-		if ( ! $actor ) {
+		if ( ! $activity['actor'] ) {
 			return new \WP_Error( 'activitypub_import_no_author', \__( 'This reply has no author.', 'activitypub' ) );
 		}
 
 		// Interactions::add_comment() refuses both, the check only says why.
-		if ( ! is_same_host( $actor, object_to_id( $object ) ) ) {
+		if ( ! is_same_host( $activity['actor'], object_to_id( $object ) ) ) {
 			return new \WP_Error( 'activitypub_import_other_host', \__( 'The author of this reply is not on the server it comes from.', 'activitypub' ) );
 		}
 
@@ -263,12 +263,6 @@ class Search {
 		if ( ! $post_id ) {
 			return new \WP_Error( 'activitypub_import_not_here', \__( 'This is not a reply to one of your posts.', 'activitypub' ) );
 		}
-
-		$activity = array(
-			'type'   => 'Create',
-			'actor'  => $actor,
-			'object' => $object,
-		);
 
 		// The checks the inbox runs before a received reply is stored, see Handler\Create::handle_create().
 		if ( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === get_activity_visibility( $activity ) ) {
