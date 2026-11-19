@@ -6,6 +6,7 @@ Applies to: `includes/handler/**`, `includes/collection/**`, `includes/rest/clas
 
 ## Past issues
 
+- **Identity read from the file URL** (2026): incoming objects and actors were stored, looked up and compared through `object_to_uri()`, which returns the `url` of a media object. Create and Update looked for different keys and handed an activity back and forth, `is_same_host()` checked the host of the file instead of the object, and the signature checks bound the actor by its `url`. Everything that identifies now goes through `object_to_id()`.
 - **Actor↔object binding gaps** (2026): Update, Undo and Accept handlers and remote upserts (`Remote_Actors`, `Remote_Posts`, `Interactions::update_comment`, `Inbox::undo`) changed or deleted records found by the sender's `object.id`, without checking the `actor` owns it. The Delete handler did check: `object_to_uri($activity['object']) === $activity['actor']`.
 - **Relayed activity not re-authenticated** (2026): `Announce::handle_announce()` passed the inner activity to its handler as it came. The announcer is not necessarily its author, so an inner `Undo` or `Delete` could name another actor. The inner activity now has to be fetched from its own `id` with `host(id) === host(actor)`.
 - **Ownership check fallbacks** (2026): the Update and Undo owner checks let records through when no owner was recorded, when the recorded owner was deleted or merged, or when the lookup and the check read different identifiers.
@@ -30,7 +31,7 @@ Read the "owner's block" pitfall in `AGENTS.md`. `Moderation::activity_is_blocke
 
 The signature binds only the top-level `actor`. Everything else a handler reads, stores or acts on (`object`, `attributedTo`, any field specific to the activity) must be on the actor's host: `host(ref) === host(actor)`. This includes create paths: `Remote_Posts::add()` requires `actor === object.attributedTo`, like `Remote_Posts::update()`.
 
-- Compare hosts with `is_same_host()`. It normalizes through `object_to_uri()` and fails closed when a side has no host (handles and identifiers that are not `http(s)` parse to none). A hand-written `wp_parse_url` comparison that passes on an empty side fails open.
+- Compare hosts with `is_same_host()`. It normalizes through `object_to_id()` and fails closed when a side has no host (handles and identifiers that are not `http(s)` parse to none). A hand-written `wp_parse_url` comparison that passes on an empty side fails open.
 - Fold both sides of a host gate with `fold_host()`/`fold_authority()`, and make sure the folded host is the one the plugin connects to (see "Canonicalization" in `signatures.md`).
 - A binding is worthless when one side is derived from the other, for example an `actor` filled in from the signing key. Pin whatever the handler still trusts on its own.
 - The signature's `keyId` belongs to the `actor`, not only to its host: the key's owner (the stored actor the keyId resolves to, or the key as its host serves it through `Proxy::get()`) has to be the actor. On a server where users hold their own keys, a same-host check lets one user sign for another (see "Same-host key accepted for another actor" in `signatures.md`).
@@ -48,7 +49,7 @@ Any path that takes an activity out of another one and dispatches it (today `Han
 
 - **A fallback is a gate of its own.** "No owner recorded, let it through" for old rows still binds the actor, at least `is_same_host( actor, <the identifier the record was found by> )`. Missing never means anyone.
 - **A recorded reference that no longer resolves fails closed.** `if ( $owner instanceof WP_Post && … )` skips the check exactly when the owner is gone. Every path that deletes or merges a record an authorization depends on (actor Delete, Move, scheduled cleanup) repoints or removes the references in the same step.
-- **Check the value you look up by.** `object_to_uri()` returns `url` for `Image`, `Audio`, `Video` and `Document`, so a gate on `object_to_uri( $object )` and a lookup on `$object['id']` can get two different identifiers. Derive it once and use it for lookup, check and stored key, as `add_comment()` does.
+- **Check the value you look up by.** Identify an object or an actor with `object_to_id()`, and use the same value for lookup, check and stored key, as `add_comment()` does. `object_to_uri()` returns the file (`url`) for `Image`, `Audio`, `Video` and `Document` and otherwise falls back to `url`; it is only for links (icons, avatars, attachments, `source_url`). A gate on one and a lookup on the other gets two different identifiers.
 
 ## Other inbox checks
 

@@ -71,7 +71,7 @@ class Proxy {
 			return $pre;
 		}
 
-		$url = object_to_uri( $id );
+		$url = object_to_id( $id );
 
 		if ( Webfinger::is_acct( $url ) ) {
 			$url = Webfinger::resolve( $url );
@@ -240,7 +240,7 @@ class Proxy {
 			$id = $id['id'] ?? null;
 		}
 
-		$url = object_to_uri( $id );
+		$url = object_to_id( $id );
 
 		return \is_string( $url ) && '' !== $url ? \strip_fragment_from_url( $url ) : '';
 	}

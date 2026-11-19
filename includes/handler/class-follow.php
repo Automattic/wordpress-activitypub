@@ -15,7 +15,7 @@ use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
 
 use function Activitypub\add_to_outbox;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 
 /**
  * Handle Follow requests.
@@ -154,11 +154,11 @@ class Follow {
 			return;
 		}
 
-		if ( empty( $activity['object'] ) || ! Application::is_application_resource( object_to_uri( $activity['object'] ) ) ) {
+		if ( empty( $activity['object'] ) || ! Application::is_application_resource( object_to_id( $activity['object'] ) ) ) {
 			return;
 		}
 
-		$actor        = object_to_uri( $activity['actor'] );
+		$actor        = object_to_id( $activity['actor'] );
 		$remote_actor = Remote_Actors::fetch_by_uri( $actor );
 
 		if ( \is_wp_error( $remote_actor ) ) {

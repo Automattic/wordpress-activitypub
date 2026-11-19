@@ -11,7 +11,7 @@ use Activitypub\Moderation;
 use Activitypub\Signature;
 
 use function Activitypub\maybe_set_no_store;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 use function Activitypub\use_authorized_fetch;
 
 /**
@@ -182,7 +182,7 @@ class Server {
 
 		// The key that verifies is one of these, and the actor is bound to it, so the sender is blocked when any of them is.
 		$senders   = Signature::get_key_ids( $request );
-		$senders[] = object_to_uri( $json['actor'] ?? null );
+		$senders[] = object_to_id( $json['actor'] ?? null );
 		$blocked   = \array_filter(
 			$senders,
 			static function ( $sender ) {

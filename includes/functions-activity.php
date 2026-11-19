@@ -58,7 +58,7 @@ function extract_recipients_from_activity( $data ) {
 		\is_array( $data['object'] ) &&
 		! empty( $data['object']['actor'] )
 	) {
-		$recipient_items[] = object_to_uri( $data['object']['actor'] );
+		$recipient_items[] = object_to_id( $data['object']['actor'] );
 	}
 
 	return \array_unique( \array_filter( $recipient_items ) );
@@ -187,7 +187,7 @@ function is_quote_activity( $data ) {
 function get_quote_url( $activity ) {
 	foreach ( array( 'quote', 'quoteUrl', 'quoteUri', '_misskey_quote' ) as $key ) {
 		if ( ! empty( $activity['object'][ $key ] ) ) {
-			return object_to_uri( $activity['object'][ $key ] );
+			return object_to_id( $activity['object'][ $key ] );
 		}
 	}
 
@@ -265,6 +265,36 @@ function object_to_uri( $data ) {
 }
 
 /**
+ * Get the ID of an ActivityPub object.
+ *
+ * Unlike object_to_uri(), which returns the file of a media object or falls back to `url`,
+ * this returns only the `id`, so an object is stored, looked up and compared by its identity.
+ * A string is already an ID, and a Link or Mention refers to an object by its `href`.
+ *
+ * @since unreleased
+ *
+ * @param mixed $data The ActivityPub object, an array of it, or its ID.
+ *
+ * @return string|null The ID of the ActivityPub object.
+ */
+function object_to_id( $data ) {
+	if ( \is_object( $data ) && \is_callable( array( $data, 'to_array' ) ) ) {
+		$data = $data->to_array();
+	}
+
+	// This plugin does not support collections, so a list stands for its first item.
+	if ( \is_array( $data ) && $data && \array_is_list( $data ) ) {
+		return object_to_id( $data[0] );
+	}
+
+	if ( ! \is_array( $data ) || \in_array( $data['type'] ?? '', array( 'Link', 'Mention' ), true ) ) {
+		return object_to_uri( $data );
+	}
+
+	return \is_string( $data['id'] ?? null ) ? $data['id'] : null;
+}
+
+/**
  * Get the hash of an ID, to look the ID up by.
  *
  * A lookup by the ID itself is not exact: the database collation also matches IDs that
@@ -336,7 +366,7 @@ function unescape_guid( $guid ) {
 /**
  * Check whether two references point at the same actor.
  *
- * Both values are resolved to their canonical URI via object_to_uri() before
+ * Both values are resolved to their ID via object_to_id() before
  * comparison. Empty references never match, so a missing actor can never be
  * mistaken for a match.
  *
@@ -346,8 +376,8 @@ function unescape_guid( $guid ) {
  * @return bool True when both resolve to the same non-empty URI.
  */
 function is_same_actor( $a, $b ) {
-	$a = object_to_uri( $a );
-	$b = object_to_uri( $b );
+	$a = object_to_id( $a );
+	$b = object_to_id( $b );
 
 	return ! empty( $a ) && ! empty( $b ) && $a === $b;
 }
@@ -355,7 +385,7 @@ function is_same_actor( $a, $b ) {
 /**
  * Check whether two references live on the same host.
  *
- * Both values are resolved to their canonical URI via object_to_uri(), then
+ * Both values are resolved to their ID via object_to_id(), then
  * their hosts are compared case-insensitively. Empty references, or references
  * without a host, never match.
  *
@@ -365,8 +395,8 @@ function is_same_actor( $a, $b ) {
  * @return bool True when both resolve to a URI on the same host.
  */
 function is_same_host( $a, $b ) {
-	$host_a = \wp_parse_url( (string) object_to_uri( $a ), PHP_URL_HOST );
-	$host_b = \wp_parse_url( (string) object_to_uri( $b ), PHP_URL_HOST );
+	$host_a = \wp_parse_url( (string) object_to_id( $a ), PHP_URL_HOST );
+	$host_b = \wp_parse_url( (string) object_to_id( $b ), PHP_URL_HOST );
 
 	return ! empty( $host_a ) && ! empty( $host_b ) && \strtolower( $host_a ) === \strtolower( $host_b );
 }

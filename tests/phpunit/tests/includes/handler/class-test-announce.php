@@ -12,6 +12,8 @@ use Activitypub\Handler\Announce;
 use Activitypub\Model\Blog;
 use Activitypub\Moderation;
 
+use function Activitypub\camel_to_snake_case;
+
 /**
  * Test class for Activitypub Announce Handler.
  *
@@ -190,6 +192,64 @@ class Test_Announce extends \WP_UnitTestCase {
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10 );
 
 		$this->assertSame( 1, $inbox->get_call_count(), 'An origin-authentic announced activity must be relayed.' );
+	}
+
+	/**
+	 * An announced activity is relayed on the hook the inbox uses for its type, a request is not relayed.
+	 *
+	 * Loops over every activity type, so a new type is checked as well.
+	 *
+	 * @covers ::handle_announce
+	 */
+	public function test_handle_announce_relays_on_the_inbox_hook_name() {
+		foreach ( Activity::TYPES as $type ) {
+			// An announced Announce is a chain of its own, its relay is not a hook name question.
+			if ( 'Announce' === $type ) {
+				continue;
+			}
+
+			$activity_url = \sprintf( 'https://example.com/activities/%s', $type );
+			$fetch        = function ( $pre, $url_or_object ) use ( $activity_url, $type ) {
+				if ( $activity_url !== $url_or_object ) {
+					return $pre;
+				}
+
+				return array(
+					'id'     => $activity_url,
+					'type'   => $type,
+					'actor'  => 'https://example.com/user',
+					'object' => $this->post_permalink,
+				);
+			};
+			\add_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10, 2 );
+
+			$hook   = \sprintf( 'activitypub_inbox_%s', camel_to_snake_case( $type ) );
+			$typed  = new \MockAction();
+			$global = new \MockAction();
+			\add_action( $hook, array( $typed, 'action' ), 0 );
+			\add_action( 'activitypub_inbox', array( $global, 'action' ), 10, 4 );
+
+			$announce = array(
+				'actor'  => 'https://booster.example/user',
+				'type'   => 'Announce',
+				'id'     => \sprintf( 'https://booster.example/a/%s', $type ),
+				'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+				'object' => $activity_url,
+			);
+			Announce::handle_announce( $announce, $this->user_id, Activity::init_from_array( $announce ) );
+
+			\remove_action( $hook, array( $typed, 'action' ), 0 );
+			\remove_action( 'activitypub_inbox', array( $global, 'action' ), 10 );
+			\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10 );
+
+			$expected = \str_ends_with( $type, 'Request' ) ? 0 : 1;
+			$this->assertSame( $expected, $typed->get_call_count(), \sprintf( 'Announced %s on %s.', $type, $hook ) );
+			$this->assertSame( $expected, $global->get_call_count(), \sprintf( 'Announced %s on activitypub_inbox.', $type ) );
+
+			if ( $expected ) {
+				$this->assertSame( camel_to_snake_case( $type ), $global->get_args()[0][2], \sprintf( 'The type passed for an announced %s.', $type ) );
+			}
+		}
 	}
 
 	/**
@@ -599,6 +659,60 @@ class Test_Announce extends \WP_UnitTestCase {
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10 );
 
 		$this->assertSame( 0, $inbox->get_call_count(), 'An embedded inner activity must not be dispatched from its inline copy.' );
+	}
+
+	/**
+	 * An announced Announce is not fetched further or handed on.
+	 *
+	 * A chain of Announces, each pointing at the next, goes through the registered Announce
+	 * handler. Only the first one is fetched, and nothing is relayed.
+	 *
+	 * @covers ::handle_announce
+	 */
+	public function test_handle_announce_does_not_relay_an_announce() {
+		$fetched = array();
+		$fetch   = function ( $pre, $url_or_object ) use ( &$fetched ) {
+			$prefix = 'https://chain.example/announces/';
+
+			if ( ! \is_string( $url_or_object ) || 0 !== \strpos( $url_or_object, $prefix ) ) {
+				return $pre;
+			}
+
+			$fetched[] = $url_or_object;
+			$level     = (int) \substr( $url_or_object, \strlen( $prefix ) );
+
+			// Ends the chain, so a missing bound fails the assertions below instead of the run.
+			if ( $level > 10 ) {
+				return new \WP_Error( 'http_request_failed', 'not found' );
+			}
+
+			return array(
+				'id'     => $url_or_object,
+				'type'   => 'Announce',
+				'actor'  => 'https://chain.example/users/alice',
+				'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+				'object' => \sprintf( '%s%d', $prefix, $level + 1 ),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10, 2 );
+
+		$inbox = new \MockAction();
+		\add_action( 'activitypub_inbox', array( $inbox, 'action' ) );
+
+		$announce = array(
+			'actor'  => 'https://booster.example/user',
+			'type'   => 'Announce',
+			'id'     => 'https://booster.example/a/1',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => 'https://chain.example/announces/1',
+		);
+		\do_action( 'activitypub_inbox_announce', $announce, array( $this->user_id ), Activity::init_from_array( $announce ) );
+
+		\remove_action( 'activitypub_inbox', array( $inbox, 'action' ) );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10 );
+
+		$this->assertSame( array( 'https://chain.example/announces/1' ), $fetched, 'Only the announced Announce may be fetched.' );
+		$this->assertSame( 0, $inbox->get_call_count(), 'An announced Announce must not be relayed.' );
 	}
 
 	/**

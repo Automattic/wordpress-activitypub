@@ -9,7 +9,7 @@ namespace Activitypub\Handler\Outbox;
 
 use Activitypub\Collection\Actors;
 
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 
 /**
  * Handle outgoing Remove activities.
@@ -42,8 +42,8 @@ class Remove {
 	 * @return \WP_Post|\WP_Error|array The post object on success, WP_Error on failure, or original data if unhandled.
 	 */
 	public static function handle_remove( $data, $user_id = null ) {
-		$object_uri = object_to_uri( $data['object'] ?? '' );
-		$target     = object_to_uri( $data['target'] ?? '' );
+		$object_uri = object_to_id( $data['object'] ?? '' );
+		$target     = object_to_id( $data['target'] ?? '' );
 
 		if ( empty( $object_uri ) || empty( $target ) ) {
 			return $data;

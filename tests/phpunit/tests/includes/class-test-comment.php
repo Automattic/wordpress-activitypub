@@ -1668,6 +1668,19 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An empty ID finds no comment, even when comments with a source_id exist.
+	 *
+	 * @covers ::object_id_to_comment
+	 */
+	public function test_object_id_to_comment_with_empty_id() {
+		$comment_id = self::factory()->comment->create();
+		\add_comment_meta( $comment_id, 'source_id', 'https://example.com/1' );
+
+		$this->assertFalse( Comment::object_id_to_comment( '' ) );
+		$this->assertFalse( Comment::object_id_to_comment( null, array( 'status' => 'any' ) ) );
+	}
+
+	/**
 	 * Test pre_comment_approved filter.
 	 *
 	 * @covers ::pre_comment_approved
