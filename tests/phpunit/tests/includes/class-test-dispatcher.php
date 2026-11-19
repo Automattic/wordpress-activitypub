@@ -828,6 +828,42 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * A row reaches a local inbox even when its user no longer resolves, as for a deleted user.
+	 *
+	 * The actor is recorded when the row is queued, so the check does not depend on whether
+	 * the user can still use ActivityPub when the row is sent.
+	 *
+	 * @covers ::send_to_inboxes
+	 * @covers \Activitypub\Collection\Outbox::add
+	 */
+	public function test_local_inbox_takes_a_row_whose_user_no_longer_resolves() {
+		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+		$local_inbox = \rest_url( sprintf( '/%s/users/%d/inbox', ACTIVITYPUB_REST_NAMESPACE, self::$user_id ) );
+
+		$this->assertNotEmpty( \get_post_meta( $outbox_item->ID, '_activitypub_activity_actor_id', true ) );
+
+		$results  = array();
+		$callback = static function ( $result ) use ( &$results ) {
+			$results[] = $result;
+		};
+		\add_action( 'activitypub_sent_to_inbox', $callback );
+		\get_user_by( 'id', self::$user_id )->remove_cap( 'activitypub' );
+
+		$send_to_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$send_to_inboxes->setAccessible( true );
+		}
+		$send_to_inboxes->invoke( null, array( $local_inbox ), $outbox_item->ID );
+
+		\get_user_by( 'id', self::$user_id )->add_cap( 'activitypub' );
+		\remove_action( 'activitypub_sent_to_inbox', $callback );
+
+		$this->assertCount( 1, $results );
+		$this->assertFalse( \is_wp_error( $results[0] ) && 'activitypub_actor_mismatch' === $results[0]->get_error_code() );
+	}
+
+	/**
 	 * Test that local inboxes do not trigger HTTP requests.
 	 *
 	 * @covers ::send_to_inboxes

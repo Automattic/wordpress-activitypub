@@ -146,6 +146,15 @@ class Outbox {
 
 		\remove_filter( 'activitypub_is_activitypub_request', '__return_true' );
 
+		/*
+		 * The actor the row is signed as, recorded now: a local delivery checks the activity against
+		 * it, and when the row is sent the user may no longer resolve, for example once deleted.
+		 */
+		$sender = Actors::get_by_id( $user_id );
+		if ( ! \is_wp_error( $sender ) ) {
+			$outbox_item['meta_input']['_activitypub_activity_actor_id'] = $sender->get_id();
+		}
+
 		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
 		if ( $has_kses ) {
 			// Prevent KSES from corrupting JSON in post_content.

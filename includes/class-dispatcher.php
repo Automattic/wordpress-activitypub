@@ -297,10 +297,15 @@ class Dispatcher {
 
 		/*
 		 * A local inbox skips the signature check, so it only takes an activity in the name of the
-		 * actor the row is sent as, the actor whose key signs it for every other inbox.
+		 * actor the row is sent as, the actor whose key signs it for every other inbox. That actor is
+		 * recorded when the row is queued; rows queued before that resolve it now.
 		 */
-		$sender   = Outbox::get_actor( $outbox_item );
-		$is_owner = ! \is_wp_error( $sender ) && object_to_uri( $activity->get_actor() ) === $sender->get_id();
+		$sender_id = \get_post_meta( $outbox_item->ID, '_activitypub_activity_actor_id', true );
+		if ( ! $sender_id ) {
+			$sender    = Outbox::get_actor( $outbox_item );
+			$sender_id = \is_wp_error( $sender ) ? '' : $sender->get_id();
+		}
+		$is_owner = $sender_id && object_to_uri( $activity->get_actor() ) === $sender_id;
 
 		foreach ( $inboxes as $inbox ) {
 			// Handle local inboxes via internal REST API, remote via HTTP.
