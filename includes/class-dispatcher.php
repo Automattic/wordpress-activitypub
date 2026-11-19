@@ -305,7 +305,7 @@ class Dispatcher {
 			$sender    = Outbox::get_actor( $outbox_item );
 			$sender_id = \is_wp_error( $sender ) ? '' : $sender->get_id();
 		}
-		$is_owner = $sender_id && object_to_uri( $activity->get_actor() ) === $sender_id;
+		$is_owner = $sender_id && object_to_id( $activity->get_actor() ) === $sender_id;
 
 		foreach ( $inboxes as $inbox ) {
 			// Handle local inboxes via internal REST API, remote via HTTP.

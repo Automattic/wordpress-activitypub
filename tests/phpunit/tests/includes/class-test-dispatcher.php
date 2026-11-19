@@ -818,13 +818,30 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		);
 		$send_to_inboxes->invoke( null, array( $local_inbox ), $outbox_item->ID );
 
+		// An actor is identified by its id, not by a url that names the sender.
+		$sender            = \json_decode( $outbox_item->post_content, true )['actor'];
+		$activity['actor'] = array(
+			'type' => 'Image',
+			'id'   => 'https://remote.example/users/someone',
+			'url'  => $sender,
+		);
+		\wp_update_post(
+			array(
+				'ID'           => $outbox_item->ID,
+				'post_content' => \wp_slash( \wp_json_encode( $activity ) ),
+			)
+		);
+		$send_to_inboxes->invoke( null, array( $local_inbox ), $outbox_item->ID );
+
 		\remove_action( 'activitypub_sent_to_inbox', $callback );
 
-		$this->assertCount( 2, $results );
+		$this->assertCount( 3, $results );
 		// The inbox may still refuse it for its own reasons, but not for the actor.
 		$this->assertFalse( \is_wp_error( $results[0] ) && 'activitypub_actor_mismatch' === $results[0]->get_error_code(), 'The row in its own actor\'s name has to be delivered.' );
 		$this->assertWPError( $results[1] );
 		$this->assertSame( 'activitypub_actor_mismatch', $results[1]->get_error_code() );
+		$this->assertWPError( $results[2] );
+		$this->assertSame( 'activitypub_actor_mismatch', $results[2]->get_error_code() );
 	}
 
 	/**
