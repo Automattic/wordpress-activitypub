@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Quote requests for drafts, private or password-protected posts are now declined, like requests for posts that do not exist.
