@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Data the plugin keeps for itself, like the outbox, can no longer be changed through the WordPress editor or its APIs, and your site only accepts activities from its own outbox in the name of the account that sends them.

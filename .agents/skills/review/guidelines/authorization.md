@@ -10,6 +10,7 @@ Applies to: `includes/rest/**`, `includes/oauth/**`, `includes/wp-admin/**`
 - **User ID 0** (2026): `Actors::BLOG_USER_ID` is `0`, and so is `get_current_user_id()` when logged out. `user_can_activitypub( get_current_user_id() )` or `get_current_user_id() === $user_id` without a login check let anonymous callers act as the blog actor.
 - **OAuth scope missing next to identity** (2026): a bearer token proves who the caller is, not what it may do. Read paths that only checked the user served data to tokens without the `read` scope.
 - **Uncounted discovery trigger** (2026): the consent form on `wp-login.php` fetched the Client ID Metadata Document of unknown clients, outside the REST routes that count callers. Now discovery runs only during a REST request.
+- **Internal rows editable by users** (2026): the outbox, inbox, OAuth client and tombstone post types only blocked `create_posts` or set no capabilities, so `edit_post` mapped to the default post rights. Authors could rewrite their own outbox rows over XML-RPC, and a local delivery, which skips the signature, trusted the row as stored.
 
 ## Ownership
 
@@ -40,4 +41,6 @@ Files: `includes/wp-admin/`, `includes/rest/`.
 - Admin pages check `manage_options` or the fitting capability.
 - Per-user settings (like the profile ActivityPub toggle) check that it is the right user.
 - Every form submission has a nonce check. Each `phpcs:ignore WordPress.Security.NonceVerification` explains why it is safe.
+- A post type only the plugin writes uses `Post_Types::LOCKED_CAPABILITIES` with `map_meta_cap`, so nobody can create, edit, publish or delete its posts through XML-RPC, REST or the admin. A new `ap_*` post type is locked or listed as editable with its reason in `test_internal_post_types_are_locked()`. `ap_post` and `ap_actor` are still editable, because the admin app reads them with `context=edit`.
+- Content that is delivered without a signature (a local inbox) is checked against an identity recorded when the row was written, not against what the row says now.
 - A gate fed by `rawurldecode()`/`urldecode()` sees a value REST has usually decoded once already. Check what the second decode lets in: `*`, `_`, the empty string, characters a later sanitizer strips, encoded spellings of a stored identifier (see "Canonicalization" in `signatures.md`).
