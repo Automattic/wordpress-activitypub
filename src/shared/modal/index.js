@@ -260,9 +260,12 @@ export function createModalStore( namespace ) {
 			 * @param {Element} element The element to trap focus within.
 			 */
 			trapFocus( element ) {
-				const focusableElements = element.querySelectorAll(
-					'a[href]:not([disabled]), button:not([disabled]), textarea:not([disabled]), input[type="text"]:not([disabled]):not([readonly]), input[type="radio"]:not([disabled]), input[type="checkbox"]:not([disabled]), select:not([disabled])'
-				);
+				// Skip the fields of hidden dialogs, the modal can hold more than one.
+				const focusableElements = Array.from(
+					element.querySelectorAll(
+						'a[href]:not([disabled]), button:not([disabled]), textarea:not([disabled]), input:not([type="hidden"]):not([disabled]):not([readonly]), select:not([disabled])'
+					)
+				).filter( ( el ) => ! el.closest( '[hidden]' ) );
 				const firstFocusableElement = focusableElements[ 0 ];
 				const lastFocusableElement = focusableElements[ focusableElements.length - 1 ];
 
