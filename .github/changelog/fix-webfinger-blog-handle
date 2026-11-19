@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-The blog profile can be found by its Fediverse handle again when an author uses the same name in the WebFinger plugin.
