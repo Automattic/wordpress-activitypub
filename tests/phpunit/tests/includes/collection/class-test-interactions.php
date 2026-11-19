@@ -911,6 +911,21 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An empty ID finds no interaction, even one stored with an empty source_url.
+	 *
+	 * @covers ::get_by_id
+	 */
+	public function test_get_by_id_with_empty_id() {
+		$comment_id = self::factory()->comment->create( array( 'comment_post_ID' => self::$post_id ) );
+		\add_comment_meta( $comment_id, 'protocol', 'activitypub' );
+		\add_comment_meta( $comment_id, 'source_id', 'https://remote.example/notes/1' );
+		\add_comment_meta( $comment_id, 'source_url', '' );
+
+		$this->assertSame( array(), Interactions::get_by_id( '' ) );
+		$this->assertSame( array(), Interactions::get_by_id( null ) );
+	}
+
+	/**
 	 * Test get interaction by actor with remote actor optimization.
 	 *
 	 * @covers ::get_by_actor
@@ -2296,7 +2311,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertEquals( 'activitypub_update_forbidden', $result->get_error_code() );
 		$this->assertStringNotContainsString( 'HACKED', \get_comment( $comment_id )->comment_content );
 
-		// A media object is found by its url, which has to be on the actor's host as well.
+		// A media object is found by its id, not by its url, so a url that names the comment finds nothing.
 		$result = Interactions::update_comment(
 			array(
 				'actor'  => 'https://attacker.example/users/evil',
@@ -2310,7 +2325,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 				),
 			)
 		);
-		$this->assertWPError( $result );
+		$this->assertFalse( $result );
 		$this->assertStringNotContainsString( 'HACKED', \get_comment( $comment_id )->comment_content );
 
 		// The author on the comment's own host can still update it.

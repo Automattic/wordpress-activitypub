@@ -157,12 +157,6 @@ parameters:
 			path: includes/class-options.php
 
 		-
-			message: '#^Parameter \#2 \$args of function register_post_type expects array\{label\?\: string, labels\?\: array\<string\>, description\?\: string, public\?\: bool, hierarchical\?\: bool, exclude_from_search\?\: bool, publicly_queryable\?\: bool, show_ui\?\: bool, \.\.\.\}, array\{labels\: array\{name\: string, singular_name\: string\}, capabilities\: array\{create_posts\: false\}, map_meta_cap\: true, public\: false, show_in_rest\: false, rewrite\: false, query_var\: false, supports\: array\{''title'', ''editor'', ''author'', ''custom\-fields''\}, \.\.\.\} given\.$#'
-			identifier: argument.type
-			count: 2
-			path: includes/class-post-types.php
-
-		-
 			message: '#^Parameter \#2 \$args of function register_post_type expects array\{label\?\: string, labels\?\: array\<string\>, description\?\: string, public\?\: bool, hierarchical\?\: bool, exclude_from_search\?\: bool, publicly_queryable\?\: bool, show_ui\?\: bool, \.\.\.\}, array\{labels\: array\{name\: string, singular_name\: string\}, map_meta_cap\: true, public\: false, capabilities\: array\{create_posts\: false\}, show_in_rest\: true, rest_controller_class\: ''Activitypub\\\\Rest\\\\Remote_Posts_Controller'', rewrite\: false, query_var\: false, \.\.\.\} given\.$#'
 			identifier: argument.type
 			count: 1

@@ -17,7 +17,7 @@ use function Activitypub\extract_recipients_from_activity;
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_object_id;
 use function Activitypub\get_rest_url_by_path;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 use function Activitypub\unescape_guid;
 
 /**
@@ -662,7 +662,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 
 		// Check activity actor if present.
 		if ( ! empty( $data['actor'] ) ) {
-			$actor_id = object_to_uri( $data['actor'] );
+			$actor_id = object_to_id( $data['actor'] );
 			if ( $actor_id && $actor_id !== $user_actor_id ) {
 				return new \WP_Error(
 					'activitypub_actor_mismatch',
@@ -679,7 +679,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 		// Check object.attributedTo if present.
 		$object = $data['object'] ?? $data;
 		if ( \is_array( $object ) && ! empty( $object['attributedTo'] ) ) {
-			$attributed_to = object_to_uri( $object['attributedTo'] );
+			$attributed_to = object_to_id( $object['attributedTo'] );
 			if ( $attributed_to && $attributed_to !== $user_actor_id ) {
 				return new \WP_Error(
 					'activitypub_attribution_mismatch',

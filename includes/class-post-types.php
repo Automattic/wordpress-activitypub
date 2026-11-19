@@ -27,6 +27,28 @@ use Activitypub\Rest\Remote_Posts_Controller;
  */
 class Post_Types {
 	/**
+	 * The capabilities of post types only the plugin writes.
+	 *
+	 * Nobody may create, edit, publish or delete their posts, not through XML-RPC, the REST API or
+	 * the admin: what the plugin stores there is sent or trusted later. The plugin writes them
+	 * without a capability check. Reading is left to core.
+	 *
+	 * @var string[]
+	 */
+	const LOCKED_CAPABILITIES = array(
+		'create_posts'           => 'do_not_allow',
+		'edit_posts'             => 'do_not_allow',
+		'edit_others_posts'      => 'do_not_allow',
+		'edit_private_posts'     => 'do_not_allow',
+		'edit_published_posts'   => 'do_not_allow',
+		'publish_posts'          => 'do_not_allow',
+		'delete_posts'           => 'do_not_allow',
+		'delete_others_posts'    => 'do_not_allow',
+		'delete_private_posts'   => 'do_not_allow',
+		'delete_published_posts' => 'do_not_allow',
+	);
+
+	/**
 	 * Initialize the class, registering all custom post types and post meta.
 	 *
 	 * @return void
@@ -135,9 +157,7 @@ class Post_Types {
 					'name'          => \_x( 'Inbox', 'post_type plural name', 'activitypub' ),
 					'singular_name' => \_x( 'Inbox Item', 'post_type single name', 'activitypub' ),
 				),
-				'capabilities'        => array(
-					'create_posts' => false,
-				),
+				'capabilities'        => self::LOCKED_CAPABILITIES,
 				'map_meta_cap'        => true,
 				'public'              => false,
 				'show_in_rest'        => false,
@@ -246,9 +266,7 @@ class Post_Types {
 					'name'          => \_x( 'Outbox', 'post_type plural name', 'activitypub' ),
 					'singular_name' => \_x( 'Outbox Item', 'post_type single name', 'activitypub' ),
 				),
-				'capabilities'        => array(
-					'create_posts' => false,
-				),
+				'capabilities'        => self::LOCKED_CAPABILITIES,
 				'map_meta_cap'        => true,
 				'public'              => false,
 				'show_in_rest'        => false,
@@ -501,6 +519,8 @@ class Post_Types {
 					'name'          => \_x( 'OAuth Clients', 'post_type plural name', 'activitypub' ),
 					'singular_name' => \_x( 'OAuth Client', 'post_type single name', 'activitypub' ),
 				),
+				'capabilities'        => self::LOCKED_CAPABILITIES,
+				'map_meta_cap'        => true,
 				'public'              => false,
 				'show_in_rest'        => false,
 				'hierarchical'        => false,
@@ -605,6 +625,8 @@ class Post_Types {
 					'name'          => \_x( 'Tombstones', 'post_type plural name', 'activitypub' ),
 					'singular_name' => \_x( 'Tombstone', 'post_type single name', 'activitypub' ),
 				),
+				'capabilities'        => self::LOCKED_CAPABILITIES,
+				'map_meta_cap'        => true,
 				'public'              => false,
 				'publicly_queryable'  => false,
 				'show_ui'             => false,

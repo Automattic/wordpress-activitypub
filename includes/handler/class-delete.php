@@ -18,7 +18,7 @@ use Activitypub\Tombstone;
 use function Activitypub\add_to_outbox;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 use function Activitypub\unescape_guid;
 
 /**
@@ -125,7 +125,7 @@ class Delete {
 				}
 
 				// Check if Object is an Actor.
-				if ( object_to_uri( $activity['object'] ) === $activity['actor'] ) {
+				if ( object_to_id( $activity['object'] ) === $activity['actor'] ) {
 					self::delete_remote_actor( $activity, $user_ids );
 				} else { // Assume an object otherwise.
 					self::delete_object( $activity, $user_ids );
@@ -149,8 +149,8 @@ class Delete {
 	 * @return bool True if a stamp on a local quote post was revoked.
 	 */
 	private static function revoke_quote_authorization( $activity, $user_ids ) {
-		$stamp_uri = object_to_uri( $activity['object'] ?? '' );
-		$actor     = object_to_uri( $activity['actor'] ?? '' );
+		$stamp_uri = object_to_id( $activity['object'] ?? '' );
+		$actor     = object_to_id( $activity['actor'] ?? '' );
 
 		// An actor deleting itself is never a stamp, and a stamp always lives on its issuer's host.
 		if ( ! $stamp_uri || $stamp_uri === $actor || ! is_same_host( $stamp_uri, $actor ) ) {
@@ -216,7 +216,7 @@ class Delete {
 	 */
 	public static function delete_object( $activity, $user_ids ) {
 		$result = self::maybe_delete_interaction( $activity );
-		$post   = Remote_Posts::get_by_guid( object_to_uri( $activity['object'] ) );
+		$post   = Remote_Posts::get_by_guid( object_to_id( $activity['object'] ) );
 
 		// An object can be both, for example a reply of a followed actor is also in the reader.
 		if ( ! $result || ! \is_wp_error( $post ) ) {
@@ -270,7 +270,7 @@ class Delete {
 	 * @return bool True on success, false otherwise.
 	 */
 	public static function maybe_delete_follower( $activity ) {
-		$actor = object_to_uri( $activity['actor'] ?? '' );
+		$actor = object_to_id( $activity['actor'] ?? '' );
 
 		// Confirm at the actor's URI; an inline Tombstone is only an untrusted claim.
 		if ( ! \is_string( $actor ) || ! $actor || ! Tombstone::exists( $actor ) ) {
@@ -377,7 +377,7 @@ class Delete {
 	 * @return bool True on success, false otherwise.
 	 */
 	public static function maybe_delete_interaction( $activity ) {
-		$id       = object_to_uri( $activity['object'] );
+		$id       = object_to_id( $activity['object'] );
 		$comments = Interactions::get_by_id( $id );
 
 		if ( ! $comments ) {
@@ -415,7 +415,7 @@ class Delete {
 	 * @return bool|\WP_Error True on success, false or WP_Error on failure.
 	 */
 	public static function maybe_delete_post( $activity, $post = null ) {
-		$id   = object_to_uri( $activity['object'] );
+		$id   = object_to_id( $activity['object'] );
 		$post = $post ?? Remote_Posts::get_by_guid( $id );
 
 		$owner_id = \is_wp_error( $post ) ? 0 : (int) \get_post_meta( $post->ID, '_activitypub_remote_actor_id', true );
@@ -499,8 +499,8 @@ class Delete {
 			 * without making it a requirement. It is checked only when a local copy is about to be
 			 * deleted, see is_signed_by().
 			 */
-			$actor = object_to_uri( $json['actor'] ?? '' );
-			self::reset( ( $actor && object_to_uri( $json['object'] ?? '' ) !== $actor ) ? $request : null );
+			$actor = object_to_id( $json['actor'] ?? '' );
+			self::reset( ( $actor && object_to_id( $json['object'] ?? '' ) !== $actor ) ? $request : null );
 
 			return true;
 		}
@@ -579,7 +579,7 @@ class Delete {
 	 */
 	public static function outbox_activity( $activity ) {
 		if ( 'Delete' === $activity->get_type() ) {
-			$activity->set_object( object_to_uri( $activity->get_object() ) );
+			$activity->set_object( object_to_id( $activity->get_object() ) );
 		}
 
 		return $activity;
@@ -604,7 +604,7 @@ class Delete {
 			return;
 		}
 
-		Tombstone::bury( object_to_uri( $object ) );
+		Tombstone::bury( object_to_id( $object ) );
 
 		if ( \is_object( $object ) ) {
 			Tombstone::bury( $object->get_id(), $object->get_url() );

@@ -13,6 +13,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Proxy;
 
 use function Activitypub\get_upload_baseurl;
+use function Activitypub\object_to_id;
 use function Activitypub\object_to_uri;
 
 /**
@@ -208,7 +209,7 @@ abstract class Base {
 		foreach ( \array_filter( $referenced ) as $uri ) {
 			$object = Proxy::get( $uri );
 			if ( $object && ! \is_wp_error( $object ) && isset( $object['attributedTo'] ) ) {
-				$referenced_authors[] = object_to_uri( $object['attributedTo'] );
+				$referenced_authors[] = object_to_id( $object['attributedTo'] );
 			}
 		}
 		$referenced_authors = $referenced_authors ? \array_values( \array_unique( $referenced_authors ) ) : null;

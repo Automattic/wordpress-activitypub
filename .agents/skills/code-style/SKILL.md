@@ -157,7 +157,10 @@ Expose ActivityPub endpoints.
 // Get remote actor metadata.
 $metadata = get_remote_metadata_by_actor( $actor_url );
 
-// Convert ActivityPub object to URI string.
+// The ID of an ActivityPub object, to store, look up, compare or fetch it.
+$id = object_to_id( $object );
+
+// A link to an ActivityPub object: the file of a media object, else its url (icons, avatars, attachments).
 $uri = object_to_uri( $object );
 
 // Enrich content with callbacks.
