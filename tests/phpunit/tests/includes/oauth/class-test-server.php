@@ -316,6 +316,88 @@ class Test_Server extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A token without the scope a route requires opens no route a logged-out request cannot.
+	 *
+	 * A bearer token logs its user in whatever it was consented to, so a permission check that
+	 * settles for a login or a capability lets the token in without its scope. `push` is granted
+	 * but no route requires it, so a token holding only `push` must get no further than a
+	 * logged-out request on any route of the plugin's namespace. The token belongs to an
+	 * administrator, so a check on any capability shows up here. A new route fails until it
+	 * checks a scope or is listed below.
+	 *
+	 * @covers ::check_oauth_permission
+	 * @covers ::permits_scope
+	 */
+	public function test_token_without_scope_opens_no_route() {
+		$namespace = '/' . ACTIVITYPUB_REST_NAMESPACE;
+
+		// Revocation and introspection authenticate the client with any token it holds (RFC 7009, RFC 7662).
+		$token_is_enough = array(
+			$namespace . '/oauth/revoke',
+			$namespace . '/oauth/introspect',
+		);
+
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\get_user_by( 'id', $admin_id )->add_cap( 'activitypub' );
+		$push_token = Token::create( $admin_id, $this->client_id, array( Scope::PUSH ) );
+
+		global $wp_rest_server;
+		$wp_rest_server = new \WP_REST_Server();
+		\do_action( 'rest_api_init' );
+		$routes = $wp_rest_server->get_routes();
+
+		// Every permission check runs as WordPress runs it: an error, false or null refuses.
+		$grants = function ( $handler, $method, $route ) use ( $admin_id ) {
+			if ( empty( $handler['permission_callback'] ) ) {
+				return true;
+			}
+
+			// A new request per caller: the rate limit remembers its answer per request.
+			$request = new \WP_REST_Request( $method, $route );
+			$request->set_url_params(
+				array(
+					'user_id' => $admin_id,
+					'id'      => 'https://remote.example/users/alice',
+				)
+			);
+
+			$result = \call_user_func( $handler['permission_callback'], $request );
+
+			return ! \is_wp_error( $result ) && false !== $result && null !== $result;
+		};
+
+		$opened = array();
+		foreach ( $routes as $route => $handlers ) {
+			if ( $route !== $namespace && 0 !== \strpos( $route, $namespace . '/' ) ) {
+				continue;
+			}
+
+			foreach ( $handlers as $handler ) {
+				foreach ( \array_keys( $handler['methods'] ) as $method ) {
+					unset( $_SERVER['HTTP_AUTHORIZATION'] );
+					Server::authenticate_oauth( null );
+					\wp_set_current_user( 0 );
+					$logged_out = $grants( $handler, $method, $route );
+
+					$_SERVER['HTTP_AUTHORIZATION'] = \sprintf( 'Bearer %s', $push_token['access_token'] );
+					$this->set_rest_route( $namespace );
+					$this->assertTrue( Server::authenticate_oauth( null ), 'The token logs its user in, as on a real request.' );
+					$with_token = $grants( $handler, $method, $route );
+
+					if ( $with_token && ! $logged_out && ! \in_array( $route, $token_is_enough, true ) ) {
+						$opened[] = \sprintf( '%s %s', $method, $route );
+					}
+				}
+			}
+		}
+
+		$wp_rest_server = null;
+
+		$this->assertSame( array(), \array_diff( $token_is_enough, \array_keys( $routes ) ), 'Every route listed as deliberately open to any token is registered.' );
+		$this->assertSame( array(), $opened, 'These routes let a token in without the scope they require.' );
+	}
+
+	/**
 	 * The consent page refuses an account that is not enabled for ActivityPub.
 	 *
 	 * `login_form_authorize()` ends in `exit`, which a test cannot cross, so the refusal is read at the
