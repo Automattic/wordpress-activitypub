@@ -7,6 +7,9 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\OAuth\Scope;
+use Activitypub\OAuth\Server as OAuth_Server;
+
 use function Activitypub\user_can_act_as_blog;
 use function Activitypub\user_can_activitypub;
 
@@ -37,8 +40,12 @@ trait Reader_Permission {
 		 * `is_user_type_disabled( 'user' )` and the `activitypub_user_can_activitypub` filter, the
 		 * way the plugin's own admin routes do. A logged-out request has user ID 0, which is also
 		 * `Actors::BLOG_USER_ID`, so the login check has to come first.
+		 *
+		 * An OAuth bearer logs its user in whatever it was consented to, so the user's capability
+		 * says who the caller is, and the `read` scope says whether the app may read. A WordPress
+		 * session is not scope-limited.
 		 */
-		if ( \is_user_logged_in() && ( user_can_activitypub( \get_current_user_id() ) || user_can_act_as_blog() ) ) {
+		if ( \is_user_logged_in() && ( user_can_activitypub( \get_current_user_id() ) || user_can_act_as_blog() ) && OAuth_Server::permits_scope( Scope::READ ) ) {
 			return true;
 		}
 

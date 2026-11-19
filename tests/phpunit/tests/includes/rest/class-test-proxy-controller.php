@@ -690,6 +690,9 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 	 * remote object. Requiring `write` would mean a read-only client could not use it, and would
 	 * make a client that only wants to read ask for permission to post.
 	 *
+	 * A bearer token logs its user in, so the token's user is the current user here too: the
+	 * user's own capability must not stand in for the scope the token lacks.
+	 *
 	 * @covers ::register_routes
 	 */
 	public function test_proxy_requires_the_read_scope() {
@@ -705,6 +708,8 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
 		$request->set_body_params( array( 'id' => 'https://example.com/gone-forever' ) );
 
+		\wp_set_current_user( self::$user_id );
+
 		// A read-scoped token reaches the handler, which forwards the remote 404.
 		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), self::$user_id ) );
 		$this->assertEquals( 404, $this->server->dispatch( $request )->get_status(), 'A read token may use the proxy.' );
@@ -713,6 +718,11 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::WRITE ), self::$user_id ) );
 		$this->assertEquals( 403, $this->server->dispatch( $request )->get_status(), 'Write is not the authority to read a remote object.' );
 
+		// Nor does a token that may only receive live updates.
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH ), self::$user_id ) );
+		$this->assertEquals( 403, $this->server->dispatch( $request )->get_status(), 'Push is not the authority to read a remote object.' );
+
+		\wp_set_current_user( 0 );
 		\remove_filter( 'pre_http_request', $respond );
 	}
 

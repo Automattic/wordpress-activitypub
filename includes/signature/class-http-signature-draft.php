@@ -261,7 +261,7 @@ class Http_Signature_Draft implements Http_Signature {
 	/**
 	 * The keyId this verifier checks, from the Signature header or, failing that, Authorization.
 	 *
-	 * @since unreleased
+	 * @since 9.4.4
 	 *
 	 * @param array $headers The HTTP headers.
 	 *

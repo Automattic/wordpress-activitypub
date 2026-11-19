@@ -271,7 +271,7 @@ function object_to_uri( $data ) {
  * differ in case or accents. A lookup by its hash is exact and can use an index. The ID is
  * hashed as it is stored, sanitized by `esc_url_raw()`, and not normalized like the Tombstone key.
  *
- * @since unreleased
+ * @since 9.4.4
  *
  * @param string $id The ID.
  *
@@ -291,7 +291,7 @@ function get_id_hash( $id ) {
  * Meta values and rows written directly keep the raw ID. So a lookup by a stored ID matches all three.
  * They are the same for an ID without `&` or `'`.
  *
- * @since unreleased
+ * @since 9.4.4
  *
  * @param string $id The ID.
  *
@@ -315,7 +315,7 @@ function get_stored_id_forms( $id ) {
  * Decoding the full entity set would also rewrite a `&lt;` or `&quot;` that an ID contains as literal
  * text, which escaping never put there.
  *
- * @since unreleased
+ * @since 9.4.4
  *
  * @param string $guid The stored `guid`.
  *
