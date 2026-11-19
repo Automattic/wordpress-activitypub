@@ -358,6 +358,11 @@ class Comment {
 	 * @return \WP_Comment|false Comment object, or false on failure.
 	 */
 	public static function object_id_to_comment( $id, $args = array() ) {
+		// Core ignores an empty meta value, so the query would match any comment with a source_id.
+		if ( ! $id ) {
+			return false;
+		}
+
 		$args = \wp_parse_args(
 			$args,
 			array(
