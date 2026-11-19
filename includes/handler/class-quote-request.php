@@ -16,6 +16,8 @@ use Activitypub\Proxy;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\get_meta_ids_by_value;
+use function Activitypub\get_target_post_id;
+use function Activitypub\is_post_publicly_queryable;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_id;
@@ -52,8 +54,10 @@ class Quote_Request {
 	 */
 	public static function handle_quote_request( $activity, $user_ids, $activity_object = null, $context = null ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$state   = true;
-		$post_id = \url_to_postid( object_to_id( $activity['object'] ) );
-		$post    = $post_id ? \get_post( $post_id ) : null;
+		$post_id = get_target_post_id( object_to_id( $activity['object'] ) );
+
+		// Only a post anyone can see can be quoted; any other post is answered like one that does not exist.
+		$post = is_post_publicly_queryable( $post_id ) ? \get_post( $post_id ) : null;
 
 		if ( ! $post ) {
 			$user_id = \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids;
