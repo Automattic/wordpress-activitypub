@@ -74,10 +74,11 @@ function generate_image_block( $url, $img_html ) {
  * @return string The audio block markup.
  */
 function generate_audio_block( $url ) {
-	return \sprintf(
-		'<!-- wp:activitypub/audio %s --><figure class="wp-block-audio"><audio controls src="%s"></audio></figure><!-- /wp:activitypub/audio -->',
-		\wp_json_encode( array( 'url' => $url ) ),
-		\esc_url( $url )
+	// Core escapes the attributes, so a URL cannot end the block comment and start another block.
+	return \get_comment_delimited_block_content(
+		'activitypub/audio',
+		array( 'url' => $url ),
+		\sprintf( '<figure class="wp-block-audio"><audio controls src="%s"></audio></figure>', \esc_url( $url ) )
 	);
 }
 
@@ -89,10 +90,11 @@ function generate_audio_block( $url ) {
  * @return string The video block markup.
  */
 function generate_video_block( $url ) {
-	return \sprintf(
-		'<!-- wp:activitypub/video %s --><figure class="wp-block-video"><video controls src="%s"></video></figure><!-- /wp:activitypub/video -->',
-		\wp_json_encode( array( 'url' => $url ) ),
-		\esc_url( $url )
+	// Core escapes the attributes, so a URL cannot end the block comment and start another block.
+	return \get_comment_delimited_block_content(
+		'activitypub/video',
+		array( 'url' => $url ),
+		\sprintf( '<figure class="wp-block-video"><video controls src="%s"></video></figure>', \esc_url( $url ) )
 	);
 }
 
