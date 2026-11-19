@@ -8,7 +8,7 @@
 namespace Activitypub\Handler\Outbox;
 
 use function Activitypub\follow;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 
 /**
  * Handle outgoing Follow activities.
@@ -35,7 +35,7 @@ class Follow {
 	 * @return int|\WP_Error The outbox post ID on success, or WP_Error on failure.
 	 */
 	public static function handle_follow( $data, $user_id = null ) {
-		$object = object_to_uri( $data['object'] ?? '' );
+		$object = object_to_id( $data['object'] ?? '' );
 
 		if ( empty( $object ) ) {
 			return $data;

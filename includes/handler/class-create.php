@@ -16,7 +16,7 @@ use function Activitypub\is_activity_reply;
 use function Activitypub\is_quote_activity;
 use function Activitypub\is_self_ping;
 use function Activitypub\object_id_to_comment;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 
 /**
  * Handle Create requests.
@@ -80,7 +80,7 @@ class Create {
 	 */
 	public static function create_interaction( $activity, $user_ids, $activity_object = null ) {
 		// Look the object up by the identifier it is stored under, as Update does.
-		$existing_comment = object_id_to_comment( \esc_url_raw( object_to_uri( $activity['object'] ) ) );
+		$existing_comment = object_id_to_comment( \esc_url_raw( object_to_id( $activity['object'] ) ) );
 
 		// If comment exists, call update action.
 		if ( $existing_comment ) {

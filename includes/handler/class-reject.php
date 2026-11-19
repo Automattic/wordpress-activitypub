@@ -14,6 +14,7 @@ use Activitypub\Proxy;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\is_same_actor;
+use function Activitypub\object_to_id;
 use function Activitypub\object_to_uri;
 
 /**
@@ -73,7 +74,7 @@ class Reject {
 		 * targeted another actor by referencing that pending Follow's outbox GUID.
 		 */
 		$reject_actor   = object_to_uri( $reject['actor'] ?? '' );
-		$followed_actor = object_to_uri( $reject['object']['object'] ?? '' );
+		$followed_actor = object_to_id( $reject['object']['object'] ?? '' );
 		if ( ! $reject_actor || ! $followed_actor || $reject_actor !== $followed_actor ) {
 			return;
 		}

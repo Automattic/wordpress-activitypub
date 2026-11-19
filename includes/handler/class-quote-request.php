@@ -18,6 +18,7 @@ use function Activitypub\add_to_outbox;
 use function Activitypub\get_meta_ids_by_value;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
+use function Activitypub\object_to_id;
 use function Activitypub\object_to_uri;
 use function Activitypub\user_can_activitypub;
 
@@ -107,7 +108,7 @@ class Quote_Request {
 		 * A policy that rejects needs no proof, so the post is only fetched for an approval.
 		 */
 		if ( $state ) {
-			$instrument = Proxy::get( object_to_uri( $activity['instrument'] ) );
+			$instrument = Proxy::get( object_to_id( $activity['instrument'] ) );
 
 			/*
 			 * Without the post there is nothing to decide: a Reject would be final, and an Accept would be
@@ -118,7 +119,7 @@ class Quote_Request {
 			}
 
 			// The fetched post has to be the instrument itself; an alias or redirect could otherwise lend another post's author.
-			$state = is_same_actor( $instrument['id'] ?? null, object_to_uri( $activity['instrument'] ) ) && is_same_actor( $instrument['attributedTo'] ?? null, $activity['actor'] );
+			$state = is_same_actor( $instrument['id'] ?? null, object_to_id( $activity['instrument'] ) ) && is_same_actor( $instrument['attributedTo'] ?? null, $activity['actor'] );
 		}
 
 		if ( $state ) {
@@ -272,7 +273,7 @@ class Quote_Request {
 			return;
 		}
 
-		$activity_object['instrument'] = object_to_uri( $activity_object['instrument'] );
+		$activity_object['instrument'] = object_to_id( $activity_object['instrument'] );
 
 		$meta_id = get_meta_ids_by_value( 'post', $post_id, '_activitypub_quoted_by', $activity_object['instrument'] )[0] ?? \add_post_meta( $post_id, '_activitypub_quoted_by', $activity_object['instrument'] );
 
@@ -328,7 +329,7 @@ class Quote_Request {
 			return;
 		}
 
-		$activity_object['instrument'] = object_to_uri( $activity_object['instrument'] );
+		$activity_object['instrument'] = object_to_id( $activity_object['instrument'] );
 
 		// Only send minimal data.
 		$activity_object = \array_intersect_key(

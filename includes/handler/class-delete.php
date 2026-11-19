@@ -17,6 +17,7 @@ use Activitypub\Tombstone;
 use function Activitypub\add_to_outbox;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
+use function Activitypub\object_to_id;
 use function Activitypub\object_to_uri;
 use function Activitypub\unescape_guid;
 
@@ -110,7 +111,7 @@ class Delete {
 				}
 
 				// Check if Object is an Actor.
-				if ( object_to_uri( $activity['object'] ) === $activity['actor'] ) {
+				if ( object_to_id( $activity['object'] ) === $activity['actor'] ) {
 					self::delete_remote_actor( $activity, $user_ids );
 				} else { // Assume an object otherwise.
 					self::delete_object( $activity, $user_ids );
@@ -131,7 +132,7 @@ class Delete {
 	 * @return bool True if a stamp on a local quote post was revoked.
 	 */
 	private static function revoke_quote_authorization( $activity, $user_ids ) {
-		$stamp_uri = object_to_uri( $activity['object'] ?? '' );
+		$stamp_uri = object_to_id( $activity['object'] ?? '' );
 		$actor     = object_to_uri( $activity['actor'] ?? '' );
 
 		// An actor deleting itself is never a stamp, and a stamp always lives on its issuer's host.
@@ -355,7 +356,7 @@ class Delete {
 	 * @return bool True on success, false otherwise.
 	 */
 	public static function maybe_delete_interaction( $activity ) {
-		$id       = object_to_uri( $activity['object'] );
+		$id       = object_to_id( $activity['object'] );
 		$comments = Interactions::get_by_id( $id );
 
 		if ( $comments && Tombstone::exists( $id ) ) {
@@ -381,7 +382,7 @@ class Delete {
 	 * @return bool|\WP_Error True on success, false or WP_Error on failure.
 	 */
 	public static function maybe_delete_post( $activity ) {
-		$id = object_to_uri( $activity['object'] );
+		$id = object_to_id( $activity['object'] );
 
 		// Check if the object exists and is a tombstone.
 		if ( Tombstone::exists( $id ) ) {

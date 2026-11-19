@@ -17,6 +17,7 @@ use Activitypub\Proxy;
 use function Activitypub\is_activity;
 use function Activitypub\is_activity_public;
 use function Activitypub\is_same_host;
+use function Activitypub\object_to_id;
 use function Activitypub\object_to_uri;
 
 /**
@@ -60,7 +61,7 @@ class Announce {
 
 		self::maybe_save_announce( $announcement, $user_ids );
 
-		$object_url = object_to_uri( $announcement['object'] );
+		$object_url = object_to_id( $announcement['object'] );
 
 		/*
 		 * The filter below recognizes the request by its URL, and `Proxy::get()` drops the

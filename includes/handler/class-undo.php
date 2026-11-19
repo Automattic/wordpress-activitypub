@@ -9,6 +9,7 @@ namespace Activitypub\Handler;
 
 use Activitypub\Collection\Inbox as Inbox_Collection;
 
+use function Activitypub\object_to_id;
 use function Activitypub\object_to_uri;
 
 /**
@@ -51,7 +52,7 @@ class Undo {
 				array( 'status' => 400 )
 			);
 		} else {
-			$result = Inbox_Collection::undo( object_to_uri( $activity['object'] ), $actor );
+			$result = Inbox_Collection::undo( object_to_id( $activity['object'] ), $actor );
 		}
 
 		if ( $result && ! \is_wp_error( $result ) ) {

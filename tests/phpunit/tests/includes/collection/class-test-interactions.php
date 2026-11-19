@@ -2290,7 +2290,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertEquals( 'activitypub_update_forbidden', $result->get_error_code() );
 		$this->assertStringNotContainsString( 'HACKED', \get_comment( $comment_id )->comment_content );
 
-		// A media object is found by its url, which has to be on the actor's host as well.
+		// A media object is found by its id, not by its url, so a url that names the comment finds nothing.
 		$result = Interactions::update_comment(
 			array(
 				'actor'  => 'https://attacker.example/users/evil',
@@ -2304,7 +2304,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 				),
 			)
 		);
-		$this->assertWPError( $result );
+		$this->assertFalse( $result );
 		$this->assertStringNotContainsString( 'HACKED', \get_comment( $comment_id )->comment_content );
 
 		// The author on the comment's own host can still update it.

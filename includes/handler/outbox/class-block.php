@@ -10,7 +10,7 @@ namespace Activitypub\Handler\Outbox;
 use Activitypub\Moderation;
 
 use function Activitypub\add_to_outbox;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 
 /**
  * Handle outgoing Block activities.
@@ -39,7 +39,7 @@ class Block {
 	 * @return array|int|\WP_Error The original data if unhandled, outbox post ID on success, or WP_Error on failure.
 	 */
 	public static function handle_block( $data, $user_id = null ) {
-		$actor_uri = object_to_uri( $data['object'] ?? '' );
+		$actor_uri = object_to_id( $data['object'] ?? '' );
 
 		if ( empty( $actor_uri ) ) {
 			return $data;

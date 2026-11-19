@@ -7,7 +7,7 @@
 
 namespace Activitypub\Handler\Outbox;
 
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 
 /**
  * Handle outgoing Announce activities.
@@ -33,7 +33,7 @@ class Announce {
 	 * @return array The activity data array.
 	 */
 	public static function handle_announce( $data, $user_id = null ) {
-		$object_url = object_to_uri( $data['object'] ?? '' );
+		$object_url = object_to_id( $data['object'] ?? '' );
 
 		if ( empty( $object_url ) ) {
 			return $data;

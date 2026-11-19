@@ -16,6 +16,7 @@ use function Activitypub\add_to_outbox;
 use function Activitypub\get_object_id;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
+use function Activitypub\object_to_id;
 use function Activitypub\object_to_uri;
 
 /**
@@ -78,7 +79,7 @@ class Accept {
 			return;
 		}
 
-		$actor_post = Remote_Actors::get_by_uri( object_to_uri( $accept['object']['object'] ?? '' ) );
+		$actor_post = Remote_Actors::get_by_uri( object_to_id( $accept['object']['object'] ?? '' ) );
 
 		if ( \is_wp_error( $actor_post ) ) {
 			return;
@@ -133,7 +134,7 @@ class Accept {
 			return;
 		}
 
-		$stamp_uri = object_to_uri( $accept['result'] ?? '' );
+		$stamp_uri = object_to_id( $accept['result'] ?? '' );
 
 		if ( ! $stamp_uri ) {
 			return;

@@ -15,6 +15,7 @@ use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\object_to_id;
 use function Activitypub\object_to_uri;
 
 /**
@@ -154,7 +155,7 @@ class Follow {
 			return;
 		}
 
-		if ( empty( $activity['object'] ) || ! Application::is_application_resource( object_to_uri( $activity['object'] ) ) ) {
+		if ( empty( $activity['object'] ) || ! Application::is_application_resource( object_to_id( $activity['object'] ) ) ) {
 			return;
 		}
 

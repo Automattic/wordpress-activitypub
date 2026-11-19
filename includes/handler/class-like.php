@@ -10,6 +10,7 @@ namespace Activitypub\Handler;
 use Activitypub\Collection\Interactions;
 use Activitypub\Comment;
 
+use function Activitypub\object_to_id;
 use function Activitypub\object_to_uri;
 
 /**
@@ -39,7 +40,7 @@ class Like {
 			return;
 		}
 
-		$url = object_to_uri( $like['object'] );
+		$url = object_to_id( $like['object'] );
 
 		if ( empty( $url ) ) {
 			return;

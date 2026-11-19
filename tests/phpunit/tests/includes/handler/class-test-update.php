@@ -16,7 +16,7 @@ use Activitypub\Handler\Update;
 use Activitypub\Proxy;
 use Activitypub\Tests\Remote_Request_Stub;
 
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 
 /**
  * Update Handler Test Class.
@@ -527,7 +527,7 @@ class Test_Update extends \WP_UnitTestCase {
 								'comment_content'  => 'original',
 							)
 						);
-						\add_comment_meta( $comment_id, 'source_id', \esc_url_raw( object_to_uri( $activity['object'] ) ) );
+						\add_comment_meta( $comment_id, 'source_id', \esc_url_raw( object_to_id( $activity['object'] ) ) );
 						\add_comment_meta( $comment_id, 'protocol', 'activitypub' );
 
 						$lookups = 0;
@@ -555,14 +555,14 @@ class Test_Update extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * A media object is looked up by its url in Update and in Create.
+	 * A media object is looked up by its id in Update and in Create, not by the url of its file.
 	 *
-	 * A comment stored under the media object's id, not its url, is not the comment of that
-	 * object for either handler, so they do not hand the activity back and forth.
+	 * The file lives on another host, as on a CDN. Both handlers find the comment stored under the
+	 * object's id and update it, so they do not hand the activity back and forth.
 	 *
 	 * @covers ::update_object
 	 */
-	public function test_media_object_is_looked_up_by_url_in_both_handlers() {
+	public function test_media_object_is_looked_up_by_id_in_both_handlers() {
 		$post_id = self::factory()->post->create();
 		$actor   = 'https://remote.example/users/bob';
 
@@ -612,7 +612,7 @@ class Test_Update extends \WP_UnitTestCase {
 					'object' => array(
 						'id'           => $id,
 						'type'         => $type,
-						'url'          => \sprintf( 'https://remote.example/media/%d', $number ),
+						'url'          => \sprintf( 'https://cdn.example/media/%d', $number ),
 						'content'      => 'edited',
 						'inReplyTo'    => \get_permalink( $post_id ),
 						'attributedTo' => $actor,
@@ -629,7 +629,7 @@ class Test_Update extends \WP_UnitTestCase {
 				}
 
 				$this->assertNull( $caught, \sprintf( '%s entering through %s', $type, $entry[0] ) );
-				$this->assertSame( 'original', \get_comment( $comment_id )->comment_content, 'The comment stored under the id is not the media object.' );
+				$this->assertSame( 'edited', \get_comment( $comment_id )->comment_content, \sprintf( '%s entering through %s', $type, $entry[0] ) );
 			}
 		}
 

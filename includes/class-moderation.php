@@ -74,7 +74,7 @@ class Moderation {
 	public static function activity_is_blocked_by_content_owner( $activity ) {
 		$data    = $activity->to_array( false );
 		$object  = $data['object'] ?? null;
-		$targets = array( object_to_uri( $object ), object_to_uri( $object['inReplyTo'] ?? null ), get_quote_url( $data ) );
+		$targets = array( object_to_id( $object ), object_to_id( $object['inReplyTo'] ?? null ), get_quote_url( $data ) );
 
 		$owners = array();
 		foreach ( \array_unique( \array_filter( $targets, 'is_string' ) ) as $url ) {

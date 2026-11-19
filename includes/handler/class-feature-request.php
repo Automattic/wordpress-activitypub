@@ -18,6 +18,7 @@ use function Activitypub\add_to_outbox;
 use function Activitypub\get_meta_ids_by_value;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
+use function Activitypub\object_to_id;
 use function Activitypub\object_to_uri;
 use function Activitypub\user_can_activitypub;
 
@@ -63,7 +64,7 @@ class Feature_Request {
 	 * @return void
 	 */
 	public static function handle_feature_request( $activity, $user_ids, $activity_object = null, $context = null ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		$object_uri = object_to_uri( $activity['object'] );
+		$object_uri = object_to_id( $activity['object'] );
 		$target     = Actors::get_by_resource( $object_uri );
 
 		if ( \is_wp_error( $target ) ) {
@@ -109,7 +110,7 @@ class Feature_Request {
 		 * proof, so the collection is only fetched for an approval.
 		 */
 		if ( $state ) {
-			$instrument = Proxy::get( object_to_uri( $activity['instrument'] ) );
+			$instrument = Proxy::get( object_to_id( $activity['instrument'] ) );
 
 			/*
 			 * Without the collection there is nothing to decide: a Reject would be final, and an
@@ -121,7 +122,7 @@ class Feature_Request {
 			}
 
 			// The fetched collection has to be the instrument itself; an alias or redirect could otherwise lend another collection's owner.
-			$state = is_same_actor( $instrument['id'] ?? null, object_to_uri( $activity['instrument'] ) ) && is_same_actor( $instrument['attributedTo'] ?? null, $activity['actor'] );
+			$state = is_same_actor( $instrument['id'] ?? null, object_to_id( $activity['instrument'] ) ) && is_same_actor( $instrument['attributedTo'] ?? null, $activity['actor'] );
 		}
 
 		if ( $state ) {
@@ -182,7 +183,7 @@ class Feature_Request {
 			return;
 		}
 
-		$activity_object['instrument'] = object_to_uri( $activity_object['instrument'] );
+		$activity_object['instrument'] = object_to_id( $activity_object['instrument'] );
 
 		$stamp_id = self::add_stamp( $user_id, $activity_object['instrument'] );
 		if ( ! $stamp_id ) {
@@ -333,7 +334,7 @@ class Feature_Request {
 		}
 
 		if ( isset( $activity_object['instrument'] ) ) {
-			$activity_object['instrument'] = object_to_uri( $activity_object['instrument'] );
+			$activity_object['instrument'] = object_to_id( $activity_object['instrument'] );
 		}
 
 		// Only send minimal data.
