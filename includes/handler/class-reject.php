@@ -14,7 +14,7 @@ use Activitypub\Proxy;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\is_same_actor;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 
 /**
  * Handle "Reject" requests.
@@ -72,8 +72,8 @@ class Reject {
 		 * Without this, a signed Reject from one actor could cancel a Follow that
 		 * targeted another actor by referencing that pending Follow's outbox GUID.
 		 */
-		$reject_actor   = object_to_uri( $reject['actor'] ?? '' );
-		$followed_actor = object_to_uri( $reject['object']['object'] ?? '' );
+		$reject_actor   = object_to_id( $reject['actor'] ?? '' );
+		$followed_actor = object_to_id( $reject['object']['object'] ?? '' );
 		if ( ! $reject_actor || ! $followed_actor || $reject_actor !== $followed_actor ) {
 			return;
 		}
@@ -118,14 +118,14 @@ class Reject {
 		}
 
 		// The request's `object` is the quoted URI; our post is its `instrument`.
-		$post_id = \url_to_postid( object_to_uri( $request->get_instrument() ) );
+		$post_id = \url_to_postid( object_to_id( $request->get_instrument() ) );
 		$post    = $post_id ? \get_post( $post_id ) : null;
 
 		if ( ! $post ) {
 			return;
 		}
 
-		$quoted_uri = object_to_uri( $request->get_object() );
+		$quoted_uri = object_to_id( $request->get_object() );
 
 		// A Reject for a request the post has since superseded with another quoted URL is ignored.
 		if ( \get_post_meta( $post->ID, '_activitypub_quote_request', true ) !== $quoted_uri ) {

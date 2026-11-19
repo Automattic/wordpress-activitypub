@@ -16,7 +16,7 @@ use Activitypub\Signature;
 use function Activitypub\is_local_host;
 use function Activitypub\is_user_type_disabled;
 use function Activitypub\normalize_url;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 use function Activitypub\url_to_authorid;
 use function Activitypub\user_can_activitypub;
 
@@ -225,7 +225,7 @@ class Actors {
 	 * @return int|\WP_Error Actor id or WP_Error if not found.
 	 */
 	public static function get_id_by_resource( $uri ) {
-		$uri = object_to_uri( $uri );
+		$uri = object_to_id( $uri );
 
 		if ( ! $uri ) {
 			return new \WP_Error(

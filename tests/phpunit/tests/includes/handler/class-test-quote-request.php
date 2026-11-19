@@ -232,6 +232,30 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * The quoted post is found by the object's id, as the block check finds it, not by its url.
+	 *
+	 * @covers ::handle_quote_request
+	 */
+	public function test_handle_quote_request_finds_the_post_by_its_id() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		$other_id = self::factory()->post->create();
+
+		$activity           = $this->create_quote_request_activity();
+		$activity['object'] = array(
+			'id'   => \get_permalink( self::$post_id ),
+			'type' => 'Image',
+			'url'  => \get_permalink( $other_id ),
+		);
+
+		Quote_Request::handle_quote_request( $activity, Actors::BLOG_USER_ID );
+
+		$this->assertNotEmpty( \get_post_meta( self::$post_id, '_activitypub_quoted_by', false ) );
+		$this->assertEmpty( \get_post_meta( $other_id, '_activitypub_quoted_by', false ) );
+
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
 	 * A post that is not public is answered like a post that does not exist.
 	 *
 	 * The request goes to the post's author, with a policy that accepts anyone, so only the

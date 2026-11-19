@@ -13,7 +13,7 @@ use Activitypub\Proxy;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\is_same_actor;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 
 /**
  * Sends the FEP-044f QuoteRequest for local quote posts.
@@ -56,7 +56,7 @@ class Quote_Request {
 		}
 
 		$quoted_uri = $object->get_quote();
-		$post_id    = \url_to_postid( object_to_uri( $object->get_id() ) );
+		$post_id    = \url_to_postid( object_to_id( $object->get_id() ) );
 		$post       = $post_id ? \get_post( $post_id ) : null;
 
 		if ( ! $post ) {
@@ -91,7 +91,7 @@ class Quote_Request {
 			return;
 		}
 
-		$quoted_author = object_to_uri( $quoted['attributedTo'] );
+		$quoted_author = object_to_id( $quoted['attributedTo'] );
 		$actor         = Actors::get_by_id( $user_id );
 
 		if ( \is_wp_error( $actor ) ) {
@@ -107,7 +107,7 @@ class Quote_Request {
 		$request->set_type( 'QuoteRequest' );
 		$request->set_actor( $actor->get_id() );
 		$request->set_object( $quoted_uri );
-		$request->set_instrument( object_to_uri( $object->get_id() ) );
+		$request->set_instrument( object_to_id( $object->get_id() ) );
 		$request->add_to( $quoted_author );
 
 		$request_id = add_to_outbox( $request, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );

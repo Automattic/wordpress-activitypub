@@ -15,7 +15,7 @@ use function Activitypub\get_id_hash;
 use function Activitypub\get_stored_id_forms;
 use function Activitypub\is_activity_public;
 use function Activitypub\is_same_host;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 use function Activitypub\unescape_guid;
 
 /**
@@ -114,9 +114,9 @@ class Inbox {
 		 * For all other activities, we store the object URL as before.
 		 */
 		if ( 'QuoteRequest' === $activity->get_type() && $activity->get_instrument() ) {
-			$object_id = object_to_uri( $activity->get_instrument() ?? '' );
+			$object_id = object_to_id( $activity->get_instrument() ?? '' );
 		} else {
-			$object_id = object_to_uri( $activity->get_object() ?? '' );
+			$object_id = object_to_id( $activity->get_object() ?? '' );
 		}
 
 		$inbox_item = array(
@@ -136,7 +136,7 @@ class Inbox {
 			'meta_input'   => array(
 				'_activitypub_object_id'             => $object_id,
 				'_activitypub_activity_type'         => $activity->get_type(),
-				'_activitypub_activity_remote_actor' => object_to_uri( $activity->get_actor() ),
+				'_activitypub_activity_remote_actor' => object_to_id( $activity->get_actor() ),
 				'activitypub_content_visibility'     => $visibility,
 			),
 		);
@@ -261,7 +261,7 @@ class Inbox {
 		 * but only from the host of the activity's id.
 		 */
 		$stored_actor = \get_post_meta( $inbox_item->ID, '_activitypub_activity_remote_actor', true );
-		if ( null !== $actor && ( $stored_actor ? object_to_uri( $actor ) !== $stored_actor : ! is_same_host( $actor, $id ) ) ) {
+		if ( null !== $actor && ( $stored_actor ? object_to_id( $actor ) !== $stored_actor : ! is_same_host( $actor, $id ) ) ) {
 			return new \WP_Error(
 				'activitypub_inbox_undo_forbidden',
 				\__( 'Undo is not possible because the actor does not own the activity.', 'activitypub' ),

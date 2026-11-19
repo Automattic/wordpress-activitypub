@@ -11,6 +11,7 @@ use Activitypub\Http;
 
 use function Activitypub\follow;
 use function Activitypub\is_user_type_disabled;
+use function Activitypub\object_to_id;
 use function Activitypub\object_to_uri;
 
 /**
@@ -459,7 +460,7 @@ class Starter_Kit {
 		<ul>
 			<?php foreach ( $actors as $actor ) : ?>
 				<?php
-				$actor_uri = object_to_uri( $actor );
+				$actor_uri = object_to_id( $actor );
 				$actor_uri = \ltrim( $actor_uri, '@' );
 
 				if ( ! self::is_valid_actor( $actor_uri ) ) {
@@ -540,7 +541,7 @@ class Starter_Kit {
 		$items = self::$actor_list;
 
 		foreach ( $items as $actor_id ) {
-			$actor_id = object_to_uri( $actor_id );
+			$actor_id = object_to_id( $actor_id );
 			$actor_id = \ltrim( $actor_id, '@' );
 
 			if ( ! \filter_var( $actor_id, FILTER_VALIDATE_URL ) && ! \filter_var( $actor_id, FILTER_VALIDATE_EMAIL ) ) {
