@@ -320,7 +320,10 @@ class Webfinger {
 		// Use Http::get() which handles all caching (success and errors).
 		$response = Http::get(
 			$webfinger_url,
-			array( 'headers' => array( 'Accept' => 'application/jrd+json' ) ),
+			array(
+				'headers'             => array( 'Accept' => 'application/jrd+json' ),
+				'limit_response_size' => Http::SMALL_RESPONSE_SIZE,
+			),
 			WEEK_IN_SECONDS
 		);
 

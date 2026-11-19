@@ -16,6 +16,19 @@ use Activitypub\Collection\Actors;
  */
 class Http {
 	/**
+	 * The response size for small documents a remote server can make arbitrarily large.
+	 *
+	 * A WebFinger document or the root of a collection takes a few kilobytes. Their responses
+	 * are cached, so the default limit of 1 MiB would let anyone who can trigger a lookup fill
+	 * the cache with large entries.
+	 *
+	 * @since unreleased
+	 *
+	 * @var int
+	 */
+	const SMALL_RESPONSE_SIZE = 65536;
+
+	/**
 	 * Send a POST Request with the needed HTTP Headers
 	 *
 	 * @param string   $url     The URL endpoint.

@@ -249,7 +249,7 @@ class Mailer {
 				continue;
 			}
 
-			$result = Http::get( $actor[ $field ], array(), true );
+			$result = Http::get( $actor[ $field ], array( 'limit_response_size' => Http::SMALL_RESPONSE_SIZE ), true );
 			if ( 200 === \wp_remote_retrieve_response_code( $result ) ) {
 				$body = \json_decode( \wp_remote_retrieve_body( $result ), true );
 				if ( isset( $body['totalItems'] ) ) {
