@@ -73,7 +73,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 							'description'       => 'The actor performing the activity.',
 							'type'              => 'string',
 							'required'          => true,
-							'sanitize_callback' => '\Activitypub\object_to_uri',
+							'sanitize_callback' => '\Activitypub\object_to_id',
 						),
 						'type'   => array(
 							'description'       => 'The type of the activity.',

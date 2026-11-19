@@ -2444,4 +2444,38 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		$this->assertSame( array( 'verify_signature' ), $callbacks );
 	}
+
+	/**
+	 * Every route that takes an actor reads it by its id, as the signature checks do.
+	 *
+	 * The sanitized value is what the permission callback and the handlers read, so an actor
+	 * sent as an object has to become its id, not the url it names. Loops over every route in
+	 * the namespace, so a new route with an actor argument is covered as soon as it is added.
+	 *
+	 * @coversNothing
+	 */
+	public function test_actor_arguments_are_read_by_their_id() {
+		$actor = array(
+			'id'   => 'https://remote.example/users/alice',
+			'type' => 'Image',
+			'url'  => 'https://cdn.example/users/bob',
+		);
+
+		$checked = 0;
+		foreach ( \rest_get_server()->get_routes( ACTIVITYPUB_REST_NAMESPACE ) as $route => $handlers ) {
+			foreach ( $handlers as $handler ) {
+				if ( empty( $handler['args']['actor']['sanitize_callback'] ) ) {
+					continue;
+				}
+
+				$request = new \WP_REST_Request( 'POST', $route );
+				$value   = \call_user_func( $handler['args']['actor']['sanitize_callback'], $actor, $request, 'actor' );
+
+				$this->assertSame( 'https://remote.example/users/alice', $value, $route );
+				++$checked;
+			}
+		}
+
+		$this->assertGreaterThan( 0, $checked );
+	}
 }
