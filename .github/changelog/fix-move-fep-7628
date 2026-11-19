@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+When someone you follow moves their account, you now follow the new account, and your blocks carry over.
