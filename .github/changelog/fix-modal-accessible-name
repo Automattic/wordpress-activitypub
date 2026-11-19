@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+The Follow, Reply and Reactions dialogs are now named by their heading, so screen readers announce what each dialog is for when it opens.
