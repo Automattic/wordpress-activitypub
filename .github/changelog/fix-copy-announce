@@ -1,4 +1,4 @@
 Significance: patch
 Type: fixed
 
-Copying your handle in the Follow dialog is now announced to screen readers.
+Copying a handle or link in the Follow, Reactions and Reply dialogs is now announced to screen readers.
