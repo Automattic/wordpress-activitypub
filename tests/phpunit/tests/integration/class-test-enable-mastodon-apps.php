@@ -17,6 +17,7 @@ use Activitypub\Tests\Equal_Html;
 use Enable_Mastodon_Apps\Handler\Timeline;
 use Enable_Mastodon_Apps\Entity\Account;
 use Enable_Mastodon_Apps\Entity\Status;
+use ReflectionMethod;
 
 /**
  * Test class for Enable Mastodon Apps integration.
@@ -123,6 +124,77 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 		$args['tax_query'][0]['operator'] = 'NOT IN';
 		$filtered                         = Enable_Mastodon_Apps::api_home_timeline_args( $args, $request );
 		$this->assertSame( array( $remote_id, $standard_id ), \get_posts( $filtered ) );
+	}
+
+	/**
+	 * Inline images become one attachment each, preserving dimensions and alt text.
+	 */
+	public function test_reader_inline_images_become_attachments() {
+		$method = new ReflectionMethod( Enable_Mastodon_Apps::class, 'reader_media' );
+		$method->setAccessible( true );
+		$url   = 'https://example.org/photo.png?a=1&b=2';
+		$media = $method->invoke(
+			null,
+			'<p>Body <img src="https://example.org/photo.png?a=1&amp;b=2" alt="A &amp; B" width="640" height="480"></p><img src="https://example.org/photo.png?a=1&amp;b=2">',
+			array()
+		);
+		$this->assertCount( 1, $media['attachments'] );
+		$this->assertSame( $url, $media['attachments'][0]['url'] );
+		$this->assertSame( 'A & B', $media['attachments'][0]['alt'] );
+		$this->assertSame( 640, $media['attachments'][0]['width'] );
+		$this->assertSame( 480, $media['attachments'][0]['height'] );
+		$this->assert_equal_html( '<p>Body </p>', $media['content'] );
+		$cached             = $media['attachments'];
+		$cached[0]['width'] = 1280;
+		$media              = $method->invoke( null, '<img src="https://example.org/photo.png?a=1&amp;b=2" width="640" height="480">', $cached );
+		$this->assertSame( 1280, $media['attachments'][0]['width'] );
+	}
+
+	/**
+	 * Reader attachments expose the size and descriptions supplied by federation.
+	 */
+	public function test_reader_status_returns_attachment_dimensions() {
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $user_id );
+		$actor_id = Remote_Actors::create( self::$users['username@example.org'] );
+		$this->assertNotWPError( $actor_id );
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'    => Remote_Posts::POST_TYPE,
+				'post_content' => '<p>Examiner.com in 1996</p><img src="https://example.org/screenshot.png" alt="Screenshot">',
+				'meta_input'   => array(
+					'_activitypub_remote_actor_id' => $actor_id,
+					'_activitypub_attachments'     => array(
+						array(
+							'url'      => 'https://example.org/screenshot.png',
+							'type'     => 'image',
+							'alt'      => 'Screenshot',
+							'width'    => 640,
+							'height'   => 480,
+							'blurhash' => 'test-hash',
+						),
+					),
+				),
+			)
+		);
+		Remote_Posts::add_recipient( $post_id, $user_id );
+		$status = Enable_Mastodon_Apps::api_reader_status( null, $post_id );
+		$this->assertInstanceOf( Status::class, $status );
+		$this->assertCount( 1, $status->media_attachments );
+		$attachment = $status->media_attachments[0];
+		$this->assertSame( 'image', $attachment->type );
+		$this->assertSame( 'Screenshot', $attachment->description );
+		$this->assertSame( 'test-hash', $attachment->blurhash );
+		$this->assertSame(
+			array(
+				'width'  => 640,
+				'height' => 480,
+				'size'   => '640x480',
+				'aspect' => 640 / 480,
+			),
+			$attachment->meta['original']
+		);
+		$this->assert_equal_html( '<p>Examiner.com in 1996</p>', $status->content );
 	}
 
 	/**

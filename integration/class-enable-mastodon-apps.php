@@ -188,21 +188,102 @@ class Enable_Mastodon_Apps {
 		if ( ! $account instanceof Account ) {
 			return null;
 		}
-		$status     = new Status();
-		$status->id = (string) $post_id;
-		$date       = $post->post_date_gmt;
+		$date = $post->post_date_gmt;
 		if ( ! $date || '0000-00-00 00:00:00' === $date ) {
 			$date = \get_gmt_from_date( $post->post_date );
 		}
-		$status->created_at = new \DateTime( $date, new \DateTimeZone( 'UTC' ) );
-		$status->uri        = unescape_guid( $post->guid );
-		$status->url        = unescape_guid( $post->guid );
-		$status->content    = \wp_kses_post( $post->post_content );
+		$media       = self::reader_media( $post->post_content, (array) \get_post_meta( $post_id, '_activitypub_attachments', true ) );
+		$attachments = array();
+		foreach ( $media['attachments'] as $attachment ) {
+			$attachment['mediaType'] = $attachment['type'] . '/octet-stream';
+			$attachment['name']      = $attachment['alt'] ?? '';
+			$attachments[]           = $attachment;
+		}
+		$status = self::activity_to_status(
+			array(
+				'type'       => 'Note',
+				'id'         => unescape_guid( $post->guid ),
+				'url'        => unescape_guid( $post->guid ),
+				'published'  => $date,
+				'content'    => $media['content'],
+				'attachment' => $attachments,
+			),
+			$account,
+			$post_id
+		);
+		if ( ! $status ) {
+			return null;
+		}
 		if ( $post->post_title ) {
 			$status->content = '<strong>' . \esc_html( $post->post_title ) . '</strong>' . PHP_EOL . $status->content;
 		}
-		$status->account = $account;
 		return $status;
+	}
+
+	/**
+	 * Convert inline reader images and cached media into native attachments.
+	 *
+	 * Cached metadata takes precedence over HTML attributes. Conversion only reads
+	 * the stored HTML and never downloads media while building a timeline.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $content     Cached reader HTML.
+	 * @param array  $attachments Cached attachment metadata.
+	 * @return array Reader content and normalized attachments.
+	 */
+	private static function reader_media( $content, $attachments ) {
+		$media = array();
+		foreach ( $attachments as $attachment ) {
+			if ( \is_array( $attachment ) && ! empty( $attachment['url'] ) && \in_array( $attachment['type'] ?? '', array( 'image', 'audio', 'video' ), true ) ) {
+				$media[ $attachment['url'] ] = $attachment;
+			}
+		}
+
+		// Cached audio and video blocks are displayed by the client's media player.
+		$html = '';
+		foreach ( \parse_blocks( $content ) as $block ) {
+			if ( \in_array( $block['blockName'], array( 'activitypub/audio', 'activitypub/video' ), true ) && isset( $media[ $block['attrs']['url'] ?? '' ] ) ) {
+				continue;
+			}
+			$html .= \serialize_block( $block );
+		}
+
+		$content = '';
+		foreach ( \wp_html_split( \wp_kses_post( $html ) ) as $fragment ) {
+			$processor = new \WP_HTML_Tag_Processor( $fragment );
+			if ( ! $processor->next_tag( 'IMG' ) ) {
+				$content .= $fragment;
+				continue;
+			}
+			$images = Remote_Posts::extract_attachments(
+				array(
+					'attachment' => array(
+						'type'   => 'Image',
+						'url'    => $processor->get_attribute( 'src' ),
+						'name'   => $processor->get_attribute( 'alt' ),
+						'width'  => $processor->get_attribute( 'width' ),
+						'height' => $processor->get_attribute( 'height' ),
+					),
+				),
+				1
+			);
+			if ( ! $images ) {
+				$content .= $fragment;
+				continue;
+			}
+			$image = $images[0];
+			$url   = $image['url'];
+			if ( ! isset( $media[ $url ] ) && \count( $media ) >= 20 ) {
+				$content .= $fragment;
+				continue;
+			}
+			$media[ $url ] = \array_merge( $image, $media[ $url ] ?? array() );
+		}
+		return array(
+			'content'     => \trim( $content ),
+			'attachments' => \array_values( $media ),
+		);
 	}
 
 	/**
@@ -425,7 +506,7 @@ class Enable_Mastodon_Apps {
 	 * @param Account|null $user_data The user data.
 	 * @param string       $user_id   The user id.
 	 *
-	 * @return Account The filtered Account.
+	 * @return Account|null The filtered Account.
 	 */
 	public static function api_account_external( $user_data, $user_id ) {
 		if ( ! $user_data && \is_numeric( $user_id ) && Remote_Actors::POST_TYPE === \get_post_type( (int) $user_id ) ) {
@@ -466,7 +547,7 @@ class Enable_Mastodon_Apps {
 	 * @param Account|null $user_data The user data.
 	 * @param string       $user_id   The user id.
 	 *
-	 * @return Account The filtered Account.
+	 * @return Account|null The filtered Account.
 	 */
 	public static function api_account_internal( $user_data, $user_id ) {
 		$user_id_to_use = self::maybe_map_user_to_blog( $user_id );
