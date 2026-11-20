@@ -1101,6 +1101,8 @@ class Admin {
 
 	/**
 	 * Register bulk actions for post types that support ActivityPub.
+	 *
+	 * @return void
 	 */
 	public static function register_post_bulk_actions() {
 		$post_types = \get_post_types_by_support( 'activitypub' );
@@ -1141,7 +1143,7 @@ class Admin {
 			return $send_back;
 		}
 
-		\_prime_post_caches( $post_ids, false, false );
+		\_prime_post_caches( $post_ids, false, true );
 
 		$federated_posts = array();
 		foreach ( $post_ids as $post_id ) {
@@ -1174,6 +1176,8 @@ class Admin {
 
 	/**
 	 * Handle the bulk post deletion page request directly.
+	 *
+	 * @return void
 	 */
 	public static function handle_bulk_post_delete_page() {
 		// Verify nonce.
@@ -1208,6 +1212,8 @@ class Admin {
 
 	/**
 	 * Handle the bulk post deletion confirmation form submission.
+	 *
+	 * @return void
 	 */
 	public static function handle_bulk_post_delete_confirmation() {
 		// Verify nonce.
@@ -1229,7 +1235,7 @@ class Admin {
 			exit;
 		}
 
-		\_prime_post_caches( $selected_posts, false, false );
+		\_prime_post_caches( $selected_posts, false, true );
 
 		$deleted_count = 0;
 		foreach ( $selected_posts as $post_id ) {
@@ -1259,6 +1265,8 @@ class Admin {
 
 	/**
 	 * Handle single post deletion from Fediverse.
+	 *
+	 * @return void
 	 */
 	public static function handle_single_post_delete() {
 		// Get and sanitize post ID.
@@ -1310,7 +1318,7 @@ class Admin {
 	 */
 	private static function soft_delete_post( $post ) {
 		// The Delete has to be queued while the post is still public; a local post gets no audience.
-		$result = add_to_outbox( $post, 'Delete', $post->post_author );
+		$result = add_to_outbox( $post, 'Delete', (int) $post->post_author );
 
 		if ( ! $result || \is_wp_error( $result ) ) {
 			return false;
