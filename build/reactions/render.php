@@ -237,6 +237,7 @@ $context = array(
 if ( $attributes['showActions'] ) {
 	$context['modal']['intent']   = '';
 	$context['copyButtonText']    = __( 'Copy', 'activitypub' );
+	$context['copyStatus']        = '';
 	$context['errorMessage']      = '';
 	$context['isError']           = false;
 	$context['isLoading']         = false;
@@ -398,6 +399,7 @@ ob_start();
 			>
 				<span data-wp-text="context.copyButtonText"></span>
 			</button>
+			<span class="screen-reader-text" data-wp-text="context.copyStatus" role="status"></span>
 		</div>
 	</div>
 	<div class="activitypub-dialog__section">

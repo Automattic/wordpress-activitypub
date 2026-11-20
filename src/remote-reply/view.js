@@ -23,6 +23,7 @@ createModalStore( 'activitypub/remote-reply' );
  * @property {string}  commentId         The comment ID.
  * @property {string}  commentURL        The comment URL.
  * @property {string}  copyButtonText    The copy button text.
+ * @property {string}  copyStatus        Text for the copy status region.
  * @property {string}  errorMessage      The error message.
  * @property {boolean} isError           Whether there is an error.
  * @property {boolean} isLoading         Whether the remote profile is being submitted.
@@ -72,12 +73,14 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 			// Use the Clipboard API to copy text.
 			navigator.clipboard.writeText( context.commentURL ).then(
 				() => {
-					// Update button text to show success.
+					// Update button text to show success, and announce it.
 					context.copyButtonText = i18n.copied;
+					context.copyStatus = i18n.copied;
 
 					// Reset button text after 1 second.
 					setTimeout( () => {
 						context.copyButtonText = i18n.copy;
+						context.copyStatus = '';
 					}, 1000 );
 				},
 				( error ) => {

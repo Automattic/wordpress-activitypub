@@ -182,8 +182,10 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 			navigator.clipboard.writeText( context.postUrl ).then(
 				() => {
 					context.copyButtonText = i18n.copied;
+					context.copyStatus = i18n.copied;
 					setTimeout( () => {
 						context.copyButtonText = i18n.copy;
+						context.copyStatus = '';
 					}, 1000 );
 				},
 				( error ) => {
