@@ -18,8 +18,10 @@ use Activitypub\Sanitize;
 use Activitypub\Scheduler\Actor;
 use Activitypub\Tombstone;
 
+use function Activitypub\add_to_outbox;
 use function Activitypub\count_followers;
 use function Activitypub\get_content_visibility;
+use function Activitypub\get_wp_object_state;
 use function Activitypub\is_user_type_disabled;
 use function Activitypub\site_icon;
 use function Activitypub\site_supports_blocks;
@@ -43,6 +45,7 @@ class Admin {
 		\add_action( 'load-edit.php', array( self::class, 'list_posts' ) );
 		\add_filter( 'page_row_actions', array( self::class, 'row_actions' ), 10, 2 );
 		\add_filter( 'post_row_actions', array( self::class, 'row_actions' ), 10, 2 );
+		\add_filter( 'media_row_actions', array( self::class, 'row_actions' ), 10, 2 );
 		\add_action( 'personal_options_update', array( self::class, 'save_user_settings' ) );
 		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 		\add_action( 'admin_notices', array( self::class, 'admin_notices' ) );
@@ -63,6 +66,10 @@ class Admin {
 
 		\add_action( 'admin_post_delete_actor_confirmed', array( self::class, 'handle_bulk_actor_delete_confirmation' ) );
 		\add_action( 'admin_action_activitypub_confirm_removal', array( self::class, 'handle_bulk_actor_delete_page' ) );
+
+		self::register_post_bulk_actions();
+		\add_action( 'admin_post_activitypub_delete_post', array( self::class, 'handle_single_post_delete' ) );
+		\add_filter( 'removable_query_args', array( self::class, 'add_removable_query_args' ) );
 
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
@@ -131,6 +138,56 @@ class Admin {
 			</div>
 			<?php
 		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$deleted = \absint( $_GET['activitypub_deleted'] ?? 0 );
+		if ( $deleted ) {
+			\wp_admin_notice(
+				\esc_html(
+					\sprintf(
+						/* translators: %d: Number of posts. */
+						\_n( '%d post has been removed from the Fediverse.', '%d posts have been removed from the Fediverse.', $deleted, 'activitypub' ),
+						$deleted
+					)
+				),
+				array(
+					'type'        => 'success',
+					'dismissible' => true,
+				)
+			);
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$not_deleted = \absint( $_GET['activitypub_not_deleted'] ?? 0 );
+		if ( $not_deleted ) {
+			\wp_admin_notice(
+				\esc_html(
+					\sprintf(
+						/* translators: %d: Number of posts. */
+						\_n( '%d post could not be removed from the Fediverse. Only federated posts that you can edit are removed.', '%d posts could not be removed from the Fediverse. Only federated posts that you can edit are removed.', $not_deleted, 'activitypub' ),
+						$not_deleted
+					)
+				),
+				array(
+					'type'        => 'warning',
+					'dismissible' => true,
+				)
+			);
+		}
+	}
+
+	/**
+	 * Add the query args of the Remove from Fediverse notices to the removable query args.
+	 *
+	 * @param array $args The removable query args.
+	 *
+	 * @return array The extended removable query args.
+	 */
+	public static function add_removable_query_args( $args ) {
+		$args[] = 'activitypub_deleted';
+		$args[] = 'activitypub_not_deleted';
+
+		return $args;
 	}
 
 	/**
@@ -397,6 +454,28 @@ class Admin {
 			\wp_add_inline_style(
 				'wp-emoji-styles',
 				'.column-author img.emoji { float: none; }'
+			);
+		}
+
+		if ( 'edit.php' === $hook_suffix || 'upload.php' === $hook_suffix ) {
+			// Confirm the "Remove from Fediverse" row and bulk actions without inline event-handler attributes.
+			\wp_add_inline_script(
+				'common',
+				\sprintf(
+					'document.addEventListener( "click", function ( event ) {
+	var link = event.target.closest && event.target.closest( ".activitypub-delete-link" );
+	if ( link && ! window.confirm( link.dataset.activitypubConfirm ) ) {
+		event.preventDefault();
+	}
+} );
+document.addEventListener( "submit", function ( event ) {
+	var select = document.getElementById( event.submitter && "doaction2" === event.submitter.id ? "bulk-action-selector-bottom" : "bulk-action-selector-top" );
+	if ( select && "activitypub_delete" === select.value && ! window.confirm( %s ) ) {
+		event.preventDefault();
+	}
+} );',
+					\wp_json_encode( \__( 'Remove the selected posts from the Fediverse? They stay on your site.', 'activitypub' ) )
+				)
 			);
 		}
 	}
@@ -988,6 +1067,130 @@ class Admin {
 	}
 
 	/**
+	 * Register bulk actions for post types that support ActivityPub.
+	 *
+	 * @return void
+	 */
+	public static function register_post_bulk_actions() {
+		$post_types = \get_post_types_by_support( 'activitypub' );
+
+		foreach ( $post_types as $post_type ) {
+			// Attachments are listed on the upload screen, not on an edit screen.
+			$screen = 'attachment' === $post_type ? 'upload' : 'edit-' . $post_type;
+
+			\add_filter( "bulk_actions-{$screen}", array( self::class, 'post_bulk_options' ) );
+			\add_filter( "handle_bulk_actions-{$screen}", array( self::class, 'handle_post_bulk_request' ), 10, 3 );
+		}
+	}
+
+	/**
+	 * Add options to the Bulk dropdown on the posts page.
+	 *
+	 * @param array $actions The existing bulk options.
+	 *
+	 * @return array The extended bulk options.
+	 */
+	public static function post_bulk_options( $actions ) {
+		$actions['activitypub_delete'] = \__( 'Remove from Fediverse ⁂', 'activitypub' );
+
+		return $actions;
+	}
+
+	/**
+	 * Remove the selected posts from the Fediverse.
+	 *
+	 * @param string $send_back The URL to send the user back to.
+	 * @param string $action    The requested action.
+	 * @param array  $post_ids  The selected post IDs.
+	 *
+	 * @return string The URL to send the user back to.
+	 */
+	public static function handle_post_bulk_request( $send_back, $action, $post_ids ) {
+		if ( 'activitypub_delete' !== $action ) {
+			return $send_back;
+		}
+
+		\_prime_post_caches( $post_ids, false, true );
+
+		$deleted = 0;
+		foreach ( $post_ids as $post_id ) {
+			if ( self::soft_delete_post( (int) $post_id ) ) {
+				++$deleted;
+			}
+		}
+
+		return \add_query_arg(
+			array(
+				'activitypub_deleted'     => $deleted,
+				'activitypub_not_deleted' => \count( $post_ids ) - $deleted,
+			),
+			$send_back
+		);
+	}
+
+	/**
+	 * Remove a single post from the Fediverse, from its row action.
+	 *
+	 * @return void
+	 */
+	public static function handle_single_post_delete() {
+		$post_id = \absint( $_GET['post_id'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification
+
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ?? '' ) ), 'activitypub-delete-post-' . $post_id ) ) {
+			\wp_die( \esc_html__( 'Security check failed.', 'activitypub' ) );
+		}
+
+		$deleted = (int) self::soft_delete_post( $post_id );
+
+		// Back to the list the row action was on, with its filters and page.
+		$send_back = \wp_get_referer();
+		if ( ! $send_back ) {
+			$post_type = \get_post_type( $post_id );
+			$send_back = 'attachment' === $post_type ? \admin_url( 'upload.php' ) : \add_query_arg( 'post_type', $post_type, \admin_url( 'edit.php' ) );
+		}
+
+		\wp_safe_redirect(
+			\add_query_arg(
+				array(
+					'activitypub_deleted'     => $deleted,
+					'activitypub_not_deleted' => 1 - $deleted,
+				),
+				$send_back
+			)
+		);
+		exit;
+	}
+
+	/**
+	 * Send a Delete for a federated post the current user can edit, and keep it from being federated again.
+	 *
+	 * @param int $post_id The post ID.
+	 *
+	 * @return bool Whether the Delete was queued.
+	 */
+	private static function soft_delete_post( $post_id ) {
+		$post = \get_post( $post_id );
+		if (
+			! $post ||
+			! \current_user_can( 'edit_post', $post->ID ) ||
+			ACTIVITYPUB_OBJECT_STATE_FEDERATED !== get_wp_object_state( $post )
+		) {
+			return false;
+		}
+
+		// The Delete has to be queued while the post is still public; a local post gets no audience.
+		$result = add_to_outbox( $post, 'Delete', (int) $post->post_author );
+
+		if ( ! $result || \is_wp_error( $result ) ) {
+			return false;
+		}
+
+		\update_post_meta( $post->ID, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+
+		return true;
+	}
+
+	/**
 	 * Add ActivityPub infos to the dashboard glance items.
 	 *
 	 * @param array $items The existing glance items.
@@ -1049,24 +1252,49 @@ class Admin {
 	 * @return array The modified actions.
 	 */
 	public static function row_actions( $actions, $post ) {
-		// check if the post is enabled for ActivityPub.
+		// Check if the post type supports ActivityPub.
 		if (
 			! \post_type_supports( \get_post_type( $post ), 'activitypub' ) ||
-			! \in_array( $post->post_status, array( 'pending', 'draft', 'future', 'publish' ), true ) ||
-			! \current_user_can( 'edit_post', $post->ID ) ||
-			ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === get_content_visibility( $post->ID ) ||
-			( site_supports_blocks() && \use_block_editor_for_post_type( $post->post_type ) )
+			! \current_user_can( 'edit_post', $post->ID )
 		) {
 			return $actions;
 		}
 
-		$preview_url = \add_query_arg( 'activitypub', 'true', \get_preview_post_link( $post ) );
+		// Add preview link for non-local posts in block editor.
+		if (
+			\in_array( $post->post_status, array( 'pending', 'draft', 'future', 'publish' ), true ) &&
+			ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL !== get_content_visibility( $post->ID ) &&
+			! ( site_supports_blocks() && \use_block_editor_for_post_type( $post->post_type ) )
+		) {
+			$preview_url = \add_query_arg( 'activitypub', 'true', \get_preview_post_link( $post ) );
 
-		$actions['activitypub'] = \sprintf(
-			'<a href="%s" target="_blank">%s</a>',
-			\esc_url( $preview_url ),
-			\esc_html__( 'Fediverse Preview ⁂', 'activitypub' )
-		);
+			$actions['activitypub'] = \sprintf(
+				'<a href="%s" target="_blank">%s</a>',
+				\esc_url( $preview_url ),
+				\esc_html__( 'Fediverse Preview ⁂', 'activitypub' )
+			);
+		}
+
+		// Add the "Remove from Fediverse" link for federated posts.
+		if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED === get_wp_object_state( $post ) ) {
+			$delete_url = \wp_nonce_url(
+				\add_query_arg(
+					array(
+						'action'  => 'activitypub_delete_post',
+						'post_id' => $post->ID,
+					),
+					\admin_url( 'admin-post.php' )
+				),
+				'activitypub-delete-post-' . $post->ID
+			);
+
+			$actions['activitypub_delete'] = \sprintf(
+				'<a href="%s" class="activitypub-delete-link" data-activitypub-confirm="%s">%s</a>',
+				\esc_url( $delete_url ),
+				\esc_attr__( 'Remove this post from the Fediverse? It stays on your site.', 'activitypub' ),
+				\esc_html__( 'Remove from Fediverse ⁂', 'activitypub' )
+			);
+		}
 
 		return $actions;
 	}
