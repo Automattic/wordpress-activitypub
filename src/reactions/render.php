@@ -394,7 +394,7 @@ ob_start();
 			<button
 				aria-label="<?php esc_attr_e( 'Copy URL to clipboard', 'activitypub' ); ?>"
 				class="wp-element-button"
-				data-wp-on--click="actions.copyPostUrl"
+				data-wp-on--click="actions.copyToClipboard"
 				type="button"
 			>
 				<span data-wp-text="context.copyButtonText"></span>

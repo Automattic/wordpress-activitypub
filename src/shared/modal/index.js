@@ -1,13 +1,22 @@
-import { getContext, store, getElement } from '@wordpress/interactivity';
+import { getConfig, getContext, store, getElement } from '@wordpress/interactivity';
 import { withSyncEvent } from '../with-sync-event';
 
 /**
  * @typedef {Object} context
  * @property {string}  blockId         - The ID of the block.
+ * @property {string}  copyButtonText  - The text of the copy button.
+ * @property {string}  copyStatus      - The text of the copy status region.
  * @property {Object}  modal           - The modal state.
  * @property {boolean} modal.isOpen    - Whether the modal is open.
  * @property {boolean} modal.isCompact - Whether the modal is compact.
  */
+
+/**
+ * The timers that reset a copy button, by button.
+ *
+ * @type {WeakMap<Element, number>}
+ */
+const copyTimeouts = new WeakMap();
 
 /**
  * Set up a modal store with actions and callbacks.
@@ -110,6 +119,43 @@ export function createModalStore( namespace ) {
 					actions.openModal( event );
 				}
 			} ),
+
+			/**
+			 * Copy the value of the field next to the button to the clipboard.
+			 *
+			 * The button keeps its `aria-label`, which wins over its text, so the result
+			 * also goes to the status region next to it.
+			 */
+			copyToClipboard() {
+				const context = getContext();
+				const { i18n } = getConfig( namespace );
+				const { ref } = getElement();
+				const field = ref.closest( '.activitypub-dialog__button-group' ).querySelector( 'input' );
+
+				// Empty the status first, so a second copy is a change and gets announced again.
+				context.copyStatus = '';
+
+				navigator.clipboard.writeText( field.value ).then(
+					() => {
+						context.copyButtonText = i18n.copied;
+						context.copyStatus = i18n.copied;
+
+						// A second click while the result shows restarts the countdown.
+						clearTimeout( copyTimeouts.get( ref ) );
+						copyTimeouts.set(
+							ref,
+							setTimeout( () => {
+								context.copyButtonText = i18n.copy;
+								context.copyStatus = '';
+							}, 1000 )
+						);
+					},
+					( error ) => {
+						// eslint-disable-next-line no-console -- Log error if copying fails.
+						console.error( 'Could not copy text: ', error );
+					}
+				);
+			},
 		},
 
 		callbacks: {

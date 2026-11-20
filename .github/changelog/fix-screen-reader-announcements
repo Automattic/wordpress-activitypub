@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Copying a link in the admin and removing a blocklist subscription are now announced to screen readers.
