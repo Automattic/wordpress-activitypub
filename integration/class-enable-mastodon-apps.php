@@ -323,7 +323,7 @@ class Enable_Mastodon_Apps {
 			}
 			$comment_id = Comment_CPT::post_id_to_comment_id( $status->id );
 			$comment    = $comment_id ? \get_comment( $comment_id ) : null;
-			if ( ! $comment || Remote_Posts::POST_TYPE !== \get_post_type( $comment->comment_post_ID ) ) {
+			if ( ! $comment || Remote_Posts::POST_TYPE !== \get_post_type( (int) $comment->comment_post_ID ) ) {
 				continue;
 			}
 			$parent = $comment->comment_parent ? \get_comment( $comment->comment_parent ) : null;
