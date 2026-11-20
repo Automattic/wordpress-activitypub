@@ -208,23 +208,18 @@ class Test_Search extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Searching the front end for a URL leads to the comments screen, without fetching anything.
+	 * Search the front end as a user with the `activitypub` capability.
 	 *
-	 * @covers \Activitypub\Search::enhance_public_search
+	 * @param string $url  The URL to search for.
+	 * @param string $role Optional. The user's role. Default 'editor'.
+	 * @param array  $args Optional. Query arguments besides `s`.
+	 *
+	 * @return string Where the search redirects to, or an empty string.
 	 */
-	public function test_public_search_leads_to_the_comments_screen() {
-		$user = \get_user_by( 'id', self::factory()->user->create( array( 'role' => 'editor' ) ) );
+	private function public_search_redirect( $url, $role = 'editor', $args = array() ) {
+		$user = \get_user_by( 'id', self::factory()->user->create( array( 'role' => $role ) ) );
 		$user->add_cap( 'activitypub' );
 		\wp_set_current_user( $user->ID );
-
-		// A public IP, so wp_http_validate_url() accepts the URL without a DNS lookup.
-		$url     = 'https://1.1.1.1/notes/3';
-		$fetched = 0;
-		$fetch   = static function ( $pre ) use ( &$fetched ) {
-			++$fetched;
-			return $pre;
-		};
-		\add_filter( 'activitypub_pre_http_get_remote_object', $fetch );
 
 		$redirect = static function ( $location ) {
 			throw new \Exception( \esc_url_raw( $location ) );
@@ -234,16 +229,139 @@ class Test_Search extends \WP_UnitTestCase {
 		// The front end runs the search as the main query.
 		$redirected = '';
 		try {
-			$this->go_to( \add_query_arg( 's', \rawurlencode( $url ), \home_url( '/' ) ) );
+			$this->go_to( \add_query_arg( \array_merge( $args, array( 's' => \rawurlencode( $url ) ) ), \home_url( '/' ) ) );
 		} catch ( \Exception $e ) {
 			$redirected = $e->getMessage();
 		}
 
 		\remove_filter( 'wp_redirect', $redirect );
+
+		return $redirected;
+	}
+
+	/**
+	 * Searching the front end for a reply from the Fediverse leads to the comments screen, without storing it.
+	 *
+	 * @covers \Activitypub\Search::enhance_public_search
+	 */
+	public function test_public_search_leads_to_the_comments_screen() {
+		// A public IP, so wp_http_validate_url() accepts the URL without a DNS lookup.
+		$url     = 'https://1.1.1.1/notes/3';
+		$filters = $this->serve_reply( $url );
+
+		$redirected = $this->public_search_redirect( $url );
+
+		$this->stop_serving( $filters );
+
+		$this->assertEmpty( Comment::url_to_commentid( $url ), 'A search must not store the reply.' );
+		$this->assertSame( \add_query_arg( 's', \rawurlencode( $url ), \admin_url( 'edit-comments.php' ) ), $redirected );
+	}
+
+	/**
+	 * Searching the front end for a URL that leads to nothing from the Fediverse is a normal search.
+	 *
+	 * @covers \Activitypub\Search::enhance_public_search
+	 */
+	public function test_public_search_stays_a_search_for_other_urls() {
+		$nothing = static function () {
+			return new \WP_Error( 'not_found' );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $nothing );
+
+		$redirected = $this->public_search_redirect( 'https://1.1.1.1/about' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $nothing );
+
+		$this->assertSame( '', $redirected );
+	}
+
+	/**
+	 * Searching the front end for a stored reply leads to it, without fetching anything.
+	 *
+	 * @covers \Activitypub\Search::enhance_public_search
+	 */
+	public function test_public_search_leads_to_a_stored_reply() {
+		$url        = 'https://1.1.1.1/notes/12';
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => self::factory()->post->create(),
+				'comment_approved' => '1',
+			)
+		);
+		\add_comment_meta( $comment_id, 'source_id', $url );
+
+		$fetched = 0;
+		$fetch   = static function ( $pre ) use ( &$fetched ) {
+			++$fetched;
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fetch );
+
+		$redirected = $this->public_search_redirect( $url );
+
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch );
 
-		$this->assertSame( 0, $fetched, 'A search must not fetch.' );
-		$this->assertSame( \add_query_arg( 's', \rawurlencode( $url ), \admin_url( 'edit-comments.php' ) ), $redirected );
+		$this->assertSame( 0, $fetched, 'A stored reply needs no fetch.' );
+		$this->assertSame( \esc_url_raw( \get_comment_link( $comment_id ) ), $redirected );
+	}
+
+	/**
+	 * Data for test_public_search_stays_a_search().
+	 *
+	 * @return array[] The role and the query arguments besides `s`.
+	 */
+	public function data_public_search_stays_a_search() {
+		return array(
+			'feed'                      => array( 'editor', array( 'feed' => 'rss2' ) ),
+			'no access to the comments' => array( 'subscriber', array() ),
+		);
+	}
+
+	/**
+	 * A feed, or a user who cannot open the comments screen, gets the normal search.
+	 *
+	 * @dataProvider data_public_search_stays_a_search
+	 * @covers \Activitypub\Search::enhance_public_search
+	 *
+	 * @param string $role The user's role.
+	 * @param array  $args The query arguments besides `s`.
+	 */
+	public function test_public_search_stays_a_search( $role, $args ) {
+		// A reply that would lead to the comments screen otherwise.
+		$url     = 'https://1.1.1.1/notes/13';
+		$filters = $this->serve_reply( $url );
+
+		$redirected = $this->public_search_redirect( $url, $role, $args );
+
+		$this->stop_serving( $filters );
+
+		$this->assertSame( '', $redirected );
+	}
+
+	/**
+	 * The notice names the post a reply is to, so it does not name a private post.
+	 *
+	 * @covers \Activitypub\Search::enhance_admin_comment_search
+	 * @covers \Activitypub\Search::is_importable_reply
+	 */
+	public function test_admin_search_hides_private_posts() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'  => 'Not for everyone',
+				'post_status' => 'private',
+			)
+		);
+
+		$url     = 'https://1.1.1.1/notes/11';
+		$filters = $this->serve_reply( $url, array( 'inReplyTo' => \add_query_arg( 'p', $post_id, \home_url( '/' ) ) ) );
+
+		$notice = $this->admin_search_notice( $url );
+
+		$this->stop_serving( $filters );
+
+		$this->assertStringContainsString( 'This is not a reply to one of your posts.', $notice );
+		$this->assertStringNotContainsString( 'Not for everyone', $notice );
+		$this->assertStringNotContainsString( 'action=activitypub_import_reply', $notice );
 	}
 
 	/**

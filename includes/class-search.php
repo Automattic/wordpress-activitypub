@@ -31,19 +31,19 @@ class Search {
 	}
 
 	/**
-	 * Send a search for a URL on to the comments screen, see enhance_admin_comment_search().
+	 * Lead a search for a URL to the stored reply, or to the comments screen to import it, see enhance_admin_comment_search().
 	 *
 	 * @param \WP_Query $query The WP_Query instance.
 	 * @return \WP_Query The unchanged query, when it does not redirect.
 	 */
 	public static function enhance_public_search( $query ) {
 		// Only enhance main search queries on frontend.
-		if ( ! $query->is_main_query() || ! $query->is_search() || \is_admin() ) {
+		if ( ! $query->is_main_query() || ! $query->is_search() || $query->is_feed() || \is_admin() ) {
 			return $query;
 		}
 
-		// Check user capabilities.
-		if ( ! \current_user_can( 'activitypub' ) ) {
+		// Check user capabilities, the comments screen needs `edit_posts`.
+		if ( ! \current_user_can( 'activitypub' ) || ! \current_user_can( 'edit_posts' ) ) {
 			return $query;
 		}
 
@@ -57,7 +57,19 @@ class Search {
 			return $query;
 		}
 
-		// The comments screen leads to a stored reply and offers to import one that is not stored yet.
+		$existing = Comment::url_to_commentid( $search_term );
+		if ( $existing ) {
+			self::redirect_to_comment( $existing );
+			return $query;
+		}
+
+		// A URL that leads to nothing from the Fediverse is a plain search, as on the comments screen.
+		$reply = self::is_importable_reply( $search_term );
+		if ( \is_wp_error( $reply ) && 'activitypub_import_not_found' === $reply->get_error_code() ) {
+			return $query;
+		}
+
+		// The comments screen offers to import the reply, or says why it cannot be imported.
 		\wp_safe_redirect( \add_query_arg( 's', \rawurlencode( $search_term ), \admin_url( 'edit-comments.php' ) ) );
 		exit;
 	}
@@ -260,7 +272,9 @@ class Search {
 
 		$target  = object_to_id( $object['inReplyTo'] );
 		$post_id = get_target_post_id( $target, url_to_commentid( $target ) );
-		if ( ! $post_id ) {
+
+		// The notice shows the post's title, so it has to be one anyone can read. Stored remote posts are public.
+		if ( ! $post_id || ( ! is_ap_post( $post_id ) && ! is_post_publicly_queryable( $post_id ) ) ) {
 			return new \WP_Error( 'activitypub_import_not_here', \__( 'This is not a reply to one of your posts.', 'activitypub' ) );
 		}
 
