@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Remote posts with non-media attachments no longer fail to load in Mastodon apps.

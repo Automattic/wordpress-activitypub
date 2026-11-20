@@ -10,6 +10,10 @@ namespace Activitypub\Tests;
 use Activitypub\Activity\Actor;
 use Activitypub\Application;
 use Activitypub\Cache\Avatar;
+use Activitypub\Cache\Comment_Media;
+use Activitypub\Cache\Emoji as Emoji_Cache;
+use Activitypub\Cache\File;
+use Activitypub\Cache\Media;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
@@ -36,6 +40,13 @@ class Test_Migration extends \WP_UnitTestCase {
 	 * @var array
 	 */
 	public static $fixtures = array();
+
+	/**
+	 * The `upload_dir` filter of use_empty_uploads_dir().
+	 *
+	 * @var callable|null
+	 */
+	private $uploads_filter;
 
 	/**
 	 * Set up the test.
@@ -974,6 +985,92 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertFileDoesNotExist( "{$dir}/{$hash}-2.webp" );
 
 		Avatar::delete_directory( $dir );
+	}
+
+	/**
+	 * A site without a cache folder does no work: nothing is created.
+	 *
+	 * @covers ::clear_remote_media_caches
+	 */
+	public function test_clear_remote_media_caches_without_a_cache_folder() {
+		$uploads = $this->use_empty_uploads_dir();
+
+		Migration::clear_remote_media_caches();
+
+		$this->assertSame( array(), \array_diff( \scandir( $uploads ), array( '.', '..' ) ) );
+
+		\remove_filter( 'upload_dir', $this->uploads_filter );
+		File::delete_directory( $uploads );
+	}
+
+	/**
+	 * Every remote media cache is deleted right away, with caching off too, the legacy `ap_posts/`
+	 * directory included. The stats images stay, and the caches fill again when content is shown.
+	 *
+	 * @covers ::clear_remote_media_caches
+	 */
+	public function test_clear_remote_media_caches() {
+		$uploads = $this->use_empty_uploads_dir();
+		\add_filter( 'activitypub_remote_cache_enabled', '__return_false' );
+		$cleared = array(
+			Avatar::get_storage_paths( 'migration-clear' )['basedir'],
+			Emoji_Cache::get_storage_paths( 'migration.example' )['basedir'],
+			Comment_Media::get_storage_paths( 'migration-clear' )['basedir'],
+			Media::get_storage_paths( 'migration-clear' )['basedir'],
+			$uploads . '/activitypub/ap_posts/migration-clear',
+		);
+		$stats   = $uploads . '/activitypub/stats/migration-clear';
+		foreach ( \array_merge( $cleared, array( $stats ) ) as $dir ) {
+			\wp_mkdir_p( $dir );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			\file_put_contents( "{$dir}/file.txt", 'file' );
+		}
+
+		Migration::clear_remote_media_caches();
+		\remove_filter( 'activitypub_remote_cache_enabled', '__return_false' );
+
+		foreach ( $cleared as $dir ) {
+			$this->assertDirectoryDoesNotExist( $dir );
+		}
+		$this->assertFileExists( "{$stats}/file.txt" );
+
+		// The cache warms up again the next time the content is shown.
+		$download = static function () {
+			$file = \get_temp_dir() . \wp_unique_filename( \get_temp_dir(), 'emoji.jpg' );
+			\copy( AP_TESTS_DIR . '/data/assets/test.jpg', $file );
+
+			return array(
+				'file'      => $file,
+				'mime_type' => 'image/jpeg',
+			);
+		};
+		\add_filter( 'activitypub_pre_download_url', $download );
+		$cached = Emoji_Cache::get_or_cache( 'https://migration.example/emoji.png', 'migration.example' );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+
+		$this->assertStringContainsString( '/activitypub/emoji/migration.example/', (string) $cached );
+
+		\remove_filter( 'upload_dir', $this->uploads_filter );
+		File::delete_directory( $uploads );
+	}
+
+	/**
+	 * Point uploads at a new, empty folder for one test.
+	 *
+	 * @return string The folder.
+	 */
+	private function use_empty_uploads_dir() {
+		$uploads = \get_temp_dir() . \wp_unique_filename( \get_temp_dir(), 'uploads' );
+		\wp_mkdir_p( $uploads );
+		$this->uploads_filter = static function ( $dir ) use ( $uploads ) {
+			$dir['basedir'] = $uploads;
+			$dir['path']    = $uploads . $dir['subdir'];
+
+			return $dir;
+		};
+		\add_filter( 'upload_dir', $this->uploads_filter );
+
+		return $uploads;
 	}
 
 	/**

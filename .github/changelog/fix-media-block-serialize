@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Audio and video from other servers can no longer add other blocks to replies and posts shown in the Reader.

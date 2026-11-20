@@ -425,6 +425,25 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get method returns error for an empty client ID, even when clients exist.
+	 *
+	 * @covers ::get
+	 */
+	public function test_get_empty_client_id() {
+		$this->create_client(
+			array(
+				'name'          => 'Test Client',
+				'redirect_uris' => array( 'https://example.com/callback' ),
+			)
+		);
+
+		$result = Client::get( '' );
+
+		$this->assertInstanceOf( \WP_Error::class, $result );
+		$this->assertEquals( 'activitypub_client_not_found', $result->get_error_code() );
+	}
+
+	/**
 	 * An unknown client is not discovered outside a REST request, a discovered one still loads.
 	 *
 	 * The consent form on wp-login.php is not rate-limited, so it must not fetch client metadata.

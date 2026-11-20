@@ -14,7 +14,7 @@ use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_stored_id_forms;
 use function Activitypub\is_same_host;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 
 /**
  * ActivityPub Followers Collection.
@@ -61,7 +61,7 @@ class Followers {
 		 * declares an id on a different host than the one that sent the Follow would
 		 * otherwise record a third party, who never sent the Follow, as a follower.
 		 */
-		if ( ! is_same_host( $actor, object_to_uri( $meta ) ) ) {
+		if ( ! is_same_host( $actor, object_to_id( $meta ) ) ) {
 			return new \WP_Error(
 				'activitypub_follower_host_mismatch',
 				\__( 'The follower does not match the actor that sent the request.', 'activitypub' ),

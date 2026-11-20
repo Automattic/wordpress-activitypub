@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Handle shared and edited posts from other servers only once, so they can no longer keep your site busy.

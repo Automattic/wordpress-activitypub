@@ -9,7 +9,7 @@ namespace Activitypub\Handler\Outbox;
 
 use Activitypub\Collection\Remote_Posts;
 
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 use function Activitypub\url_to_commentid;
 
 /**
@@ -36,7 +36,7 @@ class Delete {
 	 * @return \WP_Post|\WP_Comment|\WP_Error|false The deleted object, an error if it may not or could not be deleted, or false without an object.
 	 */
 	public static function handle_delete( $data, $user_id = null ) {
-		$object_id = object_to_uri( $data['object'] ?? '' );
+		$object_id = object_to_id( $data['object'] ?? '' );
 
 		if ( empty( $object_id ) ) {
 			return false;

@@ -11,6 +11,7 @@ use Activitypub\Cache\Comment_Media;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Tests\Equal_Html;
+use Activitypub\Tests\Image_Download_Stub;
 use Activitypub\Tests\Uri_Test_Cases;
 
 use function Activitypub\get_id_hash;
@@ -23,6 +24,7 @@ use function Activitypub\object_id_to_comment;
  */
 class Test_Interactions extends \WP_UnitTestCase {
 	use Equal_Html;
+	use Image_Download_Stub;
 	use Uri_Test_Cases;
 
 	/**
@@ -258,12 +260,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$downloads = 0;
 		$download  = static function () use ( &$downloads ) {
 			++$downloads;
-			$file = \wp_tempnam( 'comment-image.jpg' );
-			\copy( AP_TESTS_DIR . '/data/assets/test.jpg', $file );
-			return array(
-				'file'      => $file,
-				'mime_type' => 'image/jpeg',
-			);
+			return self::image_download();
 		};
 		Comment_Media::init();
 		\add_filter( 'activitypub_pre_download_url', $download );
@@ -914,6 +911,21 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An empty ID finds no interaction, even one stored with an empty source_url.
+	 *
+	 * @covers ::get_by_id
+	 */
+	public function test_get_by_id_with_empty_id() {
+		$comment_id = self::factory()->comment->create( array( 'comment_post_ID' => self::$post_id ) );
+		\add_comment_meta( $comment_id, 'protocol', 'activitypub' );
+		\add_comment_meta( $comment_id, 'source_id', 'https://remote.example/notes/1' );
+		\add_comment_meta( $comment_id, 'source_url', '' );
+
+		$this->assertSame( array(), Interactions::get_by_id( '' ) );
+		$this->assertSame( array(), Interactions::get_by_id( null ) );
+	}
+
+	/**
 	 * Test get interaction by actor with remote actor optimization.
 	 *
 	 * @covers ::get_by_actor
@@ -1375,7 +1387,16 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$emoji_data = get_post_meta( $actor_post_id, '_activitypub_emoji', true );
 		$this->assertNotEmpty( $emoji_data );
 
-		// Test emoji replacement on display via comment_text filter (blocks are rendered).
+		// A comment that is not approved yet shows the shortcodes as text.
+		\wp_set_comment_status( $comment_id, 'hold' );
+		$comment      = get_comment( $comment_id );
+		$pending_text = apply_filters( 'comment_text', $comment->comment_content, $comment );
+		$this->assertStringNotContainsString( '<img', $pending_text );
+		$this->assertStringContainsString( ':kappa:', $pending_text );
+
+		// Test emoji replacement on display via comment_text filter (blocks are rendered once approved).
+		\wp_set_comment_status( $comment_id, 'approve' );
+		$comment                 = get_comment( $comment_id );
 		$comment_text_with_emoji = apply_filters( 'comment_text', $comment->comment_content, $comment );
 		$this->assertStringContainsString( 'kappa.png" alt="kappa" title="kappa" class="emoji"', $comment_text_with_emoji );
 		$this->assertStringContainsString( 'smile.png" alt="smile" title="smile" class="emoji"', $comment_text_with_emoji );
@@ -2290,7 +2311,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertEquals( 'activitypub_update_forbidden', $result->get_error_code() );
 		$this->assertStringNotContainsString( 'HACKED', \get_comment( $comment_id )->comment_content );
 
-		// A media object is found by its url, which has to be on the actor's host as well.
+		// A media object is found by its id, not by its url, so a url that names the comment finds nothing.
 		$result = Interactions::update_comment(
 			array(
 				'actor'  => 'https://attacker.example/users/evil',
@@ -2304,7 +2325,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 				),
 			)
 		);
-		$this->assertWPError( $result );
+		$this->assertFalse( $result );
 		$this->assertStringNotContainsString( 'HACKED', \get_comment( $comment_id )->comment_content );
 
 		// The author on the comment's own host can still update it.

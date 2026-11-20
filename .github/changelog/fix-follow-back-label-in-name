@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+The "Follow back" link in the Followers list now has an accessible name that starts with its visible text, so voice control users can activate it by saying what they see.

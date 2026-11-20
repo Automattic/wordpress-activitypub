@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Cache\Avatar;
+use Activitypub\Cache\Comment_Media;
 use Activitypub\Cache\Emoji as Emoji_Cache;
 use Activitypub\Cache\File;
 use Activitypub\Cache\Media;
@@ -243,8 +244,11 @@ class Migration {
 			// A filesystem walk, so off the upgrade request and onto cron.
 			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_remove_duplicate_cache_files' );
 		}
+		if ( \version_compare( $version_from_db, '9.4.4', '<' ) ) {
+			self::clear_remote_media_caches();
+		}
 
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+		if ( \version_compare( $version_from_db, '9.4.4', '<' ) ) {
 			self::migrate_oauth_token_keys();
 		}
 
@@ -1417,6 +1421,43 @@ class Migration {
 	}
 
 	/**
+	 * Delete the cached copies of remote media.
+	 *
+	 * Avatars, emoji, comment images and remote post media are downloaded again the next time
+	 * they are shown. Two kinds of older content link to the files directly and lose those
+	 * images: remote posts stored before 8.0, whose attachments are in `ap_posts/`, and emoji in
+	 * comments received with 7.9. The stats images are made on this site and stay.
+	 *
+	 * This runs on the upgrade request, so the caches are gone even where cron doesn't run, and
+	 * whether caching is on or not. A site without a cache folder does no work. A request that
+	 * runs out of time before the end never stores the new database version, so the migration
+	 * runs this again once its lock expires; what was deleted stays deleted.
+	 *
+	 * @since 9.4.4
+	 *
+	 * @return void
+	 */
+	public static function clear_remote_media_caches() {
+		// Without creating the year/month upload folder, as wp_upload_dir() does by default.
+		$basedir = \wp_upload_dir( null, false )['basedir'];
+		if ( ! \is_dir( $basedir . '/activitypub' ) ) {
+			return;
+		}
+
+		$directories = array(
+			Avatar::get_base_dir(),
+			Emoji_Cache::get_base_dir(),
+			Comment_Media::get_base_dir(),
+			Media::get_base_dir(),
+			'/activitypub/ap_posts/',
+		);
+
+		foreach ( $directories as $directory ) {
+			File::delete_directory( $basedir . $directory );
+		}
+	}
+
+	/**
 	 * Delete outbox items that belonged to the Application actor.
 	 *
 	 * The Application used to queue Reject activities through the Outbox as user
@@ -1457,7 +1498,7 @@ class Migration {
 	 * not name the site it was issued on, so the tokens are deleted and apps have to be connected
 	 * again.
 	 *
-	 * @since unreleased
+	 * @since 9.4.4
 	 *
 	 * @return void
 	 */

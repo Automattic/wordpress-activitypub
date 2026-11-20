@@ -232,6 +232,125 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * The quoted post is found by the object's id, as the block check finds it, not by its url.
+	 *
+	 * @covers ::handle_quote_request
+	 */
+	public function test_handle_quote_request_finds_the_post_by_its_id() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		$other_id = self::factory()->post->create();
+
+		$activity           = $this->create_quote_request_activity();
+		$activity['object'] = array(
+			'id'   => \get_permalink( self::$post_id ),
+			'type' => 'Image',
+			'url'  => \get_permalink( $other_id ),
+		);
+
+		Quote_Request::handle_quote_request( $activity, Actors::BLOG_USER_ID );
+
+		$this->assertNotEmpty( \get_post_meta( self::$post_id, '_activitypub_quoted_by', false ) );
+		$this->assertEmpty( \get_post_meta( $other_id, '_activitypub_quoted_by', false ) );
+
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * A post that is not public is answered like a post that does not exist.
+	 *
+	 * The request goes to the post's author, with a policy that accepts anyone, so only the
+	 * visibility of the post decides. A published post is the control case and is accepted.
+	 *
+	 * @dataProvider non_public_post_data
+	 * @covers ::handle_quote_request
+	 *
+	 * @param array  $post_args Arguments for the quoted post.
+	 * @param array  $post_meta Meta for the quoted post.
+	 * @param string $expected  The type of the answer.
+	 */
+	public function test_handle_quote_request_rejects_non_public_post( $post_args, $post_meta, $expected ) {
+		\update_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
+
+		$post_id = self::factory()->post->create(
+			\array_merge(
+				array(
+					'post_author' => self::$user_id,
+					'post_status' => 'publish',
+					'meta_input'  => $post_meta,
+				),
+				$post_args
+			)
+		);
+
+		$activity           = $this->create_quote_request_activity();
+		$activity['object'] = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		Quote_Request::handle_quote_request( $activity, self::$user_id, null, Inbox::CONTEXT_INBOX );
+
+		\delete_option( 'activitypub_default_quote_policy' );
+
+		$outbox = $this->get_quote_responses();
+		$this->assertCount( 1, $outbox );
+		$this->assertSame( $expected, \json_decode( $outbox[0]->post_content, true )['type'] );
+
+		if ( 'Reject' === $expected ) {
+			$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quoted_by', false ) );
+		}
+	}
+
+	/**
+	 * Posts that are not public, and a published post as the control case.
+	 *
+	 * @return array[] Post arguments, post meta and the type of the answer.
+	 */
+	public function non_public_post_data() {
+		return array(
+			'published'          => array( array(), array(), 'Accept' ),
+			'draft'              => array( array( 'post_status' => 'draft' ), array(), 'Reject' ),
+			'pending'            => array( array( 'post_status' => 'pending' ), array(), 'Reject' ),
+			'scheduled'          => array(
+				array(
+					'post_status' => 'future',
+					'post_date'   => \gmdate( 'Y-m-d H:i:s', \time() + DAY_IN_SECONDS ),
+				),
+				array(),
+				'Reject',
+			),
+			'private'            => array( array( 'post_status' => 'private' ), array(), 'Reject' ),
+			'trashed'            => array( array( 'post_status' => 'trash' ), array(), 'Reject' ),
+			'password protected' => array( array( 'post_password' => 'secret' ), array(), 'Reject' ),
+			'local visibility'   => array( array(), array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ), 'Reject' ),
+			'private visibility' => array( array(), array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), 'Reject' ),
+			// A type no test enables, post type support is global and outlives a test.
+			'not federated type' => array( array( 'post_type' => 'ap_not_federated' ), array(), 'Reject' ),
+			'cached remote post' => array( array( 'post_type' => 'ap_post' ), array(), 'Reject' ),
+		);
+	}
+
+	/**
+	 * A URL with query arguments the site does not know does not name the static front page.
+	 *
+	 * @covers ::handle_quote_request
+	 */
+	public function test_handle_quote_request_unknown_query_is_not_front_page() {
+		\update_option( 'show_on_front', 'page' );
+		\update_option( 'page_on_front', self::$post_id );
+
+		$activity           = $this->create_quote_request_activity();
+		$activity['object'] = \add_query_arg( 'unknown', '1', \home_url( '/' ) );
+
+		Quote_Request::handle_quote_request( $activity, self::$user_id, null, Inbox::CONTEXT_INBOX );
+
+		$outbox = $this->get_quote_responses();
+		$this->assertCount( 1, $outbox );
+		$this->assertSame( 'Reject', \json_decode( $outbox[0]->post_content, true )['type'] );
+		$this->assertEmpty( \get_post_meta( self::$post_id, '_activitypub_quoted_by', false ) );
+
+		\delete_option( 'show_on_front' );
+		\delete_option( 'page_on_front' );
+	}
+
+	/**
 	 * Get the queued Accept and Reject responses.
 	 *
 	 * @return \WP_Post[] The outbox items.

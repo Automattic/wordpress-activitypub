@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Connected apps can now only look up content from other sites when you have allowed them to read.

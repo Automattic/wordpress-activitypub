@@ -23,6 +23,7 @@
 		"env": "wp-env",
 		"env-start": "wp-env start",
 		"env-stop": "wp-env stop",
+		"env-destroy": "wp-env destroy --force",
 		"env-test": "wp-env run tests-cli --env-cwd=\"wp-content/plugins/activitypub\" vendor/bin/phpunit",
 		"release": "node bin/release.js",
 		"prepare": "git config core.hooksPath .githooks"
@@ -38,7 +39,7 @@
 		"@playwright/test": "^1.65.1",
 		"@testing-library/jest-dom": "^7.0.1",
 		"@testing-library/react": "^16.3.3",
-		"@testing-library/user-event": "^14.6.10",
+		"@testing-library/user-event": "^14.6.12",
 		"@types/jest": "^30.0.0",
 		"@types/react": "^18.3.31",
 		"@types/react-dom": "^18.3.7",

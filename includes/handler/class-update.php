@@ -13,7 +13,8 @@ use Activitypub\Collection\Remote_Posts;
 use Activitypub\Proxy;
 
 use function Activitypub\is_activity_reply;
-use function Activitypub\object_to_uri;
+use function Activitypub\is_quote_activity;
+use function Activitypub\object_to_id;
 
 /**
  * Handle Update requests.
@@ -95,8 +96,8 @@ class Update {
 		$result  = new \WP_Error( 'activitypub_update_failed', 'Update failed' );
 		$updated = true;
 
-		// Check for private and/or direct messages.
-		if ( is_activity_reply( $activity ) ) {
+		// Replies and quotes are stored as comments, as Create decides.
+		if ( is_activity_reply( $activity ) || is_quote_activity( $activity ) ) {
 			$comment_data = Interactions::update_comment( $activity );
 
 			if ( false === $comment_data ) {
@@ -171,7 +172,7 @@ class Update {
 		 * cannot overwrite another host's cached actor by sending an Update whose
 		 * object.id points at a victim actor.
 		 */
-		if ( \is_array( $actor ) && isset( $actor['id'] ) && object_to_uri( $actor ) === object_to_uri( $activity['actor'] ) ) {
+		if ( \is_array( $actor ) && isset( $actor['id'] ) && object_to_id( $actor ) === object_to_id( $activity['actor'] ) ) {
 			$state = Remote_Actors::upsert( $actor );
 		} else {
 			$state = new \WP_Error( 'activitypub_update_failed', \__( 'Update failed: missing, invalid, or unauthorized actor object in Update activity.', 'activitypub' ) );
