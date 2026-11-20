@@ -45,6 +45,7 @@ class Admin {
 		\add_action( 'load-edit.php', array( self::class, 'list_posts' ) );
 		\add_filter( 'page_row_actions', array( self::class, 'row_actions' ), 10, 2 );
 		\add_filter( 'post_row_actions', array( self::class, 'row_actions' ), 10, 2 );
+		\add_filter( 'media_row_actions', array( self::class, 'row_actions' ), 10, 2 );
 		\add_action( 'personal_options_update', array( self::class, 'save_user_settings' ) );
 		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 		\add_action( 'admin_notices', array( self::class, 'admin_notices' ) );
@@ -67,10 +68,7 @@ class Admin {
 		\add_action( 'admin_action_activitypub_confirm_removal', array( self::class, 'handle_bulk_actor_delete_page' ) );
 
 		self::register_post_bulk_actions();
-		\add_action( 'admin_post_activitypub_delete_posts_confirmed', array( self::class, 'handle_bulk_post_delete_confirmation' ) );
-		\add_action( 'admin_action_activitypub_confirm_post_removal', array( self::class, 'handle_bulk_post_delete_page' ) );
 		\add_action( 'admin_post_activitypub_delete_post', array( self::class, 'handle_single_post_delete' ) );
-
 		\add_filter( 'removable_query_args', array( self::class, 'add_removable_query_args' ) );
 
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
@@ -141,15 +139,15 @@ class Admin {
 			<?php
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification
-		$deleted_count = \absint( $_GET['activitypub_deleted'] ?? 0 );
-		if ( $deleted_count ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$deleted = \absint( $_GET['activitypub_deleted'] ?? 0 );
+		if ( $deleted ) {
 			\wp_admin_notice(
 				\esc_html(
 					\sprintf(
-						/* translators: %d: number of posts */
-						\_n( '%d post has been deleted from the Fediverse.', '%d posts have been deleted from the Fediverse.', $deleted_count, 'activitypub' ),
-						$deleted_count
+						/* translators: %d: Number of posts. */
+						\_n( '%d post has been removed from the Fediverse.', '%d posts have been removed from the Fediverse.', $deleted, 'activitypub' ),
+						$deleted
 					)
 				),
 				array(
@@ -159,19 +157,19 @@ class Admin {
 			);
 		}
 
-		$notices = array(
-			'activitypub_no_federated'  => array( 'warning', \__( 'None of the selected posts have been federated yet. Only federated posts can be deleted from the Fediverse.', 'activitypub' ) ),
-			'activitypub_delete_failed' => array( 'error', \__( 'Failed to delete the post from the Fediverse.', 'activitypub' ) ),
-			'activitypub_no_users'      => array( 'warning', \__( 'No valid users were found for deletion from the Fediverse. Please select users that have ActivityPub enabled.', 'activitypub' ) ),
-			'activitypub_no_posts'      => array( 'warning', \__( 'No valid posts were found for deletion from the Fediverse. Please select posts that you have permission to edit.', 'activitypub' ) ),
-		);
-
-		// phpcs:ignore WordPress.Security.NonceVerification
-		foreach ( \array_intersect_key( $notices, $_GET ) as $notice ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$not_deleted = \absint( $_GET['activitypub_not_deleted'] ?? 0 );
+		if ( $not_deleted ) {
 			\wp_admin_notice(
-				\esc_html( $notice[1] ),
+				\esc_html(
+					\sprintf(
+						/* translators: %d: Number of posts. */
+						\_n( '%d post could not be removed from the Fediverse. Only federated posts that you can edit are removed.', '%d posts could not be removed from the Fediverse. Only federated posts that you can edit are removed.', $not_deleted, 'activitypub' ),
+						$not_deleted
+					)
+				),
 				array(
-					'type'        => $notice[0],
+					'type'        => 'warning',
 					'dismissible' => true,
 				)
 			);
@@ -179,25 +177,17 @@ class Admin {
 	}
 
 	/**
-	 * Add ActivityPub query args to the list of removable query args.
+	 * Add the query args of the Remove from Fediverse notices to the removable query args.
 	 *
-	 * This ensures one-time admin notices are removed from the URL after display.
-	 *
-	 * @param array $args The existing removable query args.
+	 * @param array $args The removable query args.
 	 *
 	 * @return array The extended removable query args.
 	 */
 	public static function add_removable_query_args( $args ) {
-		return \array_merge(
-			$args,
-			array(
-				'activitypub_deleted',
-				'activitypub_delete_failed',
-				'activitypub_no_federated',
-				'activitypub_no_users',
-				'activitypub_no_posts',
-			)
-		);
+		$args[] = 'activitypub_deleted';
+		$args[] = 'activitypub_not_deleted';
+
+		return $args;
 	}
 
 	/**
@@ -467,16 +457,25 @@ class Admin {
 			);
 		}
 
-		if ( 'edit.php' === $hook_suffix ) {
-			// Confirm the "Soft Delete" row action without an inline event-handler attribute.
+		if ( 'edit.php' === $hook_suffix || 'upload.php' === $hook_suffix ) {
+			// Confirm the "Remove from Fediverse" row and bulk actions without inline event-handler attributes.
 			\wp_add_inline_script(
 				'common',
-				'document.addEventListener( "click", function ( event ) {
+				\sprintf(
+					'document.addEventListener( "click", function ( event ) {
 	var link = event.target.closest && event.target.closest( ".activitypub-delete-link" );
-	if ( link && link.dataset.activitypubConfirm && ! window.confirm( link.dataset.activitypubConfirm ) ) {
+	if ( link && ! window.confirm( link.dataset.activitypubConfirm ) ) {
 		event.preventDefault();
 	}
-} );'
+} );
+document.addEventListener( "submit", function ( event ) {
+	var select = document.getElementById( event.submitter && "doaction2" === event.submitter.id ? "bulk-action-selector-bottom" : "bulk-action-selector-top" );
+	if ( select && "activitypub_delete" === select.value && ! window.confirm( %s ) ) {
+		event.preventDefault();
+	}
+} );',
+					\wp_json_encode( \__( 'Remove the selected posts from the Fediverse? They stay on your site.', 'activitypub' ) )
+				)
 			);
 		}
 	}
@@ -853,47 +852,6 @@ class Admin {
 	}
 
 	/**
-	 * Store the IDs pending a bulk-delete confirmation and return a one-time token.
-	 *
-	 * The IDs are kept in a short-lived, per-user transient rather than passed
-	 * through the redirect URL, so large selections cannot exceed URL length limits.
-	 *
-	 * @param int[] $ids The IDs to store.
-	 *
-	 * @return string The token to pass to the confirmation page.
-	 */
-	private static function store_bulk_delete_ids( $ids ) {
-		$token = \wp_generate_uuid4();
-		\set_transient(
-			'activitypub_bulk_delete_' . \get_current_user_id() . '_' . $token,
-			\array_values( \array_map( 'absint', (array) $ids ) ),
-			5 * MINUTE_IN_SECONDS
-		);
-
-		return $token;
-	}
-
-	/**
-	 * Retrieve and delete the IDs stored for a bulk-delete confirmation token.
-	 *
-	 * @param string $token The token from the confirmation page request.
-	 *
-	 * @return int[] The stored IDs, or an empty array if none or expired.
-	 */
-	private static function consume_bulk_delete_ids( $token ) {
-		$token = \sanitize_key( $token );
-		if ( '' === $token ) {
-			return array();
-		}
-
-		$key = 'activitypub_bulk_delete_' . \get_current_user_id() . '_' . $token;
-		$ids = \get_transient( $key );
-		\delete_transient( $key );
-
-		return \is_array( $ids ) ? \array_values( \array_filter( $ids ) ) : array();
-	}
-
-	/**
 	 * Handle bulk activitypub requests.
 	 *
 	 * * `add_activitypub_cap` - Add the activitypub capability to the selected users.
@@ -955,17 +913,18 @@ class Admin {
 					++$removed_count;
 				}
 
-				// Build the confirmation URL. The user IDs are stored in a transient and
-				// referenced by token to avoid URL length limits on large selections.
-				$confirmation_url = \add_query_arg(
-					array(
-						'action'    => 'activitypub_confirm_removal',
-						'send_back' => \rawurlencode( $send_back ),
-						'token'     => self::store_bulk_delete_ids( $users ),
-						'_wpnonce'  => \wp_create_nonce( 'activitypub-confirm-removal' ),
-					),
-					\admin_url( 'users.php' )
+				// Build the query args with proper array handling for fediverse deletion confirmation.
+				$query_args = array(
+					'action'    => 'activitypub_confirm_removal',
+					'send_back' => \rawurlencode( $send_back ),
 				);
+
+				// Add user IDs as separate parameters.
+				foreach ( $users as $index => $user_id ) {
+					$query_args[ \sprintf( 'users[%d]', $index ) ] = \absint( $user_id );
+				}
+
+				$confirmation_url = \add_query_arg( $query_args, \admin_url( 'users.php' ) );
 
 				// Force redirect instead of just returning URL.
 				\wp_safe_redirect( $confirmation_url );
@@ -984,20 +943,21 @@ class Admin {
 	 * @return void
 	 */
 	public static function handle_bulk_actor_delete_page() {
-		// Verify nonce.
-		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ?? '' ) ), 'activitypub-confirm-removal' ) ) {
-			\wp_die( \esc_html__( 'Security check failed.', 'activitypub' ) );
-		}
 
 		// Check permissions.
 		if ( ! \current_user_can( 'promote_users' ) ) {
 			\wp_die( \esc_html__( 'You do not have sufficient permissions to access this page.', 'activitypub' ) );
 		}
 
-		// Get the pending user IDs from the transient referenced by the token.
-		$users = self::consume_bulk_delete_ids( \sanitize_key( \wp_unslash( $_GET['token'] ?? '' ) ) );
+		// Get parameters.
+		// phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
+		$users = \wp_unslash( $_GET['users'] ?? array() );
+		// phpcs:ignore WordPress.Security.NonceVerification
+		$send_back = \urldecode( \sanitize_text_field( \wp_unslash( $_GET['send_back'] ?? '' ) ) );
 
-		$send_back = \esc_url_raw( \wp_unslash( $_GET['send_back'] ?? '' ) );
+		// Sanitize user IDs.
+		$users = \array_map( 'absint', (array) $users );
+		$users = \array_filter( $users );
 
 		// Validate send_back URL.
 		if ( empty( $send_back ) ) {
@@ -1006,11 +966,10 @@ class Admin {
 
 		// Load template and exit to prevent WordPress from trying to load other admin pages.
 		\load_template(
-			ACTIVITYPUB_PLUGIN_DIR . 'templates/bulk-delete-confirmation.php',
+			ACTIVITYPUB_PLUGIN_DIR . 'templates/bulk-actor-delete-confirmation.php',
 			false,
 			array(
-				'type'      => 'users',
-				'items'     => $users,
+				'users'     => $users,
 				'send_back' => $send_back,
 			)
 		);
@@ -1124,13 +1083,13 @@ class Admin {
 	 * @return array The extended bulk options.
 	 */
 	public static function post_bulk_options( $actions ) {
-		$actions['activitypub_delete'] = \__( 'Soft Delete', 'activitypub' );
+		$actions['activitypub_delete'] = \__( 'Remove from Fediverse ⁂', 'activitypub' );
 
 		return $actions;
 	}
 
 	/**
-	 * Handle bulk activitypub requests for posts.
+	 * Remove the selected posts from the Fediverse.
 	 *
 	 * @param string $send_back The URL to send the user back to.
 	 * @param string $action    The requested action.
@@ -1145,178 +1104,72 @@ class Admin {
 
 		\_prime_post_caches( $post_ids, false, true );
 
-		$federated_posts = array();
+		$deleted = 0;
 		foreach ( $post_ids as $post_id ) {
-			$post = \get_post( $post_id );
-			if ( $post && ACTIVITYPUB_OBJECT_STATE_FEDERATED === get_wp_object_state( $post ) ) {
-				$federated_posts[] = $post_id;
+			if ( self::soft_delete_post( (int) $post_id ) ) {
+				++$deleted;
 			}
 		}
 
-		// If no federated posts, redirect back with a notice.
-		if ( empty( $federated_posts ) ) {
-			return \add_query_arg( 'activitypub_no_federated', '1', $send_back );
-		}
-
-		// Build the confirmation URL. The post IDs are stored in a transient and
-		// referenced by token to avoid URL length limits on large selections.
-		$confirmation_url = \add_query_arg(
+		return \add_query_arg(
 			array(
-				'action'    => 'activitypub_confirm_post_removal',
-				'send_back' => \rawurlencode( $send_back ),
-				'token'     => self::store_bulk_delete_ids( $federated_posts ),
-				'_wpnonce'  => \wp_create_nonce( 'activitypub-confirm-post-removal' ),
+				'activitypub_deleted'     => $deleted,
+				'activitypub_not_deleted' => \count( $post_ids ) - $deleted,
 			),
-			\admin_url( 'edit.php' )
+			$send_back
 		);
-
-		\wp_safe_redirect( $confirmation_url );
-		exit;
 	}
 
 	/**
-	 * Handle the bulk post deletion page request directly.
+	 * Remove a single post from the Fediverse, from its row action.
 	 *
 	 * @return void
 	 */
-	public static function handle_bulk_post_delete_page() {
-		// Verify nonce.
-		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ?? '' ) ), 'activitypub-confirm-post-removal' ) ) {
+	public static function handle_single_post_delete() {
+		$post_id = \absint( $_GET['post_id'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification
+
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ?? '' ) ), 'activitypub-delete-post-' . $post_id ) ) {
 			\wp_die( \esc_html__( 'Security check failed.', 'activitypub' ) );
 		}
 
-		$posts = self::consume_bulk_delete_ids( \sanitize_key( \wp_unslash( $_GET['token'] ?? '' ) ) );
+		$deleted = (int) self::soft_delete_post( $post_id );
 
-		$send_back = \esc_url_raw( \wp_unslash( $_GET['send_back'] ?? '' ) );
-
-		if ( empty( $send_back ) ) {
-			$send_back  = \admin_url( 'edit.php' );
-			$first_post = $posts ? \get_post( $posts[0] ) : null;
-
-			if ( $first_post ) {
-				$send_back = \add_query_arg( 'post_type', $first_post->post_type, $send_back );
-			}
+		// Back to the list the row action was on, with its filters and page.
+		$send_back = \wp_get_referer();
+		if ( ! $send_back ) {
+			$post_type = \get_post_type( $post_id );
+			$send_back = 'attachment' === $post_type ? \admin_url( 'upload.php' ) : \add_query_arg( 'post_type', $post_type, \admin_url( 'edit.php' ) );
 		}
 
-		\load_template(
-			ACTIVITYPUB_PLUGIN_DIR . 'templates/bulk-delete-confirmation.php',
-			false,
-			array(
-				'type'      => 'posts',
-				'items'     => $posts,
-				'send_back' => $send_back,
+		\wp_safe_redirect(
+			\add_query_arg(
+				array(
+					'activitypub_deleted'     => $deleted,
+					'activitypub_not_deleted' => 1 - $deleted,
+				),
+				$send_back
 			)
 		);
 		exit;
 	}
 
 	/**
-	 * Handle the bulk post deletion confirmation form submission.
+	 * Send a Delete for a federated post the current user can edit, and keep it from being federated again.
 	 *
-	 * @return void
-	 */
-	public static function handle_bulk_post_delete_confirmation() {
-		// Verify nonce.
-		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub-bulk-post-delete' ) ) {
-			\wp_die( \esc_html__( 'Security check failed.', 'activitypub' ) );
-		}
-
-		// Get form data.
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		$selected_posts = \wp_unslash( $_POST['selected_posts'] ?? array() );
-		$send_back      = \esc_url_raw( \wp_unslash( $_POST['send_back'] ?? '' ) );
-
-		// Sanitize post IDs.
-		$selected_posts = \array_map( 'absint', (array) $selected_posts );
-		$selected_posts = \array_filter( $selected_posts );
-
-		if ( empty( $selected_posts ) ) {
-			\wp_safe_redirect( \add_query_arg( 'activitypub_no_posts', '1', $send_back ) );
-			exit;
-		}
-
-		\_prime_post_caches( $selected_posts, false, true );
-
-		$deleted_count = 0;
-		foreach ( $selected_posts as $post_id ) {
-			$post = \get_post( $post_id );
-			if (
-				! $post ||
-				ACTIVITYPUB_OBJECT_STATE_FEDERATED !== get_wp_object_state( $post ) ||
-				! \current_user_can( 'edit_post', $post_id )
-			) {
-				continue;
-			}
-
-			if ( self::soft_delete_post( $post ) ) {
-				++$deleted_count;
-			}
-		}
-
-		if ( $deleted_count ) {
-			$send_back = \add_query_arg( 'activitypub_deleted', $deleted_count, $send_back );
-		} else {
-			$send_back = \add_query_arg( 'activitypub_delete_failed', '1', $send_back );
-		}
-
-		\wp_safe_redirect( $send_back );
-		exit;
-	}
-
-	/**
-	 * Handle single post deletion from Fediverse.
-	 *
-	 * @return void
-	 */
-	public static function handle_single_post_delete() {
-		// Get and sanitize post ID.
-		$post_id = \absint( $_GET['post_id'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification
-
-		// Verify nonce.
-		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ?? '' ) ), 'activitypub-delete-post-' . $post_id ) ) {
-			\wp_die( \esc_html__( 'Security check failed.', 'activitypub' ) );
-		}
-
-		// Check post exists.
-		$post = \get_post( $post_id );
-		if ( ! $post ) {
-			\wp_die( \esc_html__( 'Post not found.', 'activitypub' ) );
-		}
-
-		// Check permissions.
-		if ( ! \current_user_can( 'edit_post', $post_id ) ) {
-			\wp_die( \esc_html__( 'You do not have sufficient permissions to perform this action.', 'activitypub' ) );
-		}
-
-		if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED !== get_wp_object_state( $post ) ) {
-			\wp_die( \esc_html__( 'This post has not been federated.', 'activitypub' ) );
-		}
-
-		$result = self::soft_delete_post( $post );
-
-		$send_back = \admin_url( 'edit.php' );
-		if ( 'post' !== $post->post_type ) {
-			$send_back = \add_query_arg( 'post_type', $post->post_type, $send_back );
-		}
-
-		if ( $result ) {
-			$send_back = \add_query_arg( 'activitypub_deleted', 1, $send_back );
-		} else {
-			$send_back = \add_query_arg( 'activitypub_delete_failed', 1, $send_back );
-		}
-
-		\wp_safe_redirect( $send_back );
-		exit;
-	}
-
-	/**
-	 * Send a Delete activity for a post and keep it from being federated again.
-	 *
-	 * @param \WP_Post $post The post.
+	 * @param int $post_id The post ID.
 	 *
 	 * @return bool Whether the Delete was queued.
 	 */
-	private static function soft_delete_post( $post ) {
+	private static function soft_delete_post( $post_id ) {
+		$post = \get_post( $post_id );
+		if (
+			! $post ||
+			! \current_user_can( 'edit_post', $post->ID ) ||
+			ACTIVITYPUB_OBJECT_STATE_FEDERATED !== get_wp_object_state( $post )
+		) {
+			return false;
+		}
+
 		// The Delete has to be queued while the post is still public; a local post gets no audience.
 		$result = add_to_outbox( $post, 'Delete', (int) $post->post_author );
 
@@ -1414,7 +1267,7 @@ class Admin {
 			);
 		}
 
-		// Add "Delete from Fediverse" link for federated posts.
+		// Add the "Remove from Fediverse" link for federated posts.
 		if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED === get_wp_object_state( $post ) ) {
 			$delete_url = \wp_nonce_url(
 				\add_query_arg(
@@ -1428,11 +1281,10 @@ class Admin {
 			);
 
 			$actions['activitypub_delete'] = \sprintf(
-				'<a href="%s" title="%s" class="activitypub-delete-link" data-activitypub-confirm="%s">%s</a>',
+				'<a href="%s" class="activitypub-delete-link" data-activitypub-confirm="%s">%s</a>',
 				\esc_url( $delete_url ),
-				\esc_attr__( 'Send Delete activity to the Fediverse', 'activitypub' ),
-				\esc_attr__( 'Are you sure you want to delete this post from the Fediverse?', 'activitypub' ),
-				\esc_html__( 'Soft Delete', 'activitypub' )
+				\esc_attr__( 'Remove this post from the Fediverse? It stays on your site.', 'activitypub' ),
+				\esc_html__( 'Remove from Fediverse ⁂', 'activitypub' )
 			);
 		}
 

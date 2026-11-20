@@ -1,4 +1,4 @@
 Significance: minor
 Type: added
 
-Add bulk and row actions to soft delete posts from the Fediverse.
+Add a "Remove from Fediverse" action to the posts and media lists, to remove posts from the Fediverse while keeping them on your site.

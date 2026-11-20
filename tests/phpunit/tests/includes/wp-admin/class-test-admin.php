@@ -101,7 +101,7 @@ class Test_Admin extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test post_bulk_options adds the Soft Delete option after the existing ones.
+	 * Test post_bulk_options adds the Remove from Fediverse option after the existing ones.
 	 *
 	 * @covers ::post_bulk_options
 	 */
@@ -114,7 +114,7 @@ class Test_Admin extends \WP_UnitTestCase {
 		);
 
 		$this->assertSame( array( 'edit', 'trash', 'activitypub_delete' ), \array_keys( $result ) );
-		$this->assertEquals( 'Soft Delete', $result['activitypub_delete'] );
+		$this->assertEquals( 'Remove from Fediverse ⁂', $result['activitypub_delete'] );
 	}
 
 	/**
@@ -129,65 +129,66 @@ class Test_Admin extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * A selection without a federated post goes back with the "no federated posts" notice.
-	 *
-	 * @covers ::handle_post_bulk_request
-	 * @dataProvider data_selection_without_federated_posts
-	 *
-	 * @param string|null $state    The state of a post to create, or null for none.
-	 * @param int[]       $post_ids The IDs to select when no post is created.
-	 */
-	public function test_handle_post_bulk_request_without_federated_posts( $state, $post_ids = array() ) {
-		if ( null !== $state ) {
-			$post_ids = array( $this->create_post( $state ) );
-		}
-
-		$result = Admin::handle_post_bulk_request( 'http://example.org/wp-admin/edit.php', 'activitypub_delete', $post_ids );
-
-		$this->assertStringContainsString( 'activitypub_no_federated=1', $result );
-	}
-
-	/**
-	 * Data provider for selections without a federated post.
-	 *
-	 * @return array[] Test parameters.
-	 */
-	public function data_selection_without_federated_posts() {
-		return array(
-			'pending post'     => array( ACTIVITYPUB_OBJECT_STATE_PENDING ),
-			'deleted post'     => array( ACTIVITYPUB_OBJECT_STATE_DELETED ),
-			'non-existent ids' => array( null, array( 999999, 999998 ) ),
-			'empty selection'  => array( null, array() ),
-		);
-	}
-
-	/**
-	 * Test the bulk request stores IDs in a transient and redirects with a token (not in the URL).
+	 * The bulk action removes the federated posts from the Fediverse and counts the others.
 	 *
 	 * @covers ::handle_post_bulk_request
 	 */
-	public function test_handle_post_bulk_request_redirects_with_token() {
+	public function test_handle_post_bulk_request_deletes_federated_posts() {
+		$federated = $this->create_post();
+		$pending   = $this->create_post( ACTIVITYPUB_OBJECT_STATE_PENDING );
+
+		$result = Admin::handle_post_bulk_request( \admin_url( 'edit.php' ), 'activitypub_delete', array( $federated, $pending, 999999 ) );
+
+		$this->assertStringContainsString( 'activitypub_deleted=1', $result );
+		$this->assertStringContainsString( 'activitypub_not_deleted=2', $result );
+		$this->assertSame( ACTIVITYPUB_OBJECT_STATE_DELETED, \get_post_meta( $federated, 'activitypub_status', true ) );
+		$this->assertSame( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, \get_post_meta( $federated, 'activitypub_content_visibility', true ) );
+		$this->assertSame( ACTIVITYPUB_OBJECT_STATE_PENDING, \get_post_meta( $pending, 'activitypub_status', true ) );
+		$this->assertEmpty( \get_post_meta( $pending, 'activitypub_content_visibility', true ) );
+	}
+
+	/**
+	 * A post the current user cannot edit is not removed from the Fediverse.
+	 *
+	 * @covers ::handle_post_bulk_request
+	 */
+	public function test_handle_post_bulk_request_skips_posts_the_user_cannot_edit() {
 		$post_id = $this->create_post();
 
-		$captured = $this->capture_redirect(
-			static function () use ( $post_id ) {
-				Admin::handle_post_bulk_request( \admin_url( 'edit.php' ), 'activitypub_delete', array( $post_id ) );
-			}
-		);
+		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'author' ) ) );
 
-		$this->assertStringContainsString( 'action=activitypub_confirm_post_removal', $captured );
-		$this->assertStringContainsString( 'token=', $captured );
-		$this->assertStringContainsString( '_wpnonce=', $captured );
-		$this->assertStringNotContainsString( 'posts%5B', $captured, 'Post IDs must not be passed in the URL.' );
+		$result = Admin::handle_post_bulk_request( \admin_url( 'edit.php' ), 'activitypub_delete', array( $post_id ) );
 
-		// The token resolves to the federated post via the transient.
-		\parse_str( (string) \wp_parse_url( $captured, PHP_URL_QUERY ), $query );
-		$stored = \get_transient( 'activitypub_bulk_delete_' . \get_current_user_id() . '_' . \sanitize_key( $query['token'] ) );
-		$this->assertSame( array( $post_id ), $stored );
+		$this->assertStringContainsString( 'activitypub_deleted=0', $result );
+		$this->assertStringContainsString( 'activitypub_not_deleted=1', $result );
+		$this->assertSame( ACTIVITYPUB_OBJECT_STATE_FEDERATED, \get_post_meta( $post_id, 'activitypub_status', true ) );
 	}
 
 	/**
-	 * Test row_actions adds a nonced, confirmed Soft Delete link for federated posts.
+	 * A post whose Delete cannot be queued counts as not deleted and stays federated.
+	 *
+	 * @covers ::handle_post_bulk_request
+	 */
+	public function test_handle_post_bulk_request_counts_a_failed_delete() {
+		$post_id = $this->create_post();
+
+		// Fail every outbox insert.
+		$fail_outbox = static function ( $maybe_empty, $postarr ) {
+			return 'ap_outbox' === ( $postarr['post_type'] ?? '' ) ? true : $maybe_empty;
+		};
+		\add_filter( 'wp_insert_post_empty_content', $fail_outbox, 10, 2 );
+
+		$result = Admin::handle_post_bulk_request( \admin_url( 'edit.php' ), 'activitypub_delete', array( $post_id ) );
+
+		\remove_filter( 'wp_insert_post_empty_content', $fail_outbox, 10 );
+
+		$this->assertStringContainsString( 'activitypub_deleted=0', $result );
+		$this->assertStringContainsString( 'activitypub_not_deleted=1', $result );
+		$this->assertEmpty( \get_post_meta( $post_id, 'activitypub_content_visibility', true ) );
+	}
+
+	/**
+	 * Test row_actions adds a nonced, confirmed Remove from Fediverse link for federated posts.
 	 *
 	 * @covers ::row_actions
 	 */
@@ -200,19 +201,18 @@ class Test_Admin extends \WP_UnitTestCase {
 		$this->assertArrayHasKey( 'activitypub_delete', $result );
 
 		$link = $result['activitypub_delete'];
-		$this->assertStringContainsString( 'Soft Delete', $link );
+		$this->assertStringContainsString( 'Remove from Fediverse ⁂', $link );
 		$this->assertStringContainsString( 'activitypub_delete_post', $link );
 		$this->assertStringContainsString( 'post_id=' . $post_id, $link );
 		$this->assertStringContainsString( '_wpnonce', $link );
 		$this->assertStringContainsString( 'class="activitypub-delete-link"', $link );
 		$this->assertStringContainsString( 'data-activitypub-confirm', $link );
 		$this->assertStringNotContainsString( 'onclick', $link, 'Row action must not use an inline onclick handler.' );
-		$this->assertStringContainsString( 'title=', $link );
-		$this->assertStringContainsString( 'Send Delete activity', $link );
+		$this->assertStringContainsString( 'It stays on your site.', $link );
 	}
 
 	/**
-	 * Test row_actions adds no Soft Delete for posts that are not federated.
+	 * Test row_actions adds no Remove from Fediverse link for posts that are not federated.
 	 *
 	 * @covers ::row_actions
 	 * @dataProvider data_not_federated_states
@@ -291,7 +291,7 @@ class Test_Admin extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * A federated draft still gets the Soft Delete action; the state decides, not the status.
+	 * A federated draft still gets the Remove from Fediverse action; the state decides, not the status.
 	 *
 	 * @covers ::row_actions
 	 */
@@ -304,25 +304,15 @@ class Test_Admin extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test add_removable_query_args keeps existing args and adds every ActivityPub notice arg.
+	 * Test add_removable_query_args keeps existing args and adds the Remove from Fediverse notice args.
 	 *
 	 * @covers ::add_removable_query_args
 	 */
 	public function test_add_removable_query_args() {
-		$result = Admin::add_removable_query_args( array( 'existing_arg' ) );
-
-		$expected_args = array(
-			'existing_arg',
-			'activitypub_deleted',
-			'activitypub_delete_failed',
-			'activitypub_no_federated',
-			'activitypub_no_users',
-			'activitypub_no_posts',
+		$this->assertSame(
+			array( 'existing_arg', 'activitypub_deleted', 'activitypub_not_deleted' ),
+			Admin::add_removable_query_args( array( 'existing_arg' ) )
 		);
-
-		foreach ( $expected_args as $arg ) {
-			$this->assertContains( $arg, $result, "Missing removable query arg: {$arg}" );
-		}
 	}
 
 	/**
@@ -360,20 +350,37 @@ class Test_Admin extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * The confirm handler for the Soft Delete row action is enqueued on the posts screen.
+	 * The confirm handlers for the Remove from Fediverse row and bulk actions are enqueued on the list screens.
 	 *
 	 * @covers ::enqueue_scripts
+	 * @dataProvider data_list_screens
+	 *
+	 * @param string $hook_suffix The list screen.
 	 */
-	public function test_confirm_handler_enqueued_on_posts_screen() {
+	public function test_confirm_handler_enqueued_on_list_screens( $hook_suffix ) {
+		\wp_scripts()->add_data( 'common', 'after', array() );
 		\wp_enqueue_script( 'common' );
-		Admin::enqueue_scripts( 'edit.php' );
+		Admin::enqueue_scripts( $hook_suffix );
 
 		$after = \implode( '', (array) \wp_scripts()->get_data( 'common', 'after' ) );
 		$this->assertStringContainsString( 'activitypub-delete-link', $after );
+		$this->assertStringContainsString( 'activitypub_delete', $after );
 	}
 
 	/**
-	 * Test that a single soft delete sends a Delete and marks the post local-only.
+	 * The list screens with Remove from Fediverse actions.
+	 *
+	 * @return array[] The hook suffix of each screen.
+	 */
+	public function data_list_screens() {
+		return array(
+			'posts' => array( 'edit.php' ),
+			'media' => array( 'upload.php' ),
+		);
+	}
+
+	/**
+	 * Test that removing a single post sends a Delete and marks the post local-only.
 	 *
 	 * @covers ::handle_single_post_delete
 	 */
@@ -389,7 +396,7 @@ class Test_Admin extends \WP_UnitTestCase {
 		$this->assertSame(
 			ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL,
 			\get_post_meta( $post_id, 'activitypub_content_visibility', true ),
-			'A soft-deleted post must be marked local-only, not private.'
+			'A removed post must be marked local-only, not private.'
 		);
 		$this->assertSame(
 			ACTIVITYPUB_OBJECT_STATE_DELETED,
@@ -399,7 +406,7 @@ class Test_Admin extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that a single soft delete with an invalid nonce is rejected.
+	 * Test that removing a single post with an invalid nonce is rejected.
 	 *
 	 * @covers ::handle_single_post_delete
 	 */
@@ -412,136 +419,29 @@ class Test_Admin extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * A token another user stored resolves to nothing for the current user and stays untouched.
+	 * Removing a single post goes back to the list it came from.
 	 *
-	 * @covers ::handle_bulk_post_delete_page
+	 * @covers ::handle_single_post_delete
 	 */
-	public function test_handle_bulk_post_delete_page_ignores_a_foreign_token() {
-		$token = \wp_generate_uuid4();
-		$key   = 'activitypub_bulk_delete_' . ( self::$user_id + 1 ) . '_' . $token;
-		\set_transient( $key, array( 999999 ), MINUTE_IN_SECONDS );
-
-		$_GET['_wpnonce'] = \wp_create_nonce( 'activitypub-confirm-post-removal' );
-		$_GET['token']    = $token;
-
-		$captured = $this->capture_redirect( array( Admin::class, 'handle_bulk_post_delete_page' ) );
-
-		$this->assertStringContainsString( 'activitypub_no_posts=1', $captured );
-		$this->assertSame( array( 999999 ), \get_transient( $key ), 'The other user\'s token must not be consumed.' );
-	}
-
-	/**
-	 * A token is deleted once it has been consumed.
-	 *
-	 * @covers ::handle_bulk_post_delete_page
-	 */
-	public function test_handle_bulk_post_delete_page_consumes_the_token() {
-		$token = \wp_generate_uuid4();
-		$key   = 'activitypub_bulk_delete_' . \get_current_user_id() . '_' . $token;
-		\set_transient( $key, array( 999999 ), MINUTE_IN_SECONDS );
-
-		$_GET['_wpnonce'] = \wp_create_nonce( 'activitypub-confirm-post-removal' );
-		$_GET['token']    = $token;
-
-		$this->capture_redirect( array( Admin::class, 'handle_bulk_post_delete_page' ) );
-
-		$this->assertFalse( \get_transient( $key ), 'The token must be consumed by the first request.' );
-	}
-
-	/**
-	 * A list URL with an encoded search term survives the round trip to the confirmation page.
-	 *
-	 * @covers ::handle_bulk_post_delete_page
-	 */
-	public function test_handle_bulk_post_delete_page_keeps_encoded_send_back() {
-		$_GET['_wpnonce'] = \wp_create_nonce( 'activitypub-confirm-post-removal' );
-		$_GET['token']    = 'unknown';
-		// What PHP hands us after decoding the rawurlencoded value once.
-		$_GET['send_back'] = \admin_url( 'edit.php?s=caf%C3%A9' );
-
-		$captured = $this->capture_redirect( array( Admin::class, 'handle_bulk_post_delete_page' ) );
-
-		$this->assertStringContainsString( 's=caf%C3%A9', $captured );
-	}
-
-	/**
-	 * Test the bulk confirmation sends a Delete and marks posts local-only.
-	 *
-	 * @covers ::handle_bulk_post_delete_confirmation
-	 */
-	public function test_handle_bulk_post_delete_confirmation_deletes() {
+	public function test_handle_single_post_delete_goes_back_to_the_list() {
 		$post_id = $this->create_post();
 
-		$_POST['_wpnonce']       = \wp_create_nonce( 'activitypub-bulk-post-delete' );
-		$_POST['selected_posts'] = array( $post_id );
-		$_POST['send_back']      = \admin_url( 'edit.php' );
+		$_GET['post_id']              = $post_id;
+		$_GET['_wpnonce']             = \wp_create_nonce( 'activitypub-delete-post-' . $post_id );
+		$_REQUEST['_wp_http_referer'] = \admin_url( 'edit.php?paged=3&post_status=publish' );
+		$captured                     = $this->capture_redirect( array( Admin::class, 'handle_single_post_delete' ) );
+		unset( $_REQUEST['_wp_http_referer'] );
 
-		$captured = $this->capture_redirect( array( Admin::class, 'handle_bulk_post_delete_confirmation' ) );
-
+		$this->assertStringStartsWith( \admin_url( 'edit.php?paged=3&post_status=publish' ), $captured );
 		$this->assertStringContainsString( 'activitypub_deleted=1', $captured );
-		$this->assertSame( ACTIVITYPUB_OBJECT_STATE_DELETED, \get_post_meta( $post_id, 'activitypub_status', true ) );
-		$this->assertSame( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, \get_post_meta( $post_id, 'activitypub_content_visibility', true ) );
 	}
 
 	/**
-	 * Submitting the confirmation with nothing selected reports it instead of redirecting silently.
+	 * An editor of a custom-capability post type can remove its posts from the Fediverse.
 	 *
-	 * @covers ::handle_bulk_post_delete_confirmation
+	 * @covers ::handle_post_bulk_request
 	 */
-	public function test_handle_bulk_post_delete_confirmation_reports_empty_selection() {
-		$_POST['_wpnonce']       = \wp_create_nonce( 'activitypub-bulk-post-delete' );
-		$_POST['selected_posts'] = array();
-		$_POST['send_back']      = \admin_url( 'edit.php' );
-
-		$captured = $this->capture_redirect( array( Admin::class, 'handle_bulk_post_delete_confirmation' ) );
-
-		$this->assertStringContainsString( 'activitypub_no_posts=1', $captured );
-	}
-
-	/**
-	 * When no Delete could be queued, the user sees the failure notice, not a success count of zero.
-	 *
-	 * @covers ::handle_bulk_post_delete_confirmation
-	 */
-	public function test_handle_bulk_post_delete_confirmation_reports_when_nothing_was_deleted() {
-		$post_id = $this->create_post();
-
-		// Fail every outbox insert.
-		$fail_outbox = static function ( $maybe_empty, $postarr ) {
-			return 'ap_outbox' === ( $postarr['post_type'] ?? '' ) ? true : $maybe_empty;
-		};
-		\add_filter( 'wp_insert_post_empty_content', $fail_outbox, 10, 2 );
-
-		$_POST['_wpnonce']       = \wp_create_nonce( 'activitypub-bulk-post-delete' );
-		$_POST['selected_posts'] = array( $post_id );
-		$_POST['send_back']      = \admin_url( 'edit.php' );
-
-		$captured = $this->capture_redirect( array( Admin::class, 'handle_bulk_post_delete_confirmation' ) );
-
-		\remove_filter( 'wp_insert_post_empty_content', $fail_outbox, 10 );
-
-		$this->assertStringContainsString( 'activitypub_delete_failed=1', $captured );
-		$this->assertStringNotContainsString( 'activitypub_deleted=0', $captured );
-	}
-
-	/**
-	 * Test the bulk confirmation rejects an invalid nonce.
-	 *
-	 * @covers ::handle_bulk_post_delete_confirmation
-	 */
-	public function test_handle_bulk_post_delete_confirmation_invalid_nonce() {
-		$_POST['_wpnonce'] = 'invalid-nonce';
-
-		$this->expectException( \WPDieException::class );
-		Admin::handle_bulk_post_delete_confirmation();
-	}
-
-	/**
-	 * Test that an editor of a custom-capability post type can bulk soft delete its posts.
-	 *
-	 * @covers ::handle_bulk_post_delete_confirmation
-	 */
-	public function test_handle_bulk_post_delete_confirmation_allows_cpt_only_editor() {
+	public function test_handle_post_bulk_request_allows_cpt_only_editor() {
 		\register_post_type(
 			'ap_event',
 			array(
@@ -578,11 +478,7 @@ class Test_Admin extends \WP_UnitTestCase {
 		$this->assertFalse( \current_user_can( 'edit_posts' ) );
 		$this->assertTrue( \current_user_can( 'edit_post', $post_id ) );
 
-		$_POST['_wpnonce']       = \wp_create_nonce( 'activitypub-bulk-post-delete' );
-		$_POST['selected_posts'] = array( $post_id );
-		$_POST['send_back']      = \admin_url( 'edit.php' );
-
-		$this->capture_redirect( array( Admin::class, 'handle_bulk_post_delete_confirmation' ) );
+		Admin::handle_post_bulk_request( \admin_url( 'edit.php?post_type=ap_event' ), 'activitypub_delete', array( $post_id ) );
 
 		\remove_role( 'ap_event_editor' );
 		\unregister_post_type( 'ap_event' );
@@ -590,7 +486,7 @@ class Test_Admin extends \WP_UnitTestCase {
 		$this->assertSame(
 			ACTIVITYPUB_OBJECT_STATE_DELETED,
 			\get_post_meta( $post_id, 'activitypub_status', true ),
-			'A custom-capability editor must be able to bulk soft delete its federated posts.'
+			'A custom-capability editor must be able to remove its federated posts from the Fediverse.'
 		);
 	}
 
