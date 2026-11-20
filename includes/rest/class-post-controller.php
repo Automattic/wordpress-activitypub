@@ -137,7 +137,7 @@ class Post_Controller extends \WP_REST_Controller {
 
 		$reactions = array();
 
-		foreach ( Comment::get_comment_types() as $type_object ) {
+		foreach ( \wp_list_filter( Comment::get_comment_types(), array( 'reaction' => true ) ) as $type_object ) {
 			$comments = \get_comments(
 				array(
 					'post_id' => $post_id,

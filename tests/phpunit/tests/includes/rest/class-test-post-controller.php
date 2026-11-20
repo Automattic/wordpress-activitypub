@@ -247,6 +247,11 @@ class Test_Post_Controller extends WP_UnitTestCase {
 				'author' => 'Announce User',
 				'url'    => 'https://example.com/announce-user',
 			),
+			array(
+				'type'   => 'quote',
+				'author' => 'Quote User',
+				'url'    => 'https://example.com/quote-user',
+			),
 		);
 
 		foreach ( $reaction_types as $reaction ) {
@@ -273,6 +278,9 @@ class Test_Post_Controller extends WP_UnitTestCase {
 		$this->assertArrayHasKey( 'reposts', $data );
 		$this->assertEquals( '1 like', $data['likes']['label'] );
 		$this->assertEquals( '1 repost', $data['reposts']['label'] );
+
+		// A quote has its own content, it is a comment and not a reaction.
+		$this->assertArrayNotHasKey( 'quotes', $data );
 	}
 
 	/**

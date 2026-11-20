@@ -66,7 +66,7 @@ If a caching layer serves cached HTML where the remote server expects JSON ([con
 Some "missing comments" are protocol semantics, not bugs:
 
 - **Only actual replies become comments.** A post that merely @-mentions you — written from scratch instead of using the Reply button — has no `inReplyTo` and cannot be matched to a post.
-- **Quotes are not replies.** A post that *quotes* yours is shown as a reaction (in the facepile), not as a comment. If you would rather see quotes in the comments, use the [Quotes as Comments snippet](../../snippets/quotes-as-comments).
+- **Quotes are shown as comments.** A post that *quotes* yours is shown in the comment list, with the replies to it below. If you would rather see quotes in the Reactions block, use the [Quotes as Reactions snippet](../../snippets/quotes-as-reactions). Replies to a quote are hidden then, together with the quote.
 - **Visibility matters.** Replies with "mentioned people only" visibility are treated as private messages, not public comments.
 - **Deep threads:** replies to *other people's* replies arrive via the thread; in some setups replies addressed to a local WordPress comment rather than the post are still not imported — a known limitation under investigation.
 - **Companion plugins:** if you run the [Friends plugin](https://wordpress.org/plugins/friends/), mention-only posts appear there as feed items rather than as comments — that is intentional routing.
