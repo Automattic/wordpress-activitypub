@@ -88,6 +88,44 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * App post-format filters must not exclude unformatted remote reader posts.
+	 */
+	public function test_reader_posts_bypass_local_post_format_filters() {
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $user_id );
+		\update_option( 'activitypub_reader_ui', '1' );
+		$standard_id = self::factory()->post->create();
+		$status_id   = self::factory()->post->create();
+		\set_post_format( $status_id, 'status' );
+		$remote_id = self::factory()->post->create( array( 'post_type' => Remote_Posts::POST_TYPE ) );
+		Remote_Posts::add_recipient( $remote_id, $user_id );
+		$other_id = self::factory()->post->create( array( 'post_type' => Remote_Posts::POST_TYPE ) );
+		Remote_Posts::add_recipient( $other_id, $user_id + 100 );
+		$request  = new \WP_REST_Request( 'GET', '/enable-mastodon-apps/api/v1/timelines/home' );
+		$args     = array(
+			'post_type'        => array( 'post' ),
+			'post_status'      => 'publish',
+			'fields'           => 'ids',
+			'posts_per_page'   => 20,
+			'suppress_filters' => false,
+			'tax_query'        => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+				array(
+					'taxonomy' => 'post_format',
+					'field'    => 'slug',
+					'terms'    => array( 'post-format-status' ),
+					'operator' => 'IN',
+				),
+			),
+		);
+		$filtered = Enable_Mastodon_Apps::api_home_timeline_args( $args, $request );
+		$this->assertSame( array( $remote_id, $status_id ), \get_posts( $filtered ) );
+		// The standard format uses NOT IN; local exclusions still apply.
+		$args['tax_query'][0]['operator'] = 'NOT IN';
+		$filtered                         = Enable_Mastodon_Apps::api_home_timeline_args( $args, $request );
+		$this->assertSame( array( $remote_id, $standard_id ), \get_posts( $filtered ) );
+	}
+
+	/**
 	 * Disabled readers, public timelines, and tag timelines keep their query args.
 	 */
 	public function test_reader_timeline_requires_enabled_home_route() {

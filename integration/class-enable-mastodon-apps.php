@@ -21,6 +21,7 @@ use Enable_Mastodon_Apps\Entity\Account;
 use Enable_Mastodon_Apps\Entity\Media_Attachment;
 use Enable_Mastodon_Apps\Entity\Notification;
 use Enable_Mastodon_Apps\Entity\Status;
+use WP_Tax_Query;
 
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\is_user_type_disabled;
@@ -93,6 +94,11 @@ class Enable_Mastodon_Apps {
 
 		$args['post_type']                = \array_unique( \array_merge( (array) $args['post_type'], array( Remote_Posts::POST_TYPE ) ) );
 		$args['activitypub_reader_actor'] = $actor_id;
+		// WordPress taxonomy filters describe local posts, not cached reader posts.
+		if ( ! empty( $args['tax_query'] ) ) {
+			$args['activitypub_reader_local_tax_query'] = $args['tax_query'];
+			unset( $args['tax_query'] );
+		}
 		// The pagination cursors are WordPress post IDs, including for cached posts.
 		$args['orderby'] = 'ID';
 		return $args;
@@ -113,12 +119,23 @@ class Enable_Mastodon_Apps {
 			return $where;
 		}
 		global $wpdb;
-		return $where . $wpdb->prepare(
+		$where .= $wpdb->prepare(
 			" AND ({$wpdb->posts}.post_type <> %s OR EXISTS (SELECT 1 FROM {$wpdb->postmeta} ap_reader WHERE ap_reader.post_id = {$wpdb->posts}.ID AND ap_reader.meta_key = %s AND ap_reader.meta_value = %s))",
 			Remote_Posts::POST_TYPE,
 			'_activitypub_user_id',
 			(string) $actor_id
 		);
+
+		$local_tax_query = $query->get( 'activitypub_reader_local_tax_query' );
+		if ( $local_tax_query ) {
+			$tax_query = new WP_Tax_Query( $local_tax_query );
+			$sql       = $tax_query->get_sql( $wpdb->posts, 'ID' );
+			// The subquery preserves local filters without requiring remote posts to
+			// have WordPress post formats or categories. IN also avoids duplicates.
+			$where .= $wpdb->prepare( " AND ({$wpdb->posts}.post_type = %s OR {$wpdb->posts}.ID IN (SELECT {$wpdb->posts}.ID FROM {$wpdb->posts} ", Remote_Posts::POST_TYPE )
+				. $sql['join'] . ' WHERE 1=1 ' . $sql['where'] . '))';
+		}
+		return $where;
 	}
 
 	/**
@@ -405,8 +422,8 @@ class Enable_Mastodon_Apps {
 	/**
 	 * Resolve external accounts for Mastodon API
 	 *
-	 * @param Account $user_data The user data.
-	 * @param string  $user_id   The user id.
+	 * @param Account|null $user_data The user data.
+	 * @param string       $user_id   The user id.
 	 *
 	 * @return Account The filtered Account.
 	 */
