@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Searching for a reply URL no longer imports it by itself. On the comments screen, a reply that is not stored yet is imported with an extra click, and blocked accounts, domains and keywords are respected.
