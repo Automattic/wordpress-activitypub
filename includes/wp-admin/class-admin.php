@@ -1039,6 +1039,14 @@ document.addEventListener( "submit", function ( event ) {
 			$users_to_delete       = \array_filter( $remove_from_fediverse );
 		}
 
+		// Only the users of this removal that no longer publish to the Fediverse get a Delete.
+		$users_to_delete = \array_filter(
+			\array_intersect( $users_to_delete, \array_map( 'absint', (array) $users ) ),
+			static function ( $user_id ) {
+				return ! user_can_activitypub( $user_id );
+			}
+		);
+
 		// Schedule delete activities for users who should be removed from fediverse.
 		if ( ! empty( $users_to_delete ) ) {
 			// Temporarily bypass capability checks for delete activity scheduling since capabilities were already removed.

@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Removing users from the Fediverse after disabling them now only affects the selected users that are no longer enabled.
