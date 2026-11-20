@@ -1,7 +1,7 @@
 /artifacts/
 /build/**/*.map
 /coverage/
-/node_modules/
+/node_modules
 /vendor/
 _site
 .idea/

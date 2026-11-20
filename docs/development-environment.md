@@ -224,6 +224,35 @@ Change ports in `.wp-env.json`:
 }
 ```
 
+For local changes that should not be committed, like other ports, use `.wp-env.override.json` instead. It is ignored by git.
+
+### Several Worktrees at Once
+
+wp-env creates one environment per directory, with its own containers, database and uploads. A git worktree can therefore run its own environment next to the one of the main checkout, and its tests do not touch the other environments. Only the ports have to differ: give each worktree its own pair in `.wp-env.override.json`. They stay the same across restarts, so the IDs of the worktree's site do not change.
+
+```bash
+git worktree add -b my-branch ../my-branch trunk
+cd ../my-branch
+
+# Dependencies: link the Node packages of the main checkout (or run npm install), install the PHP packages.
+ln -s /path/to/main/checkout/node_modules node_modules
+composer install
+
+# Own ports, own environment, own tests.
+echo '{ "port": 8890, "testsPort": 8891 }' > .wp-env.override.json
+npm run env-start
+npm run env-test -- --filter=Test_Name
+
+# Before removing the worktree: delete its containers, database and uploads.
+npm run env-destroy
+cd -
+git worktree remove ../my-branch
+```
+
+Pick ports that no other environment uses, running or not: `lsof -nP -iTCP:8890 -sTCP:LISTEN` prints nothing for a free port, and `cat ../*/.wp-env.override.json` shows the ports other worktrees next to this one have taken.
+
+`vendor/` has to be installed in the worktree: the environment mounts the worktree, and a link to the vendor directory of the main checkout would point outside of it. Run `npm run build` in the worktree as well if you want to use the admin screens of its site.
+
 ## Running Tests
 
 You can run the test suite using either npm or composer:
