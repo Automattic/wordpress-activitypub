@@ -12,6 +12,7 @@ use Activitypub\Collection\Remote_Actors;
 use Activitypub\Integration\Enable_Mastodon_Apps;
 use Activitypub\Transformer\Comment;
 use Activitypub\Transformer\Post;
+use Enable_Mastodon_Apps\Comment_CPT;
 use Enable_Mastodon_Apps\Entity\Account;
 use Enable_Mastodon_Apps\Entity\Status;
 
@@ -235,6 +236,91 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 		);
 
 		$this->assertNull( Enable_Mastodon_Apps::api_status( null, $post_id ) );
+	}
+
+	/**
+	 * Plain-text replies use the federation renderer without changing stored content or EMA metadata.
+	 *
+	 * @covers ::api_comment_content
+	 */
+	public function test_api_comment_content_links_urls_and_mentions() {
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\get_userdata( $user_id )->add_cap( 'activitypub' );
+		\wp_set_current_user( $user_id );
+		$post_id    = self::factory()->post->create( array( 'post_author' => $user_id ) );
+		$content    = '@username@example.org See https://example.net/plain and <a href="https://example.net/existing">an existing link</a>.';
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_content'  => $content,
+				'comment_approved' => 1,
+				'user_id'          => $user_id,
+			)
+		);
+		\update_comment_meta( $comment_id, 'activitypub_status', 'federated' );
+		$mapped_id              = Comment_CPT::comment_id_to_post_id( $comment_id );
+		$status                 = new Status();
+		$status->id             = (string) $mapped_id;
+		$status->account        = new Account();
+		$status->in_reply_to_id = (string) $post_id;
+		$status->visibility     = 'unlisted';
+		$account                = $status->account;
+
+		$result = Enable_Mastodon_Apps::api_comment_content( $status, $mapped_id );
+		$this->assertSame( $status, $result );
+		$this->assertSame( (string) $mapped_id, $result->id );
+		$this->assertSame( $account, $result->account );
+		$this->assertSame( (string) $post_id, $result->in_reply_to_id );
+		$this->assertSame( 'unlisted', $result->visibility );
+		$this->assertSame( $content, \get_comment( $comment_id )->comment_content );
+
+		$links     = array();
+		$processor = new \WP_HTML_Tag_Processor( $result->content );
+		while ( $processor->next_tag( 'a' ) ) {
+			$links[] = $processor->get_attribute( 'href' );
+		}
+		$this->assertContains( 'https://example.org/users/username', $links );
+		$this->assertContains( 'https://example.net/plain', $links );
+		$this->assertSame( 1, \count( \array_keys( $links, 'https://example.net/existing', true ) ) );
+
+		// Exercise the registered filter after EMA has built the mapped comment status.
+		$filtered = \apply_filters( 'mastodon_api_status', null, $mapped_id );
+		$this->assertInstanceOf( Status::class, $filtered );
+		$this->assertSame( $result->content, $filtered->content );
+	}
+
+	/**
+	 * Incoming remote HTML must not gain local reply-context mentions.
+	 *
+	 * @covers ::api_comment_content
+	 */
+	public function test_api_comment_content_leaves_received_comments_unchanged() {
+		$post_id    = self::factory()->post->create();
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'user_id'         => self::factory()->user->create(),
+			)
+		);
+		\update_comment_meta( $comment_id, 'protocol', 'activitypub' );
+		$status          = new Status();
+		$status->content = '<p>Remote HTML.</p>';
+		$result          = Enable_Mastodon_Apps::api_comment_content( $status, Comment_CPT::comment_id_to_post_id( $comment_id ) );
+		$this->assertSame( '<p>Remote HTML.</p>', $result->content );
+	}
+
+	/**
+	 * Ordinary posts and missing statuses remain owned by the existing handlers.
+	 *
+	 * @covers ::api_comment_content
+	 */
+	public function test_api_comment_content_ignores_other_statuses() {
+		$post_id         = self::factory()->post->create();
+		$status          = new Status();
+		$status->content = 'An ordinary post.';
+		$this->assertSame( $status, Enable_Mastodon_Apps::api_comment_content( $status, $post_id ) );
+		$this->assertSame( 'An ordinary post.', $status->content );
+		$this->assertNull( Enable_Mastodon_Apps::api_comment_content( null, $post_id ) );
 	}
 
 	/**

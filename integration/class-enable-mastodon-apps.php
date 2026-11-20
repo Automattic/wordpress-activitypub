@@ -12,10 +12,12 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Comment as Comment_Utils;
 use Activitypub\Http;
 use Activitypub\Proxy;
 use Activitypub\Transformer\Factory;
 use Activitypub\Webfinger as Webfinger_Util;
+use Enable_Mastodon_Apps\Comment_CPT;
 use Enable_Mastodon_Apps\Entity\Account;
 use Enable_Mastodon_Apps\Entity\Media_Attachment;
 use Enable_Mastodon_Apps\Entity\Notification;
@@ -50,6 +52,7 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_external' ), 15, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_internal' ), 9, 2 );
 		\add_filter( 'mastodon_api_status', array( self::class, 'api_status' ), 9, 2 );
+		\add_filter( 'mastodon_api_status', array( self::class, 'api_comment_content' ), 99, 2 );
 		\add_filter( 'mastodon_api_search', array( self::class, 'api_search' ), 40, 2 );
 		\add_filter( 'mastodon_api_search', array( self::class, 'api_search_by_url' ), 40, 2 );
 		\add_filter( 'mastodon_api_get_posts_query_args', array( self::class, 'api_get_posts_query_args' ) );
@@ -401,6 +404,36 @@ class Enable_Mastodon_Apps {
 		}
 
 		return self::api_post_status( $post_id );
+	}
+
+	/**
+	 * Render local comment replies with the same links and mentions used in federation.
+	 *
+	 * EMA owns the comment's status identity, account and reply relationships. Only
+	 * replace its content after EMA has built the status, including for older replies
+	 * stored as plain text. Received comments already contain the remote author's HTML.
+	 *
+	 * @since unreleased
+	 *
+	 * @param Status|null $status  The status built by EMA.
+	 * @param int         $post_id The mapped comment post ID.
+	 * @return Status|null The status with ActivityPub-formatted comment content.
+	 */
+	public static function api_comment_content( $status, $post_id ) {
+		if ( ! $status instanceof Status || ! \class_exists( Comment_CPT::class ) ) {
+			return $status;
+		}
+		$comment_id = Comment_CPT::post_id_to_comment_id( $post_id );
+		$comment    = $comment_id ? \get_comment( $comment_id ) : null;
+		if ( ! $comment || ! $comment->user_id || Comment_Utils::was_received( $comment ) ) {
+			return $status;
+		}
+		$transformer = Factory::get_transformer( $comment );
+		if ( \is_wp_error( $transformer ) ) {
+			return $status;
+		}
+		$status->content = $transformer->to_object()->get_content();
+		return $status;
 	}
 
 	/**
