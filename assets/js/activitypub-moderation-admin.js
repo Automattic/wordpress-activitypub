@@ -140,6 +140,11 @@
 
 			updateSiteBlockSummary( type );
 		}
+
+		if ( wp.a11y && wp.a11y.speak ) {
+			/* translators: %s: The blocked domain or keyword. */
+			wp.a11y.speak( sprintf( __( '%s added to the block list.', 'activitypub' ), value ) );
+		}
 	}
 
 	/**
@@ -177,12 +182,23 @@
 		var button = $( selector );
 
 		if ( button.length > 0 ) {
+			// The row being removed usually holds focus (its Remove button), so
+			// move focus to the field for adding a new entry before removing it.
+			if ( $.contains( button.closest( 'tr' )[ 0 ], document.activeElement ) ) {
+				$( '#new_' + context + '_' + type ).trigger( 'focus' );
+			}
+
 			// Remove the parent table row
 			button.closest( 'tr' ).remove();
 
 			// Update the summary count for site blocks
 			if ( context === 'site' ) {
 				updateSiteBlockSummary( type );
+			}
+
+			if ( wp.a11y && wp.a11y.speak ) {
+				/* translators: %s: The blocked domain or keyword. */
+				wp.a11y.speak( sprintf( __( '%s removed from the block list.', 'activitypub' ), value ) );
 			}
 		}
 	}
