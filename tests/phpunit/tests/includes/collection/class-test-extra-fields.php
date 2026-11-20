@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Tests\Equal_Html;
 
 /**
  * Test class for Extra Fields.
@@ -16,6 +17,7 @@ use Activitypub\Collection\Extra_Fields;
  * @coversDefaultClass \Activitypub\Collection\Extra_Fields
  */
 class Test_Extra_Fields extends \WP_UnitTestCase {
+	use Equal_Html;
 
 	/**
 	 * Test the get_attachment.
@@ -124,5 +126,81 @@ class Test_Extra_Fields extends \WP_UnitTestCase {
 
 		$this->assertStringContainsString( 'WordPress', $content );
 		$this->assertStringNotContainsString( '<a ', $content, 'It was never a link, and must not become one.' );
+	}
+
+	/**
+	 * A field that holds a single link federates it with the URL as its text, so Mastodon can verify it.
+	 *
+	 * @dataProvider single_link_provider
+	 * @covers ::fields_to_attachments
+	 *
+	 * @param string $content The field content.
+	 */
+	public function test_single_link_field_is_verifiable( $content ) {
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_type'    => Extra_Fields::BLOG_POST_TYPE,
+				'post_content' => $content,
+				'post_title'   => 'Blog',
+			)
+		);
+
+		$attachments = Extra_Fields::fields_to_attachments( array( $post ) );
+
+		$this->assert_equal_html( '<a href="https://notiz.example/" target="_blank" rel="nofollow noopener noreferrer me" translate="no"><span class="invisible">https://</span><span class="">notiz.example/</span><span class="invisible"></span></a>', $attachments[0]['value'] );
+		$this->assertSame( 'https://notiz.example/', \wp_strip_all_tags( $attachments[0]['value'] ), 'The text of the link is its URL.' );
+		$this->assertSame( 'https://notiz.example/', $attachments[1]['href'] );
+	}
+
+	/**
+	 * Fields that hold a single link.
+	 *
+	 * @return array[] The field content.
+	 */
+	public function single_link_provider() {
+		return array(
+			'plain url'          => array( 'https://notiz.example/' ),
+			'link with a label'  => array( '<a href="https://notiz.example/">notiz.example</a>' ),
+			'link in paragraphs' => array( '<!-- wp:paragraph --><p><a href="https://notiz.example/" rel="me">notiz.example</a></p><!-- /wp:paragraph --><!-- wp:paragraph --><p></p><!-- /wp:paragraph -->' ),
+		);
+	}
+
+	/**
+	 * A field that is not a single web link keeps its content.
+	 *
+	 * @dataProvider not_a_single_link_provider
+	 * @covers ::fields_to_attachments
+	 *
+	 * @param string $content  The field content.
+	 * @param string $expected The text the value keeps.
+	 */
+	public function test_other_field_keeps_its_value( $content, $expected ) {
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_type'    => Extra_Fields::BLOG_POST_TYPE,
+				'post_content' => $content,
+				'post_title'   => 'Field',
+			)
+		);
+
+		$attachments = Extra_Fields::fields_to_attachments( array( $post ) );
+
+		$this->assertStringContainsString( $expected, $attachments[0]['value'] );
+		$this->assertStringNotContainsString( 'invisible', $attachments[0]['value'] );
+	}
+
+	/**
+	 * Fields that are not a single web link.
+	 *
+	 * @return array[] The field content and the text it keeps.
+	 */
+	public function not_a_single_link_provider() {
+		return array(
+			'text around a link'  => array( 'Visit <a href="https://notiz.example/">notiz.example</a> now', 'Visit' ),
+			'mail link'           => array( '<a href="mailto:me@notiz.example">Mail</a>', 'mailto:me@notiz.example' ),
+			'plain text'          => array( 'Just text', 'Just text' ),
+			'link without href'   => array( '<a>Anchor</a>', 'Anchor' ),
+			'url text would lose' => array( '<a href="https://notiz.example/?">notiz.example</a>', 'notiz.example' ),
+		);
 	}
 }
