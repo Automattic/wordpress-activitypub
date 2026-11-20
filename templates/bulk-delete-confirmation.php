@@ -41,7 +41,7 @@ if ( 'users' === $item_type ) {
 		}
 	}
 
-	cache_users( array_unique( wp_list_pluck( $items, 'post_author' ) ) );
+	update_post_author_caches( $items );
 }
 
 if ( empty( $items ) ) {
