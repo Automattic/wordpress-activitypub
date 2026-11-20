@@ -64,33 +64,6 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 		} ),
 
 		/**
-		 * Copy the comment URL to the clipboard.
-		 */
-		copyToClipboard() {
-			const context = getContext();
-			const { i18n } = getConfig();
-
-			// Use the Clipboard API to copy text.
-			navigator.clipboard.writeText( context.commentURL ).then(
-				() => {
-					// Update button text to show success, and announce it.
-					context.copyButtonText = i18n.copied;
-					context.copyStatus = i18n.copied;
-
-					// Reset button text after 1 second.
-					setTimeout( () => {
-						context.copyButtonText = i18n.copy;
-						context.copyStatus = '';
-					}, 1000 );
-				},
-				( error ) => {
-					// eslint-disable-next-line no-console -- Log error if copying fails.
-					console.error( 'Could not copy text: ', error );
-				}
-			);
-		},
-
-		/**
 		 * Update the remote profile value.
 		 *
 		 * @param {Event}  event              Input event.
