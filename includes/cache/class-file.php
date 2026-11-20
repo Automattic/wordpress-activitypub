@@ -297,8 +297,8 @@ abstract class File {
 		 * the whole directory: when the delete lands between the two, the move has nowhere to put
 		 * the file and the download is lost for no reason.
 		 */
-		if ( ! static::get_filesystem()->move( $tmp_file, $file_path, true ) ) {
-			if ( ! \wp_mkdir_p( $paths['basedir'] ) || ! static::get_filesystem()->move( $tmp_file, $file_path, true ) ) {
+		if ( ! static::move_to_cache( $tmp_file, $file_path ) ) {
+			if ( ! \wp_mkdir_p( $paths['basedir'] ) || ! static::move_to_cache( $tmp_file, $file_path ) ) {
 				\wp_delete_file( $tmp_file );
 				return false;
 			}
@@ -344,6 +344,88 @@ abstract class File {
 		$paths = static::get_storage_paths( $entity_id );
 
 		return static::delete_directory( $paths['basedir'] );
+	}
+
+	/**
+	 * Move a file into the cache, with the permissions core gives an uploaded file.
+	 *
+	 * The file is made in the temporary directory, by the image editor (which copies the
+	 * permissions of that directory) or by wp_tempnam() (which follows the umask). On many hosts
+	 * that leaves it readable by its owner only, and a move keeps it that way, so the web server
+	 * would refuse to serve it, see set_permissions().
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $source      The file to move.
+	 * @param string $destination The path in the cache.
+	 *
+	 * @return bool True on success, false if the file could not be moved.
+	 */
+	protected static function move_to_cache( $source, $destination ) {
+		if ( ! static::get_filesystem()->move( $source, $destination, true ) ) {
+			return false;
+		}
+
+		static::set_permissions( $destination );
+
+		return true;
+	}
+
+	/**
+	 * Give a cached file the permissions of its directory, without the executable bits.
+	 *
+	 * The same permissions core gives an uploaded file, see _wp_handle_upload().
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $file The cached file.
+	 *
+	 * @return void
+	 */
+	protected static function set_permissions( $file ) {
+		$stat = \stat( \dirname( $file ) );
+		if ( $stat ) {
+			static::get_filesystem()->chmod( $file, $stat['mode'] & 0000666 );
+		}
+	}
+
+	/**
+	 * Give every file in a cache directory the permissions of its directory.
+	 *
+	 * Files cached by earlier versions kept the permissions of the temporary directory they were
+	 * made in, see move_to_cache(). Running this twice is harmless.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $directory The cache directory to walk, subdirectories included.
+	 *
+	 * @return void
+	 */
+	public static function fix_permissions( $directory ) {
+		// A live cache can remove entity directories at any time.
+		if ( ! \is_dir( $directory ) || ! \is_readable( $directory ) ) {
+			return;
+		}
+
+		try {
+			$entries = new \FilesystemIterator( $directory, \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::CURRENT_AS_PATHNAME );
+		} catch ( \UnexpectedValueException $exception ) {
+			// Entity directories can disappear between the readability check and opening the iterator.
+			return;
+		}
+
+		foreach ( $entries as $file ) {
+			// Linked files and directories can lead out of the cache.
+			if ( \is_link( $file ) ) {
+				continue;
+			}
+
+			if ( \is_dir( $file ) ) {
+				static::fix_permissions( $file );
+			} elseif ( \is_file( $file ) ) {
+				static::set_permissions( $file );
+			}
+		}
 	}
 
 	/**
