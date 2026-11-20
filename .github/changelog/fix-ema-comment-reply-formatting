@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Show clickable links and linked mentions in local comment replies viewed through Mastodon apps, including older replies stored as plain text.
