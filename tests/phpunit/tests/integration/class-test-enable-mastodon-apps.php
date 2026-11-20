@@ -17,6 +17,7 @@ use Activitypub\Tests\Equal_Html;
 use Enable_Mastodon_Apps\Handler\Timeline;
 use Enable_Mastodon_Apps\Entity\Account;
 use Enable_Mastodon_Apps\Entity\Status;
+use Enable_Mastodon_Apps\Comment_CPT;
 use ReflectionMethod;
 
 /**
@@ -27,6 +28,121 @@ use ReflectionMethod;
  */
 class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 	use Equal_Html;
+
+	/**
+	 * Remote conversations notify the reader only for mentions or direct replies.
+	 */
+	public function test_reader_comment_notification_relevance() {
+		$this->assertSame( 90, \has_filter( 'mastodon_api_notifications_get', array( Enable_Mastodon_Apps::class, 'filter_reader_comment_notifications' ) ) );
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\get_userdata( $user_id )->add_cap( 'activitypub' );
+		\wp_set_current_user( $user_id );
+		$actor = \Activitypub\Collection\Actors::get_by_id( $user_id );
+		$this->assertNotWPError( $actor );
+		$root         = self::factory()->post->create( array( 'post_type' => Remote_Posts::POST_TYPE ) );
+		$comment_id   = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $root,
+				'comment_content' => 'A remote author replying to themselves.',
+			)
+		);
+		$status       = new Status();
+		$status->id   = (string) Comment_CPT::comment_id_to_post_id( $comment_id );
+		$notification = array(
+			'type'   => 'mention',
+			'status' => $status,
+		);
+		$follow       = array( 'type' => 'follow' );
+		$this->assertSame( array( $follow ), Enable_Mastodon_Apps::filter_reader_comment_notifications( array( $notification, $follow ) ) );
+
+		// A mention link remains meaningful even when core strips its class and rel.
+		\wp_update_comment(
+			array(
+				'comment_ID'      => $comment_id,
+				'comment_content' => '<a href="' . \esc_url( $actor->get_id() ) . '">@reader</a>',
+			)
+		);
+		$this->assertSame( array( $notification ), Enable_Mastodon_Apps::filter_reader_comment_notifications( array( $notification ) ) );
+		\wp_update_comment(
+			array(
+				'comment_ID'      => $comment_id,
+				'comment_content' => 'A remote reply.',
+			)
+		);
+
+		// Real mention tags in the original inbox object survive comment HTML sanitization.
+		$source_id = 'https://remote.example/mentions-reader';
+		\update_comment_meta( $comment_id, 'source_id', $source_id );
+		$inbox = self::factory()->post->create(
+			array(
+				'post_type'    => 'ap_inbox',
+				'post_status'  => 'publish',
+				'post_content' => \wp_json_encode(
+					array(
+						'object' => array(
+							'tag' => array(
+								array(
+									'type' => 'Mention',
+									'href' => $actor->get_id(),
+								),
+							),
+						),
+					)
+				),
+				'meta_input'   => array(
+					'_activitypub_activity_type' => 'Create',
+					'_activitypub_object_id'     => $source_id,
+				),
+			)
+		);
+		$this->assertSame( array( $notification ), Enable_Mastodon_Apps::filter_reader_comment_notifications( array( $notification ) ) );
+		\wp_delete_post( $inbox, true );
+
+		// A direct reply to the reader's local comment needs no explicit mention.
+		$parent = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $root,
+				'user_id'         => $user_id,
+			)
+		);
+		\wp_update_comment(
+			array(
+				'comment_ID'     => $comment_id,
+				'comment_parent' => $parent,
+			)
+		);
+		$this->assertSame( array( $notification ), Enable_Mastodon_Apps::filter_reader_comment_notifications( array( $notification ) ) );
+	}
+
+	/**
+	 * Boosts and likes of somebody else's cached post are not the reader's notifications.
+	 */
+	public function test_reader_reaction_notifications_require_local_target() {
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $user_id );
+		$remote_id = self::factory()->post->create(
+			array(
+				'post_type'   => Remote_Posts::POST_TYPE,
+				'post_author' => 0,
+			)
+		);
+		$own_id    = self::factory()->post->create( array( 'post_author' => $user_id ) );
+		foreach ( array( 'reblog', 'favourite' ) as $type ) {
+			$remote     = new Status();
+			$remote->id = (string) $remote_id;
+			$own        = new Status();
+			$own->id    = (string) $own_id;
+			$unrelated  = array(
+				'type'   => $type,
+				'status' => $remote,
+			);
+			$genuine    = array(
+				'type'   => $type,
+				'status' => $own,
+			);
+			$this->assertSame( array( $genuine ), Enable_Mastodon_Apps::filter_reader_comment_notifications( array( $unrelated, $genuine ) ) );
+		}
+	}
 
 	/**
 	 * The reader adds only the authenticated actor's posts, retaining local posts.

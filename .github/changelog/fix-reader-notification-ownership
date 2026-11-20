@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Avoid notifying readers about unrelated replies, boosts, and likes in cached remote conversations while keeping direct replies and mentions.

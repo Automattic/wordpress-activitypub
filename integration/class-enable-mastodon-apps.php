@@ -11,12 +11,14 @@ use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
 use Activitypub\Http;
 use Activitypub\Proxy;
 use Activitypub\Transformer\Factory;
 use Activitypub\Webfinger as Webfinger_Util;
+use Enable_Mastodon_Apps\Comment_CPT;
 use Enable_Mastodon_Apps\Entity\Account;
 use Enable_Mastodon_Apps\Entity\Media_Attachment;
 use Enable_Mastodon_Apps\Entity\Notification;
@@ -63,6 +65,7 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_status_context', array( self::class, 'api_get_replies' ), 10, 3 );
 		\add_filter( 'mastodon_api_update_credentials', array( self::class, 'api_update_credentials' ), 10, 2 );
 		\add_filter( 'mastodon_api_notifications_get', array( self::class, 'api_notifications_get' ), 10, 5 );
+		\add_filter( 'mastodon_api_notifications_get', array( self::class, 'filter_reader_comment_notifications' ), 90 );
 		\add_filter( 'mastodon_api_tag_timeline', array( self::class, 'api_tag_timeline_tags_pub' ), 20, 2 );
 		\add_filter( 'mastodon_api_timelines_args', array( self::class, 'api_home_timeline_args' ), 20, 2 );
 		\add_filter( 'posts_where', array( self::class, 'filter_reader_timeline_where' ), 20, 2 );
@@ -284,6 +287,76 @@ class Enable_Mastodon_Apps {
 			'content'     => \trim( $content ),
 			'attachments' => \array_values( $media ),
 		);
+	}
+
+	/**
+	 * Do not notify readers about unrelated interactions in remote conversations.
+	 *
+	 * EMA exposes mapped comments as notifications. Reactions require a locally owned
+	 * target; comments on cached Reader posts require a direct reply or explicit mention.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $notifications The combined EMA notifications before pagination.
+	 * @return array Relevant notifications.
+	 */
+	public static function filter_reader_comment_notifications( $notifications ) {
+		if ( ! \class_exists( Comment_CPT::class ) ) {
+			return $notifications;
+		}
+		$actor_id  = self::get_reader_actor_id();
+		$actor     = null === $actor_id ? null : Actors::get_by_id( $actor_id );
+		$actor_url = $actor && ! \is_wp_error( $actor ) ? \untrailingslashit( $actor->get_id() ) : '';
+		foreach ( $notifications as $key => $notification ) {
+			$data   = (array) $notification;
+			$status = $data['status'] ?? null;
+			if ( $status && \in_array( $data['type'] ?? '', array( 'reblog', 'favourite' ), true ) ) {
+				$target = \get_post( $status->id );
+				if ( $target && \get_current_user_id() !== (int) $target->post_author ) {
+					// A reaction concerns the target's author, not everyone caching their post.
+					unset( $notifications[ $key ] );
+					continue;
+				}
+			}
+			if ( 'mention' !== ( $data['type'] ?? '' ) || ! $status ) {
+				continue;
+			}
+			$comment_id = Comment_CPT::post_id_to_comment_id( $status->id );
+			$comment    = $comment_id ? \get_comment( $comment_id ) : null;
+			if ( ! $comment || Remote_Posts::POST_TYPE !== \get_post_type( $comment->comment_post_ID ) ) {
+				continue;
+			}
+			$parent = $comment->comment_parent ? \get_comment( $comment->comment_parent ) : null;
+			if ( $parent && \get_current_user_id() === (int) $parent->user_id && $parent->user_id ) {
+				continue;
+			}
+			$mentioned = false;
+			if ( $actor_url ) {
+				// WordPress comment sanitization can remove the mention class and rel.
+				$links = new \WP_HTML_Tag_Processor( $comment->comment_content );
+				while ( $links->next_tag( 'a' ) ) {
+					if ( \untrailingslashit( (string) $links->get_attribute( 'href' ) ) === $actor_url ) {
+						$mentioned = true;
+						break;
+					}
+				}
+				$source_id = \get_comment_meta( $comment_id, 'source_id', true );
+				$inbox     = $source_id ? Inbox::get_by_type_and_object( 'Create', $source_id ) : null;
+				if ( $inbox instanceof \WP_Post ) {
+					$activity = \json_decode( $inbox->post_content, true );
+					foreach ( (array) ( $activity['object']['tag'] ?? array() ) as $tag ) {
+						if ( \is_array( $tag ) && 'Mention' === ( $tag['type'] ?? '' ) && \untrailingslashit( $tag['href'] ?? '' ) === $actor_url ) {
+							$mentioned = true;
+							break;
+						}
+					}
+				}
+			}
+			if ( ! $mentioned ) {
+				unset( $notifications[ $key ] );
+			}
+		}
+		return \array_values( $notifications );
 	}
 
 	/**
