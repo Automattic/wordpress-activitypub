@@ -1,0 +1,15 @@
+<?php
+/**
+ * WordPress accepts a tag-name string as well as a query array in next_tag().
+ *
+ * @package Activitypub
+ */
+
+class WP_HTML_Tag_Processor {
+	/**
+	 * @param array{tag_name?: string|null, match_offset?: int|null, class_name?: string|null, tag_closers?: string|null}|string|null $query
+	 * @return bool
+	 * @phpstan-impure
+	 */
+	public function next_tag( $query = null ): bool {}
+}

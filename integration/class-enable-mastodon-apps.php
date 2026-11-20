@@ -11,18 +11,25 @@ use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\Http;
 use Activitypub\Proxy;
 use Activitypub\Transformer\Factory;
 use Activitypub\Webfinger as Webfinger_Util;
+use Enable_Mastodon_Apps\Comment_CPT;
 use Enable_Mastodon_Apps\Entity\Account;
 use Enable_Mastodon_Apps\Entity\Media_Attachment;
 use Enable_Mastodon_Apps\Entity\Notification;
 use Enable_Mastodon_Apps\Entity\Status;
+use WP_Tax_Query;
 
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\is_user_type_disabled;
+use function Activitypub\unescape_guid;
+use function Activitypub\user_can_act_as_blog;
+use function Activitypub\user_can_activitypub;
 
 /**
  * Class Enable_Mastodon_Apps.
@@ -58,8 +65,298 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_status_context', array( self::class, 'api_get_replies' ), 10, 3 );
 		\add_filter( 'mastodon_api_update_credentials', array( self::class, 'api_update_credentials' ), 10, 2 );
 		\add_filter( 'mastodon_api_notifications_get', array( self::class, 'api_notifications_get' ), 10, 5 );
+		\add_filter( 'mastodon_api_notifications_get', array( self::class, 'filter_reader_comment_notifications' ), 90 );
 		\add_filter( 'mastodon_api_tag_timeline', array( self::class, 'api_tag_timeline_tags_pub' ), 20, 2 );
+		\add_filter( 'mastodon_api_timelines_args', array( self::class, 'api_home_timeline_args' ), 20, 2 );
+		\add_filter( 'posts_where', array( self::class, 'filter_reader_timeline_where' ), 20, 2 );
+		\add_filter( 'mastodon_api_status', array( self::class, 'api_reader_status' ), 99, 2 );
 		\add_filter( 'activitypub_locale', array( self::class, 'get_post_locale' ), 9, 2 );
+	}
+
+	/**
+	 * Add cached reader posts to the home timeline when Friends does not own it.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array            $args    Timeline query arguments.
+	 * @param \WP_REST_Request $request The timeline request.
+	 * @return array The query arguments.
+	 */
+	public static function api_home_timeline_args( $args, $request ) {
+		if ( '/enable-mastodon-apps/api/v1/timelines/home' !== $request->get_route()
+			|| \class_exists( '\\Friends\\Friends' )
+			|| ! \get_option( 'activitypub_reader_ui', false )
+			|| ! \is_user_logged_in() || empty( $args ) ) {
+			return $args;
+		}
+
+		$actor_id = self::get_reader_actor_id();
+		if ( null === $actor_id ) {
+			return $args;
+		}
+
+		$args['post_type']                = \array_unique( \array_merge( (array) $args['post_type'], array( Remote_Posts::POST_TYPE ) ) );
+		$args['activitypub_reader_actor'] = $actor_id;
+		// WordPress taxonomy filters describe local posts, not cached reader posts.
+		if ( ! empty( $args['tax_query'] ) ) {
+			$args['activitypub_reader_local_tax_query'] = $args['tax_query'];
+			unset( $args['tax_query'] );
+		}
+		// The pagination cursors are WordPress post IDs, including for cached posts.
+		$args['orderby'] = 'ID';
+		return $args;
+	}
+
+	/**
+	 * Scope remote posts without restricting the timeline's existing local posts.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string    $where The SQL WHERE clause.
+	 * @param \WP_Query $query The query.
+	 * @return string The scoped WHERE clause.
+	 */
+	public static function filter_reader_timeline_where( $where, $query ) {
+		$actor_id = $query->get( 'activitypub_reader_actor', null );
+		if ( null === $actor_id ) {
+			return $where;
+		}
+		global $wpdb;
+		$where .= $wpdb->prepare(
+			" AND ({$wpdb->posts}.post_type <> %s OR EXISTS (SELECT 1 FROM {$wpdb->postmeta} ap_reader WHERE ap_reader.post_id = {$wpdb->posts}.ID AND ap_reader.meta_key = %s AND ap_reader.meta_value = %s))",
+			Remote_Posts::POST_TYPE,
+			'_activitypub_user_id',
+			(string) $actor_id
+		);
+
+		$local_tax_query = $query->get( 'activitypub_reader_local_tax_query' );
+		if ( $local_tax_query ) {
+			$tax_query = new WP_Tax_Query( $local_tax_query );
+			$sql       = $tax_query->get_sql( $wpdb->posts, 'ID' );
+			// The subquery preserves local filters without requiring remote posts to
+			// have WordPress post formats or categories. IN also avoids duplicates.
+			$where .= $wpdb->prepare( " AND ({$wpdb->posts}.post_type = %s OR {$wpdb->posts}.ID IN (SELECT {$wpdb->posts}.ID FROM {$wpdb->posts} ", Remote_Posts::POST_TYPE )
+				. $sql['join'] . ' WHERE 1=1 ' . $sql['where'] . '))';
+		}
+		return $where;
+	}
+
+	/**
+	 * Get the reader actor, requiring permission before using the shared blog feed.
+	 *
+	 * @since unreleased
+	 *
+	 * @return int|null The actor ID, or null when reader access is unavailable.
+	 */
+	private static function get_reader_actor_id() {
+		if ( ! \is_user_logged_in() ) {
+			return null;
+		}
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
+			return \get_current_user_id();
+		}
+		if ( user_can_act_as_blog() ) {
+			return Actors::BLOG_USER_ID;
+		}
+		return null;
+	}
+
+	/**
+	 * Represent a cached reader post using its remote author and canonical URL.
+	 *
+	 * Also applies to individual status requests so cached feed data cannot be read
+	 * by guessing another user's post ID. ActivityPub owns the sanitized content.
+	 *
+	 * @since unreleased
+	 *
+	 * @param Status|null $status  The status from earlier handlers.
+	 * @param int         $post_id The post ID.
+	 * @return Status|null The reader status, or the original local status.
+	 */
+	public static function api_reader_status( $status, $post_id ) {
+		$post = \get_post( $post_id );
+		if ( ! $post || Remote_Posts::POST_TYPE !== $post->post_type ) {
+			return $status;
+		}
+		$actor_id   = self::get_reader_actor_id();
+		$recipients = Remote_Posts::get_recipients( $post_id );
+		if ( null === $actor_id || ! \in_array( $actor_id, $recipients, true ) ) {
+			return null;
+		}
+		$remote_actor = \get_post_meta( $post_id, '_activitypub_remote_actor_id', true );
+		if ( ! $remote_actor ) {
+			return null;
+		}
+		$account = self::api_account_external( null, $remote_actor );
+		if ( ! $account instanceof Account ) {
+			return null;
+		}
+		$date = $post->post_date_gmt;
+		if ( ! $date || '0000-00-00 00:00:00' === $date ) {
+			$date = \get_gmt_from_date( $post->post_date );
+		}
+		$media       = self::reader_media( $post->post_content, (array) \get_post_meta( $post_id, '_activitypub_attachments', true ) );
+		$attachments = array();
+		foreach ( $media['attachments'] as $attachment ) {
+			$attachment['mediaType'] = $attachment['type'] . '/octet-stream';
+			$attachment['name']      = $attachment['alt'] ?? '';
+			$attachments[]           = $attachment;
+		}
+		$status = self::activity_to_status(
+			array(
+				'type'       => 'Note',
+				'id'         => unescape_guid( $post->guid ),
+				'url'        => unescape_guid( $post->guid ),
+				'published'  => $date,
+				'content'    => $media['content'],
+				'attachment' => $attachments,
+			),
+			$account,
+			$post_id
+		);
+		if ( ! $status ) {
+			return null;
+		}
+		if ( $post->post_title ) {
+			$status->content = '<strong>' . \esc_html( $post->post_title ) . '</strong>' . PHP_EOL . $status->content;
+		}
+		return $status;
+	}
+
+	/**
+	 * Convert inline reader images and cached media into native attachments.
+	 *
+	 * Cached metadata takes precedence over HTML attributes. Conversion only reads
+	 * the stored HTML and never downloads media while building a timeline.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $content     Cached reader HTML.
+	 * @param array  $attachments Cached attachment metadata.
+	 * @return array Reader content and normalized attachments.
+	 */
+	private static function reader_media( $content, $attachments ) {
+		$media = array();
+		foreach ( $attachments as $attachment ) {
+			if ( \is_array( $attachment ) && ! empty( $attachment['url'] ) && \in_array( $attachment['type'] ?? '', array( 'image', 'audio', 'video' ), true ) ) {
+				$media[ $attachment['url'] ] = $attachment;
+			}
+		}
+
+		// Cached audio and video blocks are displayed by the client's media player.
+		$html = '';
+		foreach ( \parse_blocks( $content ) as $block ) {
+			if ( \in_array( $block['blockName'], array( 'activitypub/audio', 'activitypub/video' ), true ) && isset( $media[ $block['attrs']['url'] ?? '' ] ) ) {
+				continue;
+			}
+			$html .= \serialize_block( $block );
+		}
+
+		$content = '';
+		foreach ( \wp_html_split( \wp_kses_post( $html ) ) as $fragment ) {
+			$processor = new \WP_HTML_Tag_Processor( $fragment );
+			if ( ! $processor->next_tag( 'IMG' ) ) {
+				$content .= $fragment;
+				continue;
+			}
+			$images = Remote_Posts::extract_attachments(
+				array(
+					'attachment' => array(
+						'type'   => 'Image',
+						'url'    => $processor->get_attribute( 'src' ),
+						'name'   => $processor->get_attribute( 'alt' ),
+						'width'  => $processor->get_attribute( 'width' ),
+						'height' => $processor->get_attribute( 'height' ),
+					),
+				),
+				1
+			);
+			if ( ! $images ) {
+				$content .= $fragment;
+				continue;
+			}
+			$image = $images[0];
+			$url   = $image['url'];
+			if ( ! isset( $media[ $url ] ) && \count( $media ) >= 20 ) {
+				$content .= $fragment;
+				continue;
+			}
+			$media[ $url ] = \array_merge( $image, $media[ $url ] ?? array() );
+		}
+		return array(
+			'content'     => \trim( $content ),
+			'attachments' => \array_values( $media ),
+		);
+	}
+
+	/**
+	 * Do not notify readers about unrelated interactions in remote conversations.
+	 *
+	 * EMA exposes mapped comments as notifications. Reactions require a locally owned
+	 * target; comments on cached Reader posts require a direct reply or explicit mention.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $notifications The combined EMA notifications before pagination.
+	 * @return array Relevant notifications.
+	 */
+	public static function filter_reader_comment_notifications( $notifications ) {
+		if ( ! \class_exists( Comment_CPT::class ) ) {
+			return $notifications;
+		}
+		$actor_id  = self::get_reader_actor_id();
+		$actor     = null === $actor_id ? null : Actors::get_by_id( $actor_id );
+		$actor_url = $actor && ! \is_wp_error( $actor ) ? \untrailingslashit( $actor->get_id() ) : '';
+		foreach ( $notifications as $key => $notification ) {
+			$data   = (array) $notification;
+			$status = $data['status'] ?? null;
+			if ( $status && \in_array( $data['type'] ?? '', array( 'reblog', 'favourite' ), true ) ) {
+				$target = \get_post( $status->id );
+				if ( $target && \get_current_user_id() !== (int) $target->post_author ) {
+					// A reaction concerns the target's author, not everyone caching their post.
+					unset( $notifications[ $key ] );
+					continue;
+				}
+			}
+			if ( 'mention' !== ( $data['type'] ?? '' ) || ! $status ) {
+				continue;
+			}
+			$comment_id = Comment_CPT::post_id_to_comment_id( $status->id );
+			$comment    = $comment_id ? \get_comment( $comment_id ) : null;
+			if ( ! $comment || Remote_Posts::POST_TYPE !== \get_post_type( (int) $comment->comment_post_ID ) ) {
+				continue;
+			}
+			$parent = $comment->comment_parent ? \get_comment( $comment->comment_parent ) : null;
+			if ( $parent && \get_current_user_id() === (int) $parent->user_id && $parent->user_id ) {
+				continue;
+			}
+			$mentioned = false;
+			if ( $actor_url ) {
+				// WordPress comment sanitization can remove the mention class and rel.
+				$links = new \WP_HTML_Tag_Processor( $comment->comment_content );
+				while ( $links->next_tag( 'a' ) ) {
+					if ( \untrailingslashit( (string) $links->get_attribute( 'href' ) ) === $actor_url ) {
+						$mentioned = true;
+						break;
+					}
+				}
+				$source_id = \get_comment_meta( $comment_id, 'source_id', true );
+				$inbox     = $source_id ? Inbox::get_by_type_and_object( 'Create', $source_id ) : null;
+				if ( $inbox instanceof \WP_Post ) {
+					$activity = \json_decode( $inbox->post_content, true );
+					foreach ( (array) ( $activity['object']['tag'] ?? array() ) as $tag ) {
+						if ( \is_array( $tag ) && 'Mention' === ( $tag['type'] ?? '' ) && \untrailingslashit( $tag['href'] ?? '' ) === $actor_url ) {
+							$mentioned = true;
+							break;
+						}
+					}
+				}
+			}
+			if ( ! $mentioned ) {
+				unset( $notifications[ $key ] );
+			}
+		}
+		return \array_values( $notifications );
 	}
 
 	/**
@@ -279,10 +576,10 @@ class Enable_Mastodon_Apps {
 	/**
 	 * Resolve external accounts for Mastodon API
 	 *
-	 * @param Account $user_data The user data.
-	 * @param string  $user_id   The user id.
+	 * @param Account|null $user_data The user data.
+	 * @param string       $user_id   The user id.
 	 *
-	 * @return Account The filtered Account.
+	 * @return Account|null The filtered Account.
 	 */
 	public static function api_account_external( $user_data, $user_id ) {
 		if ( ! $user_data && \is_numeric( $user_id ) && Remote_Actors::POST_TYPE === \get_post_type( (int) $user_id ) ) {
@@ -323,7 +620,7 @@ class Enable_Mastodon_Apps {
 	 * @param Account|null $user_data The user data.
 	 * @param string       $user_id   The user id.
 	 *
-	 * @return Account The filtered Account.
+	 * @return Account|null The filtered Account.
 	 */
 	public static function api_account_internal( $user_data, $user_id ) {
 		$user_id_to_use = self::maybe_map_user_to_blog( $user_id );
@@ -396,7 +693,7 @@ class Enable_Mastodon_Apps {
 	 */
 	public static function api_status( $status, $post_id ) {
 		$post = \get_post( $post_id );
-		if ( ! $post ) {
+		if ( ! $post || Remote_Posts::POST_TYPE === $post->post_type ) {
 			return $status;
 		}
 

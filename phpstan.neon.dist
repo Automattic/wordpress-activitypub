@@ -20,6 +20,8 @@ parameters:
 	stubFiles:
 		# Core documents the escaping functions as taking a string, but they convert any scalar.
 		- tests/phpstan/stubs/escaping.stub
+		# The WordPress stub omits the supported tag-name string shorthand.
+		- tests/phpstan/stubs/html-tag-processor.stub
 	treatPhpDocTypesAsCertain: false
 	# Keep the baseline in sync when findings are fixed, rather than hiding regressions.
 	reportUnmatchedIgnoredErrors: true

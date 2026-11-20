@@ -27,6 +27,64 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	use Uri_Test_Cases;
 
 	/**
+	 * Cache media dimensions through inserts, updates, and attachment removal.
+	 */
+	public function test_attachment_metadata_survives_cache_updates() {
+		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
+			'object' => array(
+				'id'           => 'https://example.com/objects/media-metadata',
+				'type'         => 'Note',
+				'attributedTo' => 'https://example.com/users/testuser',
+				'content'      => '<p>Screenshot</p>',
+				'attachment'   => array(
+					array(
+						'type'      => 'Document',
+						'url'       => 'https://example.com/photo.png',
+						'mediaType' => 'image/png',
+						'name'      => 'C:\\Users\\photo',
+						'width'     => 640,
+						'height'    => 480,
+						'blurhash'  => 'test-hash',
+					),
+				),
+			),
+		);
+		$post     = Remote_Posts::add( $activity, 1 );
+		$this->assertInstanceOf( '\\WP_Post', $post );
+		$media = \get_post_meta( $post->ID, '_activitypub_attachments', true );
+		$this->assertSame( 640, $media[0]['width'] );
+		$this->assertSame( 480, $media[0]['height'] );
+		$this->assertSame( 'C:\\Users\\photo', $media[0]['alt'] );
+		$this->assertSame( 'test-hash', $media[0]['blurhash'] );
+		$activity['object']['attachment'][0]['width'] = 800;
+		Remote_Posts::update( $activity, 1 );
+		$this->assertSame( 800, \get_post_meta( $post->ID, '_activitypub_attachments', true )[0]['width'] );
+		unset( $activity['object']['attachment'] );
+		Remote_Posts::update( $activity, 1 );
+		$this->assertSame( array(), \get_post_meta( $post->ID, '_activitypub_attachments', true ) );
+	}
+
+	/**
+	 * Malformed dimensions must not produce invalid media sizes.
+	 */
+	public function test_extract_attachments_rejects_invalid_dimensions() {
+		foreach ( array( -640, 0, '640px', array( 640 ) ) as $width ) {
+			$media = Remote_Posts::extract_attachments(
+				array(
+					'attachment' => array(
+						'url'    => 'https://example.com/photo.png',
+						'width'  => $width,
+						'height' => 480,
+					),
+				)
+			);
+			$this->assertArrayNotHasKey( 'width', $media[0] );
+			$this->assertSame( 480, $media[0]['height'] );
+		}
+	}
+
+	/**
 	 * A single attachment URL is handled like the same URL in a list.
 	 *
 	 * @covers ::extract_attachments
