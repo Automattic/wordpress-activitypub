@@ -223,7 +223,7 @@ class Test_Functions_Media extends \WP_UnitTestCase {
 		$this->assertStringEndsWith( '<!-- /wp:activitypub/audio -->', $result );
 		$this->assertStringContainsString( '<figure class="wp-block-audio">', $result );
 		$this->assertStringContainsString( '<audio controls src="' . $url . '"></audio>', $result );
-		$this->assertStringContainsString( '"url":"https:\/\/example.com\/audio.mp3"', $result );
+		$this->assertSame( $url, \parse_blocks( $result )[0]['attrs']['url'] );
 	}
 
 	/**
@@ -239,7 +239,30 @@ class Test_Functions_Media extends \WP_UnitTestCase {
 		$this->assertStringEndsWith( '<!-- /wp:activitypub/video -->', $result );
 		$this->assertStringContainsString( '<figure class="wp-block-video">', $result );
 		$this->assertStringContainsString( '<video controls src="' . $url . '"></video>', $result );
-		$this->assertStringContainsString( '"url":"https:\/\/example.com\/video.mp4"', $result );
+		$this->assertSame( $url, \parse_blocks( $result )[0]['attrs']['url'] );
+	}
+
+	/**
+	 * A media URL cannot end the block comment and start a block of its own.
+	 *
+	 * @covers \Activitypub\generate_audio_block
+	 * @covers \Activitypub\generate_video_block
+	 */
+	public function test_media_url_cannot_add_a_block() {
+		$url = 'https://example.com/a.mp3"} --><!-- wp:core/rss {"feedURL":"https://example.com/feed"} /--><!-- wp:activitypub/audio {"url":"x';
+
+		$markups = array(
+			'activitypub/audio' => \Activitypub\generate_audio_block( $url ),
+			'activitypub/video' => \Activitypub\generate_video_block( $url ),
+		);
+
+		foreach ( $markups as $name => $markup ) {
+			$blocks = \array_values( \array_filter( \parse_blocks( $markup ), static fn( $block ) => null !== $block['blockName'] ) );
+
+			$this->assertCount( 1, $blocks, $name );
+			$this->assertSame( $name, $blocks[0]['blockName'] );
+			$this->assertSame( $url, $blocks[0]['attrs']['url'] );
+		}
 	}
 
 	/**

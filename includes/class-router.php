@@ -171,6 +171,19 @@ class Router {
 			return $template;
 		}
 
+		/*
+		 * The same for a comment: the tombstone above only matches the exact URL, and
+		 * `Comment::should_be_federated()` lets a trashed or spam comment through so its
+		 * Delete can fire. Only an approved comment is served.
+		 *
+		 * Its post is not checked: a federated comment is an object of its own and stays
+		 * reachable under its ID when the post becomes non-public. Hiding it would delete it
+		 * on servers that refetch it; withdrawing it is a Delete, sent when it is trashed.
+		 */
+		if ( $queried_object instanceof \WP_Comment && '1' !== $queried_object->comment_approved ) {
+			return $template;
+		}
+
 		$activitypub_template = false;
 
 		if ( $activitypub_object ) {
