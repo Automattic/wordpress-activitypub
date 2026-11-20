@@ -57,6 +57,7 @@ class Test_Router extends \WP_UnitTestCase {
 		\set_query_var( 'preview', null );
 		\set_query_var( 'term_id', null );
 		Query::get_instance()->__destruct();
+		\get_user_by( 'id', self::$user_id )->remove_cap( 'activitypub' );
 
 		parent::tear_down();
 	}
@@ -380,6 +381,116 @@ class Test_Router extends \WP_UnitTestCase {
 
 		$template = Router::render_activitypub_template( 'index.php' );
 		$this->assertStringContainsString( 'tombstone-json.php', $template, 'A publicly queryable post at a tombstoned URL must still serve the Tombstone for a non-preview fetch.' );
+	}
+
+	/**
+	 * Only an approved comment is served, whatever the URL looks like.
+	 *
+	 * The tombstone only matches the exact URL, so an extra query argument used to reach the
+	 * comment itself.
+	 *
+	 * @dataProvider data_comment_statuses
+	 *
+	 * @covers ::render_activitypub_template
+	 *
+	 * @param string $status The comment status.
+	 * @param bool   $served Whether the comment is served.
+	 */
+	public function test_comment_is_served_only_when_approved( $status, $served ) {
+		$comment_id = $this->create_federated_comment();
+		\wp_update_comment(
+			array(
+				'comment_ID'       => $comment_id,
+				'comment_approved' => $status,
+			)
+		);
+
+		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
+		$this->go_to( '/?c=' . $comment_id . '&x=1' );
+		$template = Router::render_activitypub_template( 'index.php' );
+
+		if ( $served ) {
+			$this->assertNotSame( 'index.php', $template );
+		} else {
+			$this->assertSame( 'index.php', $template );
+		}
+	}
+
+	/**
+	 * Comment statuses and whether the comment is served.
+	 *
+	 * @return array[]
+	 */
+	public function data_comment_statuses() {
+		return array(
+			'approved' => array( '1', true ),
+			'pending'  => array( '0', false ),
+			'spam'     => array( 'spam', false ),
+			'trash'    => array( 'trash', false ),
+		);
+	}
+
+	/**
+	 * A federated comment stays reachable when its post becomes non-public.
+	 *
+	 * It is an object of its own; hiding it would delete it on servers that refetch it.
+	 *
+	 * @covers ::render_activitypub_template
+	 */
+	public function test_comment_on_a_post_made_private_is_served() {
+		$comment_id = $this->create_federated_comment();
+		\wp_update_post(
+			array(
+				'ID'          => \get_comment( $comment_id )->comment_post_ID,
+				'post_status' => 'private',
+			)
+		);
+
+		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
+		$this->go_to( '/?c=' . $comment_id );
+
+		$this->assertNotSame( 'index.php', Router::render_activitypub_template( 'index.php' ) );
+	}
+
+	/**
+	 * A trashed comment still gets its Tombstone at the URL that was buried.
+	 *
+	 * @covers ::render_activitypub_template
+	 */
+	public function test_trashed_comment_serves_its_tombstone() {
+		$comment_id = $this->create_federated_comment();
+		\wp_trash_comment( $comment_id );
+		Tombstone::bury( \home_url( '/?c=' . $comment_id ) );
+
+		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
+		$this->go_to( '/?c=' . $comment_id );
+
+		$this->assertStringContainsString( 'tombstone-json.php', Router::render_activitypub_template( 'index.php' ) );
+	}
+
+	/**
+	 * Create an approved comment that was federated, by a user who can federate.
+	 *
+	 * @return int The comment ID.
+	 */
+	private function create_federated_comment() {
+		\get_user_by( 'id', self::$user_id )->add_cap( 'activitypub' );
+		$post_id    = self::factory()->post->create(
+			array(
+				'post_status' => 'publish',
+				'post_author' => self::$user_id,
+			)
+		);
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'user_id'          => self::$user_id,
+				'comment_approved' => '1',
+			)
+		);
+		\Activitypub\set_wp_object_state( \get_comment( $comment_id ), ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		return $comment_id;
 	}
 
 	/**

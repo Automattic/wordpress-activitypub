@@ -99,6 +99,45 @@ class Test_Comments_Controller extends \Activitypub\Tests\Test_REST_Controller_T
 	}
 
 	/**
+	 * An unapproved, spam or trashed comment is not found.
+	 *
+	 * @dataProvider data_unapproved_statuses
+	 *
+	 * @covers ::validate_comment
+	 *
+	 * @param string $status The comment status.
+	 */
+	public function test_get_item_unapproved_comment_returns_not_found( $status ) {
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => self::$post_id,
+				'comment_approved' => $status,
+			)
+		);
+		\add_comment_meta( $comment_id, 'protocol', 'activitypub', true );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/comments/' . $comment_id . '/remote-reply' );
+		$request->set_param( 'resource', 'https://example.com/user' );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertErrorResponse( 'rest_invalid_param', $response );
+		$this->assertSame( 'activitypub_comment_not_found', $response->get_data()['data']['details']['comment_id']['code'] );
+	}
+
+	/**
+	 * Comment statuses that are not approved.
+	 *
+	 * @return array[]
+	 */
+	public function data_unapproved_statuses() {
+		return array(
+			'pending' => array( '0' ),
+			'spam'    => array( 'spam' ),
+			'trash'   => array( 'trash' ),
+		);
+	}
+
+	/**
 	 * Test getting reply response for local comment
 	 *
 	 * @covers ::get_item
