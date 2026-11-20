@@ -9,9 +9,12 @@ namespace Activitypub\Tests\Integration;
 
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\Integration\Enable_Mastodon_Apps;
 use Activitypub\Transformer\Comment;
 use Activitypub\Transformer\Post;
+use Activitypub\Tests\Equal_Html;
+use Enable_Mastodon_Apps\Handler\Timeline;
 use Enable_Mastodon_Apps\Entity\Account;
 use Enable_Mastodon_Apps\Entity\Status;
 
@@ -22,6 +25,128 @@ use Enable_Mastodon_Apps\Entity\Status;
  * @coversDefaultClass \Activitypub\Integration\Enable_Mastodon_Apps
  */
 class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
+	use Equal_Html;
+
+	/**
+	 * The reader adds only the authenticated actor's posts, retaining local posts.
+	 */
+	public function test_reader_home_timeline_scoping_and_pagination() {
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $user_id );
+		\update_option( 'activitypub_reader_ui', '1' );
+		$local_id = self::factory()->post->create( array( 'post_author' => $user_id ) );
+		$actor_id = Remote_Actors::create( self::$users['username@example.org'] );
+		$this->assertNotWPError( $actor_id );
+		$post_args = array(
+			'post_type'    => Remote_Posts::POST_TYPE,
+			'post_status'  => 'publish',
+			'post_content' => '<p>A cached remote post.</p>',
+			'guid'         => 'https://example.org/posts/reader?a=1&b=2',
+			'meta_input'   => array( '_activitypub_remote_actor_id' => $actor_id ),
+		);
+		$own_id    = self::factory()->post->create( $post_args );
+		Remote_Posts::add_recipient( $own_id, $user_id );
+		// A second recipient must not duplicate a post in the timeline.
+		Remote_Posts::add_recipient( $own_id, $user_id + 100 );
+		$other_id = self::factory()->post->create( $post_args );
+		Remote_Posts::add_recipient( $other_id, $user_id + 100 );
+		$orphan_id = self::factory()->post->create( $post_args );
+
+		$request = new \WP_REST_Request( 'GET', '/enable-mastodon-apps/api/v1/timelines/home' );
+		$request->set_param( 'limit', 20 );
+		$timeline = new Timeline();
+		$response = $timeline->api_timelines( null, $request );
+		$statuses = $response->get_data();
+		$ids      = \array_map(
+			static function ( $status ) {
+				return $status->id;
+			},
+			$statuses
+		);
+		$this->assertContains( (string) $own_id, $ids );
+		$this->assertContains( (string) $local_id, $ids );
+		$this->assertNotContains( (string) $other_id, $ids );
+		$this->assertNotContains( (string) $orphan_id, $ids );
+		$this->assertSame( 1, \count( \array_keys( $ids, (string) $own_id, true ) ) );
+		$status = $statuses[ \array_search( (string) $own_id, $ids, true ) ];
+		$this->assertSame( (string) $actor_id, (string) $status->account->id );
+		$this->assertSame( 'https://example.org/posts/reader?a=1&b=2', $status->uri );
+		$this->assert_equal_html( '<p>A cached remote post.</p>', $status->content );
+
+		$request->set_param( 'limit', 1 );
+		$response = $timeline->api_timelines( null, $request );
+		$this->assertCount( 1, $response->get_data() );
+		$this->assertSame( (string) $own_id, $response->get_data()[0]->id );
+		$this->assertArrayHasKey( 'next', $response->get_links() );
+		$request->set_param( 'max_id', $own_id );
+		$response = $timeline->api_timelines( null, $request );
+		$this->assertSame( (string) $local_id, $response->get_data()[0]->id );
+		$request->set_param( 'max_id', null );
+		$request->set_param( 'min_id', $local_id );
+		$response = $timeline->api_timelines( null, $request );
+		$this->assertSame( (string) $own_id, $response->get_data()[0]->id );
+	}
+
+	/**
+	 * Disabled readers, public timelines, and tag timelines keep their query args.
+	 */
+	public function test_reader_timeline_requires_enabled_home_route() {
+		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$args    = array( 'post_type' => array( 'post' ) );
+		$request = new \WP_REST_Request( 'GET', '/enable-mastodon-apps/api/v1/timelines/home' );
+		\update_option( 'activitypub_reader_ui', '0' );
+		$this->assertSame( $args, Enable_Mastodon_Apps::api_home_timeline_args( $args, $request ) );
+		\update_option( 'activitypub_reader_ui', '1' );
+		foreach ( array( 'public', 'tag/test' ) as $route ) {
+			$request->set_route( '/enable-mastodon-apps/api/v1/timelines/' . $route );
+			$this->assertSame( $args, Enable_Mastodon_Apps::api_home_timeline_args( $args, $request ) );
+		}
+		$this->assertSame( 'WHERE 1=1', Enable_Mastodon_Apps::filter_reader_timeline_where( 'WHERE 1=1', new \WP_Query() ) );
+	}
+
+	/**
+	 * Guessing a reader status ID must not bypass recipient or capability checks.
+	 */
+	public function test_reader_status_is_private_to_its_recipient() {
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$post_id = self::factory()->post->create( array( 'post_type' => Remote_Posts::POST_TYPE ) );
+		Remote_Posts::add_recipient( $post_id, $user_id );
+		$other_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		foreach ( array( 0, $other_id ) as $viewer_id ) {
+			\wp_set_current_user( $viewer_id );
+			$this->assertNull( \apply_filters( 'mastodon_api_status', null, $post_id ) );
+		}
+		// Even its recipient needs permission to use ActivityPub.
+		$subscriber_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		Remote_Posts::add_recipient( $post_id, $subscriber_id );
+		\wp_set_current_user( $subscriber_id );
+		$this->assertNull( \apply_filters( 'mastodon_api_status', null, $post_id ) );
+	}
+
+	/**
+	 * Only an authorized blog actor may fall back to the blog's feed.
+	 */
+	public function test_reader_blog_actor_fallback_requires_permission() {
+		\update_option( 'activitypub_reader_ui', '1' );
+		$args               = array( 'post_type' => array( 'post' ) );
+		$request            = new \WP_REST_Request( 'GET', '/enable-mastodon-apps/api/v1/timelines/home' );
+		$disable_user_actor = static function () {
+			return false;
+		};
+		\add_filter( 'activitypub_user_can_activitypub', $disable_user_actor );
+		try {
+			\wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+			$actual = Enable_Mastodon_Apps::api_home_timeline_args( $args, $request );
+			$this->assertSame( 0, $actual['activitypub_reader_actor'] );
+			\wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+			$this->assertSame( $args, Enable_Mastodon_Apps::api_home_timeline_args( $args, $request ) );
+			\wp_set_current_user( 0 );
+			$this->assertSame( $args, Enable_Mastodon_Apps::api_home_timeline_args( $args, $request ) );
+		} finally {
+			\remove_filter( 'activitypub_user_can_activitypub', $disable_user_actor );
+		}
+	}
+
 
 	/**
 	 * Actors.

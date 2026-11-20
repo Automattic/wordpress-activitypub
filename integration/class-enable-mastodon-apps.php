@@ -12,6 +12,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\Http;
 use Activitypub\Proxy;
 use Activitypub\Transformer\Factory;
@@ -23,6 +24,9 @@ use Enable_Mastodon_Apps\Entity\Status;
 
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\is_user_type_disabled;
+use function Activitypub\unescape_guid;
+use function Activitypub\user_can_act_as_blog;
+use function Activitypub\user_can_activitypub;
 
 /**
  * Class Enable_Mastodon_Apps.
@@ -59,7 +63,129 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_update_credentials', array( self::class, 'api_update_credentials' ), 10, 2 );
 		\add_filter( 'mastodon_api_notifications_get', array( self::class, 'api_notifications_get' ), 10, 5 );
 		\add_filter( 'mastodon_api_tag_timeline', array( self::class, 'api_tag_timeline_tags_pub' ), 20, 2 );
+		\add_filter( 'mastodon_api_timelines_args', array( self::class, 'api_home_timeline_args' ), 20, 2 );
+		\add_filter( 'posts_where', array( self::class, 'filter_reader_timeline_where' ), 20, 2 );
+		\add_filter( 'mastodon_api_status', array( self::class, 'api_reader_status' ), 99, 2 );
 		\add_filter( 'activitypub_locale', array( self::class, 'get_post_locale' ), 9, 2 );
+	}
+
+	/**
+	 * Add cached reader posts to the home timeline when Friends does not own it.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array            $args    Timeline query arguments.
+	 * @param \WP_REST_Request $request The timeline request.
+	 * @return array The query arguments.
+	 */
+	public static function api_home_timeline_args( $args, $request ) {
+		if ( '/enable-mastodon-apps/api/v1/timelines/home' !== $request->get_route()
+			|| \class_exists( '\\Friends\\Friends' )
+			|| ! \get_option( 'activitypub_reader_ui', false )
+			|| ! \is_user_logged_in() || empty( $args ) ) {
+			return $args;
+		}
+
+		$actor_id = self::get_reader_actor_id();
+		if ( null === $actor_id ) {
+			return $args;
+		}
+
+		$args['post_type']                = \array_unique( \array_merge( (array) $args['post_type'], array( Remote_Posts::POST_TYPE ) ) );
+		$args['activitypub_reader_actor'] = $actor_id;
+		// The pagination cursors are WordPress post IDs, including for cached posts.
+		$args['orderby'] = 'ID';
+		return $args;
+	}
+
+	/**
+	 * Scope remote posts without restricting the timeline's existing local posts.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string    $where The SQL WHERE clause.
+	 * @param \WP_Query $query The query.
+	 * @return string The scoped WHERE clause.
+	 */
+	public static function filter_reader_timeline_where( $where, $query ) {
+		$actor_id = $query->get( 'activitypub_reader_actor', null );
+		if ( null === $actor_id ) {
+			return $where;
+		}
+		global $wpdb;
+		return $where . $wpdb->prepare(
+			" AND ({$wpdb->posts}.post_type <> %s OR EXISTS (SELECT 1 FROM {$wpdb->postmeta} ap_reader WHERE ap_reader.post_id = {$wpdb->posts}.ID AND ap_reader.meta_key = %s AND ap_reader.meta_value = %s))",
+			Remote_Posts::POST_TYPE,
+			'_activitypub_user_id',
+			(string) $actor_id
+		);
+	}
+
+	/**
+	 * Get the reader actor, requiring permission before using the shared blog feed.
+	 *
+	 * @since unreleased
+	 *
+	 * @return int|null The actor ID, or null when reader access is unavailable.
+	 */
+	private static function get_reader_actor_id() {
+		if ( ! \is_user_logged_in() ) {
+			return null;
+		}
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
+			return \get_current_user_id();
+		}
+		if ( user_can_act_as_blog() ) {
+			return Actors::BLOG_USER_ID;
+		}
+		return null;
+	}
+
+	/**
+	 * Represent a cached reader post using its remote author and canonical URL.
+	 *
+	 * Also applies to individual status requests so cached feed data cannot be read
+	 * by guessing another user's post ID. ActivityPub owns the sanitized content.
+	 *
+	 * @since unreleased
+	 *
+	 * @param Status|null $status  The status from earlier handlers.
+	 * @param int         $post_id The post ID.
+	 * @return Status|null The reader status, or the original local status.
+	 */
+	public static function api_reader_status( $status, $post_id ) {
+		$post = \get_post( $post_id );
+		if ( ! $post || Remote_Posts::POST_TYPE !== $post->post_type ) {
+			return $status;
+		}
+		$actor_id   = self::get_reader_actor_id();
+		$recipients = Remote_Posts::get_recipients( $post_id );
+		if ( null === $actor_id || ! \in_array( $actor_id, $recipients, true ) ) {
+			return null;
+		}
+		$remote_actor = \get_post_meta( $post_id, '_activitypub_remote_actor_id', true );
+		if ( ! $remote_actor ) {
+			return null;
+		}
+		$account = self::api_account_external( null, $remote_actor );
+		if ( ! $account instanceof Account ) {
+			return null;
+		}
+		$status     = new Status();
+		$status->id = (string) $post_id;
+		$date       = $post->post_date_gmt;
+		if ( ! $date || '0000-00-00 00:00:00' === $date ) {
+			$date = \get_gmt_from_date( $post->post_date );
+		}
+		$status->created_at = new \DateTime( $date, new \DateTimeZone( 'UTC' ) );
+		$status->uri        = unescape_guid( $post->guid );
+		$status->url        = unescape_guid( $post->guid );
+		$status->content    = \wp_kses_post( $post->post_content );
+		if ( $post->post_title ) {
+			$status->content = '<strong>' . \esc_html( $post->post_title ) . '</strong>' . PHP_EOL . $status->content;
+		}
+		$status->account = $account;
+		return $status;
 	}
 
 	/**
@@ -396,7 +522,7 @@ class Enable_Mastodon_Apps {
 	 */
 	public static function api_status( $status, $post_id ) {
 		$post = \get_post( $post_id );
-		if ( ! $post ) {
+		if ( ! $post || Remote_Posts::POST_TYPE === $post->post_type ) {
 			return $status;
 		}
 

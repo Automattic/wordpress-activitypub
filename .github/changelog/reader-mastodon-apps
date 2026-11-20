@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+When the Reader is enabled, Mastodon apps can now show posts from accounts you follow without requiring the Friends plugin.
