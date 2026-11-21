@@ -78,6 +78,76 @@ class Test_File extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A file made in a private temporary directory is readable like an upload once it is cached.
+	 *
+	 * The image editor gives its output the permissions of the directory it writes to, so a
+	 * temporary directory that only its owner can read would leave the cached file unreadable
+	 * for the web server.
+	 *
+	 * @covers \Activitypub\Cache\File::cache
+	 * @covers \Activitypub\Cache\File::move_to_cache
+	 */
+	public function test_cache_gives_the_file_the_permissions_of_its_directory() {
+		$private = \get_temp_dir() . \wp_unique_filename( \get_temp_dir(), 'activitypub-private' );
+		\mkdir( $private, 0700 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir
+		\chmod( $private, 0700 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod
+
+		$download = static function () use ( $private ) {
+			$file = $private . '/test.jpg';
+			\copy( AP_TESTS_DIR . '/data/assets/test.jpg', $file );
+			\chmod( $file, 0600 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod
+
+			return array(
+				'file'      => $file,
+				'mime_type' => 'image/jpeg',
+			);
+		};
+		$post_id  = self::factory()->post->create();
+
+		\add_filter( 'activitypub_pre_download_url', $download );
+		$cached = Avatar::cache( 'https://example.com/photo.jpg', $post_id );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+
+		$basedir = Avatar::get_storage_paths( $post_id )['basedir'];
+		$file    = $basedir . '/' . \basename( (string) $cached );
+		\clearstatcache();
+
+		$this->assertNotFalse( $cached );
+		$this->assertSame( \fileperms( $basedir ) & 0666, \fileperms( $file ) & 0777 );
+
+		Avatar::invalidate_entity( $post_id );
+		Avatar::delete_directory( $private );
+	}
+
+	/**
+	 * Files cached earlier get the permissions of their directory; a link out of the cache is not followed.
+	 *
+	 * @covers \Activitypub\Cache\File::fix_permissions
+	 */
+	public function test_fix_permissions() {
+		$dir = Avatar::get_storage_paths( 'fix-permissions' )['basedir'];
+		\wp_mkdir_p( $dir );
+		$cached = $dir . '/' . \md5( 'https://example.com/avatar.png' ) . '.png';
+		\copy( AP_TESTS_DIR . '/data/assets/test.jpg', $cached );
+		\chmod( $cached, 0600 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod
+
+		$outside = \wp_tempnam( 'outside' );
+		\chmod( $outside, 0600 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod
+		$linked = \symlink( $outside, $dir . '/linked.png' );
+
+		Avatar::fix_permissions( \dirname( $dir ) );
+		\clearstatcache();
+
+		$this->assertSame( \fileperms( $dir ) & 0666, \fileperms( $cached ) & 0777 );
+		if ( $linked ) {
+			$this->assertSame( 0600, \fileperms( $outside ) & 0777 );
+		}
+
+		Avatar::delete_directory( $dir );
+		\wp_delete_file( $outside );
+	}
+
+	/**
 	 * A JPEG is cached as a JPEG and every other image as a PNG, named after the URL.
 	 *
 	 * @dataProvider data_cache_output_formats

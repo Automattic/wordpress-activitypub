@@ -988,6 +988,28 @@ class Test_Migration extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Cached images that only their owner could read get the permissions of their directory.
+	 *
+	 * @covers ::fix_cache_file_permissions
+	 */
+	public function test_fix_cache_file_permissions() {
+		$dir  = Avatar::get_storage_paths( 'migration-permissions' )['basedir'];
+		$file = $dir . '/' . \md5( 'https://example.com/avatar.png' ) . '.png';
+		\wp_mkdir_p( $dir );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		\file_put_contents( $file, 'image' );
+		\chmod( $file, 0600 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod
+
+		Migration::fix_cache_file_permissions();
+		\clearstatcache();
+
+		$this->assertFileExists( $file );
+		$this->assertSame( \fileperms( $dir ) & 0666, \fileperms( $file ) & 0777 );
+
+		Avatar::delete_directory( $dir );
+	}
+
+	/**
 	 * A site without a cache folder does no work: nothing is created.
 	 *
 	 * @covers ::clear_remote_media_caches
