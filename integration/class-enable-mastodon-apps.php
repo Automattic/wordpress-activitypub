@@ -56,6 +56,7 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_account_followers', array( self::class, 'api_account_followers' ), 10, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_external' ), 15, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_internal' ), 9, 2 );
+		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_comment' ), 8, 4 );
 		\add_filter( 'mastodon_api_status', array( self::class, 'api_status' ), 9, 2 );
 		\add_filter( 'mastodon_api_search', array( self::class, 'api_search' ), 40, 2 );
 		\add_filter( 'mastodon_api_search', array( self::class, 'api_search_by_url' ), 40, 2 );
@@ -571,6 +572,35 @@ class Enable_Mastodon_Apps {
 		}
 
 		return \array_merge( $mastodon_followers, $followers );
+	}
+
+	/**
+	 * Resolve a remote commenter's stored actor through EMA's account filter.
+	 *
+	 * The comment context avoids repeating URL and WebFinger lookups. Leave the
+	 * remaining account filters to resolve comments without a usable stored actor.
+	 *
+	 * @since unreleased
+	 *
+	 * @param Account|null     $account The account from earlier filters.
+	 * @param string|int       $user_id The requested account identifier.
+	 * @param object|null      $request Optional EMA request.
+	 * @param \WP_Comment|null $comment Original comment, when EMA provides context.
+	 * @return Account|null The remote account or the unmodified input.
+	 */
+	public static function api_account_comment( $account, $user_id, $request = null, $comment = null ) {
+		if ( $account || ! $comment instanceof \WP_Comment || $comment->user_id || $user_id !== $comment->comment_author_url ) {
+			return $account;
+		}
+		$actor_id = (int) \get_comment_meta( $comment->comment_ID, '_activitypub_remote_actor_id', true );
+		if ( ! $actor_id || Remote_Actors::POST_TYPE !== \get_post_type( $actor_id ) ) {
+			return $account;
+		}
+		$actor = Remote_Actors::get_actor( $actor_id );
+		if ( ! $actor || \is_wp_error( $actor ) ) {
+			return $account;
+		}
+		return self::actor_to_account( $actor, $actor_id );
 	}
 
 	/**

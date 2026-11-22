@@ -375,6 +375,59 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 
 
 	/**
+	 * EMA comment context resolves known actors without URL discovery.
+	 */
+	public function test_comment_account_filter_uses_stored_actor() {
+		$actor_id = Remote_Actors::create( self::$users['username@example.org'] );
+		$this->assertNotWPError( $actor_id );
+		$comment = self::factory()->comment->create_and_get(
+			array(
+				'comment_author_url' => 'https://example.org/users/username',
+				'user_id'            => 0,
+			)
+		);
+		\update_comment_meta( $comment->comment_ID, '_activitypub_remote_actor_id', $actor_id );
+		$discoveries       = 0;
+		$observe_discovery = static function ( $pre ) use ( &$discoveries ) {
+			++$discoveries;
+			return $pre;
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $observe_discovery );
+		try {
+			$account = \apply_filters( 'mastodon_api_account', null, $comment->comment_author_url, null, $comment );
+		} finally {
+			\remove_filter( 'pre_get_remote_metadata_by_actor', $observe_discovery );
+		}
+		$this->assertInstanceOf( Account::class, $account );
+		$this->assertSame( (string) $actor_id, $account->id );
+		$this->assertSame( 0, $discoveries );
+		// Never override another provider, an unrelated identifier, or a local author.
+		$existing = new Account();
+		$this->assertSame( $existing, Enable_Mastodon_Apps::api_account_comment( $existing, $comment->comment_author_url, null, $comment ) );
+		$this->assertNull( Enable_Mastodon_Apps::api_account_comment( null, 'someone-else', null, $comment ) );
+		$comment->user_id = 123;
+		$this->assertNull( Enable_Mastodon_Apps::api_account_comment( null, $comment->comment_author_url, null, $comment ) );
+	}
+
+	/**
+	 * Missing and stale actor metadata must leave the URL fallback available.
+	 */
+	public function test_comment_account_filter_leaves_unknown_actor_to_other_handlers() {
+		$comment = self::factory()->comment->create_and_get(
+			array(
+				'comment_author_url' => 'https://example.org/users/username',
+				'user_id'            => 0,
+			)
+		);
+		$this->assertNull( Enable_Mastodon_Apps::api_account_comment( null, $comment->comment_author_url, null, $comment ) );
+		$post_id = self::factory()->post->create();
+		\update_comment_meta( $comment->comment_ID, '_activitypub_remote_actor_id', $post_id );
+		$this->assertNull( Enable_Mastodon_Apps::api_account_comment( null, $comment->comment_author_url, null, $comment ) );
+		\update_comment_meta( $comment->comment_ID, '_activitypub_remote_actor_id', $post_id + 100000 );
+		$this->assertNull( Enable_Mastodon_Apps::api_account_comment( null, $comment->comment_author_url, null, $comment ) );
+	}
+
+	/**
 	 * Actors.
 	 *
 	 * @var array[]
