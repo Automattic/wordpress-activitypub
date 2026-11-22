@@ -145,6 +145,19 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Reader cache identity and priority do not require rendering remote accounts.
+	 */
+	public function test_reader_timeline_representation_identity_and_priority() {
+		$remote_id = self::factory()->post->create( array( 'post_type' => Remote_Posts::POST_TYPE ) );
+		$remote    = \get_post( $remote_id );
+		$local     = \get_post( self::factory()->post->create() );
+		$this->assertSame( $remote->guid, Enable_Mastodon_Apps::reader_timeline_post_identity( null, $remote ) );
+		$this->assertNull( Enable_Mastodon_Apps::reader_timeline_post_identity( null, $local ) );
+		$this->assertSame( -10, Enable_Mastodon_Apps::reader_timeline_post_priority( 0, $remote ) );
+		$this->assertSame( 5, Enable_Mastodon_Apps::reader_timeline_post_priority( 5, $local ) );
+	}
+
+	/**
 	 * The reader adds only the authenticated actor's posts, retaining local posts.
 	 */
 	public function test_reader_home_timeline_scoping_and_pagination() {

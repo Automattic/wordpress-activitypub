@@ -69,13 +69,15 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_notifications_get', array( self::class, 'filter_reader_comment_notifications' ), 90 );
 		\add_filter( 'mastodon_api_tag_timeline', array( self::class, 'api_tag_timeline_tags_pub' ), 20, 2 );
 		\add_filter( 'mastodon_api_timelines_args', array( self::class, 'api_home_timeline_args' ), 20, 2 );
+		\add_filter( 'mastodon_api_timeline_post_identity', array( self::class, 'reader_timeline_post_identity' ), 10, 2 );
+		\add_filter( 'mastodon_api_timeline_post_priority', array( self::class, 'reader_timeline_post_priority' ), 10, 2 );
 		\add_filter( 'posts_where', array( self::class, 'filter_reader_timeline_where' ), 20, 2 );
 		\add_filter( 'mastodon_api_status', array( self::class, 'api_reader_status' ), 99, 2 );
 		\add_filter( 'activitypub_locale', array( self::class, 'get_post_locale' ), 9, 2 );
 	}
 
 	/**
-	 * Add cached reader posts to the home timeline when Friends does not own it.
+	 * Add cached reader posts to the home timeline, sharing it with other caches.
 	 *
 	 * @since unreleased
 	 *
@@ -85,7 +87,7 @@ class Enable_Mastodon_Apps {
 	 */
 	public static function api_home_timeline_args( $args, $request ) {
 		if ( '/enable-mastodon-apps/api/v1/timelines/home' !== $request->get_route()
-			|| \class_exists( '\\Friends\\Friends' )
+			|| ( \class_exists( '\\Friends\\Friends' ) && ! \apply_filters( 'mastodon_api_timeline_supports_deduplication', false ) )
 			|| ! \get_option( 'activitypub_reader_ui', false )
 			|| ! \is_user_logged_in() || empty( $args ) ) {
 			return $args;
@@ -98,6 +100,7 @@ class Enable_Mastodon_Apps {
 
 		$args['post_type']                = \array_unique( \array_merge( (array) $args['post_type'], array( Remote_Posts::POST_TYPE ) ) );
 		$args['activitypub_reader_actor'] = $actor_id;
+		$args['mastodon_api_deduplicate'] = array( Remote_Posts::POST_TYPE );
 		// WordPress taxonomy filters describe local posts, not cached reader posts.
 		if ( ! empty( $args['tax_query'] ) ) {
 			$args['activitypub_reader_local_tax_query'] = $args['tax_query'];
@@ -106,6 +109,32 @@ class Enable_Mastodon_Apps {
 		// The pagination cursors are WordPress post IDs, including for cached posts.
 		$args['orderby'] = 'ID';
 		return $args;
+	}
+
+	/**
+	 * Identify reader objects without rendering a status or fetching remote actors.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string|false|null $identity Cached object identity.
+	 * @param \WP_Post          $post     Cached post.
+	 * @return string|false|null Cached object identity.
+	 */
+	public static function reader_timeline_post_identity( $identity, $post ) {
+		return Remote_Posts::POST_TYPE === $post->post_type ? $post->guid : $identity;
+	}
+
+	/**
+	 * Prefer an existing integration's representation of a shared cached object.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int      $priority Representation priority.
+	 * @param \WP_Post $post     Cached post.
+	 * @return int Representation priority.
+	 */
+	public static function reader_timeline_post_priority( $priority, $post ) {
+		return Remote_Posts::POST_TYPE === $post->post_type ? -10 : $priority;
 	}
 
 	/**
