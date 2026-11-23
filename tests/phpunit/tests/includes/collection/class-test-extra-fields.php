@@ -150,7 +150,11 @@ class Test_Extra_Fields extends \WP_UnitTestCase {
 		}
 
 		$public = \wp_list_pluck( Extra_Fields::get_actor_fields( $user_id ), 'ID' );
-		$all    = \wp_list_pluck( Extra_Fields::get_actor_fields( $user_id, true ), 'ID' );
+
+		// The screens that manage the fields are in the admin, where a query without a status finds them all.
+		\set_current_screen( 'profile' );
+		$all = \wp_list_pluck( Extra_Fields::get_actor_fields( $user_id, true ), 'ID' );
+		\set_current_screen( 'front' );
 
 		$this->assertSame( array( $ids['publish'] ), $public );
 		$this->assertEqualsCanonicalizing( \array_values( $ids ), $all );
