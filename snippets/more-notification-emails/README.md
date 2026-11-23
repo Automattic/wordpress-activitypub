@@ -2,7 +2,7 @@
 
 Raises the number of notification emails a user can get from the ActivityPub plugin per hour.
 
-The plugin sends at most 30 emails about new followers, direct messages and mentions to the same recipient per hour. When that allowance is used up, one more email says that further ones are held back until the next hour. Nothing is lost: the followers, messages and mentions are stored and show up in the dashboard.
+The plugin sends at most 30 emails about new followers, direct messages and mentions to the same recipient per hour. When that allowance is used up, one more email says that further ones will not be sent until the next hour. The followers, messages and mentions themselves are stored as usual and show up in the dashboard.
 
 On a busy site 30 can be too few. This snippet raises the allowance to 100.
 

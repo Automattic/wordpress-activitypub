@@ -380,6 +380,10 @@ class Test_Mailer extends WP_UnitTestCase {
 			return $args;
 		};
 		add_filter( 'wp_mail', $wp_mail_callback );
+		$mail_sent = static function () {
+			return true;
+		};
+		add_filter( 'pre_wp_mail', $mail_sent );
 
 		// First follow: notification email should be sent.
 		Mailer::new_follower( $activity, self::$user_id, true, $remote_actor );
@@ -401,6 +405,7 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		remove_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
 		remove_filter( 'wp_mail', $wp_mail_callback );
+		remove_filter( 'pre_wp_mail', $mail_sent );
 	}
 
 	/**
@@ -1170,7 +1175,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A recipient gets a limited number of notification mails per hour, whatever causes them, and is told once when more are held back.
+	 * A recipient gets a limited number of notification mails per hour, whatever causes them, and is told once when more will not be sent.
 	 *
 	 * @covers ::maybe_send_mail
 	 * @covers ::limit_reached
@@ -1222,7 +1227,7 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		\remove_filter( 'activitypub_rate_limit', $three_mails, 10 );
 
-		// Three notifications, and one notice that further ones are held back.
+		// Three notifications, and one notice that further ones will not be sent.
 		$this->assertSame( 4, $count );
 	}
 

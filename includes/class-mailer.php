@@ -536,7 +536,7 @@ class Mailer {
 	}
 
 	/**
-	 * Tell a recipient that further notification mails are held back.
+	 * Tell a recipient that further notification mails will not be sent this hour.
 	 *
 	 * Sent after the last mail of an allowance, see maybe_send_mail(), so that nothing can happen
 	 * without the recipient knowing where to look.
@@ -566,7 +566,7 @@ class Mailer {
 			\sprintf( \__( '[%s] Notification emails are paused', 'activitypub' ), \get_option( 'blogname' ) ),
 			\sprintf(
 				/* translators: 1: Number of emails, 2: Time of day, 3: Dashboard URL */
-				\__( 'You received %1$d notification emails within an hour. Emails about new followers, direct messages and mentions are held back until %2$s. Nothing is lost, you can see everything in your dashboard: %3$s', 'activitypub' ),
+				\__( 'You received %1$d notification emails within an hour. Further emails about new followers, direct messages and mentions will not be sent until %2$s. Check your dashboard for updates: %3$s', 'activitypub' ),
 				$limit,
 				\wp_date( \get_option( 'time_format' ), $reset ),
 				\admin_url()
@@ -583,7 +583,7 @@ class Mailer {
 	 * the `mail` bucket. Mails the site sends on its own schedule use send(), and the mails for
 	 * replies and reactions are sent by WordPress, as for every comment.
 	 *
-	 * The last mail of an allowance is followed by a notice that further ones are held back, so
+	 * The last mail of an allowance is followed by a notice that further ones will not be sent, so
 	 * that nothing can happen without the recipient knowing where to look.
 	 *
 	 * @since unreleased
@@ -594,7 +594,7 @@ class Mailer {
 	 * @param string   $message      The HTML message.
 	 * @param callable $alt_function The `phpmailer_init` callback that sets the plain text message.
 	 *
-	 * @return bool True when the mail was sent, false when it was held back or sending failed.
+	 * @return bool True when the mail was sent, false when the allowance was used up or sending failed.
 	 */
 	private static function maybe_send_mail( $user_id, $email, $subject, $message, $alt_function ) {
 		$allowance = Throttle::count( 'mail', 'user-' . $user_id, 30, HOUR_IN_SECONDS );
