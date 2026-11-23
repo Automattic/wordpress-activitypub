@@ -176,15 +176,18 @@ class Mailer {
 				return;
 			}
 
-			$email     = \get_userdata( $user_id )->user_email;
 			$admin_url = '/users.php?page=activitypub-followers-list';
 		} else {
 			if ( '1' !== \get_option( 'activitypub_blog_user_mailer_new_follower', '1' ) ) {
 				return;
 			}
 
-			$email     = \get_option( 'admin_email' );
 			$admin_url = '/options-general.php?page=activitypub&tab=followers';
+		}
+
+		$email = self::get_email( $user_id );
+		if ( ! $email ) {
+			return;
 		}
 
 		$meta_key  = null;
@@ -331,14 +334,13 @@ class Mailer {
 				if ( ! \get_user_option( 'activitypub_mailer_new_dm', $user_id ) ) {
 					continue;
 				}
+			} elseif ( '1' !== \get_option( 'activitypub_blog_user_mailer_new_dm', '1' ) ) {
+				continue;
+			}
 
-				$email = \get_userdata( $user_id )->user_email;
-			} else {
-				if ( '1' !== \get_option( 'activitypub_blog_user_mailer_new_dm', '1' ) ) {
-					continue;
-				}
-
-				$email = \get_option( 'admin_email' );
+			$email = self::get_email( $user_id );
+			if ( ! $email ) {
+				continue;
 			}
 
 			$template_args = array(
@@ -430,14 +432,13 @@ class Mailer {
 				if ( ! \get_user_option( 'activitypub_mailer_new_mention', $user_id ) ) {
 					continue;
 				}
+			} elseif ( '1' !== \get_option( 'activitypub_blog_user_mailer_new_mention', '1' ) ) {
+				continue;
+			}
 
-				$email = \get_userdata( $user_id )->user_email;
-			} else {
-				if ( '1' !== \get_option( 'activitypub_blog_user_mailer_new_mention', '1' ) ) {
-					continue;
-				}
-
-				$email = \get_option( 'admin_email' );
+			$email = self::get_email( $user_id );
+			if ( ! $email ) {
+				continue;
 			}
 
 			$template_args = array(
@@ -487,15 +488,9 @@ class Mailer {
 	 * @return bool True if email was sent, false otherwise.
 	 */
 	public static function send( $user_id, $subject, $template, $args = array(), $alt_body = '' ) {
-		// Get the recipient email address.
-		if ( $user_id > Actors::BLOG_USER_ID ) {
-			$user = \get_userdata( $user_id );
-			if ( ! $user || empty( $user->user_email ) ) {
-				return false;
-			}
-			$email = $user->user_email;
-		} else {
-			$email = \get_option( 'admin_email' );
+		$email = self::get_email( $user_id );
+		if ( ! $email ) {
+			return false;
 		}
 
 		// Load the HTML template.
@@ -536,6 +531,25 @@ class Mailer {
 	}
 
 	/**
+	 * Get the address a recipient's mails go to.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $user_id The recipient (or BLOG_USER_ID for the blog actor).
+	 *
+	 * @return string The address, or an empty string when the user has none.
+	 */
+	private static function get_email( $user_id ) {
+		if ( $user_id <= Actors::BLOG_USER_ID ) {
+			return (string) \get_option( 'admin_email' );
+		}
+
+		$user = \get_userdata( $user_id );
+
+		return $user ? (string) $user->user_email : '';
+	}
+
+	/**
 	 * Tell a recipient that further notification mails will not be sent this hour.
 	 *
 	 * Sent after the last mail of an allowance, see maybe_send_mail(), so that nothing can happen
@@ -544,20 +558,15 @@ class Mailer {
 	 * @since unreleased
 	 *
 	 * @param int $user_id The recipient (or BLOG_USER_ID for the blog actor).
-	 * @param int $limit   How many notification mails the recipient got.
+	 * @param int $limit   How many notification mails the recipient got in this window.
 	 * @param int $reset   When notification mails are sent again, as a Unix timestamp.
 	 *
 	 * @return bool True if the mail was sent, false otherwise.
 	 */
 	public static function limit_reached( $user_id, $limit, $reset ) {
-		if ( $user_id > Actors::BLOG_USER_ID ) {
-			$user = \get_userdata( $user_id );
-			if ( ! $user || empty( $user->user_email ) ) {
-				return false;
-			}
-			$email = $user->user_email;
-		} else {
-			$email = \get_option( 'admin_email' );
+		$email = self::get_email( $user_id );
+		if ( ! $email ) {
+			return false;
 		}
 
 		return \wp_mail(
@@ -566,7 +575,12 @@ class Mailer {
 			\sprintf( \__( '[%s] Notification emails are paused', 'activitypub' ), \get_option( 'blogname' ) ),
 			\sprintf(
 				/* translators: 1: Number of emails, 2: Time of day, 3: Dashboard URL */
-				\__( 'You received %1$d notification emails within an hour. Further emails about new followers, direct messages and mentions will not be sent until %2$s. Check your dashboard for updates: %3$s', 'activitypub' ),
+				\_n(
+					'You received %1$d notification email. Further emails about new followers, direct messages and mentions will not be sent until %2$s. Check your dashboard for updates: %3$s',
+					'You received %1$d notification emails. Further emails about new followers, direct messages and mentions will not be sent until %2$s. Check your dashboard for updates: %3$s',
+					$limit,
+					'activitypub'
+				),
 				$limit,
 				\wp_date( \get_option( 'time_format' ), $reset ),
 				\admin_url()
