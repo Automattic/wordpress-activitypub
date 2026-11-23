@@ -308,12 +308,22 @@ class Test_Router extends \WP_UnitTestCase {
 		$template = Router::render_activitypub_template( 'index.php' );
 		$this->assertStringContainsString( 'activitypub-json.php', $template, 'A signer that is not blocked gets the document.' );
 
-		Moderation::add_site_block( Moderation::TYPE_ACTOR, $actor );
+		$blocks = array(
+			Moderation::TYPE_ACTOR  => $actor,
+			Moderation::TYPE_DOMAIN => 'remote.example',
+		);
 
-		$this->go_to( $path );
-		$template = Router::render_activitypub_template( 'index.php' );
-		$this->assertSame( 'index.php', $template );
-		$this->assertSame( 403, $status );
+		foreach ( $blocks as $type => $value ) {
+			$status = null;
+			Moderation::add_site_block( $type, $value );
+
+			$this->go_to( $path );
+			$template = Router::render_activitypub_template( 'index.php' );
+			$this->assertSame( 'index.php', $template, $type );
+			$this->assertSame( 403, $status, $type );
+
+			Moderation::remove_site_block( $type, $value );
+		}
 	}
 
 	/**

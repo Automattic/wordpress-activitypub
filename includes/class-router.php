@@ -248,7 +248,7 @@ class Router {
 				return $template;
 			}
 
-			// A signer blocked site-wide gets nothing. Rest\Server::reject_blocked_sender() does this for the REST routes.
+			// A signer blocked site-wide gets no ActivityPub document. Rest\Server::reject_blocked_sender() does this for the REST routes.
 			if ( Moderation::is_actor_blocked( $verification ) ) {
 				\status_header( 403 );
 
