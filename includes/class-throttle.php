@@ -39,7 +39,8 @@ class Throttle {
 		 *
 		 * @param int    $limit  The allowance the caller asks for.
 		 * @param string $bucket What is being limited, for example `interactions` (requests per
-		 *                       minute) or `mail` (notification mails per recipient and hour).
+		 *                       minute), `mail` or `comment_mail` (notification mails per recipient
+		 *                       and hour).
 		 * @param int    $window The window the allowance is for, in seconds.
 		 */
 		$limit = (int) \apply_filters( 'activitypub_rate_limit', $limit, $bucket, $window );

@@ -28,8 +28,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Raise the hourly allowance of notification emails.
  *
  * The plugin sends at most 30 emails about new followers, direct messages and mentions to the
- * same recipient per hour. The same filter also sets the requests per minute of the REST
- * endpoints, so only the `mail` bucket is changed here.
+ * same recipient per hour (`mail`), and as many about replies and reactions (`comment_mail`).
+ * The same filter also sets the requests per minute of the REST endpoints, so only these two
+ * buckets are changed here.
  *
  * @param int    $limit  The allowance the plugin asks for.
  * @param string $bucket What is being limited.
@@ -37,6 +38,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return int The allowance.
  */
 function more_notification_emails( $limit, $bucket ) {
-	return 'mail' === $bucket ? 100 : $limit;
+	return \in_array( $bucket, array( 'mail', 'comment_mail' ), true ) ? 100 : $limit;
 }
 \add_filter( 'activitypub_rate_limit', __NAMESPACE__ . '\more_notification_emails', 10, 2 );

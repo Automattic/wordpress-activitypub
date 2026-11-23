@@ -39,6 +39,9 @@ class Mailer {
 		\add_filter( 'notify_post_author', array( self::class, 'maybe_prevent_comment_notification' ), 10, 2 );
 		\add_filter( 'notify_post_author', array( self::class, 'maybe_prevent_reaction_notification' ), 10, 2 );
 		\add_filter( 'notify_moderator', array( self::class, 'maybe_prevent_comment_notification' ), 10, 2 );
+		// After the filters above, so a mail they prevent does not count.
+		\add_filter( 'notify_post_author', array( self::class, 'maybe_throttle_comment_notification' ), 20, 2 );
+		\add_filter( 'notify_moderator', array( self::class, 'maybe_throttle_comment_notification' ), 20, 2 );
 	}
 
 	/**
@@ -552,13 +555,13 @@ class Mailer {
 	/**
 	 * Tell a recipient that further notification mails will not be sent this hour.
 	 *
-	 * Sent after the last mail of an allowance, see maybe_send_mail(), so that nothing can happen
-	 * without the recipient knowing where to look.
+	 * Sent once, for the first mail that is not sent, see maybe_throttle_mail(), so that nothing
+	 * can happen without the recipient knowing where to look.
 	 *
 	 * @since unreleased
 	 *
 	 * @param int $user_id The recipient (or BLOG_USER_ID for the blog actor).
-	 * @param int $limit   How many notification mails the recipient got in this window.
+	 * @param int $limit   How many notification mails a recipient can get in this window.
 	 * @param int $reset   When notification mails are sent again, as a Unix timestamp.
 	 *
 	 * @return bool True if the mail was sent, false otherwise.
@@ -576,8 +579,8 @@ class Mailer {
 			\sprintf(
 				/* translators: 1: Number of emails, 2: Time of day, 3: Dashboard URL */
 				\_n(
-					'You received %1$d notification email. Further emails about new followers, direct messages and mentions will not be sent until %2$s. Check your dashboard for updates: %3$s',
-					'You received %1$d notification emails. Further emails about new followers, direct messages and mentions will not be sent until %2$s. Check your dashboard for updates: %3$s',
+					'You reached the limit of %1$d notification email about activity from the Fediverse. Further ones will not be sent until %2$s. Check your dashboard for updates: %3$s',
+					'You reached the limit of %1$d notification emails about activity from the Fediverse. Further ones will not be sent until %2$s. Check your dashboard for updates: %3$s',
 					$limit,
 					'activitypub'
 				),
@@ -591,14 +594,9 @@ class Mailer {
 	/**
 	 * Send a notification mail, unless its recipient had enough of them this hour.
 	 *
-	 * The notifications this class sends for something from outside go through here: new
-	 * followers, direct messages and mentions share one allowance per recipient and site, whoever
-	 * sends them. 30 mails per hour by default; the `activitypub_rate_limit` filter changes it for
-	 * the `mail` bucket. Mails the site sends on its own schedule use send(), and the mails for
-	 * replies and reactions are sent by WordPress, as for every comment.
-	 *
-	 * The last mail of an allowance is followed by a notice that further ones will not be sent, so
-	 * that nothing can happen without the recipient knowing where to look.
+	 * New follower, direct message and mention notifications go through here and share one
+	 * allowance per recipient and site, whoever sends them. Mails the site sends on its own
+	 * schedule use send().
 	 *
 	 * @since unreleased
 	 *
@@ -611,9 +609,7 @@ class Mailer {
 	 * @return bool True when the mail was sent, false when the allowance was used up or sending failed.
 	 */
 	private static function maybe_send_mail( $user_id, $email, $subject, $message, $alt_function ) {
-		$allowance = Throttle::count( 'mail', \sprintf( 'user-%d', $user_id ), 30, HOUR_IN_SECONDS );
-
-		if ( ! $allowance['allowed'] ) {
+		if ( self::maybe_throttle_mail( 'mail', $user_id ) ) {
 			return false;
 		}
 
@@ -623,11 +619,38 @@ class Mailer {
 
 		\remove_action( 'phpmailer_init', $alt_function );
 
-		if ( 0 === $allowance['remaining'] ) {
+		return $sent;
+	}
+
+	/**
+	 * Count a notification mail against its recipient's allowance, and tell whether it may be sent.
+	 *
+	 * 30 mails per recipient, site and hour by default; the `activitypub_rate_limit` filter changes it
+	 * for the bucket. A mail counts even when sending it fails. The first mail that is not sent in a
+	 * window sends the recipient a notice instead, see send_limit_notice().
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $bucket  `mail` for new followers, direct messages and mentions, `comment_mail` for
+	 *                        replies and reactions, so neither can use up the other's allowance.
+	 * @param int    $user_id The recipient (or BLOG_USER_ID for the site's address).
+	 *
+	 * @return bool True when the mail must not be sent, false when it may be sent.
+	 */
+	private static function maybe_throttle_mail( $bucket, $user_id ) {
+		$caller    = \sprintf( 'user-%d', $user_id );
+		$allowance = Throttle::count( $bucket, $caller, 30, HOUR_IN_SECONDS );
+
+		if ( $allowance['allowed'] ) {
+			return false;
+		}
+
+		// Once per window, and not when the mails are switched off with a limit of 0.
+		if ( $allowance['limit'] > 0 && Throttle::count( $bucket . '_notice', $caller, 1, HOUR_IN_SECONDS )['allowed'] ) {
 			self::send_limit_notice( $user_id, $allowance['limit'], $allowance['reset'] );
 		}
 
-		return $sent;
+		return true;
 	}
 
 	/**
@@ -723,5 +746,40 @@ class Mailer {
 		}
 
 		return (bool) \get_user_option( 'activitypub_mailer_new_reaction', (int) $post->post_author );
+	}
+
+	/**
+	 * Skip the mails about replies and reactions from the Fediverse when their recipient had enough of them.
+	 *
+	 * WordPress sends the post author and the moderator a mail for every comment, and replies, likes,
+	 * reposts and quotes from the Fediverse are comments. They share one allowance per recipient: the
+	 * post author for `notify_post_author`, the site's address for `notify_moderator`.
+	 *
+	 * WordPress applies `notify_moderator` twice for one pending comment, so each comment and filter
+	 * is counted once.
+	 *
+	 * @since unreleased
+	 *
+	 * @param bool $maybe_notify Whether to send the notification.
+	 * @param int  $comment_id   The comment ID.
+	 *
+	 * @return bool Whether to send the notification.
+	 */
+	public static function maybe_throttle_comment_notification( $maybe_notify, $comment_id ) {
+		static $decided = array();
+
+		if ( ! $maybe_notify || ! Comment::was_received( $comment_id ) ) {
+			return $maybe_notify;
+		}
+
+		$key = \sprintf( '%s-%d', \current_filter(), $comment_id );
+		if ( ! isset( $decided[ $key ] ) ) {
+			$post    = \get_post( \get_comment( $comment_id )->comment_post_ID );
+			$user_id = 'notify_moderator' === \current_filter() || ! $post ? Actors::BLOG_USER_ID : (int) $post->post_author;
+
+			$decided[ $key ] = ! self::maybe_throttle_mail( 'comment_mail', $user_id );
+		}
+
+		return $decided[ $key ];
 	}
 }
