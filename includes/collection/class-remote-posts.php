@@ -360,6 +360,7 @@ class Remote_Posts {
 			'post_date'     => \get_date_from_gmt( $gm_date ),
 			'guid'          => isset( $activity['id'] ) ? \esc_url_raw( $activity['id'] ) : '',
 			'post_name'     => isset( $activity['id'] ) ? get_id_hash( $activity['id'] ) : '',
+			'meta_input'    => array( '_activitypub_attachments' => \wp_slash( $attachments ) ),
 		);
 	}
 
@@ -391,7 +392,7 @@ class Remote_Posts {
 	 * @param int    $limit           Maximum number of attachments. Default 20.
 	 * @param string $attachment_type Optional media type to include, such as 'image'.
 	 *
-	 * @return array<int, array{url: string, alt: string, type: string}> Array of attachments with 'url', 'alt', and 'type' keys.
+	 * @return array<int, array{url: string, alt: string, type: string}> Array of attachments with 'url', 'alt', and 'type' keys, plus dimensions and blurhash when supplied.
 	 */
 	public static function extract_attachments( $activity_object, $limit = 20, $attachment_type = '' ) {
 		$limit = (int) $limit;
@@ -475,6 +476,16 @@ class Remote_Posts {
 				'alt'  => \is_string( $attachment['name'] ?? null ) ? \wp_check_invalid_utf8( $attachment['name'] ) : '',
 				'type' => $type,
 			);
+			$index         = \count( $attachments ) - 1;
+			foreach ( array( 'width', 'height' ) as $dimension ) {
+				$value = \filter_var( $attachment[ $dimension ] ?? null, FILTER_VALIDATE_INT, array( 'options' => array( 'min_range' => 1 ) ) );
+				if ( false !== $value ) {
+					$attachments[ $index ][ $dimension ] = $value;
+				}
+			}
+			if ( \is_string( $attachment['blurhash'] ?? null ) ) {
+				$attachments[ $index ]['blurhash'] = \sanitize_text_field( $attachment['blurhash'] );
+			}
 			if ( \count( $attachments ) >= $limit ) {
 				break;
 			}

@@ -10,11 +10,16 @@ namespace Activitypub\Tests\Integration;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\Integration\Enable_Mastodon_Apps;
 use Activitypub\Transformer\Comment;
 use Activitypub\Transformer\Post;
+use Activitypub\Tests\Equal_Html;
+use Enable_Mastodon_Apps\Handler\Timeline;
 use Enable_Mastodon_Apps\Entity\Account;
 use Enable_Mastodon_Apps\Entity\Status;
+use Enable_Mastodon_Apps\Comment_CPT;
+use ReflectionMethod;
 
 /**
  * Test class for Enable Mastodon Apps integration.
@@ -23,6 +28,405 @@ use Enable_Mastodon_Apps\Entity\Status;
  * @coversDefaultClass \Activitypub\Integration\Enable_Mastodon_Apps
  */
 class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
+	use Equal_Html;
+
+	/**
+	 * Remote conversations notify the reader only for mentions or direct replies.
+	 */
+	public function test_reader_comment_notification_relevance() {
+		$this->assertSame( 90, \has_filter( 'mastodon_api_notifications_get', array( Enable_Mastodon_Apps::class, 'filter_reader_comment_notifications' ) ) );
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\get_userdata( $user_id )->add_cap( 'activitypub' );
+		\wp_set_current_user( $user_id );
+		$actor = \Activitypub\Collection\Actors::get_by_id( $user_id );
+		$this->assertNotWPError( $actor );
+		$root         = self::factory()->post->create( array( 'post_type' => Remote_Posts::POST_TYPE ) );
+		$comment_id   = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $root,
+				'comment_content' => 'A remote author replying to themselves.',
+			)
+		);
+		$status       = new Status();
+		$status->id   = (string) Comment_CPT::comment_id_to_post_id( $comment_id );
+		$notification = array(
+			'type'   => 'mention',
+			'status' => $status,
+		);
+		$follow       = array( 'type' => 'follow' );
+		$this->assertSame( array( $follow ), Enable_Mastodon_Apps::filter_reader_comment_notifications( array( $notification, $follow ) ) );
+
+		// A mention link remains meaningful even when core strips its class and rel.
+		\wp_update_comment(
+			array(
+				'comment_ID'      => $comment_id,
+				'comment_content' => '<a href="' . \esc_url( $actor->get_id() ) . '">@reader</a>',
+			)
+		);
+		$this->assertSame( array( $notification ), Enable_Mastodon_Apps::filter_reader_comment_notifications( array( $notification ) ) );
+		\wp_update_comment(
+			array(
+				'comment_ID'      => $comment_id,
+				'comment_content' => 'A remote reply.',
+			)
+		);
+
+		// Real mention tags in the original inbox object survive comment HTML sanitization.
+		$source_id = 'https://remote.example/mentions-reader';
+		\update_comment_meta( $comment_id, 'source_id', $source_id );
+		$inbox = self::factory()->post->create(
+			array(
+				'post_type'    => 'ap_inbox',
+				'post_status'  => 'publish',
+				'post_content' => \wp_json_encode(
+					array(
+						'object' => array(
+							'tag' => array(
+								array(
+									'type' => 'Mention',
+									'href' => $actor->get_id(),
+								),
+							),
+						),
+					)
+				),
+				'meta_input'   => array(
+					'_activitypub_activity_type' => 'Create',
+					'_activitypub_object_id'     => $source_id,
+				),
+			)
+		);
+		$this->assertSame( array( $notification ), Enable_Mastodon_Apps::filter_reader_comment_notifications( array( $notification ) ) );
+		\wp_delete_post( $inbox, true );
+
+		// A direct reply to the reader's local comment needs no explicit mention.
+		$parent = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $root,
+				'user_id'         => $user_id,
+			)
+		);
+		\wp_update_comment(
+			array(
+				'comment_ID'     => $comment_id,
+				'comment_parent' => $parent,
+			)
+		);
+		$this->assertSame( array( $notification ), Enable_Mastodon_Apps::filter_reader_comment_notifications( array( $notification ) ) );
+	}
+
+	/**
+	 * Boosts and likes of somebody else's cached post are not the reader's notifications.
+	 */
+	public function test_reader_reaction_notifications_require_local_target() {
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $user_id );
+		$remote_id = self::factory()->post->create(
+			array(
+				'post_type'   => Remote_Posts::POST_TYPE,
+				'post_author' => 0,
+			)
+		);
+		$own_id    = self::factory()->post->create( array( 'post_author' => $user_id ) );
+		foreach ( array( 'reblog', 'favourite' ) as $type ) {
+			$remote     = new Status();
+			$remote->id = (string) $remote_id;
+			$own        = new Status();
+			$own->id    = (string) $own_id;
+			$unrelated  = array(
+				'type'   => $type,
+				'status' => $remote,
+			);
+			$genuine    = array(
+				'type'   => $type,
+				'status' => $own,
+			);
+			$this->assertSame( array( $genuine ), Enable_Mastodon_Apps::filter_reader_comment_notifications( array( $unrelated, $genuine ) ) );
+		}
+	}
+
+	/**
+	 * The reader adds only the authenticated actor's posts, retaining local posts.
+	 */
+	public function test_reader_home_timeline_scoping_and_pagination() {
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $user_id );
+		\update_option( 'activitypub_reader_ui', '1' );
+		$local_id = self::factory()->post->create( array( 'post_author' => $user_id ) );
+		$actor_id = Remote_Actors::create( self::$users['username@example.org'] );
+		$this->assertNotWPError( $actor_id );
+		$post_args = array(
+			'post_type'    => Remote_Posts::POST_TYPE,
+			'post_status'  => 'publish',
+			'post_content' => '<p>A cached remote post.</p>',
+			'guid'         => 'https://example.org/posts/reader?a=1&b=2',
+			'meta_input'   => array( '_activitypub_remote_actor_id' => $actor_id ),
+		);
+		$own_id    = self::factory()->post->create( $post_args );
+		Remote_Posts::add_recipient( $own_id, $user_id );
+		// A second recipient must not duplicate a post in the timeline.
+		Remote_Posts::add_recipient( $own_id, $user_id + 100 );
+		$other_id = self::factory()->post->create( $post_args );
+		Remote_Posts::add_recipient( $other_id, $user_id + 100 );
+		$orphan_id = self::factory()->post->create( $post_args );
+
+		$request = new \WP_REST_Request( 'GET', '/enable-mastodon-apps/api/v1/timelines/home' );
+		$request->set_param( 'limit', 20 );
+		$timeline = new Timeline();
+		$response = $timeline->api_timelines( null, $request );
+		$statuses = $response->get_data();
+		$ids      = \array_map(
+			static function ( $status ) {
+				return $status->id;
+			},
+			$statuses
+		);
+		$this->assertContains( (string) $own_id, $ids );
+		$this->assertContains( (string) $local_id, $ids );
+		$this->assertNotContains( (string) $other_id, $ids );
+		$this->assertNotContains( (string) $orphan_id, $ids );
+		$this->assertSame( 1, \count( \array_keys( $ids, (string) $own_id, true ) ) );
+		$status = $statuses[ \array_search( (string) $own_id, $ids, true ) ];
+		$this->assertSame( (string) $actor_id, (string) $status->account->id );
+		$this->assertSame( 'https://example.org/posts/reader?a=1&b=2', $status->uri );
+		$this->assert_equal_html( '<p>A cached remote post.</p>', $status->content );
+
+		$request->set_param( 'limit', 1 );
+		$response = $timeline->api_timelines( null, $request );
+		$this->assertCount( 1, $response->get_data() );
+		$this->assertSame( (string) $own_id, $response->get_data()[0]->id );
+		$this->assertArrayHasKey( 'next', $response->get_links() );
+		$request->set_param( 'max_id', $own_id );
+		$response = $timeline->api_timelines( null, $request );
+		$this->assertSame( (string) $local_id, $response->get_data()[0]->id );
+		$request->set_param( 'max_id', null );
+		$request->set_param( 'min_id', $local_id );
+		$response = $timeline->api_timelines( null, $request );
+		$this->assertSame( (string) $own_id, $response->get_data()[0]->id );
+	}
+
+	/**
+	 * App post-format filters must not exclude unformatted remote reader posts.
+	 */
+	public function test_reader_posts_bypass_local_post_format_filters() {
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $user_id );
+		\update_option( 'activitypub_reader_ui', '1' );
+		$standard_id = self::factory()->post->create();
+		$status_id   = self::factory()->post->create();
+		\set_post_format( $status_id, 'status' );
+		$remote_id = self::factory()->post->create( array( 'post_type' => Remote_Posts::POST_TYPE ) );
+		Remote_Posts::add_recipient( $remote_id, $user_id );
+		$other_id = self::factory()->post->create( array( 'post_type' => Remote_Posts::POST_TYPE ) );
+		Remote_Posts::add_recipient( $other_id, $user_id + 100 );
+		$request  = new \WP_REST_Request( 'GET', '/enable-mastodon-apps/api/v1/timelines/home' );
+		$args     = array(
+			'post_type'        => array( 'post' ),
+			'post_status'      => 'publish',
+			'fields'           => 'ids',
+			'posts_per_page'   => 20,
+			'suppress_filters' => false,
+			'tax_query'        => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+				array(
+					'taxonomy' => 'post_format',
+					'field'    => 'slug',
+					'terms'    => array( 'post-format-status' ),
+					'operator' => 'IN',
+				),
+			),
+		);
+		$filtered = Enable_Mastodon_Apps::api_home_timeline_args( $args, $request );
+		$this->assertSame( array( $remote_id, $status_id ), \get_posts( $filtered ) );
+		// The standard format uses NOT IN; local exclusions still apply.
+		$args['tax_query'][0]['operator'] = 'NOT IN';
+		$filtered                         = Enable_Mastodon_Apps::api_home_timeline_args( $args, $request );
+		$this->assertSame( array( $remote_id, $standard_id ), \get_posts( $filtered ) );
+	}
+
+	/**
+	 * Inline images become one attachment each, preserving dimensions and alt text.
+	 */
+	public function test_reader_inline_images_become_attachments() {
+		$method = new ReflectionMethod( Enable_Mastodon_Apps::class, 'reader_media' );
+		$method->setAccessible( true );
+		$url   = 'https://example.org/photo.png?a=1&b=2';
+		$media = $method->invoke(
+			null,
+			'<p>Body <img src="https://example.org/photo.png?a=1&amp;b=2" alt="A &amp; B" width="640" height="480"></p><img src="https://example.org/photo.png?a=1&amp;b=2">',
+			array()
+		);
+		$this->assertCount( 1, $media['attachments'] );
+		$this->assertSame( $url, $media['attachments'][0]['url'] );
+		$this->assertSame( 'A & B', $media['attachments'][0]['alt'] );
+		$this->assertSame( 640, $media['attachments'][0]['width'] );
+		$this->assertSame( 480, $media['attachments'][0]['height'] );
+		$this->assert_equal_html( '<p>Body </p>', $media['content'] );
+		$cached             = $media['attachments'];
+		$cached[0]['width'] = 1280;
+		$media              = $method->invoke( null, '<img src="https://example.org/photo.png?a=1&amp;b=2" width="640" height="480">', $cached );
+		$this->assertSame( 1280, $media['attachments'][0]['width'] );
+	}
+
+	/**
+	 * Reader attachments expose the size and descriptions supplied by federation.
+	 */
+	public function test_reader_status_returns_attachment_dimensions() {
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $user_id );
+		$actor_id = Remote_Actors::create( self::$users['username@example.org'] );
+		$this->assertNotWPError( $actor_id );
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'    => Remote_Posts::POST_TYPE,
+				'post_content' => '<p>Examiner.com in 1996</p><img src="https://example.org/screenshot.png" alt="Screenshot">',
+				'meta_input'   => array(
+					'_activitypub_remote_actor_id' => $actor_id,
+					'_activitypub_attachments'     => array(
+						array(
+							'url'      => 'https://example.org/screenshot.png',
+							'type'     => 'image',
+							'alt'      => 'Screenshot',
+							'width'    => 640,
+							'height'   => 480,
+							'blurhash' => 'test-hash',
+						),
+					),
+				),
+			)
+		);
+		Remote_Posts::add_recipient( $post_id, $user_id );
+		$status = Enable_Mastodon_Apps::api_reader_status( null, $post_id );
+		$this->assertInstanceOf( Status::class, $status );
+		$this->assertCount( 1, $status->media_attachments );
+		$attachment = $status->media_attachments[0];
+		$this->assertSame( 'image', $attachment->type );
+		$this->assertSame( 'Screenshot', $attachment->description );
+		$this->assertSame( 'test-hash', $attachment->blurhash );
+		$this->assertSame(
+			array(
+				'width'  => 640,
+				'height' => 480,
+				'size'   => '640x480',
+				'aspect' => 640 / 480,
+			),
+			$attachment->meta['original']
+		);
+		$this->assert_equal_html( '<p>Examiner.com in 1996</p>', $status->content );
+	}
+
+	/**
+	 * Disabled readers, public timelines, and tag timelines keep their query args.
+	 */
+	public function test_reader_timeline_requires_enabled_home_route() {
+		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$args    = array( 'post_type' => array( 'post' ) );
+		$request = new \WP_REST_Request( 'GET', '/enable-mastodon-apps/api/v1/timelines/home' );
+		\update_option( 'activitypub_reader_ui', '0' );
+		$this->assertSame( $args, Enable_Mastodon_Apps::api_home_timeline_args( $args, $request ) );
+		\update_option( 'activitypub_reader_ui', '1' );
+		foreach ( array( 'public', 'tag/test' ) as $route ) {
+			$request->set_route( '/enable-mastodon-apps/api/v1/timelines/' . $route );
+			$this->assertSame( $args, Enable_Mastodon_Apps::api_home_timeline_args( $args, $request ) );
+		}
+		$this->assertSame( 'WHERE 1=1', Enable_Mastodon_Apps::filter_reader_timeline_where( 'WHERE 1=1', new \WP_Query() ) );
+	}
+
+	/**
+	 * Guessing a reader status ID must not bypass recipient or capability checks.
+	 */
+	public function test_reader_status_is_private_to_its_recipient() {
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$post_id = self::factory()->post->create( array( 'post_type' => Remote_Posts::POST_TYPE ) );
+		Remote_Posts::add_recipient( $post_id, $user_id );
+		$other_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		foreach ( array( 0, $other_id ) as $viewer_id ) {
+			\wp_set_current_user( $viewer_id );
+			$this->assertNull( \apply_filters( 'mastodon_api_status', null, $post_id ) );
+		}
+		// Even its recipient needs permission to use ActivityPub.
+		$subscriber_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		Remote_Posts::add_recipient( $post_id, $subscriber_id );
+		\wp_set_current_user( $subscriber_id );
+		$this->assertNull( \apply_filters( 'mastodon_api_status', null, $post_id ) );
+	}
+
+	/**
+	 * Only an authorized blog actor may fall back to the blog's feed.
+	 */
+	public function test_reader_blog_actor_fallback_requires_permission() {
+		\update_option( 'activitypub_reader_ui', '1' );
+		$args               = array( 'post_type' => array( 'post' ) );
+		$request            = new \WP_REST_Request( 'GET', '/enable-mastodon-apps/api/v1/timelines/home' );
+		$disable_user_actor = static function () {
+			return false;
+		};
+		\add_filter( 'activitypub_user_can_activitypub', $disable_user_actor );
+		try {
+			\wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+			$actual = Enable_Mastodon_Apps::api_home_timeline_args( $args, $request );
+			$this->assertSame( 0, $actual['activitypub_reader_actor'] );
+			\wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+			$this->assertSame( $args, Enable_Mastodon_Apps::api_home_timeline_args( $args, $request ) );
+			\wp_set_current_user( 0 );
+			$this->assertSame( $args, Enable_Mastodon_Apps::api_home_timeline_args( $args, $request ) );
+		} finally {
+			\remove_filter( 'activitypub_user_can_activitypub', $disable_user_actor );
+		}
+	}
+
+
+	/**
+	 * EMA comment context resolves known actors without URL discovery.
+	 */
+	public function test_comment_account_filter_uses_stored_actor() {
+		$actor_id = Remote_Actors::create( self::$users['username@example.org'] );
+		$this->assertNotWPError( $actor_id );
+		$comment = self::factory()->comment->create_and_get(
+			array(
+				'comment_author_url' => 'https://example.org/users/username',
+				'user_id'            => 0,
+			)
+		);
+		\update_comment_meta( $comment->comment_ID, '_activitypub_remote_actor_id', $actor_id );
+		$discoveries       = 0;
+		$observe_discovery = static function ( $pre ) use ( &$discoveries ) {
+			++$discoveries;
+			return $pre;
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $observe_discovery );
+		try {
+			$account = \apply_filters( 'mastodon_api_account', null, $comment->comment_author_url, null, $comment );
+		} finally {
+			\remove_filter( 'pre_get_remote_metadata_by_actor', $observe_discovery );
+		}
+		$this->assertInstanceOf( Account::class, $account );
+		$this->assertSame( (string) $actor_id, $account->id );
+		$this->assertSame( 0, $discoveries );
+		// Never override another provider, an unrelated identifier, or a local author.
+		$existing = new Account();
+		$this->assertSame( $existing, Enable_Mastodon_Apps::api_account_comment( $existing, $comment->comment_author_url, null, $comment ) );
+		$this->assertNull( Enable_Mastodon_Apps::api_account_comment( null, 'someone-else', null, $comment ) );
+		$comment->user_id = 123;
+		$this->assertNull( Enable_Mastodon_Apps::api_account_comment( null, $comment->comment_author_url, null, $comment ) );
+	}
+
+	/**
+	 * Missing and stale actor metadata must leave the URL fallback available.
+	 */
+	public function test_comment_account_filter_leaves_unknown_actor_to_other_handlers() {
+		$comment = self::factory()->comment->create_and_get(
+			array(
+				'comment_author_url' => 'https://example.org/users/username',
+				'user_id'            => 0,
+			)
+		);
+		$this->assertNull( Enable_Mastodon_Apps::api_account_comment( null, $comment->comment_author_url, null, $comment ) );
+		$post_id = self::factory()->post->create();
+		\update_comment_meta( $comment->comment_ID, '_activitypub_remote_actor_id', $post_id );
+		$this->assertNull( Enable_Mastodon_Apps::api_account_comment( null, $comment->comment_author_url, null, $comment ) );
+		\update_comment_meta( $comment->comment_ID, '_activitypub_remote_actor_id', $post_id + 100000 );
+		$this->assertNull( Enable_Mastodon_Apps::api_account_comment( null, $comment->comment_author_url, null, $comment ) );
+	}
 
 	/**
 	 * Actors.
