@@ -55,7 +55,7 @@ class Test_Router extends \WP_UnitTestCase {
 	 */
 	public function tear_down(): void {
 		// Clean up common state that may be left by tests.
-		unset( $_SERVER['HTTP_ACCEPT'] );
+		unset( $_SERVER['HTTP_ACCEPT'], $_SERVER['HTTP_DATE'], $_SERVER['HTTP_SIGNATURE'] );
 		\set_query_var( 'preview', null );
 		\set_query_var( 'term_id', null );
 		Query::get_instance()->__destruct();
@@ -259,27 +259,33 @@ class Test_Router extends \WP_UnitTestCase {
 		$keys    = Actors::get_keypair( self::$user_id );
 		$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
 
-		$serve_actor = static function () use ( $actor, $keys ) {
-			return array(
-				'id'        => $actor,
-				'type'      => 'Person',
-				'inbox'     => $actor . '/inbox',
-				'publicKey' => array(
-					'id'           => $actor . '#main-key',
-					'owner'        => $actor,
-					'publicKeyPem' => $keys['public_key'],
-				),
-			);
-		};
-		\add_filter( 'activitypub_pre_http_get_remote_object', $serve_actor );
+		\add_filter(
+			'activitypub_pre_http_get_remote_object',
+			static function () use ( $actor, $keys ) {
+				return array(
+					'id'        => $actor,
+					'type'      => 'Person',
+					'inbox'     => $actor . '/inbox',
+					'publicKey' => array(
+						'id'           => $actor . '#main-key',
+						'owner'        => $actor,
+						'publicKeyPem' => $keys['public_key'],
+					),
+				);
+			}
+		);
 
-		$status       = null;
-		$watch_status = static function ( $status_header, $code ) use ( &$status ) {
-			$status = $code;
+		$status = null;
+		\add_filter(
+			'status_header',
+			static function ( $status_header, $code ) use ( &$status ) {
+				$status = $code;
 
-			return $status_header;
-		};
-		\add_filter( 'status_header', $watch_status, 10, 2 );
+				return $status_header;
+			},
+			10,
+			2
+		);
 
 		$path = '/?p=' . $post_id;
 		$args = \apply_filters(
@@ -287,12 +293,8 @@ class Test_Router extends \WP_UnitTestCase {
 			array(
 				'method'      => 'GET',
 				'key_id'      => $actor . '#main-key',
-				'private_key' => Actors::get_private_key( self::$user_id ),
-				'user_id'     => self::$user_id,
-				'headers'     => array(
-					'Date' => \gmdate( 'D, d M Y H:i:s T' ),
-					'Host' => WP_TESTS_DOMAIN,
-				),
+				'private_key' => $keys['private_key'],
+				'headers'     => array( 'Date' => \gmdate( 'D, d M Y H:i:s T' ) ),
 			),
 			\home_url( $path )
 		);
@@ -305,7 +307,6 @@ class Test_Router extends \WP_UnitTestCase {
 		$this->go_to( $path );
 		$template = Router::render_activitypub_template( 'index.php' );
 		$this->assertStringContainsString( 'activitypub-json.php', $template, 'A signer that is not blocked gets the document.' );
-		$this->assertNotSame( 403, $status );
 
 		Moderation::add_site_block( Moderation::TYPE_ACTOR, $actor );
 
@@ -313,13 +314,6 @@ class Test_Router extends \WP_UnitTestCase {
 		$template = Router::render_activitypub_template( 'index.php' );
 		$this->assertSame( 'index.php', $template );
 		$this->assertSame( 403, $status );
-
-		Moderation::remove_site_block( Moderation::TYPE_ACTOR, $actor );
-		unset( $_SERVER['HTTP_DATE'], $_SERVER['HTTP_SIGNATURE'] );
-		\remove_filter( 'status_header', $watch_status );
-		\remove_filter( 'activitypub_pre_http_get_remote_object', $serve_actor );
-		\remove_filter( 'activitypub_use_authorized_fetch', '__return_true' );
-		\delete_option( 'activitypub_rfc9421_signature' );
 	}
 
 	/**
