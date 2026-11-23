@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+When the ActivityPub API is turned off, the plugin no longer blocks the OAuth discovery address for other plugins, and profiles no longer list sign-in addresses that do not work.
