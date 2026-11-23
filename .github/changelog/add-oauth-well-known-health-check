@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Site Health now warns when another plugin or the web server takes over the addresses that apps use to find the ActivityPub API.
