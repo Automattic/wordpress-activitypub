@@ -185,7 +185,7 @@ class Mailer {
 			$admin_url = '/options-general.php?page=activitypub&tab=followers';
 		}
 
-		$email = self::get_email( $user_id );
+		$email = self::get_email_address( $user_id );
 		if ( ! $email ) {
 			return;
 		}
@@ -338,7 +338,7 @@ class Mailer {
 				continue;
 			}
 
-			$email = self::get_email( $user_id );
+			$email = self::get_email_address( $user_id );
 			if ( ! $email ) {
 				continue;
 			}
@@ -436,7 +436,7 @@ class Mailer {
 				continue;
 			}
 
-			$email = self::get_email( $user_id );
+			$email = self::get_email_address( $user_id );
 			if ( ! $email ) {
 				continue;
 			}
@@ -488,7 +488,7 @@ class Mailer {
 	 * @return bool True if email was sent, false otherwise.
 	 */
 	public static function send( $user_id, $subject, $template, $args = array(), $alt_body = '' ) {
-		$email = self::get_email( $user_id );
+		$email = self::get_email_address( $user_id );
 		if ( ! $email ) {
 			return false;
 		}
@@ -539,7 +539,7 @@ class Mailer {
 	 *
 	 * @return string The address, or an empty string when the user has none.
 	 */
-	private static function get_email( $user_id ) {
+	private static function get_email_address( $user_id ) {
 		if ( $user_id <= Actors::BLOG_USER_ID ) {
 			return (string) \get_option( 'admin_email' );
 		}
@@ -564,7 +564,7 @@ class Mailer {
 	 * @return bool True if the mail was sent, false otherwise.
 	 */
 	public static function limit_reached( $user_id, $limit, $reset ) {
-		$email = self::get_email( $user_id );
+		$email = self::get_email_address( $user_id );
 		if ( ! $email ) {
 			return false;
 		}
