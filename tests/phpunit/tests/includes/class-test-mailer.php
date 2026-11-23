@@ -1170,6 +1170,76 @@ class Test_Mailer extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A recipient gets a limited number of notification mails per hour, whatever causes them.
+	 *
+	 * @covers ::maybe_send_mail
+	 * @covers ::new_follower
+	 * @covers ::direct_message
+	 * @covers ::mention
+	 */
+	public function test_notification_mails_share_one_allowance_per_recipient() {
+		$user_id = self::$user_id;
+		$href    = Actors::get_by_id( $user_id )->get_id();
+		foreach ( array( 'new_follower', 'new_dm', 'new_mention' ) as $option ) {
+			\update_user_option( $user_id, 'activitypub_mailer_' . $option, '1' );
+		}
+
+		$three_mails = static function ( $limit, $bucket ) {
+			return 'mail' === $bucket ? 3 : $limit;
+		};
+		\add_filter( 'activitypub_rate_limit', $three_mails, 10, 2 );
+
+		$remote_metadata_callback = static function ( $pre, $actor ) {
+			return array(
+				'type' => 'Person',
+				'name' => 'Test Sender',
+				'url'  => $actor,
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback, 10, 2 );
+
+		$mock = new \MockAction();
+		\add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
+
+		// Two of each kind, every one from another server.
+		foreach ( array( 'new_follower', 'direct_message', 'mention', 'new_follower', 'direct_message', 'mention' ) as $number => $method ) {
+			$activity = array(
+				'type'   => 'new_follower' === $method ? 'Follow' : 'Create',
+				'actor'  => \sprintf( 'https://server-%d.example/users/1', $number ),
+				'object' => array(
+					'id'      => \sprintf( 'https://server-%d.example/notes/1', $number ),
+					'content' => 'Test',
+				),
+			);
+
+			if ( 'mention' === $method ) {
+				$activity['cc']            = array( $href );
+				$activity['object']['tag'] = array(
+					array(
+						'type' => 'Mention',
+						'href' => $href,
+						'name' => '@test',
+					),
+				);
+			} elseif ( 'direct_message' === $method ) {
+				$activity['to'] = array( $href );
+			}
+
+			if ( 'new_follower' === $method ) {
+				Mailer::new_follower( $activity, $user_id, true );
+			} else {
+				Mailer::$method( $activity, array( $user_id ) );
+			}
+		}
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback, 10 );
+		\remove_filter( 'activitypub_rate_limit', $three_mails, 10 );
+		\remove_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
+
+		$this->assertSame( 3, $mock->get_call_count() );
+	}
+
+	/**
 	 * Test direct message with multiple recipients filters correctly.
 	 *
 	 * @covers ::direct_message

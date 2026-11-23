@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Email notifications for new followers, direct messages and mentions are limited to 30 per hour for each recipient.

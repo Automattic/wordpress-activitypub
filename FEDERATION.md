@@ -259,6 +259,8 @@ All REST API endpoints use the `activitypub/1.0` namespace.
 
 Endpoints that fetch a resource the caller names, or that create something, answer a limited number of requests per minute from the same caller: `/interactions`, `/actors/{user_id}/remote-follow`, `/proxy` and the OAuth endpoints. Their answers carry the [IETF RateLimit header fields](https://datatracker.ietf.org/doc/html/draft-ietf-httpapi-ratelimit-headers) (`RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`), a refusal adds `Retry-After`, and because those numbers describe one caller the answers are not stored by shared caches. A site can change an allowance with the `activitypub_rate_limit` filter.
 
+Notification mails for new followers, direct messages and mentions share one allowance per recipient and hour (30 by default), which the same filter changes for the `mail` bucket.
+
 **Content negotiation:**
 
 Posts and author pages serve ActivityPub JSON-LD when the request includes an appropriate `Accept` header (`application/activity+json` or `application/ld+json`).

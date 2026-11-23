@@ -268,11 +268,8 @@ class Mailer {
 			$message            .= \esc_url( \admin_url( $admin_url ) ) . "\r\n\r\n";
 			$mailer->{'AltBody'} = $message;
 		};
-		\add_action( 'phpmailer_init', $alt_function );
 
-		$sent = \wp_mail( $email, $subject, $html_message, array( 'Content-type: text/html' ) );
-
-		\remove_action( 'phpmailer_init', $alt_function );
+		$sent = self::maybe_send_mail( $user_id, $email, $subject, $html_message, $alt_function );
 
 		if ( ! $sent && $meta_key ) {
 			if ( $last_sent ) {
@@ -374,11 +371,8 @@ class Mailer {
 
 				$mailer->{'AltBody'} = $message;
 			};
-			\add_action( 'phpmailer_init', $alt_function );
 
-			\wp_mail( $email, $subject, $html_message, array( 'Content-type: text/html' ) );
-
-			\remove_action( 'phpmailer_init', $alt_function );
+			self::maybe_send_mail( $user_id, $email, $subject, $html_message, $alt_function );
 		}
 	}
 
@@ -476,11 +470,8 @@ class Mailer {
 
 				$mailer->{'AltBody'} = $message;
 			};
-			\add_action( 'phpmailer_init', $alt_function );
 
-			\wp_mail( $email, $subject, $html_message, array( 'Content-type: text/html' ) );
-
-			\remove_action( 'phpmailer_init', $alt_function );
+			self::maybe_send_mail( $user_id, $email, $subject, $html_message, $alt_function );
 		}
 	}
 
@@ -542,6 +533,38 @@ class Mailer {
 		\remove_action( 'phpmailer_init', $alt_function );
 
 		return $result;
+	}
+
+	/**
+	 * Send a notification mail, unless its recipient had enough of them this hour.
+	 *
+	 * Every mail that something from outside causes goes through here: new followers, direct
+	 * messages and mentions share one allowance per recipient, whoever sends them. 30 mails per
+	 * hour by default; the `activitypub_rate_limit` filter changes it for the `mail` bucket.
+	 * Mails the site sends on its own schedule use send().
+	 *
+	 * @since unreleased
+	 *
+	 * @param int      $user_id      The recipient.
+	 * @param string   $email        The recipient's address.
+	 * @param string   $subject      The subject.
+	 * @param string   $message      The HTML message.
+	 * @param callable $alt_function The `phpmailer_init` callback that sets the plain text message.
+	 *
+	 * @return bool True when the mail was sent, false when it was held back or sending failed.
+	 */
+	private static function maybe_send_mail( $user_id, $email, $subject, $message, $alt_function ) {
+		if ( ! Throttle::count( 'mail', 'user-' . $user_id, 30, HOUR_IN_SECONDS )['allowed'] ) {
+			return false;
+		}
+
+		\add_action( 'phpmailer_init', $alt_function );
+
+		$sent = \wp_mail( $email, $subject, $message, array( 'Content-type: text/html' ) );
+
+		\remove_action( 'phpmailer_init', $alt_function );
+
+		return $sent;
 	}
 
 	/**

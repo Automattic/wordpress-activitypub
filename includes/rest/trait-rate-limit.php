@@ -7,6 +7,8 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\Throttle;
+
 use function Activitypub\get_client_ip;
 use function Activitypub\maybe_set_no_store;
 
@@ -82,39 +84,13 @@ trait Rate_Limit {
 	 * @return array{answer: true|\WP_Error, limit: int, remaining: int, reset: int} The answer and the numbers behind it.
 	 */
 	private function count_request( $bucket, $limit ) {
-		/**
-		 * Filters how many requests a caller may make per minute.
-		 *
-		 * @since 9.4.0
-		 *
-		 * @param int    $limit  The allowance the endpoint asks for.
-		 * @param string $bucket What is being limited, for example `interactions`.
-		 */
-		$limit = (int) \apply_filters( 'activitypub_rate_limit', $limit, $bucket );
-
 		$user_id = \get_current_user_id();
 		$caller  = $user_id ? 'user-' . $user_id : get_client_ip();
 
-		/*
-		 * The window is part of the entry's name, so it ends by itself instead of being pushed
-		 * forward by every request, and only the first request of a window writes a new entry.
-		 */
-		$window = (int) \floor( \time() / MINUTE_IN_SECONDS );
-		$reset  = ( $window + 1 ) * MINUTE_IN_SECONDS;
+		$entry = Throttle::count( $bucket, $caller, $limit );
 
-		// The caller is hashed, so no IP address ends up in an option name, a backup or a debug dump.
-		$key   = \sprintf( 'activitypub_rate_%s_%s_%d', $bucket, \md5( $caller ), $window );
-		$count = (int) \get_transient( $key );
-
-		$entry = array(
-			'answer'    => true,
-			'limit'     => $limit,
-			'remaining' => 0,
-			'reset'     => $reset,
-		);
-
-		// Without a caller there is nothing to count, so the request is refused rather than let through.
-		if ( '' === $caller || $count >= $limit ) {
+		$entry['answer'] = true;
+		if ( ! $entry['allowed'] ) {
 			$entry['answer'] = new \WP_Error(
 				'activitypub_rate_limited',
 				\__( 'Too many requests. Please try again later.', 'activitypub' ),
@@ -124,12 +100,8 @@ trait Rate_Limit {
 					'title'  => 'Rate limit exceeded',
 				)
 			);
-
-			return $entry;
 		}
-
-		\set_transient( $key, $count + 1, MINUTE_IN_SECONDS );
-		$entry['remaining'] = $limit - $count - 1;
+		unset( $entry['allowed'] );
 
 		return $entry;
 	}
