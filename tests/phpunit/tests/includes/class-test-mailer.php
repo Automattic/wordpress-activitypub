@@ -380,10 +380,8 @@ class Test_Mailer extends WP_UnitTestCase {
 			return $args;
 		};
 		add_filter( 'wp_mail', $wp_mail_callback );
-		$mail_sent = static function () {
-			return true;
-		};
-		add_filter( 'pre_wp_mail', $mail_sent );
+		// The cooldown is only kept for a mail that was sent, so sending must not depend on the local mail transport.
+		add_filter( 'pre_wp_mail', '__return_true' );
 
 		// First follow: notification email should be sent.
 		Mailer::new_follower( $activity, self::$user_id, true, $remote_actor );
@@ -405,7 +403,7 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		remove_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
 		remove_filter( 'wp_mail', $wp_mail_callback );
-		remove_filter( 'pre_wp_mail', $mail_sent );
+		remove_filter( 'pre_wp_mail', '__return_true' );
 	}
 
 	/**
@@ -1232,50 +1230,45 @@ class Test_Mailer extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Mails about replies and reactions from the Fediverse have their own allowance, and a local comment is not counted.
+	 * Mails about replies and reactions from the Fediverse are counted per address, and a local comment is not counted.
 	 *
-	 * @covers ::maybe_throttle_comment_notification
+	 * @covers ::throttle_comment_recipients
 	 * @covers ::maybe_throttle_mail
 	 * @covers ::send_limit_notice
 	 */
-	public function test_comment_notifications_share_one_allowance() {
+	public function test_comment_mails_are_counted_per_address() {
 		$two_mails = static function ( $limit, $bucket ) {
 			return 'comment_mail' === $bucket ? 2 : $limit;
 		};
 		\add_filter( 'activitypub_rate_limit', $two_mails, 10, 2 );
 
+		$author    = 'author@example.com';
+		$moderator = 'moderator@example.com';
 		$post_id   = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
-		$decisions = array();
+		$received  = array(
+			'comment_post_ID' => $post_id,
+			'comment_meta'    => array( 'protocol' => 'activitypub' ),
+		);
+		$sent      = array();
 
 		$notices = $this->count_mails(
-			static function () use ( $post_id, &$decisions ) {
-				for ( $i = 0; $i < 4; $i++ ) {
-					$comment_id = self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) );
-					\add_comment_meta( $comment_id, 'protocol', 'activitypub' );
-
-					$decisions[] = \apply_filters( 'notify_post_author', true, $comment_id );
+			static function () use ( $received, $author, $moderator, &$sent ) {
+				for ( $i = 0; $i < 3; $i++ ) {
+					$sent[] = \apply_filters( 'comment_notification_recipients', array( $author ), self::factory()->comment->create( $received ) );
 				}
+
+				// The moderation mail to the same author counts against the same address.
+				$sent[] = \apply_filters( 'comment_moderation_recipients', array( $moderator, $author ), self::factory()->comment->create( $received ) );
 			}
 		);
 
-		$local = self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) );
-
-		// WordPress asks twice for one pending comment, which counts once, so a second comment still fits.
-		$moderator = array();
-		foreach ( array( 2, 1 ) as $asked ) {
-			$pending = self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) );
-			\add_comment_meta( $pending, 'protocol', 'activitypub' );
-			for ( $i = 0; $i < $asked; $i++ ) {
-				$moderator[] = \apply_filters( 'notify_moderator', true, $pending );
-			}
-		}
+		$local = \apply_filters( 'comment_notification_recipients', array( $author ), self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) ) );
 
 		\remove_filter( 'activitypub_rate_limit', $two_mails, 10 );
 
-		$this->assertSame( array( true, true, false, false ), $decisions );
+		$this->assertSame( array( array( $author ), array( $author ), array(), array( $moderator ) ), $sent );
 		$this->assertSame( 1, $notices, 'One notice for the first mail that is not sent.' );
-		$this->assertTrue( \apply_filters( 'notify_post_author', true, $local ), 'A local comment is not counted.' );
-		$this->assertSame( array( true, true, true ), $moderator, 'The moderator mails have their own allowance, and one comment counts once.' );
+		$this->assertSame( array( $author ), $local, 'A local comment is not counted.' );
 	}
 
 	/**

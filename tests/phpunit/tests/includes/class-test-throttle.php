@@ -33,6 +33,23 @@ class Test_Throttle extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Only the first refused use of a window is marked, also when the limit was lowered in between.
+	 *
+	 * @covers ::count
+	 */
+	public function test_count_marks_the_first_refusal() {
+		Throttle::count( 'test', 'a', 2 );
+		Throttle::count( 'test', 'a', 2 );
+
+		$this->assertTrue( Throttle::count( 'test', 'a', 2 )['exceeded'] );
+		$this->assertFalse( Throttle::count( 'test', 'a', 2 )['exceeded'] );
+
+		Throttle::count( 'test', 'b', 5 );
+		Throttle::count( 'test', 'b', 5 );
+		$this->assertTrue( Throttle::count( 'test', 'b', 1 )['exceeded'], 'A lowered limit is marked once as well.' );
+	}
+
+	/**
 	 * Without a caller there is nothing to count, so the use is refused.
 	 *
 	 * @covers ::count

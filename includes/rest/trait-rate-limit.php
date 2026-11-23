@@ -34,7 +34,7 @@ trait Rate_Limit {
 	 * object again; without a reference a later request could read this answer as its own. The
 	 * numbers are kept so the response can carry them once it exists.
 	 *
-	 * @var array<string, array{request: \WP_REST_Request, answer: true|\WP_Error, limit: int, remaining: int, reset: int}>
+	 * @var array<string, array{request: \WP_REST_Request, answer: true|\WP_Error, allowed: bool, exceeded: bool, limit: int, remaining: int, reset: int}>
 	 */
 	private static $counted = array();
 
@@ -81,7 +81,7 @@ trait Rate_Limit {
 	 * @param string $bucket What is being limited.
 	 * @param int    $limit  How many requests a caller may make per minute.
 	 *
-	 * @return array{answer: true|\WP_Error, limit: int, remaining: int, reset: int} The answer and the numbers behind it.
+	 * @return array{answer: true|\WP_Error, allowed: bool, exceeded: bool, limit: int, remaining: int, reset: int} The answer and the numbers behind it.
 	 */
 	private function count_request( $bucket, $limit ) {
 		$user_id = \get_current_user_id();
@@ -98,7 +98,6 @@ trait Rate_Limit {
 				'title'  => 'Rate limit exceeded',
 			)
 		);
-		unset( $entry['allowed'] );
 
 		return $entry;
 	}

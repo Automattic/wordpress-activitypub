@@ -25,11 +25,12 @@ class Throttle {
 	 * Count one use against a caller's allowance.
 	 *
 	 * @param string $bucket What is being limited, for example `interactions`.
-	 * @param string $caller Who is counted, for example a user, an IP address or a sender's host.
+	 * @param string $caller Who is counted, for example a user, an IP address or an email address.
 	 * @param int    $limit  How many uses a caller has per window.
 	 * @param int    $window Optional. The window in seconds. Default one minute.
 	 *
-	 * @return array{allowed: bool, limit: int, remaining: int, reset: int} Whether the use fits, and the numbers behind it.
+	 * @return array{allowed: bool, exceeded: bool, limit: int, remaining: int, reset: int} Whether the use fits, whether
+	 *         it is the first one in the window that does not, and the numbers behind it.
 	 */
 	public static function count( $bucket, $caller, $limit, $window = MINUTE_IN_SECONDS ) {
 		/**
@@ -58,13 +59,24 @@ class Throttle {
 
 		$entry = array(
 			'allowed'   => false,
+			'exceeded'  => false,
 			'limit'     => $limit,
 			'remaining' => 0,
 			'reset'     => $reset,
 		);
 
 		// Without a caller there is nothing to count, so the use is refused rather than let through.
-		if ( '' === $caller || $count >= $limit ) {
+		if ( '' === $caller ) {
+			return $entry;
+		}
+
+		if ( $count >= $limit ) {
+			// Marked once per window, so a caller can react to the first refusal only, also when the limit was lowered.
+			if ( false === \get_transient( $key . '_exceeded' ) ) {
+				\set_transient( $key . '_exceeded', 1, $window );
+				$entry['exceeded'] = true;
+			}
+
 			return $entry;
 		}
 
