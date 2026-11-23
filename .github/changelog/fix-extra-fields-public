@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Only published profile fields are shared with the Fediverse; drafts, private and password-protected fields stay on your site.

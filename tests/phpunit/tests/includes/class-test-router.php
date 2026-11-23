@@ -7,7 +7,9 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
+use Activitypub\Moderation;
 use Activitypub\Query;
 use Activitypub\Router;
 use Activitypub\Tombstone;
@@ -53,7 +55,7 @@ class Test_Router extends \WP_UnitTestCase {
 	 */
 	public function tear_down(): void {
 		// Clean up common state that may be left by tests.
-		unset( $_SERVER['HTTP_ACCEPT'] );
+		unset( $_SERVER['HTTP_ACCEPT'], $_SERVER['HTTP_DATE'], $_SERVER['HTTP_SIGNATURE'] );
 		\set_query_var( 'preview', null );
 		\set_query_var( 'term_id', null );
 		Query::get_instance()->__destruct();
@@ -242,6 +244,86 @@ class Test_Router extends \WP_UnitTestCase {
 		$template = Router::render_activitypub_template( 'index.php' );
 		$this->assertStringContainsString( 'index.php', $template );
 		$this->assertStringContainsString( '406', $status );
+	}
+
+	/**
+	 * With signed requests required, a signer that is blocked for the whole site gets no document.
+	 *
+	 * @covers ::render_activitypub_template
+	 */
+	public function test_authorized_fetch_refuses_a_blocked_signer() {
+		\update_option( 'activitypub_rfc9421_signature', '0' );
+		\add_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$actor   = 'https://remote.example/users/reader';
+		$keys    = Actors::get_keypair( self::$user_id );
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+
+		\add_filter(
+			'activitypub_pre_http_get_remote_object',
+			static function () use ( $actor, $keys ) {
+				return array(
+					'id'        => $actor,
+					'type'      => 'Person',
+					'inbox'     => $actor . '/inbox',
+					'publicKey' => array(
+						'id'           => $actor . '#main-key',
+						'owner'        => $actor,
+						'publicKeyPem' => $keys['public_key'],
+					),
+				);
+			}
+		);
+
+		$status = null;
+		\add_filter(
+			'status_header',
+			static function ( $status_header, $code ) use ( &$status ) {
+				$status = $code;
+
+				return $status_header;
+			},
+			10,
+			2
+		);
+
+		$path = '/?p=' . $post_id;
+		$args = \apply_filters(
+			'http_request_args',
+			array(
+				'method'      => 'GET',
+				'key_id'      => $actor . '#main-key',
+				'private_key' => $keys['private_key'],
+				'headers'     => array( 'Date' => \gmdate( 'D, d M Y H:i:s T' ) ),
+			),
+			\home_url( $path )
+		);
+
+		$_SERVER['HTTP_ACCEPT']    = 'application/activity+json';
+		$_SERVER['HTTP_DATE']      = $args['headers']['Date'];
+		$_SERVER['HTTP_SIGNATURE'] = $args['headers']['Signature'];
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+
+		$this->go_to( $path );
+		$template = Router::render_activitypub_template( 'index.php' );
+		$this->assertStringContainsString( 'activitypub-json.php', $template, 'A signer that is not blocked gets the document.' );
+
+		$blocks = array(
+			Moderation::TYPE_ACTOR  => $actor,
+			Moderation::TYPE_DOMAIN => 'remote.example',
+		);
+
+		foreach ( $blocks as $type => $value ) {
+			$status = null;
+			Moderation::add_site_block( $type, $value );
+
+			$this->go_to( $path );
+			$template = Router::render_activitypub_template( 'index.php' );
+			$this->assertSame( 'index.php', $template, $type );
+			$this->assertSame( 403, $status, $type );
+
+			Moderation::remove_site_block( $type, $value );
+		}
 	}
 
 	/**
