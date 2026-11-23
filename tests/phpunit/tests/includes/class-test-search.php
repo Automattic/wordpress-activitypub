@@ -489,8 +489,8 @@ class Test_Search extends \WP_UnitTestCase {
 		\set_current_screen( 'edit-comments' );
 		$screen = \get_current_screen();
 
-		$user = \get_user_by( 'id', self::factory()->user->create( array( 'role' => 'editor' ) ) );
-		\wp_set_current_user( $user->ID );
+		// Change the caps on the current user object itself, `current_user_can()` reads only that one.
+		$user = \wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
 		$user->remove_cap( 'activitypub' );
 
 		Search::add_help_tab();
