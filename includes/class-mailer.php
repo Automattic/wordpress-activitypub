@@ -563,7 +563,7 @@ class Mailer {
 	 *
 	 * @return bool True if the mail was sent, false otherwise.
 	 */
-	public static function limit_reached( $user_id, $limit, $reset ) {
+	public static function send_limit_notice( $user_id, $limit, $reset ) {
 		$email = self::get_email_address( $user_id );
 		if ( ! $email ) {
 			return false;
@@ -611,7 +611,7 @@ class Mailer {
 	 * @return bool True when the mail was sent, false when the allowance was used up or sending failed.
 	 */
 	private static function maybe_send_mail( $user_id, $email, $subject, $message, $alt_function ) {
-		$allowance = Throttle::count( 'mail', 'user-' . $user_id, 30, HOUR_IN_SECONDS );
+		$allowance = Throttle::count( 'mail', \sprintf( 'user-%d', $user_id ), 30, HOUR_IN_SECONDS );
 
 		if ( ! $allowance['allowed'] ) {
 			return false;
@@ -624,7 +624,7 @@ class Mailer {
 		\remove_action( 'phpmailer_init', $alt_function );
 
 		if ( 0 === $allowance['remaining'] ) {
-			self::limit_reached( $user_id, $allowance['limit'], $allowance['reset'] );
+			self::send_limit_notice( $user_id, $allowance['limit'], $allowance['reset'] );
 		}
 
 		return $sent;

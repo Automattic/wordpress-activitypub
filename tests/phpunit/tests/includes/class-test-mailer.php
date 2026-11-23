@@ -1178,7 +1178,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	 * A recipient gets a limited number of notification mails per hour, whatever causes them, and is told once when more will not be sent.
 	 *
 	 * @covers ::maybe_send_mail
-	 * @covers ::limit_reached
+	 * @covers ::send_limit_notice
 	 * @covers ::new_follower
 	 * @covers ::direct_message
 	 * @covers ::mention
