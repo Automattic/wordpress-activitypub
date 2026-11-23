@@ -462,6 +462,33 @@ class Test_Search extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The comments screen explains the search in its Help tab, only to users it works for.
+	 *
+	 * @covers \Activitypub\Search::add_help_tab
+	 */
+	public function test_help_tab() {
+		$this->assertSame( 10, \has_action( 'load-edit-comments.php', array( Search::class, 'add_help_tab' ) ) );
+
+		\set_current_screen( 'edit-comments' );
+		$screen = \get_current_screen();
+
+		$user = \get_user_by( 'id', self::factory()->user->create( array( 'role' => 'editor' ) ) );
+		\wp_set_current_user( $user->ID );
+		$user->remove_cap( 'activitypub' );
+
+		Search::add_help_tab();
+		$this->assertNull( $screen->get_help_tab( 'activitypub-replies' ) );
+
+		$user->add_cap( 'activitypub' );
+
+		Search::add_help_tab();
+		$this->assertStringContainsString( 'paste its URL', $screen->get_help_tab( 'activitypub-replies' )['content'] );
+
+		$screen->remove_help_tab( 'activitypub-replies' );
+		\set_current_screen( 'front' );
+	}
+
+	/**
 	 * The import needs the nonce of its link.
 	 *
 	 * @covers \Activitypub\Search::import_reply

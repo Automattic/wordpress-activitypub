@@ -27,6 +27,7 @@ class Search {
 	public static function init() {
 		\add_filter( 'pre_get_posts', array( self::class, 'enhance_public_search' ) );
 		\add_action( 'load-edit-comments.php', array( self::class, 'enhance_admin_comment_search' ) );
+		\add_action( 'load-edit-comments.php', array( self::class, 'add_help_tab' ) );
 		\add_action( 'admin_post_activitypub_import_reply', array( self::class, 'import_reply' ) );
 	}
 
@@ -171,6 +172,35 @@ class Search {
 					)
 				);
 			}
+		);
+	}
+
+	/**
+	 * Explain the search for a reply URL in the Help tab of the comments screen.
+	 *
+	 * @since unreleased
+	 *
+	 * @return void
+	 */
+	public static function add_help_tab() {
+		// Only for users the search works for, see enhance_admin_comment_search().
+		if ( ! \current_user_can( 'activitypub' ) ) {
+			return;
+		}
+
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'       => 'activitypub-replies',
+				'title'    => \__( 'Replies from the Fediverse', 'activitypub' ),
+				// After the tabs of core, which are added later with the default priority of 10.
+				'priority' => 20,
+				'content'  => \sprintf(
+					'<p>%s</p><p>%s</p><p>%s</p>',
+					\esc_html__( 'To find a reply from the Fediverse, paste its URL into the search field. If the reply is already a comment on your site, the search leads you to it.', 'activitypub' ),
+					\esc_html__( 'If the reply is not on your site yet, a notice offers to import it. This works for public replies to one of your posts. Blocked accounts, domains and keywords are respected.', 'activitypub' ),
+					\esc_html__( 'An imported reply is handled like every other comment, so it may wait for moderation first.', 'activitypub' )
+				),
+			)
 		);
 	}
 
