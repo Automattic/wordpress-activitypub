@@ -745,24 +745,32 @@ class Test_Health_Check extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that the API discovery test only runs when the API is on and pretty permalinks are set.
+	 * Test that the API discovery test runs async over admin-ajax, and only when the API is on and pretty permalinks are set.
 	 */
 	public function test_well_known_api_test_registered() {
 		\update_option( 'permalink_structure', '/%postname%/' );
 
 		\update_option( 'activitypub_api', '1' );
 		$result = Health_Check::add_tests( array() );
-		$this->assertArrayHasKey( 'activitypub_test_well_known_api', $result['direct'] );
-		$this->assertEquals( array( Health_Check::class, 'test_well_known_api' ), $result['direct']['activitypub_test_well_known_api']['test'] );
+		$this->assertArrayHasKey( 'activitypub_test_well_known_api', $result['async'] );
+		$this->assertArrayNotHasKey( 'activitypub_test_well_known_api', $result['direct'] );
+
+		$test = $result['async']['activitypub_test_well_known_api'];
+		$this->assertArrayNotHasKey( 'has_rest', $test, 'Runs over admin-ajax, so a REST restriction cannot stop the test.' );
+		$this->assertSame( 1, \substr_count( $test['test'], '_' ), 'Core replaces only the first underscore when it builds the action.' );
+		Health_Check::init();
+		$this->assertNotFalse( \has_action( 'wp_ajax_health-check-' . \str_replace( '_', '-', $test['test'] ), array( Health_Check::class, 'ajax_well_known_api' ) ) );
+		$this->assertSame( array( Health_Check::class, 'test_well_known_api' ), $test['async_direct_test'] );
+		$this->assertTrue( $test['skip_cron'] );
 
 		\update_option( 'activitypub_api', '' );
 		$result = Health_Check::add_tests( array() );
-		$this->assertArrayNotHasKey( 'activitypub_test_well_known_api', $result['direct'] );
+		$this->assertArrayNotHasKey( 'async', $result );
 
 		\update_option( 'activitypub_api', '1' );
 		\update_option( 'permalink_structure', '' );
 		$result = Health_Check::add_tests( array() );
-		$this->assertArrayNotHasKey( 'activitypub_test_well_known_api', $result['direct'] );
+		$this->assertArrayNotHasKey( 'async', $result );
 	}
 
 	/**
@@ -846,6 +854,113 @@ class Test_Health_Check extends WP_UnitTestCase {
 
 		$this->assertEquals( 'recommended', $result['status'] );
 		$this->assertStringContainsString( 'is not reachable: Connection refused', $result['description'] );
+	}
+
+	/**
+	 * Run the admin-ajax handler of the API discovery test and return its output.
+	 *
+	 * The handler ends in wp_die(). The ajax die handler is made to throw, so the output buffer
+	 * holds exactly the response.
+	 *
+	 * @return string The JSON response.
+	 */
+	private function run_ajax_well_known_api() {
+		$die_handler = static function () {
+			return static function ( $message ) {
+				throw new \WPDieException( \esc_html( (string) $message ) );
+			};
+		};
+
+		\add_filter( 'wp_doing_ajax', '__return_true' );
+		\add_filter( 'wp_die_ajax_handler', $die_handler );
+
+		\ob_start();
+		try {
+			Health_Check::ajax_well_known_api();
+			$this->fail( 'Expected the handler to end in wp_die().' );
+		} catch ( \WPDieException $e ) {
+			return (string) \ob_get_clean();
+		} finally {
+			if ( \ob_get_level() > 0 && '' !== (string) \ob_get_contents() ) {
+				\ob_end_clean();
+			}
+			\remove_filter( 'wp_doing_ajax', '__return_true' );
+			\remove_filter( 'wp_die_ajax_handler', $die_handler );
+			unset( $_REQUEST['_wpnonce'] );
+		}
+	}
+
+	/**
+	 * Create a user who may view Site Health.
+	 *
+	 * @return int The user ID.
+	 */
+	private function create_site_health_viewer() {
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+
+		// On a network, core grants Site Health to super admins only.
+		if ( \is_multisite() ) {
+			\grant_super_admin( $user_id );
+		}
+
+		return $user_id;
+	}
+
+	/**
+	 * Test that the admin-ajax handler returns the result the way the Site Health screen reads it.
+	 */
+	public function test_ajax_well_known_api_returns_result() {
+		\wp_set_current_user( $this->create_site_health_viewer() );
+		$_REQUEST['_wpnonce'] = \wp_create_nonce( 'health-check-site-status' );
+
+		$this->well_known_responses = array(
+			'oauth-authorization-server' => new WP_Error( 'http_request_failed', 'Connection refused' ),
+			'activitypub-client-config'  => new WP_Error( 'http_request_failed', 'Connection refused' ),
+		);
+		\add_filter( 'pre_http_request', array( $this, 'mock_well_known' ), 10, 3 );
+
+		$json = \json_decode( $this->run_ajax_well_known_api(), true );
+
+		\remove_filter( 'pre_http_request', array( $this, 'mock_well_known' ), 10 );
+
+		$this->assertTrue( $json['success'] );
+		$this->assertSame( 'test_well_known_api', $json['data']['test'] );
+		$this->assertSame( 'recommended', $json['data']['status'] );
+	}
+
+	/**
+	 * Test that the admin-ajax handler makes no request without the Site Health nonce.
+	 */
+	public function test_ajax_well_known_api_requires_nonce() {
+		\wp_set_current_user( $this->create_site_health_viewer() );
+		$_REQUEST['_wpnonce'] = 'wrong';
+
+		$requested = false;
+		$spy       = static function ( $response ) use ( &$requested ) {
+			$requested = true;
+
+			return $response;
+		};
+		\add_filter( 'pre_http_request', $spy );
+
+		$output = $this->run_ajax_well_known_api();
+
+		\remove_filter( 'pre_http_request', $spy );
+
+		$this->assertStringNotContainsString( '"success":true', $output );
+		$this->assertFalse( $requested );
+	}
+
+	/**
+	 * Test that the admin-ajax handler rejects users who may not view Site Health.
+	 */
+	public function test_ajax_well_known_api_requires_capability() {
+		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+		$_REQUEST['_wpnonce'] = \wp_create_nonce( 'health-check-site-status' );
+
+		$json = \json_decode( $this->run_ajax_well_known_api(), true );
+
+		$this->assertFalse( $json['success'] );
 	}
 
 	/**
