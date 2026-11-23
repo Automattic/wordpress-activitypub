@@ -10,6 +10,8 @@ namespace Activitypub\Tests\Model;
 use Activitypub\Model\Blog;
 use Activitypub\Move;
 
+use function Activitypub\get_rest_url_by_path;
+
 /**
  * Test class for Activitypub Blog Model.
  *
@@ -198,5 +200,30 @@ class Test_Blog extends \WP_UnitTestCase {
 		\update_option( 'activitypub_header_image', $attachment_id );
 
 		$this->assertNull( ( new Blog() )->get_image() );
+	}
+
+	/**
+	 * Test that the OAuth endpoints are only advertised when the API is enabled.
+	 *
+	 * @covers ::get_endpoints
+	 */
+	public function test_oauth_endpoints_need_the_api() {
+		$oauth = array( 'oauthAuthorizationEndpoint', 'oauthTokenEndpoint', 'oauthRegistrationEndpoint' );
+
+		\delete_option( 'activitypub_api' );
+		$endpoints = ( new Blog() )->get_endpoints();
+
+		foreach ( $oauth as $key ) {
+			$this->assertArrayNotHasKey( $key, $endpoints );
+		}
+		$this->assertArrayHasKey( 'sharedInbox', $endpoints );
+
+		\update_option( 'activitypub_api', '1' );
+		$endpoints = ( new Blog() )->get_endpoints();
+
+		foreach ( $oauth as $key ) {
+			$this->assertArrayHasKey( $key, $endpoints );
+		}
+		$this->assertSame( get_rest_url_by_path( 'oauth/authorize' ), $endpoints['oauthAuthorizationEndpoint'] );
 	}
 }

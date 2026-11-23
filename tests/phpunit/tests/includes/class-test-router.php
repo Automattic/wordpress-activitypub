@@ -902,6 +902,7 @@ class Test_Router extends \WP_UnitTestCase {
 	 */
 	public function test_oauth_authorization_server_rewrite_rule() {
 		$this->set_permalink_structure( '/%postname%/' );
+		\update_option( 'activitypub_api', '1' );
 
 		Router::add_rewrite_rules();
 		\flush_rewrite_rules();
@@ -921,6 +922,7 @@ class Test_Router extends \WP_UnitTestCase {
 	 */
 	public function test_client_config_rewrite_rule() {
 		$this->set_permalink_structure( '/%postname%/' );
+		\update_option( 'activitypub_api', '1' );
 
 		Router::add_rewrite_rules();
 		\flush_rewrite_rules();
@@ -931,6 +933,51 @@ class Test_Router extends \WP_UnitTestCase {
 		$this->assertSame( $discovery, $this->resolve_rewrite( $rules, '.well-known/activitypub-client-config' ) );
 		$this->assertSame( $discovery, $this->resolve_rewrite( $rules, '.well-known/activitypub-client-config/' ) );
 		$this->assertNotSame( $discovery, $this->resolve_rewrite( $rules, '.well-known/activitypub-client-config/suffix' ) );
+	}
+
+	/**
+	 * Test that the well-known API paths are no rewrite rules when the API is disabled.
+	 *
+	 * @covers ::add_rewrite_rules
+	 */
+	public function test_api_rewrite_rules_need_the_api() {
+		global $wp_rewrite;
+
+		$this->set_permalink_structure( '/%postname%/' );
+		\delete_option( 'activitypub_api' );
+
+		// Drop the rules other tests added in this process.
+		$wp_rewrite->extra_rules_top = array();
+
+		Router::add_rewrite_rules();
+		\flush_rewrite_rules();
+
+		$rules = get_option( 'rewrite_rules' );
+
+		$this->assertArrayNotHasKey( '^\.well-known/oauth-authorization-server/?$', $rules );
+		$this->assertArrayNotHasKey( '^\.well-known/activitypub-client-config/?$', $rules );
+	}
+
+	/**
+	 * Test that turning the API on or off clears the stored rewrite rules.
+	 *
+	 * @covers ::init
+	 * @covers ::reset_rewrite_rules
+	 */
+	public function test_api_option_change_resets_rewrite_rules() {
+		$this->set_permalink_structure( '/%postname%/' );
+		\delete_option( 'activitypub_api' );
+		$this->assertNotEmpty( \get_option( 'rewrite_rules' ) );
+
+		// The first save adds the option.
+		\update_option( 'activitypub_api', '1' );
+		$this->assertFalse( \get_option( 'rewrite_rules' ) );
+
+		\flush_rewrite_rules();
+		$this->assertNotEmpty( \get_option( 'rewrite_rules' ) );
+
+		\update_option( 'activitypub_api', '0' );
+		$this->assertFalse( \get_option( 'rewrite_rules' ) );
 	}
 
 	/**
