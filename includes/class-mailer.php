@@ -39,6 +39,9 @@ class Mailer {
 		\add_filter( 'notify_post_author', array( self::class, 'maybe_prevent_comment_notification' ), 10, 2 );
 		\add_filter( 'notify_post_author', array( self::class, 'maybe_prevent_reaction_notification' ), 10, 2 );
 		\add_filter( 'notify_moderator', array( self::class, 'maybe_prevent_comment_notification' ), 10, 2 );
+		// Late, so the addresses other code adds are counted too.
+		\add_filter( 'comment_notification_recipients', array( self::class, 'throttle_comment_recipients' ), PHP_INT_MAX, 2 );
+		\add_filter( 'comment_moderation_recipients', array( self::class, 'throttle_comment_recipients' ), PHP_INT_MAX, 2 );
 	}
 
 	/**
@@ -176,15 +179,18 @@ class Mailer {
 				return;
 			}
 
-			$email     = \get_userdata( $user_id )->user_email;
 			$admin_url = '/users.php?page=activitypub-followers-list';
 		} else {
 			if ( '1' !== \get_option( 'activitypub_blog_user_mailer_new_follower', '1' ) ) {
 				return;
 			}
 
-			$email     = \get_option( 'admin_email' );
 			$admin_url = '/options-general.php?page=activitypub&tab=followers';
+		}
+
+		$email = self::get_email_address( $user_id );
+		if ( ! $email ) {
+			return;
 		}
 
 		$meta_key  = null;
@@ -268,11 +274,8 @@ class Mailer {
 			$message            .= \esc_url( \admin_url( $admin_url ) ) . "\r\n\r\n";
 			$mailer->{'AltBody'} = $message;
 		};
-		\add_action( 'phpmailer_init', $alt_function );
 
-		$sent = \wp_mail( $email, $subject, $html_message, array( 'Content-type: text/html' ) );
-
-		\remove_action( 'phpmailer_init', $alt_function );
+		$sent = self::maybe_send_mail( $email, $subject, $html_message, $alt_function );
 
 		if ( ! $sent && $meta_key ) {
 			if ( $last_sent ) {
@@ -334,14 +337,8 @@ class Mailer {
 				if ( ! \get_user_option( 'activitypub_mailer_new_dm', $user_id ) ) {
 					continue;
 				}
-
-				$email = \get_userdata( $user_id )->user_email;
-			} else {
-				if ( '1' !== \get_option( 'activitypub_blog_user_mailer_new_dm', '1' ) ) {
-					continue;
-				}
-
-				$email = \get_option( 'admin_email' );
+			} elseif ( '1' !== \get_option( 'activitypub_blog_user_mailer_new_dm', '1' ) ) {
+				continue;
 			}
 
 			$template_args = array(
@@ -374,11 +371,8 @@ class Mailer {
 
 				$mailer->{'AltBody'} = $message;
 			};
-			\add_action( 'phpmailer_init', $alt_function );
 
-			\wp_mail( $email, $subject, $html_message, array( 'Content-type: text/html' ) );
-
-			\remove_action( 'phpmailer_init', $alt_function );
+			self::maybe_send_mail( self::get_email_address( $user_id ), $subject, $html_message, $alt_function );
 		}
 	}
 
@@ -436,14 +430,8 @@ class Mailer {
 				if ( ! \get_user_option( 'activitypub_mailer_new_mention', $user_id ) ) {
 					continue;
 				}
-
-				$email = \get_userdata( $user_id )->user_email;
-			} else {
-				if ( '1' !== \get_option( 'activitypub_blog_user_mailer_new_mention', '1' ) ) {
-					continue;
-				}
-
-				$email = \get_option( 'admin_email' );
+			} elseif ( '1' !== \get_option( 'activitypub_blog_user_mailer_new_mention', '1' ) ) {
+				continue;
 			}
 
 			$template_args = array(
@@ -476,11 +464,8 @@ class Mailer {
 
 				$mailer->{'AltBody'} = $message;
 			};
-			\add_action( 'phpmailer_init', $alt_function );
 
-			\wp_mail( $email, $subject, $html_message, array( 'Content-type: text/html' ) );
-
-			\remove_action( 'phpmailer_init', $alt_function );
+			self::maybe_send_mail( self::get_email_address( $user_id ), $subject, $html_message, $alt_function );
 		}
 	}
 
@@ -496,15 +481,9 @@ class Mailer {
 	 * @return bool True if email was sent, false otherwise.
 	 */
 	public static function send( $user_id, $subject, $template, $args = array(), $alt_body = '' ) {
-		// Get the recipient email address.
-		if ( $user_id > Actors::BLOG_USER_ID ) {
-			$user = \get_userdata( $user_id );
-			if ( ! $user || empty( $user->user_email ) ) {
-				return false;
-			}
-			$email = $user->user_email;
-		} else {
-			$email = \get_option( 'admin_email' );
+		$email = self::get_email_address( $user_id );
+		if ( ! $email ) {
+			return false;
 		}
 
 		// Load the HTML template.
@@ -542,6 +521,117 @@ class Mailer {
 		\remove_action( 'phpmailer_init', $alt_function );
 
 		return $result;
+	}
+
+	/**
+	 * Get the address a recipient's mails go to.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $user_id The recipient (or BLOG_USER_ID for the blog actor).
+	 *
+	 * @return string The address, or an empty string when the user has none.
+	 */
+	private static function get_email_address( $user_id ) {
+		if ( $user_id <= Actors::BLOG_USER_ID ) {
+			return (string) \get_option( 'admin_email' );
+		}
+
+		$user = \get_userdata( $user_id );
+
+		return $user ? $user->user_email : '';
+	}
+
+	/**
+	 * Tell a recipient that further notification mails will not be sent this hour.
+	 *
+	 * Sent once per window, for the first mail that is not sent, see maybe_throttle_mail().
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $email The recipient's address.
+	 * @param int    $limit How many notification mails an address can get in this window.
+	 * @param int    $reset When notification mails are sent again, as a Unix timestamp.
+	 *
+	 * @return bool True if the mail was sent, false otherwise.
+	 */
+	public static function send_limit_notice( $email, $limit, $reset ) {
+		return \wp_mail(
+			$email,
+			/* translators: %s: Blog name */
+			\sprintf( \__( '[%s] Notification emails are paused', 'activitypub' ), \get_option( 'blogname' ) ),
+			\sprintf(
+				/* translators: 1: Number of emails, 2: Time of day, 3: Dashboard URL */
+				\_n(
+					'You reached the limit of %1$d notification email about activity from the Fediverse. Further ones will not be sent until %2$s. Check your dashboard for updates: %3$s',
+					'You reached the limit of %1$d notification emails about activity from the Fediverse. Further ones will not be sent until %2$s. Check your dashboard for updates: %3$s',
+					$limit,
+					'activitypub'
+				),
+				$limit,
+				\wp_date( \get_option( 'time_format' ), $reset ),
+				\admin_url()
+			)
+		);
+	}
+
+	/**
+	 * Send a notification mail, unless its recipient had enough of them this hour.
+	 *
+	 * New follower, direct message and mention notifications go through here and share one
+	 * allowance per address, whoever sends them.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string   $email        The recipient's address.
+	 * @param string   $subject      The subject.
+	 * @param string   $message      The HTML message.
+	 * @param callable $alt_function The `phpmailer_init` callback that sets the plain text message.
+	 *
+	 * @return bool True when the mail was sent, false when the allowance was used up or sending failed.
+	 */
+	private static function maybe_send_mail( $email, $subject, $message, $alt_function ) {
+		if ( self::maybe_throttle_mail( 'mail', $email ) ) {
+			return false;
+		}
+
+		\add_action( 'phpmailer_init', $alt_function );
+
+		$sent = \wp_mail( $email, $subject, $message, array( 'Content-type: text/html' ) );
+
+		\remove_action( 'phpmailer_init', $alt_function );
+
+		return $sent;
+	}
+
+	/**
+	 * Count a notification mail against its recipient's allowance, and tell whether it may be sent.
+	 *
+	 * Counted per address and site, so an inbox that several users or the site share has one
+	 * allowance. A mail counts even when sending it fails. The first mail that is not sent in a window sends the recipient a
+	 * notice instead, see send_limit_notice().
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $bucket `mail` for new followers, direct messages and mentions, `comment_mail` for
+	 *                       replies and reactions.
+	 * @param string $email  The recipient's address.
+	 *
+	 * @return bool True when the mail must not be sent, false when it may be sent.
+	 */
+	private static function maybe_throttle_mail( $bucket, $email ) {
+		$allowance = Throttle::count( $bucket, \strtolower( $email ), 30, HOUR_IN_SECONDS );
+
+		if ( $allowance['allowed'] ) {
+			return false;
+		}
+
+		// Not when the mails are switched off with a limit of 0.
+		if ( $allowance['exceeded'] && $allowance['limit'] > 0 ) {
+			self::send_limit_notice( $email, $allowance['limit'], $allowance['reset'] );
+		}
+
+		return true;
 	}
 
 	/**
@@ -637,5 +727,35 @@ class Mailer {
 		}
 
 		return (bool) \get_user_option( 'activitypub_mailer_new_reaction', (int) $post->post_author );
+	}
+
+	/**
+	 * Leave out the addresses that had enough mails about replies and reactions from the Fediverse.
+	 *
+	 * WordPress mails the post author and the moderators about every comment, and replies, likes,
+	 * reposts and quotes from the Fediverse are comments. Each address in a mail is counted once; a
+	 * mail that is switched off does not reach this filter. The current user's own address is not
+	 * counted: WordPress drops it afterwards, for example when a post author approves a reply.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string[] $emails     The addresses the mail goes to.
+	 * @param int      $comment_id The comment ID.
+	 *
+	 * @return string[] The addresses that may still get the mail.
+	 */
+	public static function throttle_comment_recipients( $emails, $comment_id ) {
+		if ( ! Comment::was_received( $comment_id ) ) {
+			return $emails;
+		}
+
+		$own = \wp_get_current_user()->user_email;
+
+		return \array_filter(
+			$emails,
+			static function ( $email ) use ( $own ) {
+				return $email === $own || ! self::maybe_throttle_mail( 'comment_mail', $email );
+			}
+		);
 	}
 }
