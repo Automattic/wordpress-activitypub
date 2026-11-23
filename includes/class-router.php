@@ -247,6 +247,13 @@ class Router {
 				// Fallback as template_loader can't return http headers.
 				return $template;
 			}
+
+			// A signer blocked site-wide gets nothing. Rest\Server::reject_blocked_sender() does this for the REST routes.
+			if ( Moderation::is_actor_blocked( $verification ) ) {
+				\status_header( 403 );
+
+				return $template;
+			}
 		}
 
 		if ( $activitypub_template ) {

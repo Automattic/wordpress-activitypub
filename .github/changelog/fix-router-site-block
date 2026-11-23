@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+With signed requests required, servers you blocked for the whole site no longer get your posts and profiles either.
