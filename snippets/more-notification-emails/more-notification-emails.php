@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Allow More Notification Emails
  * Plugin URI:        https://github.com/Automattic/wordpress-activitypub
- * Description:       Raises the number of ActivityPub notification emails a user can get per hour.
+ * Description:       Raises the number of ActivityPub notification emails a recipient can get per hour.
  * Version:           1.0.0
  * Requires at least: 5.9
  * Requires PHP:      7.4

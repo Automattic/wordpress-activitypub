@@ -341,11 +341,6 @@ class Mailer {
 				continue;
 			}
 
-			$email = self::get_email_address( $user_id );
-			if ( ! $email ) {
-				continue;
-			}
-
 			$template_args = array(
 				'activity' => $activity,
 				'actor'    => $actor,
@@ -377,7 +372,7 @@ class Mailer {
 				$mailer->{'AltBody'} = $message;
 			};
 
-			self::maybe_send_mail( $email, $subject, $html_message, $alt_function );
+			self::maybe_send_mail( self::get_email_address( $user_id ), $subject, $html_message, $alt_function );
 		}
 	}
 
@@ -439,11 +434,6 @@ class Mailer {
 				continue;
 			}
 
-			$email = self::get_email_address( $user_id );
-			if ( ! $email ) {
-				continue;
-			}
-
 			$template_args = array(
 				'activity' => $activity,
 				'actor'    => $actor,
@@ -475,7 +465,7 @@ class Mailer {
 				$mailer->{'AltBody'} = $message;
 			};
 
-			self::maybe_send_mail( $email, $subject, $html_message, $alt_function );
+			self::maybe_send_mail( self::get_email_address( $user_id ), $subject, $html_message, $alt_function );
 		}
 	}
 
@@ -549,14 +539,13 @@ class Mailer {
 
 		$user = \get_userdata( $user_id );
 
-		return $user ? (string) $user->user_email : '';
+		return $user ? $user->user_email : '';
 	}
 
 	/**
 	 * Tell a recipient that further notification mails will not be sent this hour.
 	 *
-	 * Sent once per window, for the first mail that is not sent, see maybe_throttle_mail(), so that
-	 * nothing can happen without the recipient knowing where to look.
+	 * Sent once per window, for the first mail that is not sent, see maybe_throttle_mail().
 	 *
 	 * @since unreleased
 	 *
@@ -590,8 +579,7 @@ class Mailer {
 	 * Send a notification mail, unless its recipient had enough of them this hour.
 	 *
 	 * New follower, direct message and mention notifications go through here and share one
-	 * allowance per address, whoever sends them. Mails the site sends on its own schedule use
-	 * send().
+	 * allowance per address, whoever sends them.
 	 *
 	 * @since unreleased
 	 *
@@ -620,14 +608,13 @@ class Mailer {
 	 * Count a notification mail against its recipient's allowance, and tell whether it may be sent.
 	 *
 	 * Counted per address and site, so an inbox that several users or the site share has one
-	 * allowance. The `activitypub_rate_limit` filter changes it for the bucket. A mail counts even
-	 * when sending it fails. The first mail that is not sent in a window sends the recipient a
+	 * allowance. A mail counts even when sending it fails. The first mail that is not sent in a window sends the recipient a
 	 * notice instead, see send_limit_notice().
 	 *
 	 * @since unreleased
 	 *
 	 * @param string $bucket `mail` for new followers, direct messages and mentions, `comment_mail` for
-	 *                       replies and reactions, so neither can use up the other's allowance.
+	 *                       replies and reactions.
 	 * @param string $email  The recipient's address.
 	 *
 	 * @return bool True when the mail must not be sent, false when it may be sent.
@@ -746,9 +733,8 @@ class Mailer {
 	 * Leave out the addresses that had enough mails about replies and reactions from the Fediverse.
 	 *
 	 * WordPress mails the post author and the moderators about every comment, and replies, likes,
-	 * reposts and quotes from the Fediverse are comments. Each address in a mail is counted once,
-	 * after WordPress decided to send it, so a mail that is switched off or a comment that waits
-	 * for moderation does not count.
+	 * reposts and quotes from the Fediverse are comments. Each address in a mail is counted once; a
+	 * mail that is switched off does not reach this filter.
 	 *
 	 * @since unreleased
 	 *
@@ -762,13 +748,11 @@ class Mailer {
 			return $emails;
 		}
 
-		return \array_values(
-			\array_filter(
-				(array) $emails,
-				static function ( $email ) {
-					return ! self::maybe_throttle_mail( 'comment_mail', (string) $email );
-				}
-			)
+		return \array_filter(
+			$emails,
+			static function ( $email ) {
+				return ! self::maybe_throttle_mail( 'comment_mail', $email );
+			}
 		);
 	}
 }

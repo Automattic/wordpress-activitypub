@@ -1,8 +1,8 @@
 # Allow More Notification Emails
 
-Raises the number of notification emails a user can get from the ActivityPub plugin per hour.
+Raises the number of notification emails a recipient can get from the ActivityPub plugin per hour.
 
-The plugin sends at most 30 emails about new followers, direct messages and mentions to the same recipient per hour, and holds back the emails WordPress sends about replies and reactions from the Fediverse after 30 per hour as well. When an allowance is used up, one more email says that further ones will not be sent until the next hour. The followers, messages and mentions themselves are stored as usual and show up in the dashboard.
+The plugin sends at most 30 emails about new followers, direct messages and mentions to the same recipient per hour, and as many emails about replies and reactions from the Fediverse. When an allowance is used up, one more email says that further ones will not be sent until the next hour. The followers, messages and mentions themselves are stored as usual and show up in the dashboard.
 
 On a busy site 30 can be too few. This snippet raises both allowances to 100.
 

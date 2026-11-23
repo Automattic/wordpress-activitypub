@@ -42,9 +42,8 @@ class Throttle {
 		 * @param string $bucket What is being limited, for example `interactions` (requests per
 		 *                       minute), `mail` or `comment_mail` (notification mails per recipient
 		 *                       and hour).
-		 * @param int    $window The window the allowance is for, in seconds.
 		 */
-		$limit = (int) \apply_filters( 'activitypub_rate_limit', $limit, $bucket, $window );
+		$limit = (int) \apply_filters( 'activitypub_rate_limit', $limit, $bucket );
 
 		/*
 		 * The window is part of the entry's name, so it ends by itself instead of being pushed
@@ -54,8 +53,7 @@ class Throttle {
 		$reset = ( $slot + 1 ) * $window;
 
 		// The caller is hashed, so no IP address ends up in an option name, a backup or a debug dump.
-		$key   = \sprintf( 'activitypub_rate_%s_%s_%d', $bucket, \md5( $caller ), $slot );
-		$count = (int) \get_transient( $key );
+		$key = \sprintf( 'activitypub_rate_%s_%s_%d', $bucket, \md5( $caller ), $slot );
 
 		$entry = array(
 			'allowed'   => false,
@@ -69,6 +67,8 @@ class Throttle {
 		if ( '' === $caller ) {
 			return $entry;
 		}
+
+		$count = (int) \get_transient( $key );
 
 		if ( $count >= $limit ) {
 			// Marked once per window, so a caller can react to the first refusal only, also when the limit was lowered.
