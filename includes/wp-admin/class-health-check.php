@@ -248,6 +248,20 @@ class Health_Check {
 		// Try to access author URL.
 		$response = Proxy::get( $actor->get_id() );
 
+		if ( \is_wp_error( $response ) && 'activitypub_invalid_content_type' === $response->get_error_code() ) {
+			return new \WP_Error(
+				'author_url_wrong_content_type',
+				\sprintf(
+					// translators: %s: Author URL.
+					\__(
+						'Your author URL <code>%s</code> is not served as <code>application/activity+json</code>. Please check if a caching plugin or your web server changes the content type.',
+						'activitypub'
+					),
+					$actor->get_id()
+				)
+			);
+		}
+
 		if ( \is_wp_error( $response ) ) {
 			return new \WP_Error(
 				'author_url_not_accessible',

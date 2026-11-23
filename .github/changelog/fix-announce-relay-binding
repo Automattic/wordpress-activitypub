@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Documents from other servers are only accepted when they are served as ActivityPub.
