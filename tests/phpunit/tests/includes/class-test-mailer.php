@@ -1264,11 +1264,17 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		$local = \apply_filters( 'comment_notification_recipients', array( $author ), self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) ) );
 
+		// The author approving a reply gets no mail from WordPress, so their own address is not counted.
+		\wp_set_current_user( self::factory()->user->create( array( 'user_email' => $author ) ) );
+		$own = \apply_filters( 'comment_notification_recipients', array( $author ), self::factory()->comment->create( $received ) );
+		\wp_set_current_user( 0 );
+
 		\remove_filter( 'activitypub_rate_limit', $two_mails, 10 );
 
 		$this->assertSame( array( array( $author ), array( $author ), array(), array( $moderator ) ), $sent );
 		$this->assertSame( 1, $notices, 'One notice for the first mail that is not sent.' );
 		$this->assertSame( array( $author ), $local, 'A local comment is not counted.' );
+		$this->assertSame( array( $author ), $own, 'The current user\'s own address is not counted.' );
 	}
 
 	/**

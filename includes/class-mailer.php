@@ -734,7 +734,8 @@ class Mailer {
 	 *
 	 * WordPress mails the post author and the moderators about every comment, and replies, likes,
 	 * reposts and quotes from the Fediverse are comments. Each address in a mail is counted once; a
-	 * mail that is switched off does not reach this filter.
+	 * mail that is switched off does not reach this filter. The current user's own address is not
+	 * counted: WordPress drops it afterwards, for example when a post author approves a reply.
 	 *
 	 * @since unreleased
 	 *
@@ -748,10 +749,12 @@ class Mailer {
 			return $emails;
 		}
 
+		$own = \wp_get_current_user()->user_email;
+
 		return \array_filter(
 			$emails,
-			static function ( $email ) {
-				return ! self::maybe_throttle_mail( 'comment_mail', $email );
+			static function ( $email ) use ( $own ) {
+				return $email === $own || ! self::maybe_throttle_mail( 'comment_mail', $email );
 			}
 		);
 	}
