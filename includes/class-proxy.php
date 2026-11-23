@@ -422,6 +422,18 @@ class Proxy {
 			$final_url = $effective_url;
 		}
 
+		// Only a document served as ActivityPub is one, as Mastodon requires.
+		if ( ! accept_prefers_activitypub( (string) \wp_remote_retrieve_header( $response, 'content-type' ) ) ) {
+			return new \WP_Error(
+				'activitypub_invalid_content_type',
+				\__( 'The response is not an ActivityPub document.', 'activitypub' ),
+				array(
+					'status' => 400,
+					'object' => $url,
+				)
+			);
+		}
+
 		$data = \json_decode( \wp_remote_retrieve_body( $response ), true );
 
 		if ( ! \is_array( $data ) || ! $data || \array_is_list( $data ) ) {

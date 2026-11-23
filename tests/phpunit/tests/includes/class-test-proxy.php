@@ -182,6 +182,58 @@ class Test_Proxy extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Only a document served as ActivityPub is taken, as Mastodon requires.
+	 *
+	 * @dataProvider content_type_provider
+	 * @covers ::get
+	 *
+	 * @param string $content_type The served content type.
+	 * @param bool   $taken        Whether the document is taken.
+	 */
+	public function test_get_takes_only_activitypub_documents( $content_type, $taken ) {
+		$id                     = 'https://example.com/notes/typed';
+		$this->responses[ $id ] = $this->served_from(
+			$id,
+			array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'id'   => $id,
+						'type' => 'Note',
+					)
+				),
+				'headers'  => array( 'content-type' => $content_type ),
+			)
+		);
+
+		$result = Proxy::get( $id );
+
+		if ( $taken ) {
+			$this->assertIsArray( $result );
+		} else {
+			$this->assertWPError( $result );
+			$this->assertSame( 'activitypub_invalid_content_type', $result->get_error_code() );
+		}
+	}
+
+	/**
+	 * Served content types.
+	 *
+	 * @return array[] The content type and whether the document is taken.
+	 */
+	public function content_type_provider() {
+		return array(
+			'activity+json'           => array( 'application/activity+json', true ),
+			'activity+json, charset'  => array( 'application/activity+json; charset=utf-8', true ),
+			'ld+json with AS profile' => array( 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"', true ),
+			'ld+json without profile' => array( 'application/ld+json', false ),
+			'plain json'              => array( 'application/json', false ),
+			'html'                    => array( 'text/html', false ),
+			'none'                    => array( '', false ),
+		);
+	}
+
+	/**
 	 * Same-host and cross-host redirect targets.
 	 *
 	 * @return array The redirect targets and expected request counts.
