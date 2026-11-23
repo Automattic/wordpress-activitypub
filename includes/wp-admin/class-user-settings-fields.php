@@ -303,7 +303,7 @@ class User_Settings_Fields {
 	 * @return void
 	 */
 	public static function extra_fields_callback() {
-		$extra_fields = Extra_Fields::get_actor_fields( \get_current_user_id() );
+		$extra_fields = Extra_Fields::get_actor_fields( \get_current_user_id(), true );
 		?>
 		<p class="description">
 			<?php \esc_html_e( 'Your homepage, social profiles, pronouns, age, anything you want.', 'activitypub' ); ?>

@@ -354,7 +354,7 @@ class Blog_Settings_Fields {
 
 		<table class="widefat striped activitypub-extra-fields" role="presentation" style="margin: 15px 0;">
 		<?php
-		$extra_fields = Extra_Fields::get_actor_fields( Actors::BLOG_USER_ID );
+		$extra_fields = Extra_Fields::get_actor_fields( Actors::BLOG_USER_ID, true );
 
 		if ( empty( $extra_fields ) ) :
 			?>

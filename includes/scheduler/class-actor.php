@@ -61,6 +61,8 @@ class Actor {
 		\add_action( 'update_option_activitypub_default_feature_policy', array( self::class, 'schedule_all_profile_updates' ) );
 
 		\add_action( 'transition_post_status', array( self::class, 'schedule_post_activity' ), 33, 3 );
+		// Not `deleted_post`: the post cache still holds the field then, and the update would list it.
+		\add_action( 'after_delete_post', array( self::class, 'schedule_post_delete' ), 10, 2 );
 
 		\add_action( 'post_stuck', array( self::class, 'sticky_post_update' ) );
 		\add_action( 'post_unstuck', array( self::class, 'sticky_post_update' ) );
@@ -140,6 +142,11 @@ class Actor {
 	 * @return void
 	 */
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
+		// Only a published field is on the profile, so only a change from or to it is one of the profile.
+		if ( 'publish' !== $new_status && 'publish' !== $old_status ) {
+			return;
+		}
+
 		if ( $post instanceof \WP_Post ) {
 			if ( Extra_Fields::USER_POST_TYPE === $post->post_type ) {
 				self::schedule_profile_update( (int) $post->post_author );
@@ -147,6 +154,22 @@ class Actor {
 				self::schedule_profile_update( Actors::BLOG_USER_ID );
 			}
 		}
+	}
+
+	/**
+	 * Send a profile update when a profile field is deleted without going through the trash.
+	 *
+	 * A delete is no status transition, so schedule_post_activity() does not see it.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int      $post_id The post ID.
+	 * @param \WP_Post $post    The deleted post.
+	 *
+	 * @return void
+	 */
+	public static function schedule_post_delete( $post_id, $post ) {
+		self::schedule_post_activity( 'delete', $post->post_status, $post );
 	}
 
 	/**
@@ -182,6 +205,14 @@ class Actor {
 
 		if ( ! $actor || \is_wp_error( $actor ) ) {
 			return;
+		}
+
+		// While core deletes a user and their content, the actor whose Delete is queued gets no more updates.
+		if ( \did_action( 'delete_user' ) > \did_action( 'deleted_user' ) ) {
+			$delete = Outbox::get_by_object_id( $actor->get_id(), 'Delete' );
+			if ( $delete && 'pending' === $delete->post_status ) {
+				return;
+			}
 		}
 
 		$actor->set_updated( \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \time() ) );

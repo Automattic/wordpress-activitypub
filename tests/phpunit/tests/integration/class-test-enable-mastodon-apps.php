@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Integration;
 
+use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Integration\Enable_Mastodon_Apps;
@@ -447,6 +448,45 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 			array( 'user@example.com', 'user' ),
 			array( 'https://example.com', 'https://example.com' ),
 		);
+	}
+
+	/**
+	 * A Mastodon client edits only the fields it sees, the published ones.
+	 *
+	 * Fields are matched by position, so a draft in the list would take the edit meant for a published field.
+	 *
+	 * @covers ::set_extra_fields
+	 */
+	public function test_set_extra_fields_leaves_unpublished_fields_alone() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$fields  = array();
+		foreach ( array( 'draft', 'publish' ) as $order => $status ) {
+			$fields[ $status ] = self::factory()->post->create(
+				array(
+					'post_type'   => Extra_Fields::USER_POST_TYPE,
+					'post_author' => $user_id,
+					'post_status' => $status,
+					'post_title'  => $status,
+					'menu_order'  => $order,
+				)
+			);
+		}
+
+		$method = new \ReflectionMethod( Enable_Mastodon_Apps::class, 'set_extra_fields' );
+		$method->setAccessible( true );
+		$method->invoke(
+			null,
+			$user_id,
+			array(
+				array(
+					'name'  => 'edited',
+					'value' => 'Edited',
+				),
+			)
+		);
+
+		$this->assertSame( 'edited', \get_post( $fields['publish'] )->post_title, 'The published field takes the edit.' );
+		$this->assertSame( 'draft', \get_post( $fields['draft'] )->post_title, 'A draft is neither edited nor removed.' );
 	}
 
 	/**

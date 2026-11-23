@@ -23,11 +23,15 @@ class Extra_Fields {
 	/**
 	 * Get the extra fields for a user.
 	 *
-	 * @param int $user_id The user ID.
+	 * @since unreleased Added the `$all_statuses` parameter; only published fields by default.
+	 *
+	 * @param int  $user_id      The user ID.
+	 * @param bool $all_statuses Optional. Whether to include drafts, pending, scheduled, private and
+	 *                           password-protected fields, for the screens that manage them. Default false.
 	 *
 	 * @return \WP_Post[] The extra fields.
 	 */
-	public static function get_actor_fields( $user_id ) {
+	public static function get_actor_fields( $user_id, $all_statuses = false ) {
 		$is_blog   = self::is_blog( $user_id );
 		$post_type = $is_blog ? self::BLOG_POST_TYPE : self::USER_POST_TYPE;
 		$args      = array(
@@ -38,6 +42,12 @@ class Extra_Fields {
 		);
 		if ( ! $is_blog ) {
 			$args['author'] = $user_id;
+		}
+
+		// Only fields anyone can read belong on the profile.
+		if ( ! $all_statuses ) {
+			$args['post_status']  = 'publish';
+			$args['has_password'] = false;
 		}
 
 		// Limit to 20 fields to prevent response size issues.
