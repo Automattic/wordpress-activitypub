@@ -64,13 +64,12 @@ class Search {
 			return $query;
 		}
 
-		// A URL that leads to nothing from the Fediverse is a plain search, as on the comments screen.
-		$reply = self::is_importable_reply( $search_term );
-		if ( \is_wp_error( $reply ) && 'activitypub_import_not_found' === $reply->get_error_code() ) {
+		// Everything but a reply that can be imported is a plain search; the comments screen says why it cannot be.
+		if ( \is_wp_error( self::is_importable_reply( $search_term ) ) ) {
 			return $query;
 		}
 
-		// The comments screen offers to import the reply, or says why it cannot be imported.
+		// The comments screen offers to import the reply.
 		\wp_safe_redirect( \add_query_arg( 's', \rawurlencode( $search_term ), \admin_url( 'edit-comments.php' ) ) );
 		exit;
 	}
@@ -197,7 +196,7 @@ class Search {
 				'content'  => \sprintf(
 					'<p>%s</p><p>%s</p><p>%s</p>',
 					\esc_html__( 'To find a reply from the Fediverse, paste its URL into the search field. If the reply is already a comment on your site, the search leads you to it.', 'activitypub' ),
-					\esc_html__( 'If the reply is not on your site yet, a notice offers to import it. This works for public replies to one of your posts. Blocked accounts, domains and keywords are respected.', 'activitypub' ),
+					\esc_html__( 'If the reply is not on your site yet, a notice offers to import it. This works for public replies to a post on your site or to one of its comments. Blocked accounts, domains and keywords are respected.', 'activitypub' ),
 					\esc_html__( 'An imported reply is handled like every other comment, so it may wait for moderation first.', 'activitypub' )
 				),
 			)

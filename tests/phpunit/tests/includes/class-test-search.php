@@ -276,6 +276,23 @@ class Test_Search extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Searching the front end for something from the Fediverse that cannot be imported is a normal search.
+	 *
+	 * @covers \Activitypub\Search::enhance_public_search
+	 */
+	public function test_public_search_stays_a_search_for_other_objects() {
+		// A post that is not a reply.
+		$url     = 'https://1.1.1.1/notes/14';
+		$filters = $this->serve_reply( $url, array( 'inReplyTo' => '' ) );
+
+		$redirected = $this->public_search_redirect( $url );
+
+		$this->stop_serving( $filters );
+
+		$this->assertSame( '', $redirected );
+	}
+
+	/**
 	 * Searching the front end for a stored reply leads to it, without fetching anything.
 	 *
 	 * @covers \Activitypub\Search::enhance_public_search
