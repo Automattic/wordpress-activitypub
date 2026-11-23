@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Images, audio and video that visitors cannot see on your site, for example in content for paying members or in hidden blocks, are no longer attached to posts in the Fediverse.

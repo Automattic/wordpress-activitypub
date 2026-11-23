@@ -2740,4 +2740,103 @@ class Test_Post extends \WP_UnitTestCase {
 		$this->assertArrayNotHasKey( 'dcterms:subject', $array );
 		$this->assertArrayNotHasKey( 'dcterms', $array );
 	}
+
+	/**
+	 * Media that a membership plugin hides from logged-out visitors is not attached, whoever publishes the post.
+	 *
+	 * @covers ::get_attachment
+	 * @covers ::get_block_attachments
+	 * @covers ::get_visible_content
+	 */
+	public function test_media_hidden_from_visitors_is_not_attached() {
+		$public_id  = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		$paid_id    = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		$public_src = \wp_get_attachment_url( $public_id );
+		$paid_src   = \wp_get_attachment_url( $paid_id );
+		$image      = '<!-- wp:image {"id":%1$d} --><figure class="wp-block-image"><img src="%2$s" alt="" class="wp-image-%1$d"/></figure><!-- /wp:image -->';
+		$public     = \sprintf( $image, $public_id, $public_src );
+		$paid       = \sprintf( $image, $paid_id, $paid_src );
+		$author_id  = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		$attached = static function ( $content ) use ( $author_id ) {
+			$post_id = self::factory()->post->create(
+				array(
+					'post_author'  => $author_id,
+					'post_content' => $content,
+					'post_status'  => 'publish',
+				)
+			);
+
+			// Published by the author, who can see everything.
+			\wp_set_current_user( $author_id );
+			$attachment = Post::transform( \get_post( $post_id ) )->to_object()->get_attachment();
+			\wp_set_current_user( 0 );
+
+			return \wp_list_pluck( $attachment, 'url' );
+		};
+
+		// A block that only logged-in readers see, like a premium content block.
+		$members_block = '<!-- wp:group --><div class="wp-block-group">' . $paid . '</div><!-- /wp:group -->';
+		$hide_block    = static function ( $html, $block ) {
+			return 'core/group' === $block['blockName'] && ! \is_user_logged_in() ? '' : $html;
+		};
+
+		// Everything after a marker is cut for logged-out readers, like a paywall block.
+		$marker   = '<!-- wp:separator --><hr class="wp-block-separator paywall"/><!-- /wp:separator -->';
+		$cut_rest = static function ( $content ) {
+			$cut = \strpos( $content, '<!-- wp:separator' );
+
+			return \is_user_logged_in() || false === $cut ? $content : \substr( $content, 0, $cut );
+		};
+
+		// Without a membership plugin, both images are attached.
+		$this->assertSame( array( $public_src, $paid_src ), $attached( $public . $members_block ) );
+		$this->assertSame( array( $public_src, $paid_src ), $attached( $public . $marker . $paid ) );
+
+		\add_filter( 'render_block', $hide_block, 10, 2 );
+		\add_filter( 'the_content', $cut_rest, 8 );
+
+		$this->assertSame( array( $public_src ), $attached( $public . $members_block ) );
+		$this->assertSame( array( $public_src ), $attached( $public . $marker . $paid ) );
+
+		\remove_filter( 'render_block', $hide_block );
+		\remove_filter( 'the_content', $cut_rest, 8 );
+	}
+
+	/**
+	 * Images that a plugin keeps out of federated content are not attached either.
+	 *
+	 * @covers ::get_attachment
+	 * @covers ::get_visible_content
+	 */
+	public function test_images_kept_out_of_federated_content_are_not_attached() {
+		$post_image  = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		$added_image = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		$post_src    = \wp_get_attachment_url( $post_image );
+		$added_src   = \wp_get_attachment_url( $added_image );
+
+		// A plugin that adds an image to every post, and leaves federated content alone.
+		$add_image = static function ( $content ) use ( $added_image, $added_src ) {
+			return $content . \sprintf( '<p><img src="%s" class="wp-image-%d"/></p>', $added_src, $added_image );
+		};
+		$unhook    = static function () use ( $add_image ) {
+			\remove_filter( 'the_content', $add_image );
+		};
+		\add_filter( 'the_content', $add_image );
+		\add_action( 'activitypub_before_get_content', $unhook );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => \sprintf( '<p>Classic post.</p><p><img src="%s" class="wp-image-%d"/></p>', $post_src, $post_image ),
+				'post_status'  => 'publish',
+			)
+		);
+
+		$attachment = Post::transform( \get_post( $post_id ) )->to_object()->get_attachment();
+
+		\remove_filter( 'the_content', $add_image );
+		\remove_action( 'activitypub_before_get_content', $unhook );
+
+		$this->assertSame( array( $post_src ), \wp_list_pluck( $attachment, 'url' ) );
+	}
 }
