@@ -35,6 +35,9 @@ class Health_Check {
 		\add_filter( 'site_status_tests', array( self::class, 'add_tests' ) );
 		\add_filter( 'debug_information', array( self::class, 'debug_information' ) );
 
+		// Core's admin-ajax action for the async test `activitypub_wellknown`, see add_tests().
+		\add_action( 'wp_ajax_health-check-activitypub-wellknown', array( self::class, 'ajax_well_known_api' ) );
+
 		// Ensure schedules are registered when viewing the ActivityPub settings page.
 		\add_action( 'load-settings_page_activitypub', array( self::class, 'ensure_schedules_registered' ) );
 	}
@@ -150,11 +153,22 @@ class Health_Check {
 			'test'  => array( self::class, 'test_rest_api_accessibility' ),
 		);
 
-		// The well-known paths are rewrite rules, which only work with pretty permalinks.
+		/*
+		 * The well-known paths are rewrite rules, which only work with pretty permalinks.
+		 *
+		 * Async, because the test makes two requests to the site. It runs over admin-ajax, not
+		 * REST: both paths are served by REST routes, and a plugin that restricts the REST API
+		 * would otherwise also stop the test that reports it. Core builds the action by
+		 * prefixing `health-check-` and replacing the first underscore with a hyphen, so the
+		 * test name has exactly one underscore. The weekly cron run keeps only the counters, not
+		 * the description, so it skips the requests.
+		 */
 		if ( \get_option( 'activitypub_api', false ) && \get_option( 'permalink_structure' ) ) {
-			$tests['direct']['activitypub_test_well_known_api'] = array(
-				'label' => \__( 'ActivityPub API Discovery Test', 'activitypub' ),
-				'test'  => array( self::class, 'test_well_known_api' ),
+			$tests['async']['activitypub_test_well_known_api'] = array(
+				'label'             => \__( 'ActivityPub API Discovery Test', 'activitypub' ),
+				'test'              => 'activitypub_wellknown',
+				'async_direct_test' => array( self::class, 'test_well_known_api' ),
+				'skip_cron'         => true,
 			);
 		}
 
@@ -807,6 +821,26 @@ class Health_Check {
 		);
 
 		return $result;
+	}
+
+	/**
+	 * Serve the ActivityPub API discovery test to the Site Health screen.
+	 *
+	 * Same nonce and capability core uses for Site Health. The screen reads `response.data`,
+	 * hence `wp_send_json_success()`.
+	 *
+	 * @since unreleased
+	 *
+	 * @return void
+	 */
+	public static function ajax_well_known_api() {
+		\check_ajax_referer( 'health-check-site-status' );
+
+		if ( ! \current_user_can( 'view_site_health_checks' ) ) {
+			\wp_send_json_error( null, 403 );
+		}
+
+		\wp_send_json_success( self::test_well_known_api() );
 	}
 
 	/**
