@@ -186,6 +186,7 @@ class Test_Functions_Request extends ActivityPub_TestCase_Cache_HTTP {
 			'activity+json, charset'     => array( 'Application/Activity+JSON; charset=utf-8', true ),
 			'ld+json with AS profile'    => array( 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"', true ),
 			'ld+json, http profile'      => array( 'application/ld+json; profile="http://www.w3.org/ns/activitystreams"', true ),
+			'ld+json, spaced parameter'  => array( 'application/ld+json ; profile = "https://www.w3.org/ns/activitystreams"', true ),
 			'ld+json, profile in a list' => array( 'application/ld+json; profile="https://example.com/ns https://www.w3.org/ns/activitystreams"', true ),
 			'sent twice, last counts'    => array( array( 'text/html', 'application/activity+json' ), true ),
 			'sent twice, last is html'   => array( array( 'application/activity+json', 'text/html' ), false ),

@@ -190,9 +190,11 @@ function is_activitypub_content_type( $content_type ) {
 	}
 
 	foreach ( $parameters as $parameter ) {
-		if ( 0 === \strpos( $parameter, 'profile=' ) ) {
+		$parameter = \array_map( 'trim', \explode( '=', $parameter, 2 ) );
+
+		if ( 'profile' === $parameter[0] && isset( $parameter[1] ) ) {
 			// A profile parameter can list several URIs, separated by spaces.
-			$profiles = \preg_split( '/\s+/', \trim( \substr( $parameter, 8 ), '"' ) );
+			$profiles = \preg_split( '/\s+/', \trim( $parameter[1], '" ' ) );
 
 			return (bool) \array_intersect( array( 'https://www.w3.org/ns/activitystreams', 'http://www.w3.org/ns/activitystreams' ), $profiles );
 		}
