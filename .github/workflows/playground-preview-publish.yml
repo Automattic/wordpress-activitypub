@@ -1,0 +1,37 @@
+name: Playground Preview - Publish
+
+# Runs from trunk after the build, with write access, and never checks out PR code.
+on:
+  workflow_run:
+    workflows: ['Playground Preview - Build']
+    types: [completed]
+
+jobs:
+  publish:
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: read
+    uses: WordPress/action-wp-playground-pr-preview/.github/workflows/preview-publish.yml@1b15093d61b5e98cdfeb31466f34ade495762cd7 # v4.0.0
+    with:
+      mode: comment
+      blueprint: |
+        {
+          "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+          "landingPage": "/wp-admin/options-general.php?page=activitypub",
+          "login": true,
+          "steps": [
+            {
+              "step": "setSiteOptions",
+              "options": {
+                "permalink_structure": "/%postname%/",
+                "activitypub_actor_mode": "actor_blog"
+              }
+            },
+            {
+              "step": "installPlugin",
+              "pluginData": { "resource": "url", "url": "{{ARTIFACT_URL:activitypub}}" },
+              "options": { "activate": true }
+            }
+          ]
+        }
