@@ -946,8 +946,11 @@ class Test_Router extends \WP_UnitTestCase {
 		$this->set_permalink_structure( '/%postname%/' );
 		\delete_option( 'activitypub_api' );
 
-		// Drop the rules other tests added in this process.
-		$wp_rewrite->extra_rules_top = array();
+		// Drop the two rules other tests added in this process, and keep all others.
+		unset(
+			$wp_rewrite->extra_rules_top['^\.well-known/oauth-authorization-server/?$'],
+			$wp_rewrite->extra_rules_top['^\.well-known/activitypub-client-config/?$']
+		);
 
 		Router::add_rewrite_rules();
 		\flush_rewrite_rules();
