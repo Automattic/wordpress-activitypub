@@ -536,12 +536,55 @@ class Mailer {
 	}
 
 	/**
+	 * Tell a recipient that further notification mails are held back.
+	 *
+	 * Sent after the last mail of an allowance, see maybe_send_mail(), so that nothing can happen
+	 * without the recipient knowing where to look.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $user_id The recipient (or BLOG_USER_ID for the blog actor).
+	 * @param int $limit   How many notification mails the recipient got.
+	 * @param int $reset   When notification mails are sent again, as a Unix timestamp.
+	 *
+	 * @return bool True if the mail was sent, false otherwise.
+	 */
+	public static function limit_reached( $user_id, $limit, $reset ) {
+		if ( $user_id > Actors::BLOG_USER_ID ) {
+			$user = \get_userdata( $user_id );
+			if ( ! $user || empty( $user->user_email ) ) {
+				return false;
+			}
+			$email = $user->user_email;
+		} else {
+			$email = \get_option( 'admin_email' );
+		}
+
+		return \wp_mail(
+			$email,
+			/* translators: %s: Blog name */
+			\sprintf( \__( '[%s] Notification emails are paused', 'activitypub' ), \get_option( 'blogname' ) ),
+			\sprintf(
+				/* translators: 1: Number of emails, 2: Time of day, 3: Dashboard URL */
+				\__( 'You received %1$d notification emails within an hour. Emails about new followers, direct messages and mentions are held back until %2$s. Nothing is lost, you can see everything in your dashboard: %3$s', 'activitypub' ),
+				$limit,
+				\wp_date( \get_option( 'time_format' ), $reset ),
+				\admin_url()
+			)
+		);
+	}
+
+	/**
 	 * Send a notification mail, unless its recipient had enough of them this hour.
 	 *
-	 * Every mail that something from outside causes goes through here: new followers, direct
-	 * messages and mentions share one allowance per recipient, whoever sends them. 30 mails per
-	 * hour by default; the `activitypub_rate_limit` filter changes it for the `mail` bucket.
-	 * Mails the site sends on its own schedule use send().
+	 * The notifications this class sends for something from outside go through here: new
+	 * followers, direct messages and mentions share one allowance per recipient and site, whoever
+	 * sends them. 30 mails per hour by default; the `activitypub_rate_limit` filter changes it for
+	 * the `mail` bucket. Mails the site sends on its own schedule use send(), and the mails for
+	 * replies and reactions are sent by WordPress, as for every comment.
+	 *
+	 * The last mail of an allowance is followed by a notice that further ones are held back, so
+	 * that nothing can happen without the recipient knowing where to look.
 	 *
 	 * @since unreleased
 	 *
@@ -554,7 +597,9 @@ class Mailer {
 	 * @return bool True when the mail was sent, false when it was held back or sending failed.
 	 */
 	private static function maybe_send_mail( $user_id, $email, $subject, $message, $alt_function ) {
-		if ( ! Throttle::count( 'mail', 'user-' . $user_id, 30, HOUR_IN_SECONDS )['allowed'] ) {
+		$allowance = Throttle::count( 'mail', 'user-' . $user_id, 30, HOUR_IN_SECONDS );
+
+		if ( ! $allowance['allowed'] ) {
 			return false;
 		}
 
@@ -563,6 +608,10 @@ class Mailer {
 		$sent = \wp_mail( $email, $subject, $message, array( 'Content-type: text/html' ) );
 
 		\remove_action( 'phpmailer_init', $alt_function );
+
+		if ( 0 === $allowance['remaining'] ) {
+			self::limit_reached( $user_id, $allowance['limit'], $allowance['reset'] );
+		}
 
 		return $sent;
 	}

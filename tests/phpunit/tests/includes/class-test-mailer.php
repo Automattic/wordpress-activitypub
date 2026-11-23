@@ -1170,9 +1170,10 @@ class Test_Mailer extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A recipient gets a limited number of notification mails per hour, whatever causes them.
+	 * A recipient gets a limited number of notification mails per hour, whatever causes them, and is told once when more are held back.
 	 *
 	 * @covers ::maybe_send_mail
+	 * @covers ::limit_reached
 	 * @covers ::new_follower
 	 * @covers ::direct_message
 	 * @covers ::mention
@@ -1189,54 +1190,40 @@ class Test_Mailer extends WP_UnitTestCase {
 		};
 		\add_filter( 'activitypub_rate_limit', $three_mails, 10, 2 );
 
-		$remote_metadata_callback = static function ( $pre, $actor ) {
-			return array(
-				'type' => 'Person',
-				'name' => 'Test Sender',
-				'url'  => $actor,
-			);
-		};
-		\add_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback, 10, 2 );
-
-		$mock = new \MockAction();
-		\add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
-
 		// Two of each kind, every one from another server.
-		foreach ( array( 'new_follower', 'direct_message', 'mention', 'new_follower', 'direct_message', 'mention' ) as $number => $method ) {
-			$activity = array(
-				'type'   => 'new_follower' === $method ? 'Follow' : 'Create',
-				'actor'  => \sprintf( 'https://server-%d.example/users/1', $number ),
-				'object' => array(
-					'id'      => \sprintf( 'https://server-%d.example/notes/1', $number ),
-					'content' => 'Test',
-				),
-			);
+		$count = $this->count_mails(
+			static function () use ( $user_id, $href ) {
+				foreach ( array( 'new_follower', 'direct_message', 'mention', 'new_follower', 'direct_message', 'mention' ) as $number => $method ) {
+					$activity = array(
+						'type'   => 'new_follower' === $method ? 'Follow' : 'Create',
+						'actor'  => \sprintf( 'https://server-%d.example/users/1', $number ),
+						'to'     => 'direct_message' === $method ? array( $href ) : array(),
+						'object' => array(
+							'id'      => \sprintf( 'https://server-%d.example/notes/1', $number ),
+							'content' => 'Test',
+							'tag'     => 'mention' === $method ? array(
+								array(
+									'type' => 'Mention',
+									'href' => $href,
+									'name' => '@test',
+								),
+							) : array(),
+						),
+					);
 
-			if ( 'mention' === $method ) {
-				$activity['cc']            = array( $href );
-				$activity['object']['tag'] = array(
-					array(
-						'type' => 'Mention',
-						'href' => $href,
-						'name' => '@test',
-					),
-				);
-			} elseif ( 'direct_message' === $method ) {
-				$activity['to'] = array( $href );
+					if ( 'new_follower' === $method ) {
+						Mailer::new_follower( $activity, $user_id, true );
+					} else {
+						Mailer::$method( $activity, array( $user_id ) );
+					}
+				}
 			}
+		);
 
-			if ( 'new_follower' === $method ) {
-				Mailer::new_follower( $activity, $user_id, true );
-			} else {
-				Mailer::$method( $activity, array( $user_id ) );
-			}
-		}
-
-		\remove_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback, 10 );
 		\remove_filter( 'activitypub_rate_limit', $three_mails, 10 );
-		\remove_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
 
-		$this->assertSame( 3, $mock->get_call_count() );
+		// Three notifications, and one notice that further ones are held back.
+		$this->assertSame( 4, $count );
 	}
 
 	/**

@@ -89,18 +89,15 @@ trait Rate_Limit {
 
 		$entry = Throttle::count( $bucket, $caller, $limit );
 
-		$entry['answer'] = true;
-		if ( ! $entry['allowed'] ) {
-			$entry['answer'] = new \WP_Error(
-				'activitypub_rate_limited',
-				\__( 'Too many requests. Please try again later.', 'activitypub' ),
-				array(
-					'status' => 429,
-					'type'   => 'https://w3id.org/fep/c180#rate-limit-exceeded',
-					'title'  => 'Rate limit exceeded',
-				)
-			);
-		}
+		$entry['answer'] = $entry['allowed'] ? true : new \WP_Error(
+			'activitypub_rate_limited',
+			\__( 'Too many requests. Please try again later.', 'activitypub' ),
+			array(
+				'status' => 429,
+				'type'   => 'https://w3id.org/fep/c180#rate-limit-exceeded',
+				'title'  => 'Rate limit exceeded',
+			)
+		);
 		unset( $entry['allowed'] );
 
 		return $entry;
