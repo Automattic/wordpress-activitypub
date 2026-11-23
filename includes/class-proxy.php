@@ -11,7 +11,9 @@ namespace Activitypub;
  * The one way to get a remote ActivityPub object.
  *
  * Resolves an acct through WebFinger, answers from the cache, and on a miss fetches the
- * object with a signed request, checks that it is served under its own id, and stores it.
+ * object with a signed request, checks that it is served as ActivityPub
+ * (`application/activity+json`, or `application/ld+json` with the ActivityStreams profile)
+ * and under its own id, and stores it.
  * The REST `proxyUrl` endpoint and the older fetch helpers go through here.
  *
  * Entries are transients, so the backing store is the site's persistent object cache where
@@ -423,7 +425,7 @@ class Proxy {
 		}
 
 		// Only a document served as ActivityPub is one, as Mastodon requires.
-		if ( ! accept_prefers_activitypub( (string) \wp_remote_retrieve_header( $response, 'content-type' ) ) ) {
+		if ( ! is_activitypub_content_type( \wp_remote_retrieve_header( $response, 'content-type' ) ) ) {
 			return new \WP_Error(
 				'activitypub_invalid_content_type',
 				\__( 'The response is not an ActivityPub document.', 'activitypub' ),

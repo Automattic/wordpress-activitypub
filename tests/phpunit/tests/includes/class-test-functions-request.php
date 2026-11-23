@@ -162,6 +162,43 @@ class Test_Functions_Request extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
+	 * Test which Content-Type headers name an ActivityPub document.
+	 *
+	 * @dataProvider is_activitypub_content_type_provider
+	 *
+	 * @covers \Activitypub\is_activitypub_content_type
+	 *
+	 * @param string|string[] $content_type The header value.
+	 * @param bool            $expected     Whether it names an ActivityPub document.
+	 */
+	public function test_is_activitypub_content_type( $content_type, $expected ) {
+		$this->assertSame( $expected, \Activitypub\is_activitypub_content_type( $content_type ) );
+	}
+
+	/**
+	 * Data provider for is_activitypub_content_type.
+	 *
+	 * @return array<string, array{0: string|string[], 1: bool}>
+	 */
+	public function is_activitypub_content_type_provider() {
+		return array(
+			'activity+json'              => array( 'application/activity+json', true ),
+			'activity+json, charset'     => array( 'Application/Activity+JSON; charset=utf-8', true ),
+			'ld+json with AS profile'    => array( 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"', true ),
+			'ld+json, http profile'      => array( 'application/ld+json; profile="http://www.w3.org/ns/activitystreams"', true ),
+			'ld+json, profile in a list' => array( 'application/ld+json; profile="https://example.com/ns https://www.w3.org/ns/activitystreams"', true ),
+			'sent twice, last counts'    => array( array( 'text/html', 'application/activity+json' ), true ),
+			'sent twice, last is html'   => array( array( 'application/activity+json', 'text/html' ), false ),
+			'ld+json without profile'    => array( 'application/ld+json', false ),
+			'ld+json, another profile'   => array( 'application/ld+json; profile="https://example.com/?https://www.w3.org/ns/activitystreams"', false ),
+			'two types in one header'    => array( 'application/activity+json, text/html', false ),
+			'plain json'                 => array( 'application/json', false ),
+			'html'                       => array( 'text/html', false ),
+			'empty'                      => array( '', false ),
+		);
+	}
+
+	/**
 	 * Data provider for accept_prefers_activitypub.
 	 *
 	 * @return array<string, array{0: string, 1: bool}>

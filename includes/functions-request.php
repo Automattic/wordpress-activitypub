@@ -163,6 +163,45 @@ function accept_prefers_activitypub( $accept ) {
 }
 
 /**
+ * Check whether a Content-Type header names an ActivityPub document.
+ *
+ * That is `application/activity+json`, or `application/ld+json` with the ActivityStreams profile.
+ * Unlike an Accept header, see accept_prefers_activitypub(), a Content-Type names exactly one
+ * media type.
+ *
+ * @since unreleased
+ *
+ * @param string|string[] $content_type The header value. An array when the header was sent more
+ *                                      than once; the last value counts then.
+ *
+ * @return bool True when the media type is ActivityPub.
+ */
+function is_activitypub_content_type( $content_type ) {
+	$content_type = \is_array( $content_type ) ? \end( $content_type ) : $content_type;
+	$parameters   = \array_map( 'trim', \explode( ';', \strtolower( (string) $content_type ) ) );
+	$media_type   = \array_shift( $parameters );
+
+	if ( 'application/activity+json' === $media_type ) {
+		return true;
+	}
+
+	if ( 'application/ld+json' !== $media_type ) {
+		return false;
+	}
+
+	foreach ( $parameters as $parameter ) {
+		if ( 0 === \strpos( $parameter, 'profile=' ) ) {
+			// A profile parameter can list several URIs, separated by spaces.
+			$profiles = \preg_split( '/\s+/', \trim( \substr( $parameter, 8 ), '"' ) );
+
+			return (bool) \array_intersect( array( 'https://www.w3.org/ns/activitystreams', 'http://www.w3.org/ns/activitystreams' ), $profiles );
+		}
+	}
+
+	return false;
+}
+
+/**
  * Mark a REST response non-shareable, on the response object and as a raw HTTP header.
  *
  * The raw header matters because the REST `_envelope=1` parameter makes WordPress move the response

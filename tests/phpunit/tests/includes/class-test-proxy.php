@@ -224,11 +224,8 @@ class Test_Proxy extends \WP_UnitTestCase {
 	public function content_type_provider() {
 		return array(
 			'activity+json'           => array( 'application/activity+json', true ),
-			'activity+json, charset'  => array( 'application/activity+json; charset=utf-8', true ),
 			'ld+json with AS profile' => array( 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"', true ),
-			'ld+json without profile' => array( 'application/ld+json', false ),
 			'plain json'              => array( 'application/json', false ),
-			'html'                    => array( 'text/html', false ),
 			'none'                    => array( '', false ),
 		);
 	}
