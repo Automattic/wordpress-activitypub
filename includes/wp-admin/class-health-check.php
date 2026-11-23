@@ -10,11 +10,13 @@ namespace Activitypub\WP_Admin;
 use Activitypub\Application;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
+use Activitypub\OAuth\Server;
 use Activitypub\Proxy;
 use Activitypub\Sanitize;
 use Activitypub\Scheduler;
 use Activitypub\Webfinger;
 
+use function Activitypub\get_rest_url_by_path;
 use function Activitypub\user_can_activitypub;
 
 /**
@@ -147,6 +149,14 @@ class Health_Check {
 			'label' => \__( 'REST API Accessibility Test', 'activitypub' ),
 			'test'  => array( self::class, 'test_rest_api_accessibility' ),
 		);
+
+		// The well-known paths are rewrite rules, which only work with pretty permalinks.
+		if ( \get_option( 'activitypub_api', false ) && \get_option( 'permalink_structure' ) ) {
+			$tests['direct']['activitypub_test_well_known_api'] = array(
+				'label' => \__( 'ActivityPub API Discovery Test', 'activitypub' ),
+				'test'  => array( self::class, 'test_well_known_api' ),
+			);
+		}
 
 		$tests['direct']['activitypub_test_outbox_rate'] = array(
 			'label' => \__( 'Outbox Activity Rate Test', 'activitypub' ),
@@ -794,6 +804,115 @@ class Health_Check {
 		$result['actions']        = \sprintf(
 			'<p>%s</p>',
 			\__( 'Check your security plugin settings and ensure ActivityPub endpoints are accessible to unauthenticated requests.', 'activitypub' )
+		);
+
+		return $result;
+	}
+
+	/**
+	 * ActivityPub API discovery test.
+	 *
+	 * Apps find the OAuth server (RFC 8414) and the client configuration (FEP-65ca) under
+	 * `/.well-known/`. Another plugin or the web server can answer these paths before WordPress
+	 * reaches the plugin's rewrite rules, so the test requests them and checks that the answer is
+	 * the plugin's own document.
+	 *
+	 * @since unreleased
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_well_known_api() {
+		$result = array(
+			'label'       => \__( 'ActivityPub API discovery works', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'Apps can find the ActivityPub API of your site.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_well_known_api',
+		);
+
+		$documents = array(
+			'oauth-authorization-server' => static function ( $data ) {
+				$metadata = Server::get_metadata();
+
+				return isset( $data['issuer'], $data['authorization_endpoint'] )
+					&& $metadata['issuer'] === $data['issuer']
+					&& $metadata['authorization_endpoint'] === $data['authorization_endpoint'];
+			},
+			'activitypub-client-config'  => static function ( $data ) {
+				$links = isset( $data['links'] ) && \is_array( $data['links'] ) ? $data['links'] : array();
+
+				return \in_array( get_rest_url_by_path( 'client-config/1.0' ), \array_column( $links, 'href' ), true );
+			},
+		);
+
+		$problems = array();
+
+		foreach ( $documents as $name => $is_own_document ) {
+			$url      = \home_url( '/.well-known/' . $name );
+			$response = \wp_safe_remote_get(
+				$url,
+				array(
+					'timeout' => 5,
+					'cookies' => array(),
+					'headers' => array( 'Accept' => 'application/json' ),
+				)
+			);
+
+			if ( \is_wp_error( $response ) ) {
+				$problems[] = \sprintf(
+					/* translators: 1: URL, 2: Error message. */
+					\__( '<code>%1$s</code> is not reachable: %2$s', 'activitypub' ),
+					\esc_html( $url ),
+					\esc_html( $response->get_error_message() )
+				);
+				continue;
+			}
+
+			$status_code = \wp_remote_retrieve_response_code( $response );
+
+			if ( $status_code < 200 || $status_code >= 300 ) {
+				$problems[] = \sprintf(
+					/* translators: 1: URL, 2: HTTP status code. */
+					\__( '<code>%1$s</code> is not reachable: HTTP %2$d', 'activitypub' ),
+					\esc_html( $url ),
+					$status_code
+				);
+				continue;
+			}
+
+			$data = \json_decode( \wp_remote_retrieve_body( $response ), true );
+
+			if ( ! \is_array( $data ) || ! $is_own_document( $data ) ) {
+				$problems[] = \sprintf(
+					/* translators: %s: URL. */
+					\__( 'Another plugin or the web server answers <code>%s</code> instead of ActivityPub.', 'activitypub' ),
+					\esc_html( $url )
+				);
+			}
+		}
+
+		if ( empty( $problems ) ) {
+			return $result;
+		}
+
+		$result['status']         = 'recommended';
+		$result['label']          = \__( 'Apps cannot find the ActivityPub API of your site', 'activitypub' );
+		$result['badge']['color'] = 'orange';
+		$result['description']    = \sprintf(
+			'<p>%s</p><p>%s</p>',
+			\implode( '</p><p>', $problems ),
+			\__( 'Apps that look up the ActivityPub API at these addresses get another service, or nothing, and cannot sign in. Apps that use the endpoints listed in your profile still work.', 'activitypub' )
+		);
+		$result['actions']        = \sprintf(
+			'<p>%s</p>',
+			\__( 'Check which plugin answers these addresses, for example another OAuth or single sign-on plugin, and turn that feature off. If no plugin does, check the configuration of your web server.', 'activitypub' )
 		);
 
 		return $result;
