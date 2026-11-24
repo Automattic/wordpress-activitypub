@@ -56,7 +56,7 @@ class Jetpack {
 		// Jetpack podcast would get one behaviour instead of both.
 		\add_filter( 'activitypub_attachments', array( self::class, 'add_podcast_attachments' ), 10, 2 );
 		\add_filter( 'activitypub_block_media', array( self::class, 'add_block_media' ), 10, 2 );
-		\add_filter( 'activitypub_block_class', array( self::class, 'block_class' ), 10, 2 );
+		\add_filter( 'activitypub_block_class', array( self::class, 'add_block_class' ), 10, 2 );
 	}
 
 	/**
@@ -69,7 +69,7 @@ class Jetpack {
 	 *
 	 * @return string The class.
 	 */
-	public static function block_class( $block_class, $block_name ) {
+	public static function add_block_class( $block_class, $block_name ) {
 		return 'videopress/video' === $block_name ? 'wp-block-jetpack-videopress' : $block_class;
 	}
 

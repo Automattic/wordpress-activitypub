@@ -1013,15 +1013,22 @@ class Post extends Base {
 		\remove_filter( 'render_block', $keep_delimiters, PHP_INT_MAX );
 		\wp_reset_postdata();
 
-		// A saved block is visible when a block with the same name and attributes is in the rendered content.
-		$get_key = static function ( $block ) {
-			return $block['blockName'] . \wp_json_encode( $block['attrs'] );
-		};
-		$visible = \array_map( $get_key, $this->flatten_blocks( \parse_blocks( $content ) ) );
+		/*
+		 * A saved block is visible when a block with the same name and its attributes is in the
+		 * rendered content. WordPress adds attributes to some blocks while it renders them, to the
+		 * images of a gallery for example, so the rendered block may have more.
+		 */
+		$visible = $this->flatten_blocks( \parse_blocks( $content ) );
 		$blocks  = \array_filter(
 			$blocks,
-			static function ( $block ) use ( $get_key, $visible ) {
-				return \in_array( $get_key( $block ), $visible, true );
+			static function ( $block ) use ( $visible ) {
+				foreach ( $visible as $rendered ) {
+					if ( $rendered['blockName'] === $block['blockName'] && \array_intersect_key( $rendered['attrs'], $block['attrs'] ) === $block['attrs'] ) {
+						return true;
+					}
+				}
+
+				return false;
 			}
 		);
 

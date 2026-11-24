@@ -65,7 +65,7 @@ function plugin_init() {
 	} elseif ( \defined( 'JETPACK_VIDEOPRESS_DIR' ) ) {
 		// The VideoPress plugin brings its block without Jetpack too.
 		\add_filter( 'activitypub_block_media', array( Jetpack::class, 'add_block_media' ), 10, 2 );
-		\add_filter( 'activitypub_block_class', array( Jetpack::class, 'block_class' ), 10, 2 );
+		\add_filter( 'activitypub_block_class', array( Jetpack::class, 'add_block_class' ), 10, 2 );
 	}
 
 	/**

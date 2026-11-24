@@ -705,7 +705,7 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		$this->assertSame( array( array( 'id' => 6 ) ), $media['video'] );
 		$this->assertSame( array(), $media['audio'] );
 
-		$this->assertSame( 'wp-block-jetpack-videopress', Jetpack::block_class( 'wp-block-videopress-video', 'videopress/video' ) );
-		$this->assertSame( 'wp-block-other-gallery', Jetpack::block_class( 'wp-block-other-gallery', 'other/gallery' ) );
+		$this->assertSame( 'wp-block-jetpack-videopress', Jetpack::add_block_class( 'wp-block-videopress-video', 'videopress/video' ) );
+		$this->assertSame( 'wp-block-other-gallery', Jetpack::add_block_class( 'wp-block-other-gallery', 'other/gallery' ) );
 	}
 }
