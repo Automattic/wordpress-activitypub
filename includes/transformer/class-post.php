@@ -1009,7 +1009,7 @@ class Post extends Base {
 		 *
 		 * @param string[] $blocklist The block names.
 		 */
-		$blocklist = \apply_filters( 'activitypub_block_media_blocklist', array( 'core/query', 'core/latest-posts' ) );
+		$blocklist = (array) \apply_filters( 'activitypub_block_media_blocklist', array( 'core/query', 'core/latest-posts' ) );
 
 		foreach ( $blocks as $block ) {
 			if ( \in_array( $block['blockName'], $blocklist, true ) ) {
