@@ -123,9 +123,10 @@ class Search {
 			$reason = \esc_html( $reply->get_error_message() );
 		} elseif ( 'comment_duplicate' === $failed ) {
 			$reason = \sprintf(
-				/* translators: %s: Link to the comments that wait for moderation. */
-				\esc_html__( 'The same comment from this author is already stored, maybe it is %s.', 'activitypub' ),
-				\sprintf( '<a href="%s">%s</a>', \esc_url( \admin_url( 'edit-comments.php?comment_status=moderated' ) ), \esc_html__( 'waiting for moderation', 'activitypub' ) )
+				/* translators: 1: Opening tag of the link to the comments that wait for moderation, 2: Closing tag of the link. */
+				\esc_html__( 'The same comment from this author is already stored, maybe it is %1$swaiting for moderation%2$s.', 'activitypub' ),
+				\sprintf( '<a href="%s">', \esc_url( \admin_url( 'edit-comments.php?comment_status=moderated' ) ) ),
+				'</a>'
 			);
 		} elseif ( $failed ) {
 			$reason = \esc_html__( 'Storing it failed.', 'activitypub' );
