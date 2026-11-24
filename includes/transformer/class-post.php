@@ -969,6 +969,15 @@ class Post extends Base {
 			return array();
 		}
 
+		// Media that does not come from a block, like the featured image, was collected before and stays.
+		$collected = \array_map( 'count', $media );
+		$media     = $this->get_media_from_blocks( \parse_blocks( $this->item->post_content ), $media );
+
+		// Without media in the blocks there is nothing to check.
+		if ( \array_map( 'count', $media ) === $collected ) {
+			return $media;
+		}
+
 		global $post;
 
 		$keep_delimiters = static function ( $html, $block ) {
@@ -992,10 +1001,6 @@ class Post extends Base {
 		\wp_reset_postdata();
 
 		$visible = $this->get_media_from_blocks( \parse_blocks( $content ), \array_fill_keys( \array_keys( $media ), array() ) );
-
-		// Media that does not come from a block, like the featured image, was collected before and stays.
-		$collected = \array_map( 'count', $media );
-		$media     = $this->get_media_from_blocks( \parse_blocks( $this->item->post_content ), $media );
 
 		foreach ( $media as $type => $items ) {
 			$visible_ids = \wp_list_pluck( $visible[ $type ] ?? array(), 'id' );
