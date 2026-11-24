@@ -252,6 +252,11 @@ class Migration {
 			self::migrate_oauth_token_keys();
 		}
 
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			// Files cached before may not be readable for the web server, they are downloaded again.
+			self::clear_remote_media_caches();
+		}
+
 		/*
 		 * Defer the flush to late in the `init` cycle (priority 20). Migration::init
 		 * runs at priority 1, which is earlier than most plugins register their
