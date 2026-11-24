@@ -12,7 +12,6 @@ use Activitypub\Cache\Comment_Media;
 use Activitypub\Cache\Emoji as Emoji_Cache;
 use Activitypub\Cache\File;
 use Activitypub\Cache\Media;
-use Activitypub\Cache\Stats_Image;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
@@ -49,7 +48,6 @@ class Migration {
 		Scheduler::register_async_batch_callback( 'activitypub_backfill_statistics', array( Statistics::class, 'backfill_historical_stats' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_tombstone_migrate', array( self::class, 'migrate_tombstones_to_cpt' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_remove_duplicate_cache_files', array( self::class, 'remove_duplicate_cache_files' ) );
-		Scheduler::register_async_batch_callback( 'activitypub_fix_cache_file_permissions', array( self::class, 'fix_cache_file_permissions' ) );
 	}
 
 	/**
@@ -254,9 +252,9 @@ class Migration {
 			self::migrate_oauth_token_keys();
 		}
 
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) && ! \wp_next_scheduled( 'activitypub_fix_cache_file_permissions' ) ) {
-			// A filesystem walk, so off the upgrade request and onto cron.
-			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_fix_cache_file_permissions' );
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			// Files cached before may not be readable for the web server, they are downloaded again.
+			self::clear_remote_media_caches();
 		}
 
 		/*
@@ -1424,27 +1422,6 @@ class Migration {
 
 		foreach ( array( Avatar::class, Media::class, Emoji_Cache::class ) as $cache ) {
 			File::remove_duplicates( $upload_dir['basedir'] . $cache::get_base_dir(), true );
-		}
-	}
-
-	/**
-	 * Make the cached images readable for the web server again.
-	 *
-	 * Images cached since 9.4.0 kept the permissions of the temporary directory they were made
-	 * in, which on many hosts only their owner can read; see {@see File::move_to_cache()}. Each
-	 * file gets the permissions of its directory instead, nothing is downloaded again. Running
-	 * this twice is harmless.
-	 *
-	 * @since unreleased
-	 *
-	 * @return void
-	 */
-	public static function fix_cache_file_permissions() {
-		// Without creating the year/month upload folder, as wp_upload_dir() does by default.
-		$basedir = \wp_upload_dir( null, false )['basedir'];
-
-		foreach ( array( Avatar::class, Emoji_Cache::class, Comment_Media::class, Media::class, Stats_Image::class ) as $cache ) {
-			File::fix_permissions( $basedir . $cache::get_base_dir() );
 		}
 	}
 

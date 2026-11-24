@@ -352,7 +352,8 @@ abstract class File {
 	 * The file is made in the temporary directory, by the image editor (which copies the
 	 * permissions of that directory) or by wp_tempnam() (which follows the umask). On many hosts
 	 * that leaves it readable by its owner only, and a move keeps it that way, so the web server
-	 * would refuse to serve it, see set_permissions().
+	 * would refuse to serve it. It gets the permissions of its new directory without the
+	 * executable bits instead, see _wp_handle_upload().
 	 *
 	 * @since unreleased
 	 *
@@ -366,66 +367,12 @@ abstract class File {
 			return false;
 		}
 
-		static::set_permissions( $destination );
+		$stat = \stat( \dirname( $destination ) );
+		if ( $stat ) {
+			static::get_filesystem()->chmod( $destination, $stat['mode'] & 0000666 );
+		}
 
 		return true;
-	}
-
-	/**
-	 * Give a cached file the permissions of its directory, without the executable bits.
-	 *
-	 * The same permissions core gives an uploaded file, see _wp_handle_upload().
-	 *
-	 * @since unreleased
-	 *
-	 * @param string $file The cached file.
-	 *
-	 * @return void
-	 */
-	protected static function set_permissions( $file ) {
-		$stat = \stat( \dirname( $file ) );
-		if ( $stat ) {
-			static::get_filesystem()->chmod( $file, $stat['mode'] & 0000666 );
-		}
-	}
-
-	/**
-	 * Give every file in a cache directory the permissions of its directory.
-	 *
-	 * Files cached by earlier versions kept the permissions of the temporary directory they were
-	 * made in, see move_to_cache(). Running this twice is harmless.
-	 *
-	 * @since unreleased
-	 *
-	 * @param string $directory The cache directory to walk, subdirectories included.
-	 *
-	 * @return void
-	 */
-	public static function fix_permissions( $directory ) {
-		// A live cache can remove entity directories at any time.
-		if ( ! \is_dir( $directory ) || ! \is_readable( $directory ) ) {
-			return;
-		}
-
-		try {
-			$entries = new \FilesystemIterator( $directory, \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::CURRENT_AS_PATHNAME );
-		} catch ( \UnexpectedValueException $exception ) {
-			// Entity directories can disappear between the readability check and opening the iterator.
-			return;
-		}
-
-		foreach ( $entries as $file ) {
-			// Linked files and directories can lead out of the cache.
-			if ( \is_link( $file ) ) {
-				continue;
-			}
-
-			if ( \is_dir( $file ) ) {
-				static::fix_permissions( $file );
-			} elseif ( \is_file( $file ) ) {
-				static::set_permissions( $file );
-			}
-		}
 	}
 
 	/**
