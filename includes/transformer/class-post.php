@@ -1032,8 +1032,7 @@ class Post extends Base {
 			$media = \apply_filters( 'activitypub_block_media', $media, $block );
 
 			// A plugin that shows a notice in place of a block leaves the attributes, so the block's own markup has to be there.
-			$processor = new \WP_HTML_Tag_Processor( $block['innerHTML'] );
-			if ( ! $processor->next_tag( array( 'class_name' => \wp_get_block_default_classname( (string) $block['blockName'] ) ) ) ) {
+			if ( ! \str_contains( $block['innerHTML'], \wp_get_block_default_classname( (string) $block['blockName'] ) ) ) {
 				continue;
 			}
 
