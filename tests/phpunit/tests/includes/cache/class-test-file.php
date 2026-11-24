@@ -78,6 +78,44 @@ class Test_File extends WP_UnitTestCase {
 	}
 
 	/**
+	 * An image that declares more pixels than the limit is not cached, so nothing decodes it.
+	 *
+	 * @covers \Activitypub\Cache\File::cache
+	 * @covers \Activitypub\Cache\File::optimize_image
+	 */
+	public function test_cache_skips_an_image_above_the_pixel_limit() {
+		$download = static function () {
+			$file = \get_temp_dir() . \wp_unique_filename( \get_temp_dir(), 'bomb.gif' );
+			\file_put_contents( $file, 'GIF89a' . \pack( 'vv', 30000, 30000 ) . "\x00\x00\x00;" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+
+			return array(
+				'file'      => $file,
+				'mime_type' => 'image/gif',
+			);
+		};
+		$post_id  = self::factory()->post->create();
+
+		// WordPress picks an image editor before it decodes, so nothing may ask for one.
+		$asked_for_editor = false;
+		$editors          = static function ( $editors ) use ( &$asked_for_editor ) {
+			$asked_for_editor = true;
+
+			return $editors;
+		};
+
+		\add_filter( 'activitypub_pre_download_url', $download );
+		\add_filter( 'wp_image_editors', $editors );
+		$cached = Avatar::cache( 'https://example.com/bomb.gif', $post_id );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+		\remove_filter( 'wp_image_editors', $editors );
+
+		$this->assertFalse( $cached );
+		$this->assertFalse( $asked_for_editor );
+
+		Avatar::invalidate_entity( $post_id );
+	}
+
+	/**
 	 * A JPEG is cached as a JPEG and every other image as a PNG, named after the URL.
 	 *
 	 * @dataProvider data_cache_output_formats
