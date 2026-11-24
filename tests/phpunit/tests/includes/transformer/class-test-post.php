@@ -2879,4 +2879,36 @@ class Test_Post extends \WP_UnitTestCase {
 
 		$this->assertSame( array( $src ), \wp_list_pluck( $attachment, 'url' ) );
 	}
+
+	/**
+	 * The block media filter only gets blocks with a name, and a callback that returns no array changes nothing.
+	 *
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_block_media_filter() {
+		$image_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		$src      = \wp_get_attachment_url( $image_id );
+		$post_id  = self::factory()->post->create(
+			array(
+				// Text between the two blocks, which the parser returns as a block without a name.
+				'post_content' => \sprintf( '<!-- wp:paragraph --><p>Hello</p><!-- /wp:paragraph -->%3$s<!-- wp:image {"id":%1$d} --><figure class="wp-block-image"><img src="%2$s" alt="" class="wp-image-%1$d"/></figure><!-- /wp:image -->', $image_id, $src, "\n\n" ),
+				'post_status'  => 'publish',
+			)
+		);
+
+		$names    = array();
+		$callback = static function ( $media, $block ) use ( &$names ) {
+			$names[] = $block['blockName'];
+
+			return null;
+		};
+
+		\add_filter( 'activitypub_block_media', $callback, 10, 2 );
+		$attachment = Post::transform( \get_post( $post_id ) )->to_object()->get_attachment();
+		\remove_filter( 'activitypub_block_media', $callback );
+
+		$this->assertSame( array( $src ), \wp_list_pluck( $attachment, 'url' ) );
+		$this->assertNotEmpty( $names );
+		$this->assertNotContains( null, $names );
+	}
 }

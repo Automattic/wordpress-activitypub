@@ -1027,18 +1027,30 @@ class Post extends Base {
 				$media = $this->get_media_from_blocks( $block['innerBlocks'], $media );
 			}
 
+			// The text between two blocks has no name and no media.
+			if ( empty( $block['blockName'] ) ) {
+				continue;
+			}
+
 			/**
 			 * Filters the media of a block, so that a plugin can add the media of its own blocks.
 			 *
+			 * The filter runs for the blocks of the saved content and for the blocks a logged-out
+			 * visitor sees, and media is only attached when both runs return it. A plugin can show
+			 * something else in place of a block and leave its attributes, so a callback has to
+			 * check that the markup of its block is still in `innerHTML` before it reads an ID
+			 * from the attributes.
+			 *
 			 * @since unreleased
 			 *
-			 * @param array $media The media array grouped by type.
-			 * @param array $block The parsed block, as a logged-out visitor sees it.
+			 * @param array $media The media array grouped by type (`image`, `audio`, `video`), each item with an `id`.
+			 * @param array $block The parsed block. It always has a name.
 			 */
-			$media = \apply_filters( 'activitypub_block_media', $media, $block );
+			$filtered = \apply_filters( 'activitypub_block_media', $media, $block );
+			$media    = \is_array( $filtered ) ? $filtered : $media;
 
 			// A plugin that shows a notice in place of a block leaves the attributes, so the block's own markup has to be there.
-			if ( ! \str_contains( $block['innerHTML'], \wp_get_block_default_classname( (string) $block['blockName'] ) ) ) {
+			if ( ! \str_contains( $block['innerHTML'], \wp_get_block_default_classname( $block['blockName'] ) ) ) {
 				continue;
 			}
 
