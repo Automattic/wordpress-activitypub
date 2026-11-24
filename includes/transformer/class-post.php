@@ -949,11 +949,12 @@ class Post extends Base {
 	/**
 	 * Get media attachments from blocks. They will be formatted as ActivityPub attachments, not as WP attachments.
 	 *
-	 * The media is read from the saved blocks, but only from those a logged-out visitor sees.
+	 * The media is read from the saved blocks, and only kept when a logged-out visitor sees it.
 	 * For that the content is rendered: this runs inside transform_object_properties(), where the
 	 * visitor is logged out and is_activitypub_request() is true. While rendering, a block keeps
 	 * its delimiters when its own markup is in its output. A block that a membership plugin or
-	 * the block's own visibility setting removes, or replaces with a notice, has none.
+	 * the block's own visibility setting removes, or replaces with a notice, has none. The media
+	 * of the rendered blocks is read the same way, and only what is in both is attached.
 	 *
 	 * The rendered content only says what is visible. It can hold block markup the author did
 	 * not write, from an embed for example, so no media is taken from it.
@@ -969,10 +970,12 @@ class Post extends Base {
 			return array();
 		}
 
-		$blocks = $this->flatten_blocks( \parse_blocks( $this->item->post_content ) );
+		// Media that does not come from a block, like the featured image, was collected before and stays.
+		$collected = \array_map( 'count', $media );
+		$media     = $this->get_media_from_blocks( \parse_blocks( $this->item->post_content ), $media );
 
 		// Without media in the blocks there is nothing to check.
-		if ( $this->get_media_from_blocks( $blocks, $media ) === $media ) {
+		if ( \array_map( 'count', $media ) === $collected ) {
 			return $media;
 		}
 
@@ -1013,45 +1016,22 @@ class Post extends Base {
 		\remove_filter( 'render_block', $keep_delimiters, PHP_INT_MAX );
 		\wp_reset_postdata();
 
-		/*
-		 * A saved block is visible when a block with the same name and its attributes is in the
-		 * rendered content. WordPress adds attributes to some blocks while it renders them, to the
-		 * images of a gallery for example, so the rendered block may have more.
-		 */
-		$visible = $this->flatten_blocks( \parse_blocks( $content ) );
-		$blocks  = \array_filter(
-			$blocks,
-			static function ( $block ) use ( $visible ) {
-				foreach ( $visible as $rendered ) {
-					if ( $rendered['blockName'] === $block['blockName'] && \array_intersect_key( $rendered['attrs'], $block['attrs'] ) === $block['attrs'] ) {
-						return true;
-					}
+		// The media of the blocks a logged-out visitor sees. Only its IDs are used.
+		$visible = $this->get_media_from_blocks( \parse_blocks( $content ), \array_fill_keys( \array_keys( $media ), array() ) );
+
+		foreach ( $media as $type => $items ) {
+			$visible_ids = \wp_list_pluck( $visible[ $type ] ?? array(), 'id' );
+
+			foreach ( $items as $index => $item ) {
+				if ( $index >= ( $collected[ $type ] ?? 0 ) && ! \in_array( $item['id'] ?? null, $visible_ids, true ) ) {
+					unset( $media[ $type ][ $index ] );
 				}
-
-				return false;
 			}
-		);
 
-		return $this->get_media_from_blocks( $blocks, $media );
-	}
-
-	/**
-	 * Get a flat list of blocks, the inner blocks before the block that holds them.
-	 *
-	 * @param array $blocks The parsed blocks.
-	 *
-	 * @return array The blocks without their inner blocks.
-	 */
-	private function flatten_blocks( $blocks ) {
-		$flat = array();
-
-		foreach ( $blocks as $block ) {
-			$flat                 = \array_merge( $flat, $this->flatten_blocks( $block['innerBlocks'] ) );
-			$block['innerBlocks'] = array();
-			$flat[]               = $block;
+			$media[ $type ] = \array_values( $media[ $type ] );
 		}
 
-		return $flat;
+		return $media;
 	}
 
 	/**
@@ -1077,14 +1057,15 @@ class Post extends Base {
 			/**
 			 * Filters the media of a block, so that a plugin can add the media of its own blocks.
 			 *
-			 * What a callback adds is only attached for a block that a logged-out visitor sees.
-			 * A block whose markup does not have the class WordPress generates for it has to
-			 * name its class with the `activitypub_block_class` filter.
+			 * The filter runs for the saved blocks and for the blocks a logged-out visitor sees,
+			 * and media is attached when both runs return it. A block whose markup does not have
+			 * the class WordPress generates for it has to name its class with the
+			 * `activitypub_block_class` filter, or it never counts as visible.
 			 *
 			 * @since unreleased
 			 *
 			 * @param array $media The media array grouped by type (`image`, `audio`, `video`), each item with an `id`.
-			 * @param array $block The parsed block from the saved content. It always has a name.
+			 * @param array $block The parsed block. It always has a name.
 			 */
 			$filtered = \apply_filters( 'activitypub_block_media', $media, $block );
 			$media    = \is_array( $filtered ) ? $filtered : $media;
