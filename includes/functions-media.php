@@ -47,7 +47,8 @@ function is_remote_url( $url ) {
  *
  * An image editor decodes the whole bitmap before it can resize it, so a small file that
  * declares huge dimensions (a flat-color PNG of 30000×30000) takes gigabytes of memory.
- * Only the header is read here. The limit is the one `Blurhash` uses for the same reason.
+ * Only the header is read here. The limit is `ACTIVITYPUB_MAX_IMAGE_PIXELS`, and for a GIF,
+ * which may be animated, the lower `ACTIVITYPUB_MAX_GIF_PIXELS`.
  * An image whose dimensions cannot be read counts as too large.
  *
  * @since unreleased
@@ -59,7 +60,13 @@ function is_remote_url( $url ) {
 function image_exceeds_pixel_limit( $file_path ) {
 	$size = \wp_getimagesize( $file_path );
 
-	return empty( $size[0] ) || empty( $size[1] ) || $size[0] * $size[1] > Blurhash::MAX_ENCODE_PIXELS;
+	if ( empty( $size[0] ) || empty( $size[1] ) ) {
+		return true;
+	}
+
+	$limit = 'image/gif' === $size['mime'] ? ACTIVITYPUB_MAX_GIF_PIXELS : ACTIVITYPUB_MAX_IMAGE_PIXELS;
+
+	return $size[0] * $size[1] > $limit;
 }
 
 /**

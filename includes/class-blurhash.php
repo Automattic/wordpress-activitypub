@@ -133,7 +133,7 @@ class Blurhash {
 	 *
 	 * @var int
 	 */
-	public const MAX_ENCODE_PIXELS = 50000000;
+	private const MAX_ENCODE_PIXELS = 50000000;
 
 	/**
 	 * Raster MIME types GD can decode via `imagecreatefromstring`.

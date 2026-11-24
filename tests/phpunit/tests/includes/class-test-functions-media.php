@@ -393,6 +393,16 @@ class Test_Functions_Media extends \WP_UnitTestCase {
 		$this->assertTrue( \Activitypub\image_exceeds_pixel_limit( $bomb ) );
 		$this->assertTrue( \Activitypub\image_exceeds_pixel_limit( $text ), 'Unknown dimensions count as too large.' );
 
+		// A GIF may be animated, so its limit is lower: 1280×720 is fine, 1281×720 is not, a PNG of that size is.
+		$gif = \wp_tempnam( 'limit.gif' );
+		\file_put_contents( $gif, 'GIF89a' . \pack( 'vv', 1280, 720 ) . "\x00\x00\x00;" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		$this->assertFalse( \Activitypub\image_exceeds_pixel_limit( $gif ) );
+		\file_put_contents( $gif, 'GIF89a' . \pack( 'vv', 1281, 720 ) . "\x00\x00\x00;" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		$this->assertTrue( \Activitypub\image_exceeds_pixel_limit( $gif ) );
+		\imagepng( \imagecreatetruecolor( 1281, 720 ), $gif );
+		$this->assertFalse( \Activitypub\image_exceeds_pixel_limit( $gif ) );
+		\wp_delete_file( $gif );
+
 		\wp_delete_file( $small );
 		\wp_delete_file( $bomb );
 		\wp_delete_file( $text );
