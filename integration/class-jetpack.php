@@ -55,6 +55,62 @@ class Jetpack {
 		// like Podlove/SSP: a subclass is winner-take-all, so a site running one of those alongside a
 		// Jetpack podcast would get one behaviour instead of both.
 		\add_filter( 'activitypub_attachments', array( self::class, 'add_podcast_attachments' ), 10, 2 );
+		\add_filter( 'activitypub_block_media', array( self::class, 'add_block_media' ), 10, 2 );
+	}
+
+	/**
+	 * Add the media of the Jetpack and VideoPress blocks.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $media The media array grouped by type.
+	 * @param array $block The parsed block.
+	 *
+	 * @return array The media array with the media of the block.
+	 */
+	public static function add_block_media( $media, $block ) {
+		switch ( $block['blockName'] ) {
+			case 'videopress/video':
+				if ( ! empty( $block['attrs']['id'] ) ) {
+					$video = array( 'id' => $block['attrs']['id'] );
+
+					// The poster is stored as an HTML attribute on the <video> tag, not in block attrs.
+					$processor = new \WP_HTML_Tag_Processor( $block['innerHTML'] );
+					if ( $processor->next_tag( array( 'tag_name' => 'video' ) ) ) {
+						$poster = $processor->get_attribute( 'poster' );
+						if ( ! empty( $poster ) ) {
+							$video['icon'] = \esc_url_raw( $poster );
+						}
+					}
+
+					$media['video'][] = $video;
+				}
+				break;
+			case 'jetpack/slideshow':
+			case 'jetpack/tiled-gallery':
+				if ( ! empty( $block['attrs']['ids'] ) ) {
+					$media['image'] = \array_merge(
+						$media['image'],
+						\array_map(
+							static function ( $id ) {
+								return array( 'id' => $id );
+							},
+							$block['attrs']['ids']
+						)
+					);
+				}
+				break;
+			case 'jetpack/image-compare':
+				if ( ! empty( $block['attrs']['beforeImageId'] ) ) {
+					$media['image'][] = array( 'id' => $block['attrs']['beforeImageId'] );
+				}
+				if ( ! empty( $block['attrs']['afterImageId'] ) ) {
+					$media['image'][] = array( 'id' => $block['attrs']['afterImageId'] );
+				}
+				break;
+		}
+
+		return $media;
 	}
 
 	/**

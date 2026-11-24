@@ -2792,13 +2792,25 @@ class Test_Post extends \WP_UnitTestCase {
 		$this->assertSame( array( $public_src, $paid_src ), $attached( $public . $members_block ) );
 		$this->assertSame( array( $public_src, $paid_src ), $attached( $public . $marker . $paid ) );
 
+		// A notice in place of the image, where the block still has output.
+		$show_notice = static function ( $html, $block ) {
+			return 'core/image' === $block['blockName'] && \str_contains( $html, 'members-only' ) && ! \is_user_logged_in() ? '<p>Members only.</p>' : $html;
+		};
+		$restricted  = \str_replace( 'class="wp-block-image"', 'class="wp-block-image members-only"', $paid );
+
+		$this->assertSame( array( $public_src, $paid_src ), $attached( $public . $restricted ) );
+
 		\add_filter( 'render_block', $hide_block, 10, 2 );
+		\add_filter( 'render_block', $show_notice, 10, 2 );
 		\add_filter( 'the_content', $cut_rest, 8 );
+
+		$this->assertSame( array( $public_src ), $attached( $public . $restricted ) );
 
 		$this->assertSame( array( $public_src ), $attached( $public . $members_block ) );
 		$this->assertSame( array( $public_src ), $attached( $public . $marker . $paid ) );
 
 		\remove_filter( 'render_block', $hide_block );
+		\remove_filter( 'render_block', $show_notice );
 		\remove_filter( 'the_content', $cut_rest, 8 );
 	}
 
@@ -2836,5 +2848,37 @@ class Test_Post extends \WP_UnitTestCase {
 			$this->assertSame( array( $src ), \wp_list_pluck( $attachment, 'url' ), $editor );
 		}
 		\remove_filter( 'the_content', $cdn, 999999 );
+	}
+
+	/**
+	 * A post that lists other posts does not take their images, unless the list of skipped blocks is changed.
+	 *
+	 * @covers ::get_attachment
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_media_of_listed_posts_is_not_attached() {
+		$image_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		$src      = \wp_get_attachment_url( $image_id );
+
+		self::factory()->post->create(
+			array(
+				'post_content' => \sprintf( '<!-- wp:image {"id":%1$d} --><figure class="wp-block-image"><img src="%2$s" alt="" class="wp-image-%1$d"/></figure><!-- /wp:image -->', $image_id, $src ),
+				'post_status'  => 'publish',
+			)
+		);
+		$list_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:query {"queryId":1,"query":{"perPage":3,"postType":"post","inherit":false}} --><div class="wp-block-query"><!-- wp:post-template --><!-- wp:post-content /--><!-- /wp:post-template --></div><!-- /wp:query -->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$this->assertSame( array(), Post::transform( \get_post( $list_id ) )->to_object()->get_attachment() );
+
+		\add_filter( 'activitypub_block_media_blocklist', '__return_empty_array' );
+		$attachment = Post::transform( \get_post( $list_id ) )->to_object()->get_attachment();
+		\remove_filter( 'activitypub_block_media_blocklist', '__return_empty_array' );
+
+		$this->assertSame( array( $src ), \wp_list_pluck( $attachment, 'url' ) );
 	}
 }

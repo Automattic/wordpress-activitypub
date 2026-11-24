@@ -973,7 +973,7 @@ class Post extends Base {
 				return $html;
 			}
 
-			return \get_comment_delimited_block_content( $block['blockName'], $block['attrs'], $html );
+			return \get_comment_delimited_block_content( $block['blockName'], $block['attrs'] ?? array(), $html );
 		};
 
 		// Membership plugins read the post from the loop, as get_content() sets it up.
@@ -1000,10 +1000,41 @@ class Post extends Base {
 	 * @return array The image IDs.
 	 */
 	protected function get_media_from_blocks( $blocks, $media ) {
+		/**
+		 * Filters the blocks whose media is not attached, their inner blocks included.
+		 *
+		 * By default these are the blocks that show the content of other posts.
+		 *
+		 * @since unreleased
+		 *
+		 * @param string[] $blocklist The block names.
+		 */
+		$blocklist = \apply_filters( 'activitypub_block_media_blocklist', array( 'core/query', 'core/latest-posts' ) );
+
 		foreach ( $blocks as $block ) {
+			if ( \in_array( $block['blockName'], $blocklist, true ) ) {
+				continue;
+			}
+
 			// Recurse into inner blocks.
 			if ( ! empty( $block['innerBlocks'] ) ) {
 				$media = $this->get_media_from_blocks( $block['innerBlocks'], $media );
+			}
+
+			/**
+			 * Filters the media of a block, so that a plugin can add the media of its own blocks.
+			 *
+			 * @since unreleased
+			 *
+			 * @param array $media The media array grouped by type.
+			 * @param array $block The parsed block, as a logged-out visitor sees it.
+			 */
+			$media = \apply_filters( 'activitypub_block_media', $media, $block );
+
+			// A plugin that shows a notice in place of a block leaves the attributes, so the block's own markup has to be there.
+			$processor = new \WP_HTML_Tag_Processor( $block['innerHTML'] );
+			if ( ! $processor->next_tag( array( 'class_name' => \wp_get_block_default_classname( (string) $block['blockName'] ) ) ) ) {
+				continue;
 			}
 
 			switch ( $block['blockName'] ) {
@@ -1084,7 +1115,6 @@ class Post extends Base {
 					}
 					break;
 				case 'core/video':
-				case 'videopress/video':
 					if ( ! empty( $block['attrs']['id'] ) ) {
 						$video = array( 'id' => $block['attrs']['id'] );
 
@@ -1098,28 +1128,6 @@ class Post extends Base {
 						}
 
 						$media['video'][] = $video;
-					}
-					break;
-				case 'jetpack/slideshow':
-				case 'jetpack/tiled-gallery':
-					if ( ! empty( $block['attrs']['ids'] ) ) {
-						$media['image'] = \array_merge(
-							$media['image'],
-							\array_map(
-								static function ( $id ) {
-									return array( 'id' => $id );
-								},
-								$block['attrs']['ids']
-							)
-						);
-					}
-					break;
-				case 'jetpack/image-compare':
-					if ( ! empty( $block['attrs']['beforeImageId'] ) ) {
-						$media['image'][] = array( 'id' => $block['attrs']['beforeImageId'] );
-					}
-					if ( ! empty( $block['attrs']['afterImageId'] ) ) {
-						$media['image'][] = array( 'id' => $block['attrs']['afterImageId'] );
 					}
 					break;
 			}

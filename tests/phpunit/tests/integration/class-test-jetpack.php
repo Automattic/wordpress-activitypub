@@ -672,4 +672,37 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		$this->assertSame( 'https://example.com/voicemail.mp3', $attachments[1]['url'] );
 		$this->assertArrayNotHasKey( 'icon', $attachments[1], 'Unrelated audio must not advertise the show artwork.' );
 	}
+
+	/**
+	 * The media of the Jetpack and VideoPress blocks is added, a block of another plugin is left alone.
+	 *
+	 * @covers ::init
+	 * @covers ::add_block_media
+	 */
+	public function test_add_block_media() {
+		Jetpack::init();
+
+		$this->assertSame( 10, \has_filter( 'activitypub_block_media', array( Jetpack::class, 'add_block_media' ) ) );
+
+		$blocks = \parse_blocks(
+			'<!-- wp:jetpack/slideshow {"ids":[1,2]} --><div class="wp-block-jetpack-slideshow"></div><!-- /wp:jetpack/slideshow -->' .
+			'<!-- wp:jetpack/tiled-gallery {"ids":[3]} --><div class="wp-block-jetpack-tiled-gallery"></div><!-- /wp:jetpack/tiled-gallery -->' .
+			'<!-- wp:jetpack/image-compare {"beforeImageId":4,"afterImageId":5} --><figure></figure><!-- /wp:jetpack/image-compare -->' .
+			'<!-- wp:videopress/video {"id":6} --><figure class="wp-block-jetpack-videopress"></figure><!-- /wp:videopress/video -->' .
+			'<!-- wp:other/gallery {"ids":[7]} --><div></div><!-- /wp:other/gallery -->'
+		);
+		$media  = array(
+			'image' => array(),
+			'audio' => array(),
+			'video' => array(),
+		);
+
+		foreach ( $blocks as $block ) {
+			$media = Jetpack::add_block_media( $media, $block );
+		}
+
+		$this->assertSame( array( 1, 2, 3, 4, 5 ), \wp_list_pluck( $media['image'], 'id' ) );
+		$this->assertSame( array( array( 'id' => 6 ) ), $media['video'] );
+		$this->assertSame( array(), $media['audio'] );
+	}
 }
