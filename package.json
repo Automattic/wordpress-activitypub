@@ -37,7 +37,7 @@
 		"@babel/core": "^7.29.7",
 		"@base-ui/react": "^1.9.0",
 		"@playwright/test": "^1.65.1",
-		"@testing-library/jest-dom": "^7.0.1",
+		"@testing-library/jest-dom": "^8.0.0",
 		"@testing-library/react": "^16.3.3",
 		"@testing-library/user-event": "^14.6.13",
 		"@types/jest": "^30.0.0",
