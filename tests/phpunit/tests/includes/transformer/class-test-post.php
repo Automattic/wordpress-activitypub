@@ -2746,7 +2746,6 @@ class Test_Post extends \WP_UnitTestCase {
 	 *
 	 * @covers ::get_attachment
 	 * @covers ::get_block_attachments
-	 * @covers ::get_visible_content
 	 */
 	public function test_media_hidden_from_visitors_is_not_attached() {
 		$public_id  = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
@@ -2804,39 +2803,38 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Images that a plugin keeps out of federated content are not attached either.
+	 * A CDN that rewrites the image URLs in the content does not change the attachments.
 	 *
 	 * @covers ::get_attachment
-	 * @covers ::get_visible_content
+	 * @covers ::get_block_attachments
 	 */
-	public function test_images_kept_out_of_federated_content_are_not_attached() {
-		$post_image  = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
-		$added_image = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
-		$post_src    = \wp_get_attachment_url( $post_image );
-		$added_src   = \wp_get_attachment_url( $added_image );
+	public function test_attachments_survive_a_cdn_that_rewrites_image_urls() {
+		$image_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		$src      = \wp_get_attachment_url( $image_id );
 
-		// A plugin that adds an image to every post, and leaves federated content alone.
-		$add_image = static function ( $content ) use ( $added_image, $added_src ) {
-			return $content . \sprintf( '<p><img src="%s" class="wp-image-%d"/></p>', $added_src, $added_image );
+		// Rewrites every image to another host at the end of `the_content`, as an image CDN does.
+		$cdn = static function ( $content ) {
+			return \str_replace( 'src="http://', 'src="https://cdn.example/', $content );
 		};
-		$unhook    = static function () use ( $add_image ) {
-			\remove_filter( 'the_content', $add_image );
-		};
-		\add_filter( 'the_content', $add_image );
-		\add_action( 'activitypub_before_get_content', $unhook );
 
-		$post_id = self::factory()->post->create(
-			array(
-				'post_content' => \sprintf( '<p>Classic post.</p><p><img src="%s" class="wp-image-%d"/></p>', $post_src, $post_image ),
-				'post_status'  => 'publish',
-			)
+		$contents = array(
+			'block'   => \sprintf( '<!-- wp:image {"id":%1$d} --><figure class="wp-block-image"><img src="%2$s" alt="" class="wp-image-%1$d"/></figure><!-- /wp:image -->', $image_id, $src ),
+			'classic' => \sprintf( '<p>Classic post.</p><p><img src="%2$s" alt="" class="wp-image-%1$d"/></p>', $image_id, $src ),
 		);
 
-		$attachment = Post::transform( \get_post( $post_id ) )->to_object()->get_attachment();
+		\add_filter( 'the_content', $cdn, 999999 );
+		foreach ( $contents as $editor => $content ) {
+			$post_id = self::factory()->post->create(
+				array(
+					'post_content' => $content,
+					'post_status'  => 'publish',
+				)
+			);
 
-		\remove_filter( 'the_content', $add_image );
-		\remove_action( 'activitypub_before_get_content', $unhook );
+			$attachment = Post::transform( \get_post( $post_id ) )->to_object()->get_attachment();
 
-		$this->assertSame( array( $post_src ), \wp_list_pluck( $attachment, 'url' ) );
+			$this->assertSame( array( $src ), \wp_list_pluck( $attachment, 'url' ), $editor );
+		}
+		\remove_filter( 'the_content', $cdn, 999999 );
 	}
 }

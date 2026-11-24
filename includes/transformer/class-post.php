@@ -8,7 +8,6 @@
 namespace Activitypub\Transformer;
 
 use Activitypub\Activity\Base_Object;
-use Activitypub\Blocks;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Replies;
@@ -416,7 +415,7 @@ class Post extends Base {
 		if ( site_supports_blocks() && \has_blocks( $this->item->post_content ) ) {
 			$media = $this->get_block_attachments( $media, $max_media );
 		} else {
-			$media = $this->parse_html_images( $media, $max_media, $this->get_visible_content() );
+			$media = $this->parse_html_images( $media, $max_media, $this->item->post_content );
 		}
 
 		$media = $this->filter_media_by_object_type( $media, \get_post_format( $this->item ), $this->item );
@@ -950,6 +949,12 @@ class Post extends Base {
 	/**
 	 * Get media attachments from blocks. They will be formatted as ActivityPub attachments, not as WP attachments.
 	 *
+	 * The blocks are read from the content as a logged-out visitor sees it: this runs inside
+	 * transform_object_properties(), where the visitor is logged out and is_activitypub_request()
+	 * is true. A block that a membership plugin or the block's own visibility setting removes for
+	 * that visitor has no output, so its media is not attached. The block delimiters are kept
+	 * while rendering, so the block attributes can be read as before.
+	 *
 	 * @param array $media     The media array grouped by type.
 	 * @param int   $max_media The maximum number of attachments to return.
 	 *
@@ -961,24 +966,6 @@ class Post extends Base {
 			return array();
 		}
 
-		$blocks = \parse_blocks( $this->get_visible_content() );
-
-		return $this->get_media_from_blocks( $blocks, $media );
-	}
-
-	/**
-	 * Get the post's content as a logged-out visitor sees it, with the block delimiters kept.
-	 *
-	 * Runs inside transform_object_properties(), so the visitor is logged out and
-	 * is_activitypub_request() is true. A block that a membership plugin or the block's own
-	 * visibility setting removes for that visitor is missing here too, so its media is not
-	 * attached. The delimiters let get_media_from_blocks() read the block attributes as before.
-	 *
-	 * @since unreleased
-	 *
-	 * @return string The rendered content.
-	 */
-	protected function get_visible_content() {
 		global $post;
 
 		$keep_delimiters = static function ( $html, $block ) {
@@ -993,21 +980,15 @@ class Post extends Base {
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		$post = $this->item;
 		\setup_postdata( $post );
-
-		// Plugins keep their content filters out of federation here, so their images stay out too.
-		/** This action is documented in includes/transformer/class-post.php */
-		\do_action( 'activitypub_before_get_content', $post );
 		\add_filter( 'render_block', $keep_delimiters, PHP_INT_MAX, 2 );
 
 		/** This filter is documented in wp-includes/post-template.php */
 		$content = \apply_filters( 'the_content', $this->item->post_content );
 
 		\remove_filter( 'render_block', $keep_delimiters, PHP_INT_MAX );
-		// get_content() removes these on `activitypub_the_content`, which this render does not apply.
-		Blocks::remove_post_transformation_callbacks( $content );
 		\wp_reset_postdata();
 
-		return $content;
+		return $this->get_media_from_blocks( \parse_blocks( $content ), $media );
 	}
 
 	/**
