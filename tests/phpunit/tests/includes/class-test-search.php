@@ -403,6 +403,26 @@ class Test_Search extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A reply URL keeps its percent-encoded characters on the comments screen, a search term that is no string is ignored.
+	 *
+	 * @covers \Activitypub\Search::enhance_admin_comment_search
+	 */
+	public function test_admin_search_keeps_percent_encoded_urls() {
+		$url     = 'https://1.1.1.1/notes/gr%C3%BC%C3%9Fe';
+		$filters = $this->serve_reply( $url );
+
+		// First the term that adds no notice, the hook of the second one would show in both.
+		$quiet  = $this->admin_search_notice( array( $url ) );
+		$notice = $this->admin_search_notice( $url );
+
+		$this->stop_serving( $filters );
+
+		$this->assertStringContainsString( 'action=activitypub_import_reply', $notice );
+		$this->assertStringContainsString( \rawurlencode( $url ), \html_entity_decode( $notice ) );
+		$this->assertStringNotContainsString( 'action=activitypub_import_reply', $quiet );
+	}
+
+	/**
 	 * The comments screen says why a reply cannot be imported, and offers no import.
 	 *
 	 * @covers \Activitypub\Search::enhance_admin_comment_search

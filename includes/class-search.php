@@ -85,16 +85,16 @@ class Search {
 			return;
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$search_term = isset( $_GET['s'] ) ? \sanitize_text_field( \wp_unslash( $_GET['s'] ) ) : '';
-		if ( empty( $search_term ) ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Only used when it is a URL, and sanitized as one below.
+		$search_term = isset( $_GET['s'] ) && \is_string( $_GET['s'] ) ? \wp_unslash( $_GET['s'] ) : '';
+
+		// Check if search term is a URL.
+		if ( empty( $search_term ) || ! \wp_http_validate_url( $search_term ) ) {
 			return;
 		}
 
-		// Check if search term is a URL.
-		if ( ! \wp_http_validate_url( $search_term ) ) {
-			return;
-		}
+		// Sanitized as a URL: as a text field it would lose its percent-encoded characters.
+		$search_term = \sanitize_url( $search_term );
 
 		$existing = Comment::url_to_commentid( $search_term );
 		if ( $existing ) {
