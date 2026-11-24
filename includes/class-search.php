@@ -48,7 +48,8 @@ class Search {
 			return $query;
 		}
 
-		$search_term = $query->get( 's' );
+		// A pasted URL often has a space around it.
+		$search_term = \trim( (string) $query->get( 's' ) );
 		if ( empty( $search_term ) ) {
 			return $query;
 		}
@@ -86,7 +87,7 @@ class Search {
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Only used when it is a URL, and sanitized as one below.
-		$search_term = isset( $_GET['s'] ) && \is_string( $_GET['s'] ) ? \wp_unslash( $_GET['s'] ) : '';
+		$search_term = isset( $_GET['s'] ) && \is_string( $_GET['s'] ) ? \trim( \wp_unslash( $_GET['s'] ) ) : '';
 
 		// Check if search term is a URL.
 		if ( empty( $search_term ) || ! \wp_http_validate_url( $search_term ) ) {

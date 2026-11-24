@@ -403,7 +403,7 @@ class Test_Search extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * A reply URL keeps its percent-encoded characters on the comments screen, a search term that is no string is ignored.
+	 * A reply URL keeps its percent-encoded characters on the comments screen and loses the spaces around it, a search term that is no string is ignored.
 	 *
 	 * @covers \Activitypub\Search::enhance_admin_comment_search
 	 */
@@ -413,12 +413,12 @@ class Test_Search extends \WP_UnitTestCase {
 
 		// First the term that adds no notice, the hook of the second one would show in both.
 		$quiet  = $this->admin_search_notice( array( $url ) );
-		$notice = $this->admin_search_notice( $url );
+		$notice = $this->admin_search_notice( " {$url} " );
 
 		$this->stop_serving( $filters );
 
 		$this->assertStringContainsString( 'action=activitypub_import_reply', $notice );
-		$this->assertStringContainsString( \rawurlencode( $url ), \html_entity_decode( $notice ) );
+		$this->assertStringContainsString( \rawurlencode( $url ) . '&', \html_entity_decode( $notice ) );
 		$this->assertStringNotContainsString( 'action=activitypub_import_reply', $quiet );
 	}
 
