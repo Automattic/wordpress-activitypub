@@ -674,7 +674,7 @@ class Test_Jetpack extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * The media of the Jetpack and VideoPress blocks is added, a block of another plugin is left alone.
+	 * The media of the Jetpack and VideoPress blocks is added, a replaced block or a block of another plugin is left alone.
 	 *
 	 * @covers ::init
 	 * @covers ::add_block_media
@@ -687,7 +687,8 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		$blocks = \parse_blocks(
 			'<!-- wp:jetpack/slideshow {"ids":[1,2]} --><div class="wp-block-jetpack-slideshow"></div><!-- /wp:jetpack/slideshow -->' .
 			'<!-- wp:jetpack/tiled-gallery {"ids":[3]} --><div class="wp-block-jetpack-tiled-gallery"></div><!-- /wp:jetpack/tiled-gallery -->' .
-			'<!-- wp:jetpack/image-compare {"beforeImageId":4,"afterImageId":5} --><figure></figure><!-- /wp:jetpack/image-compare -->' .
+			'<!-- wp:jetpack/image-compare {"beforeImageId":4,"afterImageId":5} --><figure class="wp-block-jetpack-image-compare"></figure><!-- /wp:jetpack/image-compare -->' .
+			'<!-- wp:jetpack/slideshow {"ids":[8]} --><p>Members only.</p><!-- /wp:jetpack/slideshow -->' .
 			'<!-- wp:videopress/video {"id":6} --><figure class="wp-block-jetpack-videopress"></figure><!-- /wp:videopress/video -->' .
 			'<!-- wp:other/gallery {"ids":[7]} --><div></div><!-- /wp:other/gallery -->'
 		);

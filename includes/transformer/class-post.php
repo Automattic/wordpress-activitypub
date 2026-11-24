@@ -968,9 +968,24 @@ class Post extends Base {
 
 		global $post;
 
-		$keep_delimiters = static function ( $html, $block ) {
+		/**
+		 * Filters the blocks whose media is not attached, their inner blocks included.
+		 *
+		 * By default these are the blocks that show the content of other posts.
+		 *
+		 * @since unreleased
+		 *
+		 * @param string[] $blocklist The block names.
+		 */
+		$blocklist = (array) \apply_filters( 'activitypub_block_media_blocklist', array( 'core/query', 'core/latest-posts' ) );
+
+		$keep_delimiters = static function ( $html, $block ) use ( $blocklist ) {
 			if ( '' === $html || empty( $block['blockName'] ) ) {
 				return $html;
+			}
+
+			if ( \in_array( $block['blockName'], $blocklist, true ) ) {
+				return '';
 			}
 
 			return \get_comment_delimited_block_content( $block['blockName'], $block['attrs'] ?? array(), $html );
@@ -1000,22 +1015,7 @@ class Post extends Base {
 	 * @return array The image IDs.
 	 */
 	protected function get_media_from_blocks( $blocks, $media ) {
-		/**
-		 * Filters the blocks whose media is not attached, their inner blocks included.
-		 *
-		 * By default these are the blocks that show the content of other posts.
-		 *
-		 * @since unreleased
-		 *
-		 * @param string[] $blocklist The block names.
-		 */
-		$blocklist = (array) \apply_filters( 'activitypub_block_media_blocklist', array( 'core/query', 'core/latest-posts' ) );
-
 		foreach ( $blocks as $block ) {
-			if ( \in_array( $block['blockName'], $blocklist, true ) ) {
-				continue;
-			}
-
 			// Recurse into inner blocks.
 			if ( ! empty( $block['innerBlocks'] ) ) {
 				$media = $this->get_media_from_blocks( $block['innerBlocks'], $media );

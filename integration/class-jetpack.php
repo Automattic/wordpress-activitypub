@@ -69,6 +69,12 @@ class Jetpack {
 	 * @return array The media array with the media of the block.
 	 */
 	public static function add_block_media( $media, $block ) {
+		// A plugin that shows a notice in place of a block leaves the attributes, so the block's own markup has to be there.
+		$class = 'videopress/video' === $block['blockName'] ? 'wp-block-jetpack-videopress' : \wp_get_block_default_classname( (string) $block['blockName'] );
+		if ( ! \str_contains( $block['innerHTML'], $class ) ) {
+			return $media;
+		}
+
 		switch ( $block['blockName'] ) {
 			case 'videopress/video':
 				if ( ! empty( $block['attrs']['id'] ) ) {
