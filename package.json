@@ -80,7 +80,7 @@
 		"@wordpress/route": "^0.25.0",
 		"@wordpress/scripts": "^37.2.0",
 		"@wordpress/url": "^5.1.0",
-		"@wordpress/viewport": "^7.1.0",
+		"@wordpress/viewport": "^7.2.0",
 		"@wordpress/views": "^3.2.0",
 		"babel-jest": "^30.5.2",
 		"classnames": "^2.5.1",
