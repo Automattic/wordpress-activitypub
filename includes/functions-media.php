@@ -58,7 +58,8 @@ function is_remote_url( $url ) {
  * @return bool True when the image must not be decoded.
  */
 function image_exceeds_pixel_limit( $file_path ) {
-	$size = \wp_getimagesize( $file_path );
+	// A file that is not there has no size to read, and reading it would only raise a warning.
+	$size = \is_file( $file_path ) ? \wp_getimagesize( $file_path ) : false;
 
 	if ( empty( $size[0] ) || empty( $size[1] ) ) {
 		return true;
