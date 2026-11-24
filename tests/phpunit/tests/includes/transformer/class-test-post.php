@@ -2851,33 +2851,31 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * A post that lists other posts does not take their images, unless the list of skipped blocks is changed.
+	 * Only media of the saved blocks is attached: block markup that other code adds while the content is rendered is not.
 	 *
 	 * @covers ::get_attachment
-	 * @covers ::get_media_from_blocks
+	 * @covers ::get_block_attachments
 	 */
-	public function test_media_of_listed_posts_is_not_attached() {
+	public function test_media_added_while_rendering_is_not_attached() {
 		$image_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		$other_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
 		$src      = \wp_get_attachment_url( $image_id );
 
-		self::factory()->post->create(
+		$post_id = self::factory()->post->create(
 			array(
 				'post_content' => \sprintf( '<!-- wp:image {"id":%1$d} --><figure class="wp-block-image"><img src="%2$s" alt="" class="wp-image-%1$d"/></figure><!-- /wp:image -->', $image_id, $src ),
 				'post_status'  => 'publish',
 			)
 		);
-		$list_id = self::factory()->post->create(
-			array(
-				'post_content' => '<!-- wp:query {"queryId":1,"query":{"perPage":3,"postType":"post","inherit":false}} --><div class="wp-block-query"><!-- wp:post-template --><!-- wp:post-content /--><!-- /wp:post-template --></div><!-- /wp:query -->',
-				'post_status'  => 'publish',
-			)
-		);
 
-		$this->assertSame( array(), Post::transform( \get_post( $list_id ) )->to_object()->get_attachment() );
+		// Block markup that is not in the saved content, as an embed or a list of other posts can bring it.
+		$add_block = static function ( $content ) use ( $other_id ) {
+			return $content . \sprintf( '<!-- wp:audio {"id":%d} --><figure class="wp-block-audio"><audio controls src="https://remote.example/a.mp3"></audio></figure><!-- /wp:audio -->', $other_id );
+		};
 
-		\add_filter( 'activitypub_block_media_blocklist', '__return_empty_array' );
-		$attachment = Post::transform( \get_post( $list_id ) )->to_object()->get_attachment();
-		\remove_filter( 'activitypub_block_media_blocklist', '__return_empty_array' );
+		\add_filter( 'the_content', $add_block, 8 );
+		$attachment = Post::transform( \get_post( $post_id ) )->to_object()->get_attachment();
+		\remove_filter( 'the_content', $add_block, 8 );
 
 		$this->assertSame( array( $src ), \wp_list_pluck( $attachment, 'url' ) );
 	}

@@ -1,4 +1,4 @@
 Significance: patch
 Type: added
 
-Other plugins can now add the media of their own blocks to posts in the Fediverse, or exclude blocks from it.
+Other plugins can now add the media of their own blocks to posts in the Fediverse.

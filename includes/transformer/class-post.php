@@ -949,11 +949,14 @@ class Post extends Base {
 	/**
 	 * Get media attachments from blocks. They will be formatted as ActivityPub attachments, not as WP attachments.
 	 *
-	 * The blocks are read from the content as a logged-out visitor sees it: this runs inside
-	 * transform_object_properties(), where the visitor is logged out and is_activitypub_request()
-	 * is true. A block that a membership plugin or the block's own visibility setting removes for
-	 * that visitor has no output, so its media is not attached. The block delimiters are kept
-	 * while rendering, so the block attributes can be read as before.
+	 * The media is read from the saved blocks, and only kept when a logged-out visitor sees it.
+	 * For that the content is rendered: this runs inside transform_object_properties(), where the
+	 * visitor is logged out and is_activitypub_request() is true. A block that a membership plugin
+	 * or the block's own visibility setting removes for that visitor has no output. The block
+	 * delimiters are kept while rendering, so the visible blocks can be read like the saved ones.
+	 *
+	 * The rendered content only says what is visible. It can hold block markup the author did
+	 * not write, from an embed for example, so no media is taken from it.
 	 *
 	 * @param array $media     The media array grouped by type.
 	 * @param int   $max_media The maximum number of attachments to return.
@@ -968,24 +971,9 @@ class Post extends Base {
 
 		global $post;
 
-		/**
-		 * Filters the blocks whose media is not attached, their inner blocks included.
-		 *
-		 * By default these are the blocks that show the content of other posts.
-		 *
-		 * @since unreleased
-		 *
-		 * @param string[] $blocklist The block names.
-		 */
-		$blocklist = (array) \apply_filters( 'activitypub_block_media_blocklist', array( 'core/query', 'core/latest-posts' ) );
-
-		$keep_delimiters = static function ( $html, $block ) use ( $blocklist ) {
+		$keep_delimiters = static function ( $html, $block ) {
 			if ( '' === $html || empty( $block['blockName'] ) ) {
 				return $html;
-			}
-
-			if ( \in_array( $block['blockName'], $blocklist, true ) ) {
-				return '';
 			}
 
 			return \get_comment_delimited_block_content( $block['blockName'], $block['attrs'] ?? array(), $html );
@@ -1003,7 +991,25 @@ class Post extends Base {
 		\remove_filter( 'render_block', $keep_delimiters, PHP_INT_MAX );
 		\wp_reset_postdata();
 
-		return $this->get_media_from_blocks( \parse_blocks( $content ), $media );
+		$visible = $this->get_media_from_blocks( \parse_blocks( $content ), \array_fill_keys( \array_keys( $media ), array() ) );
+
+		// Media that does not come from a block, like the featured image, was collected before and stays.
+		$collected = \array_map( 'count', $media );
+		$media     = $this->get_media_from_blocks( \parse_blocks( $this->item->post_content ), $media );
+
+		foreach ( $media as $type => $items ) {
+			$visible_ids = \wp_list_pluck( $visible[ $type ] ?? array(), 'id' );
+
+			foreach ( $items as $index => $item ) {
+				if ( $index >= ( $collected[ $type ] ?? 0 ) && ! \in_array( $item['id'] ?? null, $visible_ids, true ) ) {
+					unset( $media[ $type ][ $index ] );
+				}
+			}
+
+			$media[ $type ] = \array_values( $media[ $type ] );
+		}
+
+		return $media;
 	}
 
 	/**
