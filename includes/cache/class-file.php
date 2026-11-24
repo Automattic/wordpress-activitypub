@@ -7,6 +7,8 @@
 
 namespace Activitypub\Cache;
 
+use function Activitypub\image_exceeds_pixel_limit;
+
 /**
  * Abstract file cache class.
  *
@@ -830,12 +832,16 @@ abstract class File {
 	 * @param string $file_path     Path to the image file.
 	 * @param int    $max_dimension Maximum width/height in pixels.
 	 *
-	 * @return string|false The path of the file the editor wrote, false if it could not read or write it.
+	 * @return string|false The path of the file the editor wrote, false if the image is too large or the editor could not read or write it.
 	 */
 	protected static function optimize_image( $file_path, $max_dimension ) {
 		// Check if it's an image.
 		$mime_type = static::get_file_mime_type( $file_path );
 		if ( ! $mime_type || ! \str_starts_with( $mime_type, 'image/' ) ) {
+			return false;
+		}
+
+		if ( image_exceeds_pixel_limit( $file_path ) ) {
 			return false;
 		}
 

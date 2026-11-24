@@ -371,4 +371,40 @@ class Test_Functions_Media extends \WP_UnitTestCase {
 		// Should not append a video block since URL is already in content.
 		$this->assertStringNotContainsString( '<!-- wp:activitypub/video', $result );
 	}
+
+	/**
+	 * An image is checked by its declared dimensions, before anything decodes it.
+	 *
+	 * @covers \Activitypub\image_exceeds_pixel_limit
+	 */
+	public function test_image_exceeds_pixel_limit() {
+		$small = \wp_tempnam( 'small.png' );
+		$image = \imagecreatetruecolor( 10, 10 );
+		\imagepng( $image, $small );
+
+		// Only the header of a 30000×30000 GIF, which would take gigabytes to decode.
+		$bomb = \wp_tempnam( 'bomb.gif' );
+		\file_put_contents( $bomb, 'GIF89a' . \pack( 'vv', 30000, 30000 ) . "\x00\x00\x00;" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+
+		$text = \wp_tempnam( 'text.png' );
+		\file_put_contents( $text, 'not an image' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+
+		$this->assertFalse( \Activitypub\image_exceeds_pixel_limit( $small ) );
+		$this->assertTrue( \Activitypub\image_exceeds_pixel_limit( $bomb ) );
+		$this->assertTrue( \Activitypub\image_exceeds_pixel_limit( $text ), 'Unknown dimensions count as too large.' );
+
+		// A GIF may be animated, so its limit is lower: 1280×720 is fine, 1281×720 is not, a PNG of that size is.
+		$gif = \wp_tempnam( 'limit.gif' );
+		\file_put_contents( $gif, 'GIF89a' . \pack( 'vv', 1280, 720 ) . "\x00\x00\x00;" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		$this->assertFalse( \Activitypub\image_exceeds_pixel_limit( $gif ) );
+		\file_put_contents( $gif, 'GIF89a' . \pack( 'vv', 1281, 720 ) . "\x00\x00\x00;" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		$this->assertTrue( \Activitypub\image_exceeds_pixel_limit( $gif ) );
+		\imagepng( \imagecreatetruecolor( 1281, 720 ), $gif );
+		$this->assertFalse( \Activitypub\image_exceeds_pixel_limit( $gif ) );
+		\wp_delete_file( $gif );
+
+		\wp_delete_file( $small );
+		\wp_delete_file( $bomb );
+		\wp_delete_file( $text );
+	}
 }

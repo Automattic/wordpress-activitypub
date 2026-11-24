@@ -43,6 +43,34 @@ function is_remote_url( $url ) {
 }
 
 /**
+ * Whether an image is too large to decode.
+ *
+ * An image editor decodes the whole bitmap before it can resize it, so a small file that
+ * declares huge dimensions (a flat-color PNG of 30000×30000) takes gigabytes of memory.
+ * Only the header is read here. The limit is `ACTIVITYPUB_MAX_IMAGE_PIXELS`, and for a GIF,
+ * which may be animated, the lower `ACTIVITYPUB_MAX_GIF_PIXELS`.
+ * An image whose dimensions cannot be read counts as too large.
+ *
+ * @since unreleased
+ *
+ * @param string $file_path The path to the image file.
+ *
+ * @return bool True when the image must not be decoded.
+ */
+function image_exceeds_pixel_limit( $file_path ) {
+	// A file that is not there has no size to read, and reading it would only raise a warning.
+	$size = \is_file( $file_path ) ? \wp_getimagesize( $file_path ) : false;
+
+	if ( empty( $size[0] ) || empty( $size[1] ) ) {
+		return true;
+	}
+
+	$limit = 'image/gif' === $size['mime'] ? ACTIVITYPUB_MAX_GIF_PIXELS : ACTIVITYPUB_MAX_IMAGE_PIXELS;
+
+	return $size[0] * $size[1] > $limit;
+}
+
+/**
  * Generate an image block wrapper for a remote image.
  *
  * @param string $url      The remote image URL.
