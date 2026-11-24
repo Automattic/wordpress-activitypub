@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Collection\Outbox;
 use Activitypub\WP_Admin\Admin;
 
 /**
@@ -301,6 +302,37 @@ class Test_Admin extends \WP_UnitTestCase {
 		}
 
 		$this->assertSame( 'died', $result );
+	}
+
+	/**
+	 * Only the users of the removal that no longer publish to the Fediverse get a Delete.
+	 *
+	 * @covers ::process_capability_removal
+	 */
+	public function test_capability_removal_deletes_only_disabled_selected_users() {
+		$disabled = self::factory()->user->create( array( 'role' => 'author' ) );
+		$enabled  = self::factory()->user->create( array( 'role' => 'author' ) );
+		$other    = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_userdata( $enabled )->add_cap( 'activitypub' );
+
+		// As after the bulk action, which takes the capability away from the selected users.
+		\get_userdata( $disabled )->remove_cap( 'activitypub' );
+		\get_userdata( $other )->remove_cap( 'activitypub' );
+
+		Admin::process_capability_removal( array( $disabled, $enabled ), array( $disabled, $enabled, $other ), 'users.php' );
+
+		$deletes = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'any',
+				'fields'      => 'ids',
+				'author__in'  => array( $disabled, $enabled, $other ),
+				'meta_key'    => '_activitypub_activity_type', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_value'  => 'Delete', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+			)
+		);
+
+		$this->assertSame( array( $disabled ), \array_map( 'intval', \wp_list_pluck( \array_map( 'get_post', $deletes ), 'post_author' ) ) );
 	}
 
 	/**

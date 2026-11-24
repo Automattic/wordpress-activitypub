@@ -58,7 +58,9 @@ $quote_intent_js = \Activitypub\get_quote_intent_js();
 				field.select();
 				field.setSelectionRange( 0, 99999 ); // For mobile devices.
 
-				navigator.clipboard.writeText( field.value );
+				navigator.clipboard.writeText( field.value ).then( function() {
+					wp.a11y.speak( <?php echo wp_json_encode( __( 'Copied!', 'activitypub' ) ); ?> );
+				} );
 			} );
 		} );
 		</script>

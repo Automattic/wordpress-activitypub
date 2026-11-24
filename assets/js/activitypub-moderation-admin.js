@@ -140,6 +140,11 @@
 
 			updateSiteBlockSummary( type );
 		}
+
+		if ( wp.a11y && wp.a11y.speak ) {
+			/* translators: %s: The blocked domain or keyword. */
+			wp.a11y.speak( sprintf( __( '%s added to the block list.', 'activitypub' ), value ) );
+		}
 	}
 
 	/**
@@ -169,6 +174,23 @@
 	}
 
 	/**
+	 * Remove a table row without losing keyboard focus.
+	 *
+	 * The row being removed usually holds focus (its Remove button), so focus
+	 * moves to the field for adding a new entry before the row is removed.
+	 *
+	 * @param {jQuery} row   The table row to remove.
+	 * @param {jQuery} field The field that takes the focus.
+	 */
+	function removeRow( row, field ) {
+		if ( row.length && $.contains( row[ 0 ], document.activeElement ) ) {
+			field.trigger( 'focus' );
+		}
+
+		row.remove();
+	}
+
+	/**
 	 * Helper function to remove a blocked term from the UI
 	 */
 	function removeBlockedTermFromUI( type, value, context ) {
@@ -178,11 +200,16 @@
 
 		if ( button.length > 0 ) {
 			// Remove the parent table row
-			button.closest( 'tr' ).remove();
+			removeRow( button.closest( 'tr' ), $( '#new_' + context + '_' + type ) );
 
 			// Update the summary count for site blocks
 			if ( context === 'site' ) {
 				updateSiteBlockSummary( type );
+			}
+
+			if ( wp.a11y && wp.a11y.speak ) {
+				/* translators: %s: The blocked domain or keyword. */
+				wp.a11y.speak( sprintf( __( '%s removed from the block list.', 'activitypub' ), value ) );
 			}
 		}
 	}
@@ -392,14 +419,21 @@
 				_wpnonce: activitypubModerationL10n.nonce
 			}).done( function() {
 				// Remove the row from the UI.
-				$( '.remove-blocklist-subscription-btn' ).filter( function() {
-					return $( this ).data( 'url' ) === url;
-				}).closest( 'tr' ).remove();
+				removeRow(
+					$( '.remove-blocklist-subscription-btn' ).filter( function() {
+						return $( this ).data( 'url' ) === url;
+					}).closest( 'tr' ),
+					$( '#new_blocklist_subscription_url' )
+				);
 
 				// If no more subscriptions, remove the table.
 				var table = $( '.activitypub-blocklist-subscriptions table' );
 				if ( table.find( 'tbody tr' ).length === 0 ) {
 					table.remove();
+				}
+
+				if ( wp.a11y && wp.a11y.speak ) {
+					wp.a11y.speak( __( 'Blocklist subscription removed.', 'activitypub' ) );
 				}
 			}).fail( function( response ) {
 				var message = response && response.message ? response.message : activitypubModerationL10n.removeSubscriptionFailed || 'Failed to remove subscription.';

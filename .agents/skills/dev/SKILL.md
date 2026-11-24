@@ -13,7 +13,24 @@ Quick reference for common development workflows in the WordPress ActivityPub pl
 ```bash
 npm run env-start    # Start WordPress at http://localhost:8888.
 npm run env-stop     # Stop WordPress environment.
+npm run env-destroy  # Delete the environment: containers, database, uploads.
+npm run env -- status  # Show the URLs and ports of the environment.
 ```
+
+### In a Worktree
+
+Every directory gets its own wp-env environment, so a worktree runs its tests in its own containers and database, without touching the main checkout or other worktrees. Never run a worktree's tests in another directory's environment: they share its test database.
+
+```bash
+ln -s /path/to/main/checkout/node_modules node_modules  # Reuse the Node packages.
+composer install                                        # vendor/ must be real, the container mounts the worktree.
+echo '{ "port": 8890, "testsPort": 8891 }' > .wp-env.override.json  # Own ports, ignored by git.
+npm run env-start
+npm run env-test -- --filter=Test_Name
+npm run env-destroy                                     # Before removing the worktree.
+```
+
+Never change the ports in `.wp-env.json`: the main checkout keeps 8888 and 8889. Pick a pair that no other environment uses, running or not: `lsof -nP -iTCP:<port> -sTCP:LISTEN` prints nothing for a free port, and the `.wp-env.override.json` files of the other worktrees list the ports they have taken.
 
 ### Testing Commands
 ```bash

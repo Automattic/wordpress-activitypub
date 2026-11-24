@@ -125,4 +125,38 @@ class Test_Extra_Fields extends \WP_UnitTestCase {
 		$this->assertStringContainsString( 'WordPress', $content );
 		$this->assertStringNotContainsString( '<a ', $content, 'It was never a link, and must not become one.' );
 	}
+
+	/**
+	 * Only fields anyone can read are part of the profile; the screens that manage them get all.
+	 *
+	 * @covers ::get_actor_fields
+	 */
+	public function test_get_actor_fields_returns_only_public_fields() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\wp_set_current_user( $user_id );
+
+		$ids = array();
+		foreach ( array( 'publish', 'draft', 'pending', 'private', 'future', 'password' ) as $state ) {
+			$ids[ $state ] = self::factory()->post->create(
+				array(
+					'post_type'     => Extra_Fields::USER_POST_TYPE,
+					'post_author'   => $user_id,
+					'post_status'   => 'password' === $state ? 'publish' : $state,
+					'post_password' => 'password' === $state ? 'secret' : '',
+					'post_title'    => $state,
+					'post_date'     => 'future' === $state ? \gmdate( 'Y-m-d H:i:s', \time() + DAY_IN_SECONDS ) : \current_time( 'mysql' ),
+				)
+			);
+		}
+
+		$public = \wp_list_pluck( Extra_Fields::get_actor_fields( $user_id ), 'ID' );
+
+		// The screens that manage the fields are in the admin, where a query without a status finds them all.
+		\set_current_screen( 'profile' );
+		$all = \wp_list_pluck( Extra_Fields::get_actor_fields( $user_id, true ), 'ID' );
+		\set_current_screen( 'front' );
+
+		$this->assertSame( array( $ids['publish'] ), $public );
+		$this->assertEqualsCanonicalizing( \array_values( $ids ), $all );
+	}
 }

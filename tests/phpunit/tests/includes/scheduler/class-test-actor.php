@@ -360,6 +360,125 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * A profile field sends a profile update when it is, becomes or stops being published, and not otherwise.
+	 *
+	 * @covers ::schedule_post_activity
+	 */
+	public function test_schedule_post_activity_only_for_published_fields() {
+		$actor_id = Actors::get_by_id( self::$user_id )->get_id();
+		$before   = $this->get_pending_activities( $actor_id );
+		$field_id = self::factory()->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'post_type'   => Extra_Fields::USER_POST_TYPE,
+				'post_status' => 'draft',
+			)
+		);
+		$this->assertSame( $before, $this->get_pending_activities( $actor_id ), 'A new draft.' );
+
+		$steps = array(
+			'An edited draft.'         => array( 'post_title' => 'Edited' ),
+			'A published field.'       => array( 'post_status' => 'publish' ),
+			'An edited field.'         => array( 'menu_order' => 5 ),
+			'A field set to private.'  => array( 'post_status' => 'private' ),
+			'An edited private field.' => array( 'post_title' => 'Private' ),
+		);
+		$sends = array( 'A published field.', 'An edited field.', 'A field set to private.' );
+
+		foreach ( $steps as $step => $change ) {
+			$before = \array_keys( $this->get_pending_activities( $actor_id ) );
+			\wp_update_post( \array_merge( array( 'ID' => $field_id ), $change ) );
+			$after = \array_keys( $this->get_pending_activities( $actor_id ) );
+
+			$this->assertSame( \in_array( $step, $sends, true ), $before !== $after, $step );
+		}
+	}
+
+	/**
+	 * Deleting a published profile field for good sends a profile update, deleting a draft does not.
+	 *
+	 * @covers ::schedule_post_delete
+	 * @covers ::schedule_post_activity
+	 */
+	public function test_schedule_post_delete_extra_fields() {
+		$ids = array();
+		foreach ( array( 'publish', 'draft' ) as $status ) {
+			$ids[ $status ] = self::factory()->post->create(
+				array(
+					'post_author' => self::$user_id,
+					'post_type'   => Extra_Fields::USER_POST_TYPE,
+					'post_status' => $status,
+					'post_title'  => $status,
+				)
+			);
+		}
+
+		// The fields are read before the delete, as a client does that replaces them, so they are cached.
+		Extra_Fields::get_actor_fields( self::$user_id );
+
+		// A new update replaces the pending one, so the item changes with every update.
+		$actor_id = Actors::get_by_id( self::$user_id )->get_id();
+		$before   = $this->get_pending_activities( $actor_id );
+
+		\wp_delete_post( $ids['draft'], true );
+		$this->assertSame( $before, $this->get_pending_activities( $actor_id ), 'A draft was not on the profile.' );
+
+		\wp_delete_post( $ids['publish'], true );
+		$after = $this->get_pending_activities( $actor_id );
+		$this->assertSame( array( 'Update' ), \array_values( $after ) );
+		$this->assertNotSame( \array_keys( $before ), \array_keys( $after ) );
+
+		$update = \json_decode( \get_post( \key( $after ) )->post_content, true );
+		$this->assertNotContains( 'publish', \wp_list_pluck( $update['object']['attachment'] ?? array(), 'name' ), 'A deleted field has to leave the profile on other servers.' );
+	}
+
+	/**
+	 * Get the pending outbox items about an actor.
+	 *
+	 * @param string $actor_id The actor ID.
+	 *
+	 * @return string[] The activity types, keyed by outbox item ID.
+	 */
+	private function get_pending_activities( $actor_id ) {
+		$types = array();
+		$items = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				'numberposts' => -1,
+				'meta_key'    => '_activitypub_object_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_value'  => $actor_id, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+			)
+		);
+		foreach ( $items as $item ) {
+			$types[ $item->ID ] = \get_post_meta( $item->ID, '_activitypub_activity_type', true );
+		}
+
+		return $types;
+	}
+
+	/**
+	 * Deleting a user with a published profile field sends the Delete for the actor, and no update after it.
+	 *
+	 * @covers ::schedule_profile_update
+	 */
+	public function test_no_profile_update_while_a_user_is_deleted() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
+		self::factory()->post->create(
+			array(
+				'post_author' => $user_id,
+				'post_type'   => Extra_Fields::USER_POST_TYPE,
+			)
+		);
+		$actor_id = Actors::get_by_id( $user_id )->get_id();
+
+		\wp_delete_user( $user_id );
+
+		$this->assertSame( array( 'Delete' ), \array_values( $this->get_pending_activities( $actor_id ) ) );
+	}
+
+	/**
 	 * Test that actor profile updates set the updated attribute.
 	 *
 	 * @covers ::schedule_profile_update

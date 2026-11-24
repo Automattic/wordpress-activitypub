@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Adding or removing a blocked domain or keyword is now announced to screen readers, and removing one keeps keyboard focus in the form instead of losing it.

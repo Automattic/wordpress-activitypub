@@ -406,7 +406,7 @@ class Attachments {
 	 * @param string $file_path     Path to the image file.
 	 * @param int    $max_dimension Maximum width/height in pixels.
 	 *
-	 * @return string|false The optimized file path, or false for a claimed image the editor cannot read or write.
+	 * @return string|false The optimized file path, or false for an image that is too large or that the editor cannot read or write.
 	 */
 	private static function optimize_image( $file_path, $max_dimension ) {
 		// A non-image (audio, video) is left for media_handle_sideload() to accept or reject by type.
@@ -415,8 +415,18 @@ class Attachments {
 			return $file_path;
 		}
 
-		// Skip SVG and GIF files (GIFs may be animated).
-		if ( \in_array( $mime_type, array( 'image/svg+xml', 'image/gif' ), true ) ) {
+		// An SVG is not decoded, and its size cannot be read from a header.
+		if ( 'image/svg+xml' === $mime_type ) {
+			return $file_path;
+		}
+
+		// An image too large to decode is not imported, a GIF included: WordPress decodes it for its sub-sizes.
+		if ( image_exceeds_pixel_limit( $file_path ) ) {
+			return false;
+		}
+
+		// A GIF is stored as it is, it may be animated.
+		if ( 'image/gif' === $mime_type ) {
 			return $file_path;
 		}
 

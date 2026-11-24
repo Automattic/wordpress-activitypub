@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Images from other servers that would take too much memory to process are no longer imported or cached.

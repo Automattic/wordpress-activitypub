@@ -78,6 +78,86 @@ class Test_File extends WP_UnitTestCase {
 	}
 
 	/**
+	 * An image that declares more pixels than the limit is not cached, so nothing decodes it.
+	 *
+	 * @covers \Activitypub\Cache\File::cache
+	 * @covers \Activitypub\Cache\File::optimize_image
+	 */
+	public function test_cache_skips_an_image_above_the_pixel_limit() {
+		$download = static function () {
+			$file = \get_temp_dir() . \wp_unique_filename( \get_temp_dir(), 'bomb.gif' );
+			\file_put_contents( $file, 'GIF89a' . \pack( 'vv', 30000, 30000 ) . "\x00\x00\x00;" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+
+			return array(
+				'file'      => $file,
+				'mime_type' => 'image/gif',
+			);
+		};
+		$post_id  = self::factory()->post->create();
+
+		// WordPress picks an image editor before it decodes, so nothing may ask for one.
+		$asked_for_editor = false;
+		$editors          = static function ( $editors ) use ( &$asked_for_editor ) {
+			$asked_for_editor = true;
+
+			return $editors;
+		};
+
+		\add_filter( 'activitypub_pre_download_url', $download );
+		\add_filter( 'wp_image_editors', $editors );
+		$cached = Avatar::cache( 'https://example.com/bomb.gif', $post_id );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+		\remove_filter( 'wp_image_editors', $editors );
+
+		$this->assertFalse( $cached );
+		$this->assertFalse( $asked_for_editor );
+
+		Avatar::invalidate_entity( $post_id );
+	}
+
+	/**
+	 * A file made in a private temporary directory is readable like an upload once it is cached.
+	 *
+	 * The image editor gives its output the permissions of the directory it writes to, so a
+	 * temporary directory that only its owner can read would leave the cached file unreadable
+	 * for the web server.
+	 *
+	 * @covers \Activitypub\Cache\File::cache
+	 * @covers \Activitypub\Cache\File::move_to_cache
+	 */
+	public function test_cache_gives_the_file_the_permissions_of_its_directory() {
+		$private = \get_temp_dir() . \wp_unique_filename( \get_temp_dir(), 'activitypub-private' );
+		\mkdir( $private, 0700 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir
+		\chmod( $private, 0700 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod
+
+		$download = static function () use ( $private ) {
+			$file = $private . '/test.jpg';
+			\copy( AP_TESTS_DIR . '/data/assets/test.jpg', $file );
+			\chmod( $file, 0600 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod
+
+			return array(
+				'file'      => $file,
+				'mime_type' => 'image/jpeg',
+			);
+		};
+		$post_id  = self::factory()->post->create();
+
+		\add_filter( 'activitypub_pre_download_url', $download );
+		$cached = Avatar::cache( 'https://example.com/photo.jpg', $post_id );
+		\remove_filter( 'activitypub_pre_download_url', $download );
+
+		$basedir = Avatar::get_storage_paths( $post_id )['basedir'];
+		$file    = $basedir . '/' . \basename( (string) $cached );
+		\clearstatcache();
+
+		$this->assertNotFalse( $cached );
+		$this->assertSame( \fileperms( $basedir ) & 0666, \fileperms( $file ) & 0777 );
+
+		Avatar::invalidate_entity( $post_id );
+		Avatar::delete_directory( $private );
+	}
+
+	/**
 	 * A JPEG is cached as a JPEG and every other image as a PNG, named after the URL.
 	 *
 	 * @dataProvider data_cache_output_formats

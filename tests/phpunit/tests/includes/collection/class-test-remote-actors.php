@@ -805,7 +805,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 			}
 
 			$response = array(
-				'headers'  => array(),
+				'headers'  => array( 'content-type' => 'application/activity+json' ),
 				'body'     => \wp_json_encode( $documents[ $url ] ),
 				'response' => array(
 					'code'    => 200,

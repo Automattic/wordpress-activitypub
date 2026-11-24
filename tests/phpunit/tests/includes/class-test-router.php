@@ -7,7 +7,9 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
+use Activitypub\Moderation;
 use Activitypub\Query;
 use Activitypub\Router;
 use Activitypub\Tombstone;
@@ -53,10 +55,11 @@ class Test_Router extends \WP_UnitTestCase {
 	 */
 	public function tear_down(): void {
 		// Clean up common state that may be left by tests.
-		unset( $_SERVER['HTTP_ACCEPT'] );
+		unset( $_SERVER['HTTP_ACCEPT'], $_SERVER['HTTP_DATE'], $_SERVER['HTTP_SIGNATURE'] );
 		\set_query_var( 'preview', null );
 		\set_query_var( 'term_id', null );
 		Query::get_instance()->__destruct();
+		\get_user_by( 'id', self::$user_id )->remove_cap( 'activitypub' );
 
 		parent::tear_down();
 	}
@@ -244,6 +247,86 @@ class Test_Router extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * With signed requests required, a signer that is blocked for the whole site gets no document.
+	 *
+	 * @covers ::render_activitypub_template
+	 */
+	public function test_authorized_fetch_refuses_a_blocked_signer() {
+		\update_option( 'activitypub_rfc9421_signature', '0' );
+		\add_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$actor   = 'https://remote.example/users/reader';
+		$keys    = Actors::get_keypair( self::$user_id );
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+
+		\add_filter(
+			'activitypub_pre_http_get_remote_object',
+			static function () use ( $actor, $keys ) {
+				return array(
+					'id'        => $actor,
+					'type'      => 'Person',
+					'inbox'     => $actor . '/inbox',
+					'publicKey' => array(
+						'id'           => $actor . '#main-key',
+						'owner'        => $actor,
+						'publicKeyPem' => $keys['public_key'],
+					),
+				);
+			}
+		);
+
+		$status = null;
+		\add_filter(
+			'status_header',
+			static function ( $status_header, $code ) use ( &$status ) {
+				$status = $code;
+
+				return $status_header;
+			},
+			10,
+			2
+		);
+
+		$path = '/?p=' . $post_id;
+		$args = \apply_filters(
+			'http_request_args',
+			array(
+				'method'      => 'GET',
+				'key_id'      => $actor . '#main-key',
+				'private_key' => $keys['private_key'],
+				'headers'     => array( 'Date' => \gmdate( 'D, d M Y H:i:s T' ) ),
+			),
+			\home_url( $path )
+		);
+
+		$_SERVER['HTTP_ACCEPT']    = 'application/activity+json';
+		$_SERVER['HTTP_DATE']      = $args['headers']['Date'];
+		$_SERVER['HTTP_SIGNATURE'] = $args['headers']['Signature'];
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+
+		$this->go_to( $path );
+		$template = Router::render_activitypub_template( 'index.php' );
+		$this->assertStringContainsString( 'activitypub-json.php', $template, 'A signer that is not blocked gets the document.' );
+
+		$blocks = array(
+			Moderation::TYPE_ACTOR  => $actor,
+			Moderation::TYPE_DOMAIN => 'remote.example',
+		);
+
+		foreach ( $blocks as $type => $value ) {
+			$status = null;
+			Moderation::add_site_block( $type, $value );
+
+			$this->go_to( $path );
+			$template = Router::render_activitypub_template( 'index.php' );
+			$this->assertSame( 'index.php', $template, $type );
+			$this->assertSame( 403, $status, $type );
+
+			Moderation::remove_site_block( $type, $value );
+		}
+	}
+
+	/**
 	 * Test no_trailing_redirect method.
 	 *
 	 * @covers ::no_trailing_redirect
@@ -380,6 +463,116 @@ class Test_Router extends \WP_UnitTestCase {
 
 		$template = Router::render_activitypub_template( 'index.php' );
 		$this->assertStringContainsString( 'tombstone-json.php', $template, 'A publicly queryable post at a tombstoned URL must still serve the Tombstone for a non-preview fetch.' );
+	}
+
+	/**
+	 * Only an approved comment is served, whatever the URL looks like.
+	 *
+	 * The tombstone only matches the exact URL, so an extra query argument used to reach the
+	 * comment itself.
+	 *
+	 * @dataProvider data_comment_statuses
+	 *
+	 * @covers ::render_activitypub_template
+	 *
+	 * @param string $status The comment status.
+	 * @param bool   $served Whether the comment is served.
+	 */
+	public function test_comment_is_served_only_when_approved( $status, $served ) {
+		$comment_id = $this->create_federated_comment();
+		\wp_update_comment(
+			array(
+				'comment_ID'       => $comment_id,
+				'comment_approved' => $status,
+			)
+		);
+
+		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
+		$this->go_to( '/?c=' . $comment_id . '&x=1' );
+		$template = Router::render_activitypub_template( 'index.php' );
+
+		if ( $served ) {
+			$this->assertNotSame( 'index.php', $template );
+		} else {
+			$this->assertSame( 'index.php', $template );
+		}
+	}
+
+	/**
+	 * Comment statuses and whether the comment is served.
+	 *
+	 * @return array[]
+	 */
+	public function data_comment_statuses() {
+		return array(
+			'approved' => array( '1', true ),
+			'pending'  => array( '0', false ),
+			'spam'     => array( 'spam', false ),
+			'trash'    => array( 'trash', false ),
+		);
+	}
+
+	/**
+	 * A federated comment stays reachable when its post becomes non-public.
+	 *
+	 * It is an object of its own; hiding it would delete it on servers that refetch it.
+	 *
+	 * @covers ::render_activitypub_template
+	 */
+	public function test_comment_on_a_post_made_private_is_served() {
+		$comment_id = $this->create_federated_comment();
+		\wp_update_post(
+			array(
+				'ID'          => \get_comment( $comment_id )->comment_post_ID,
+				'post_status' => 'private',
+			)
+		);
+
+		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
+		$this->go_to( '/?c=' . $comment_id );
+
+		$this->assertNotSame( 'index.php', Router::render_activitypub_template( 'index.php' ) );
+	}
+
+	/**
+	 * A trashed comment still gets its Tombstone at the URL that was buried.
+	 *
+	 * @covers ::render_activitypub_template
+	 */
+	public function test_trashed_comment_serves_its_tombstone() {
+		$comment_id = $this->create_federated_comment();
+		\wp_trash_comment( $comment_id );
+		Tombstone::bury( \home_url( '/?c=' . $comment_id ) );
+
+		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
+		$this->go_to( '/?c=' . $comment_id );
+
+		$this->assertStringContainsString( 'tombstone-json.php', Router::render_activitypub_template( 'index.php' ) );
+	}
+
+	/**
+	 * Create an approved comment that was federated, by a user who can federate.
+	 *
+	 * @return int The comment ID.
+	 */
+	private function create_federated_comment() {
+		\get_user_by( 'id', self::$user_id )->add_cap( 'activitypub' );
+		$post_id    = self::factory()->post->create(
+			array(
+				'post_status' => 'publish',
+				'post_author' => self::$user_id,
+			)
+		);
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'user_id'          => self::$user_id,
+				'comment_approved' => '1',
+			)
+		);
+		\Activitypub\set_wp_object_state( \get_comment( $comment_id ), ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		return $comment_id;
 	}
 
 	/**
@@ -709,6 +902,7 @@ class Test_Router extends \WP_UnitTestCase {
 	 */
 	public function test_oauth_authorization_server_rewrite_rule() {
 		$this->set_permalink_structure( '/%postname%/' );
+		\update_option( 'activitypub_api', '1' );
 
 		Router::add_rewrite_rules();
 		\flush_rewrite_rules();
@@ -728,6 +922,7 @@ class Test_Router extends \WP_UnitTestCase {
 	 */
 	public function test_client_config_rewrite_rule() {
 		$this->set_permalink_structure( '/%postname%/' );
+		\update_option( 'activitypub_api', '1' );
 
 		Router::add_rewrite_rules();
 		\flush_rewrite_rules();
@@ -738,6 +933,54 @@ class Test_Router extends \WP_UnitTestCase {
 		$this->assertSame( $discovery, $this->resolve_rewrite( $rules, '.well-known/activitypub-client-config' ) );
 		$this->assertSame( $discovery, $this->resolve_rewrite( $rules, '.well-known/activitypub-client-config/' ) );
 		$this->assertNotSame( $discovery, $this->resolve_rewrite( $rules, '.well-known/activitypub-client-config/suffix' ) );
+	}
+
+	/**
+	 * Test that the well-known API paths are no rewrite rules when the API is disabled.
+	 *
+	 * @covers ::add_rewrite_rules
+	 */
+	public function test_api_rewrite_rules_need_the_api() {
+		global $wp_rewrite;
+
+		$this->set_permalink_structure( '/%postname%/' );
+		\delete_option( 'activitypub_api' );
+
+		// Drop the two rules other tests added in this process, and keep all others.
+		unset(
+			$wp_rewrite->extra_rules_top['^\.well-known/oauth-authorization-server/?$'],
+			$wp_rewrite->extra_rules_top['^\.well-known/activitypub-client-config/?$']
+		);
+
+		Router::add_rewrite_rules();
+		\flush_rewrite_rules();
+
+		$rules = get_option( 'rewrite_rules' );
+
+		$this->assertArrayNotHasKey( '^\.well-known/oauth-authorization-server/?$', $rules );
+		$this->assertArrayNotHasKey( '^\.well-known/activitypub-client-config/?$', $rules );
+	}
+
+	/**
+	 * Test that turning the API on or off clears the stored rewrite rules.
+	 *
+	 * @covers ::init
+	 * @covers ::reset_rewrite_rules
+	 */
+	public function test_api_option_change_resets_rewrite_rules() {
+		$this->set_permalink_structure( '/%postname%/' );
+		\delete_option( 'activitypub_api' );
+		$this->assertNotEmpty( \get_option( 'rewrite_rules' ) );
+
+		// The first save adds the option.
+		\update_option( 'activitypub_api', '1' );
+		$this->assertFalse( \get_option( 'rewrite_rules' ) );
+
+		\flush_rewrite_rules();
+		$this->assertNotEmpty( \get_option( 'rewrite_rules' ) );
+
+		\update_option( 'activitypub_api', '0' );
+		$this->assertFalse( \get_option( 'rewrite_rules' ) );
 	}
 
 	/**

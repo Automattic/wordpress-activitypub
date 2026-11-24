@@ -129,6 +129,16 @@ class Test_Attachments extends \WP_UnitTestCase {
 			);
 		}
 
+		// Only the header of a GIF that declares 30000×30000 pixels.
+		if ( 'https://example.com/bomb.gif' === $url && isset( $parsed_args['filename'] ) ) {
+			\file_put_contents( $parsed_args['filename'], 'GIF89a' . \pack( 'vv', 30000, 30000 ) . "\x00\x00\x00;" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+
+			return array(
+				'response' => array( 'code' => 200 ),
+				'headers'  => array( 'content-type' => 'image/gif' ),
+			);
+		}
+
 		// Accept any URL that matches the example.com domain pattern (except missing.jpg).
 		if ( preg_match( '#^https://example\.com/(?!missing\.jpg).+#', $url ) && isset( $parsed_args['filename'] ) ) {
 			copy( AP_TESTS_DIR . '/data/assets/test.jpg', $parsed_args['filename'] );
@@ -277,6 +287,31 @@ class Test_Attachments extends \WP_UnitTestCase {
 				array(
 					'url'       => 'https://example.com/unreadable.webp',
 					'mediaType' => 'image/webp',
+					'type'      => 'Image',
+				),
+			),
+			self::$post_id,
+			self::$author_id
+		);
+
+		$this->assertSame( array(), $result );
+		$this->assertEquals( $before, \wp_count_posts( 'attachment' )->inherit );
+	}
+
+	/**
+	 * A GIF that declares more pixels than the limit is not imported, although GIFs are not converted.
+	 *
+	 * @covers ::import
+	 * @covers ::optimize_image
+	 */
+	public function test_import_skips_a_gif_above_the_pixel_limit() {
+		$before = \wp_count_posts( 'attachment' )->inherit;
+
+		$result = Attachments::import(
+			array(
+				array(
+					'url'       => 'https://example.com/bomb.gif',
+					'mediaType' => 'image/gif',
 					'type'      => 'Image',
 				),
 			),

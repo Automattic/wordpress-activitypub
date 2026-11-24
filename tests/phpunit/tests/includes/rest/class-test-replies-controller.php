@@ -241,6 +241,43 @@ class Test_Replies_Controller extends \Activitypub\Tests\Test_REST_Controller_Te
 	}
 
 	/**
+	 * An unapproved, spam or trashed comment has no replies collection.
+	 *
+	 * @dataProvider data_unapproved_statuses
+	 *
+	 * @covers ::get_items
+	 *
+	 * @param string $status The comment status.
+	 */
+	public function test_get_items_hides_unapproved_comment( $status ) {
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => self::$post_id,
+				'comment_type'     => 'comment',
+				'comment_approved' => $status,
+			)
+		);
+
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/comments/' . $comment_id . '/replies' );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertErrorResponse( 'activitypub_replies_collection_does_not_exist', $response, 404 );
+	}
+
+	/**
+	 * Comment statuses that are not approved.
+	 *
+	 * @return array[]
+	 */
+	public function data_unapproved_statuses() {
+		return array(
+			'pending' => array( '0' ),
+			'spam'    => array( 'spam' ),
+			'trash'   => array( 'trash' ),
+		);
+	}
+
+	/**
 	 * Test getting likes for a post.
 	 *
 	 * @covers ::get_items

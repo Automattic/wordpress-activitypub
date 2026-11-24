@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Email notifications about activity from the Fediverse are limited to 30 per hour for each recipient, and one more email tells you when further ones will not be sent.

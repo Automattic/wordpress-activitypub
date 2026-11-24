@@ -7,6 +7,8 @@
 
 namespace Activitypub\Cache;
 
+use function Activitypub\image_exceeds_pixel_limit;
+
 /**
  * Abstract file cache class.
  *
@@ -295,8 +297,8 @@ abstract class File {
 		 * the whole directory: when the delete lands between the two, the move has nowhere to put
 		 * the file and the download is lost for no reason.
 		 */
-		if ( ! static::get_filesystem()->move( $tmp_file, $file_path, true ) ) {
-			if ( ! \wp_mkdir_p( $paths['basedir'] ) || ! static::get_filesystem()->move( $tmp_file, $file_path, true ) ) {
+		if ( ! static::move_to_cache( $tmp_file, $file_path ) ) {
+			if ( ! \wp_mkdir_p( $paths['basedir'] ) || ! static::move_to_cache( $tmp_file, $file_path ) ) {
 				\wp_delete_file( $tmp_file );
 				return false;
 			}
@@ -342,6 +344,35 @@ abstract class File {
 		$paths = static::get_storage_paths( $entity_id );
 
 		return static::delete_directory( $paths['basedir'] );
+	}
+
+	/**
+	 * Move a file into the cache, with the permissions core gives an uploaded file.
+	 *
+	 * The file is made in the temporary directory, by the image editor (which copies the
+	 * permissions of that directory) or by wp_tempnam() (which follows the umask). On many hosts
+	 * that leaves it readable by its owner only, and a move keeps it that way, so the web server
+	 * would refuse to serve it. It gets the permissions of its new directory without the
+	 * executable bits instead, see _wp_handle_upload().
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $source      The file to move.
+	 * @param string $destination The path in the cache.
+	 *
+	 * @return bool True on success, false if the file could not be moved.
+	 */
+	protected static function move_to_cache( $source, $destination ) {
+		if ( ! static::get_filesystem()->move( $source, $destination, true ) ) {
+			return false;
+		}
+
+		$stat = \stat( \dirname( $destination ) );
+		if ( $stat ) {
+			static::get_filesystem()->chmod( $destination, $stat['mode'] & 0000666 );
+		}
+
+		return true;
 	}
 
 	/**
@@ -830,12 +861,16 @@ abstract class File {
 	 * @param string $file_path     Path to the image file.
 	 * @param int    $max_dimension Maximum width/height in pixels.
 	 *
-	 * @return string|false The path of the file the editor wrote, false if it could not read or write it.
+	 * @return string|false The path of the file the editor wrote, false if the image is too large or the editor could not read or write it.
 	 */
 	protected static function optimize_image( $file_path, $max_dimension ) {
 		// Check if it's an image.
 		$mime_type = static::get_file_mime_type( $file_path );
 		if ( ! $mime_type || ! \str_starts_with( $mime_type, 'image/' ) ) {
+			return false;
+		}
+
+		if ( image_exceeds_pixel_limit( $file_path ) ) {
 			return false;
 		}
 

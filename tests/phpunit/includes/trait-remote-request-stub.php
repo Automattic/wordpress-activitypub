@@ -124,7 +124,8 @@ trait Remote_Request_Stub {
 				'body'     => \wp_json_encode( $answer ),
 			);
 
-		$response['headers'] = array();
+		// A document is served as ActivityPub, as by the stub above.
+		$response['headers'] = \is_int( $answer ) ? array() : array( 'content-type' => 'application/activity+json' );
 
 		return $this->served_from( $served_from, $response );
 	}

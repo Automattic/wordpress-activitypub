@@ -14,7 +14,6 @@ Prefer reading project files and `docs/` over relying on training data for WordP
 ## Common Pitfalls
 
 - **PHP 7.4 compatibility.** CI tests against PHP 7.4. No named arguments, no union types, no `match` (PHP 8.0+).
-- **Never edit WordPress core files.** Only modify plugin code.
 - **Pre-commit hooks modify files.** If the hook changed files, stage and commit again — do not assume the first commit succeeded.
 - **`remove_all_filters('pre_http_request')` is forbidden in tests.** The pre-commit hook blocks this. Use targeted filter removal.
 - **Changelog entries are end-user friendly and end with punctuation.** Users see these in the WordPress update screen. Describe what changed from their perspective — no jargon, class names, or method names.
@@ -43,20 +42,6 @@ Prefer reading project files and `docs/` over relying on training data for WordP
 **Read `tests/README.md` and the `test` skill before writing or changing tests.** It covers test utilities, data factories, and detailed patterns.
 
 **One test file per source file.** Tests mirror the file they test: `includes/rest/class-seek-controller.php` → `tests/phpunit/tests/includes/rest/class-test-seek-controller.php`. Add tests to that file; never create a test file that spans several source files. The pre-commit hook enforces this.
-
-## Documentation Index
-
-```
-docs/development-environment.md  — wp-env setup, prerequisites, troubleshooting
-docs/php-coding-standards.md     — full WordPress coding standards reference
-docs/php-class-structure.md      — complete directory and class organization
-docs/code-linting.md             — linting configuration and rules
-docs/pull-request.md             — PR workflow details
-docs/release-process.md          — release workflow and versioning
-tests/README.md                  — test file layout, utilities, data factories, writing patterns
-src/app/README.md                — admin React app: target architecture for new screens
-FEDERATION.md                    — implemented FEPs, supported standards, compatibility
-```
 
 ## Skills and Agents
 

@@ -11,6 +11,10 @@ defined( 'ACTIVITYPUB_REST_NAMESPACE' ) || define( 'ACTIVITYPUB_REST_NAMESPACE',
 defined( 'ACTIVITYPUB_EXCERPT_LENGTH' ) || define( 'ACTIVITYPUB_EXCERPT_LENGTH', 400 );
 defined( 'ACTIVITYPUB_NOTE_LENGTH' ) || define( 'ACTIVITYPUB_NOTE_LENGTH', 500 );
 defined( 'ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS' ) || define( 'ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS', 4 );
+// The largest image the plugin decodes, in pixels: 7680×4320, the limit Mastodon has for images.
+defined( 'ACTIVITYPUB_MAX_IMAGE_PIXELS' ) || define( 'ACTIVITYPUB_MAX_IMAGE_PIXELS', 33177600 );
+// The largest GIF, which may have many frames of that size: 1280×720, the limit Mastodon has for GIFs.
+defined( 'ACTIVITYPUB_MAX_GIF_PIXELS' ) || define( 'ACTIVITYPUB_MAX_GIF_PIXELS', 921600 );
 defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?:(?<=\s)|(?<=<p>)|(?<=<br>)|^)#([A-Za-z0-9_]+)(?:(?=\s|[[:punct:]]|$))' );
 // Letters and digits of any script, so internationalized handles match too. It needs the `u` modifier: without it `\p{…}` matches single bytes.
 // The top-level label is Latin letters, punycode or all non-ASCII, so text written right after a handle (`.com-thanks`, `.com今日は`) is not part of it.

@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Avatars, emoji and other images from the Fediverse show again on hosts where they could not be loaded.
