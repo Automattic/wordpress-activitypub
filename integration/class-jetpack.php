@@ -56,6 +56,21 @@ class Jetpack {
 		// Jetpack podcast would get one behaviour instead of both.
 		\add_filter( 'activitypub_attachments', array( self::class, 'add_podcast_attachments' ), 10, 2 );
 		\add_filter( 'activitypub_block_media', array( self::class, 'add_block_media' ), 10, 2 );
+		\add_filter( 'activitypub_block_class', array( self::class, 'block_class' ), 10, 2 );
+	}
+
+	/**
+	 * Name the class of the VideoPress block, which is not the one WordPress generates for it.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $block_class The class that tells that the block's own markup is in its output.
+	 * @param string $block_name  The block name.
+	 *
+	 * @return string The class.
+	 */
+	public static function block_class( $block_class, $block_name ) {
+		return 'videopress/video' === $block_name ? 'wp-block-jetpack-videopress' : $block_class;
 	}
 
 	/**
@@ -69,12 +84,6 @@ class Jetpack {
 	 * @return array The media array with the media of the block.
 	 */
 	public static function add_block_media( $media, $block ) {
-		// A plugin that shows a notice in place of a block leaves the attributes, so the block's own markup has to be there.
-		$class = 'videopress/video' === $block['blockName'] ? 'wp-block-jetpack-videopress' : \wp_get_block_default_classname( $block['blockName'] );
-		if ( ! \str_contains( $block['innerHTML'], $class ) ) {
-			return $media;
-		}
-
 		switch ( $block['blockName'] ) {
 			case 'videopress/video':
 				if ( ! empty( $block['attrs']['id'] ) ) {
