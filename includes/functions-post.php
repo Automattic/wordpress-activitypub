@@ -402,7 +402,7 @@ function generate_post_summary( $post, $length = 500 ) {
 	$content = \get_the_excerpt( $teaser );
 
 	if ( false !== $mention_priority ) {
-		\add_filter( 'get_the_excerpt', $mention, $mention_priority );
+		\add_filter( 'get_the_excerpt', $mention, $mention_priority, 2 );
 	}
 
 	\remove_filter( 'excerpt_allowed_blocks', $details );
