@@ -204,8 +204,8 @@ class Dashboard {
 		<p>
 			<?php \esc_html_e( 'People can follow your blog by using:', 'activitypub' ); ?>
 		</p>
-		<p><label for="activitypub-user-identifier"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-identifier" value="<?php echo \esc_attr( $user->get_webfinger() ); ?>" readonly /></p>
-		<p><label for="activitypub-user-url"><?php \esc_html_e( 'Profile URL', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-url" value="<?php echo \esc_attr( $user->get_url() ); ?>" readonly /></p>
+		<p><label for="activitypub-blog-identifier"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-blog-identifier" value="<?php echo \esc_attr( $user->get_webfinger() ); ?>" readonly /></p>
+		<p><label for="activitypub-blog-url"><?php \esc_html_e( 'Profile URL', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-blog-url" value="<?php echo \esc_attr( $user->get_url() ); ?>" readonly /></p>
 		<p>
 			<?php \esc_html_e( 'This blog profile will federate all posts written on your blog, regardless of the author who posted it.', 'activitypub' ); ?>
 			<?php if ( \current_user_can( 'manage_options' ) ) : ?>

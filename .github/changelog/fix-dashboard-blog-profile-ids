@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+The labels in the Blog Profile box on the dashboard now point to the blog's own fields instead of the author fields.
