@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\Mention;
 
 use function Activitypub\object_to_uri;
@@ -266,6 +267,50 @@ ENDPRE;
 		$this->assertSame( 0, $requests );
 
 		\remove_filter( 'pre_http_request', $count, 1 );
+	}
+
+	/**
+	 * Handles in the content and the excerpt of a received post are not looked up.
+	 *
+	 * @covers ::the_content
+	 * @covers ::the_excerpt
+	 */
+	public function test_received_posts_are_not_searched_for_mentions() {
+		$text     = 'hallo @username@example.org test';
+		$linked   = '<a rel="mention" class="u-url mention" href="https://example.org/users/username">@username</a>';
+		$requests = 0;
+		$count    = static function ( $pre ) use ( &$requests ) {
+			++$requests;
+
+			return $pre;
+		};
+
+		foreach ( array( Remote_Posts::POST_TYPE, 'post' ) as $post_type ) {
+			$GLOBALS['post'] = self::factory()->post->create_and_get( // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+				array(
+					'post_type'    => $post_type,
+					'post_content' => $text,
+					'post_excerpt' => $text,
+				)
+			);
+
+			$requests = 0;
+			\add_filter( 'pre_http_request', $count, 1 );
+			$content = \apply_filters( 'the_content', $text );
+			$excerpt = \get_the_excerpt( $GLOBALS['post'] );
+			\remove_filter( 'pre_http_request', $count, 1 );
+
+			if ( 'post' === $post_type ) {
+				$this->assertStringContainsString( $linked, $content );
+				$this->assertStringContainsString( $linked, $excerpt );
+			} else {
+				$this->assertStringContainsString( $text, $content );
+				$this->assertStringContainsString( $text, $excerpt );
+				$this->assertSame( 0, $requests );
+			}
+		}
+
+		unset( $GLOBALS['post'] );
 	}
 
 	/**

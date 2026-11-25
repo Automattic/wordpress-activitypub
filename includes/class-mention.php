@@ -23,7 +23,7 @@ class Mention {
 	 */
 	public static function init() {
 		\add_filter( 'the_content', array( self::class, 'the_content' ), 99 );
-		\add_filter( 'get_the_excerpt', array( self::class, 'the_excerpt' ), 99 );
+		\add_filter( 'get_the_excerpt', array( self::class, 'the_excerpt' ), 99, 2 );
 		\add_filter( 'comment_text', array( self::class, 'comment_text' ), 10, 2 );
 		\add_filter( 'activitypub_extra_field_content', array( self::class, 'the_content' ) );
 		\add_filter( 'activitypub_extract_mentions', array( self::class, 'extract_mentions' ), 99, 2 );
@@ -75,6 +75,11 @@ class Mention {
 			return $the_content;
 		}
 
+		// A received post has its mentions as links already.
+		if ( \doing_filter( 'the_content' ) && is_ap_post( \get_post() ) ) {
+			return $the_content;
+		}
+
 		return enrich_content_data( $the_content, self::get_pattern( $the_content ), array( self::class, 'replace_with_links' ) );
 	}
 
@@ -106,12 +111,19 @@ class Mention {
 	 * rest of the content's HTML.
 	 *
 	 * @since 9.4.1
+	 * @since unreleased Added the `$post` parameter.
 	 *
-	 * @param string $excerpt The post excerpt.
+	 * @param string            $excerpt The post excerpt.
+	 * @param \WP_Post|int|null $post    Optional. The post of the excerpt. Default null, the current post.
 	 *
 	 * @return string The filtered excerpt.
 	 */
-	public static function the_excerpt( $excerpt ) {
+	public static function the_excerpt( $excerpt, $post = null ) {
+		// A received post has its mentions as links already.
+		if ( is_ap_post( $post ) ) {
+			return $excerpt;
+		}
+
 		return enrich_content_data( $excerpt, self::get_pattern( $excerpt ), array( self::class, 'replace_with_links' ) );
 	}
 
