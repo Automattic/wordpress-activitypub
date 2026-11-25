@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Answers from other servers that the plugin keeps for a while, like account lookups, are limited in size.

@@ -1273,4 +1273,38 @@ class Test_Webfinger extends \WP_UnitTestCase {
 			'remote follow endpoint, no links' => array( static fn() => Webfinger::get_remote_follow_endpoint( 'f@remote.example' ), $document ),
 		);
 	}
+
+	/**
+	 * A WebFinger lookup asks for a small document and keeps the response for a day.
+	 *
+	 * @covers ::get_data
+	 */
+	public function test_get_data_limits_the_response_size() {
+		$limit   = null;
+		$lookup  = null;
+		$capture = static function ( $pre, $args, $url ) use ( &$limit, &$lookup ) {
+			if ( \str_contains( $url, '/.well-known/webfinger' ) ) {
+				$limit  = $args['limit_response_size'] ?? null;
+				$lookup = $url;
+
+				return array(
+					'response' => array( 'code' => 200 ),
+					'headers'  => array(),
+					'body'     => '{}',
+				);
+			}
+
+			return $pre;
+		};
+		\add_filter( 'pre_http_request', $capture, 10, 3 );
+
+		Webfinger::get_data( 'acct:alice@remote.example' );
+
+		\remove_filter( 'pre_http_request', $capture, 10 );
+
+		$this->assertSame( Http::SMALL_RESPONSE_SIZE, $limit );
+
+		$expires = (int) \get_option( '_transient_timeout_' . Http::generate_cache_key( $lookup ) );
+		$this->assertEqualsWithDelta( \time() + DAY_IN_SECONDS, $expires, 5 );
+	}
 }
