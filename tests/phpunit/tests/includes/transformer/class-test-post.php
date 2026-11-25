@@ -2740,4 +2740,175 @@ class Test_Post extends \WP_UnitTestCase {
 		$this->assertArrayNotHasKey( 'dcterms:subject', $array );
 		$this->assertArrayNotHasKey( 'dcterms', $array );
 	}
+
+	/**
+	 * Media that a membership plugin hides from logged-out visitors is not attached, whoever publishes the post.
+	 *
+	 * @covers ::get_attachment
+	 * @covers ::get_block_attachments
+	 */
+	public function test_media_hidden_from_visitors_is_not_attached() {
+		$public_id  = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		$paid_id    = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		$public_src = \wp_get_attachment_url( $public_id );
+		$paid_src   = \wp_get_attachment_url( $paid_id );
+		$image      = '<!-- wp:image {"id":%1$d} --><figure class="wp-block-image"><img src="%2$s" alt="" class="wp-image-%1$d"/></figure><!-- /wp:image -->';
+		$public     = \sprintf( $image, $public_id, $public_src );
+		$paid       = \sprintf( $image, $paid_id, $paid_src );
+		$author_id  = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		$attached = static function ( $content ) use ( $author_id ) {
+			$post_id = self::factory()->post->create(
+				array(
+					'post_author'  => $author_id,
+					'post_content' => $content,
+					'post_status'  => 'publish',
+				)
+			);
+
+			// Published by the author, who can see everything.
+			\wp_set_current_user( $author_id );
+			$attachment = Post::transform( \get_post( $post_id ) )->to_object()->get_attachment();
+			\wp_set_current_user( 0 );
+
+			return \wp_list_pluck( $attachment, 'url' );
+		};
+
+		// A block that only logged-in readers see, like a premium content block.
+		$members_block = '<!-- wp:group --><div class="wp-block-group">' . $paid . '</div><!-- /wp:group -->';
+		$hide_block    = static function ( $html, $block ) {
+			return 'core/group' === $block['blockName'] && ! \is_user_logged_in() ? '' : $html;
+		};
+
+		// Everything after a marker is cut for logged-out readers, like a paywall block.
+		$marker   = '<!-- wp:separator --><hr class="wp-block-separator paywall"/><!-- /wp:separator -->';
+		$cut_rest = static function ( $content ) {
+			$cut = \strpos( $content, '<!-- wp:separator' );
+
+			return \is_user_logged_in() || false === $cut ? $content : \substr( $content, 0, $cut );
+		};
+
+		// Without a membership plugin, both images are attached.
+		$this->assertSame( array( $public_src, $paid_src ), $attached( $public . $members_block ) );
+		$this->assertSame( array( $public_src, $paid_src ), $attached( $public . $marker . $paid ) );
+
+		// A notice in place of the image, where the block still has output.
+		$show_notice = static function ( $html, $block ) {
+			return 'core/image' === $block['blockName'] && \str_contains( $html, 'members-only' ) && ! \is_user_logged_in() ? '<p>Members only.</p>' : $html;
+		};
+		$restricted  = \str_replace( 'class="wp-block-image"', 'class="wp-block-image members-only"', $paid );
+
+		$this->assertSame( array( $public_src, $paid_src ), $attached( $public . $restricted ) );
+
+		\add_filter( 'render_block', $hide_block, 10, 2 );
+		\add_filter( 'render_block', $show_notice, 10, 2 );
+		\add_filter( 'the_content', $cut_rest, 8 );
+
+		$this->assertSame( array( $public_src ), $attached( $public . $restricted ) );
+
+		$this->assertSame( array( $public_src ), $attached( $public . $members_block ) );
+		$this->assertSame( array( $public_src ), $attached( $public . $marker . $paid ) );
+
+		\remove_filter( 'render_block', $hide_block );
+		\remove_filter( 'render_block', $show_notice );
+		\remove_filter( 'the_content', $cut_rest, 8 );
+	}
+
+	/**
+	 * A CDN that rewrites the image URLs in the content does not change the attachments.
+	 *
+	 * @covers ::get_attachment
+	 * @covers ::get_block_attachments
+	 */
+	public function test_attachments_survive_a_cdn_that_rewrites_image_urls() {
+		$image_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		$src      = \wp_get_attachment_url( $image_id );
+
+		// Rewrites every image to another host at the end of `the_content`, as an image CDN does.
+		$cdn = static function ( $content ) {
+			return \str_replace( 'src="http://', 'src="https://cdn.example/', $content );
+		};
+
+		$contents = array(
+			'block'   => \sprintf( '<!-- wp:image {"id":%1$d} --><figure class="wp-block-image"><img src="%2$s" alt="" class="wp-image-%1$d"/></figure><!-- /wp:image -->', $image_id, $src ),
+			'classic' => \sprintf( '<p>Classic post.</p><p><img src="%2$s" alt="" class="wp-image-%1$d"/></p>', $image_id, $src ),
+		);
+
+		\add_filter( 'the_content', $cdn, 999999 );
+		foreach ( $contents as $editor => $content ) {
+			$post_id = self::factory()->post->create(
+				array(
+					'post_content' => $content,
+					'post_status'  => 'publish',
+				)
+			);
+
+			$attachment = Post::transform( \get_post( $post_id ) )->to_object()->get_attachment();
+
+			$this->assertSame( array( $src ), \wp_list_pluck( $attachment, 'url' ), $editor );
+		}
+		\remove_filter( 'the_content', $cdn, 999999 );
+	}
+
+	/**
+	 * Only media of the saved blocks is attached: block markup that other code adds while the content is rendered is not.
+	 *
+	 * @covers ::get_attachment
+	 * @covers ::get_block_attachments
+	 */
+	public function test_media_added_while_rendering_is_not_attached() {
+		$image_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		$other_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		$src      = \wp_get_attachment_url( $image_id );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => \sprintf( '<!-- wp:image {"id":%1$d} --><figure class="wp-block-image"><img src="%2$s" alt="" class="wp-image-%1$d"/></figure><!-- /wp:image -->', $image_id, $src ),
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Block markup that is not in the saved content, as an embed or a list of other posts can bring it.
+		$add_block = static function ( $content ) use ( $other_id ) {
+			return $content . \sprintf( '<!-- wp:audio {"id":%d} --><figure class="wp-block-audio"><audio controls src="https://remote.example/a.mp3"></audio></figure><!-- /wp:audio -->', $other_id );
+		};
+
+		\add_filter( 'the_content', $add_block, 8 );
+		$attachment = Post::transform( \get_post( $post_id ) )->to_object()->get_attachment();
+		\remove_filter( 'the_content', $add_block, 8 );
+
+		$this->assertSame( array( $src ), \wp_list_pluck( $attachment, 'url' ) );
+	}
+
+	/**
+	 * The block media filter only gets blocks with a name, and a callback that returns no array changes nothing.
+	 *
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_block_media_filter() {
+		$image_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		$src      = \wp_get_attachment_url( $image_id );
+		$post_id  = self::factory()->post->create(
+			array(
+				// Text between the two blocks, which the parser returns as a block without a name.
+				'post_content' => \sprintf( '<!-- wp:paragraph --><p>Hello</p><!-- /wp:paragraph -->%3$s<!-- wp:image {"id":%1$d} --><figure class="wp-block-image"><img src="%2$s" alt="" class="wp-image-%1$d"/></figure><!-- /wp:image -->', $image_id, $src, "\n\n" ),
+				'post_status'  => 'publish',
+			)
+		);
+
+		$names    = array();
+		$callback = static function ( $media, $block ) use ( &$names ) {
+			$names[] = $block['blockName'];
+
+			return null;
+		};
+
+		\add_filter( 'activitypub_block_media', $callback, 10, 2 );
+		$attachment = Post::transform( \get_post( $post_id ) )->to_object()->get_attachment();
+		\remove_filter( 'activitypub_block_media', $callback );
+
+		$this->assertSame( array( $src ), \wp_list_pluck( $attachment, 'url' ) );
+		$this->assertNotEmpty( $names );
+		$this->assertNotContains( null, $names );
+	}
 }
