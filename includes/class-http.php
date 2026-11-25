@@ -16,11 +16,12 @@ use Activitypub\Collection\Actors;
  */
 class Http {
 	/**
-	 * The response size for small documents a remote server can make arbitrarily large.
+	 * The response size limit for documents that are small by nature.
 	 *
-	 * A WebFinger document or the root of a collection takes a few kilobytes. Their responses
-	 * are cached, so the default limit of 1 MiB would let anyone who can trigger a lookup fill
-	 * the cache with large entries.
+	 * Pass it as `limit_response_size` to `Http::get()` whenever the response is cached and the
+	 * document only takes a few kilobytes, for example a WebFinger document or the root of a
+	 * collection that is only read for its `totalItems`. With the default of 1 MiB the remote
+	 * server decides how large the cached entry gets.
 	 *
 	 * @since unreleased
 	 *
