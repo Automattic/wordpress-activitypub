@@ -556,6 +556,37 @@ class Test_Search extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The import needs the capability of the comments screen, not only `activitypub`.
+	 *
+	 * @covers \Activitypub\Search::import_reply
+	 */
+	public function test_import_reply_requires_edit_posts() {
+		// A user keeps `activitypub` when their role changes, for example from author to subscriber.
+		$user = \get_user_by( 'id', self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+		$user->add_cap( 'activitypub' );
+		\wp_set_current_user( $user->ID );
+
+		$url     = 'https://1.1.1.1/notes/15';
+		$filters = $this->serve_reply( $url );
+
+		$_GET['url']          = $url;
+		$_REQUEST['_wpnonce'] = \wp_create_nonce( 'activitypub_import_reply' );
+
+		$died = false;
+		try {
+			Search::import_reply();
+		} catch ( \WPDieException $e ) {
+			$died = true;
+		}
+
+		unset( $_GET['url'], $_REQUEST['_wpnonce'] );
+		$this->stop_serving( $filters );
+
+		$this->assertTrue( $died, 'An import without edit_posts must stop.' );
+		$this->assertEmpty( Comment::url_to_commentid( $url ), 'Nothing may be stored without edit_posts.' );
+	}
+
+	/**
 	 * A reply that cannot be stored leads back to the search with a notice, instead of breaking.
 	 *
 	 * @covers \Activitypub\Search::import_reply

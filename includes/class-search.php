@@ -215,7 +215,8 @@ class Search {
 	public static function import_reply() {
 		\check_admin_referer( 'activitypub_import_reply' );
 
-		if ( ! \current_user_can( 'activitypub' ) ) {
+		// The capability stays with a user whose role changes, so check the comments screen's capability too.
+		if ( ! \current_user_can( 'activitypub' ) || ! \current_user_can( 'edit_posts' ) ) {
 			\wp_die( \esc_html__( 'Sorry, you are not allowed to import replies.', 'activitypub' ), '', array( 'response' => 403 ) );
 		}
 
