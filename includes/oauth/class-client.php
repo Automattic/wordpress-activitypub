@@ -7,6 +7,7 @@
 
 namespace Activitypub\OAuth;
 
+use Activitypub\Http;
 use Activitypub\Sanitize;
 
 use function Activitypub\get_url_authority;
@@ -342,11 +343,12 @@ class Client {
 		}
 
 		$args = array(
-			'timeout'     => 10,
-			'headers'     => array(
+			'timeout'             => 10,
+			'headers'             => array(
 				'Accept' => 'application/cimd+json, application/json, application/ld+json, application/activity+json',
 			),
-			'redirection' => 0, // CIMDs prohibit following redirects to prevent client impersonation.
+			'redirection'         => 0, // CIMDs prohibit following redirects to prevent client impersonation.
+			'limit_response_size' => Http::SMALL_RESPONSE_SIZE, // The name and the redirect URIs are stored, so the document must not get large.
 		);
 
 		/*
