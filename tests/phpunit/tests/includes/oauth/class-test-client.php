@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\OAuth;
 
+use Activitypub\Http;
 use Activitypub\OAuth\Client;
 use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Token;
@@ -1031,6 +1032,44 @@ class Test_Client extends \WP_UnitTestCase {
 		$this->assertEquals( 'https://example.com/cimd-client', $metadata['client_id'] );
 		$this->assertEquals( 'CIMD Name', $metadata['client_name'] );
 		$this->assertEquals( array( 'https://example.com/cimd-callback' ), $metadata['redirect_uris'] );
+	}
+
+	/**
+	 * The client metadata document is fetched with a size limit, because its name and redirect URIs are stored.
+	 *
+	 * @covers ::fetch_client_metadata
+	 */
+	public function test_fetch_client_metadata_limits_the_response_size() {
+		$limit   = null;
+		$resolve = static function () {
+			return array(
+				'ipv4' => array( '93.184.216.34' ),
+				'ipv6' => array(),
+			);
+		};
+		$capture = static function ( $pre, $args ) use ( &$limit ) {
+			$limit = $args['limit_response_size'] ?? null;
+
+			return array(
+				'response' => array( 'code' => 200 ),
+				'headers'  => array(),
+				'body'     => '{"client_id":"https://app.example/client.json"}',
+			);
+		};
+
+		$method = new \ReflectionMethod( Client::class, 'fetch_client_metadata' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		\add_filter( 'activitypub_pre_resolve_public_host', $resolve );
+		\add_filter( 'pre_http_request', $capture, 10, 2 );
+		$metadata = $method->invoke( null, 'https://app.example/client.json' );
+		\remove_filter( 'pre_http_request', $capture, 10 );
+		\remove_filter( 'activitypub_pre_resolve_public_host', $resolve );
+
+		$this->assertSame( Http::SMALL_RESPONSE_SIZE, $limit );
+		$this->assertSame( 'https://app.example/client.json', $metadata['client_id'] );
 	}
 
 	/**

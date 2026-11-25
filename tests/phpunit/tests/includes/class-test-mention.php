@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\Mention;
 
 use function Activitypub\object_to_uri;
@@ -217,6 +218,99 @@ ENDPRE;
 		}
 
 		return $pre;
+	}
+
+	/**
+	 * In a comment, handles are only linked when the comment is sent to the Fediverse.
+	 *
+	 * @covers ::comment_text
+	 */
+	public function test_comment_text_links_mentions_only_in_federated_comments() {
+		$text    = 'hallo @username@example.org test';
+		$linked  = 'hallo <a rel="mention" class="u-url mention" href="https://example.org/users/username">@username</a> test';
+		$post_id = self::factory()->post->create( array( 'post_author' => 1 ) );
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		$comments = array(
+			'visitor'  => array( 'user_id' => 0 ),
+			'received' => array(
+				'user_id'      => 0,
+				'comment_meta' => array( 'protocol' => 'activitypub' ),
+			),
+			'local'    => array( 'user_id' => 1 ),
+		);
+
+		$requests = 0;
+		$count    = static function ( $pre ) use ( &$requests ) {
+			++$requests;
+
+			return $pre;
+		};
+		\add_filter( 'pre_http_request', $count, 1 );
+
+		foreach ( $comments as $name => $args ) {
+			$comment  = self::factory()->comment->create_and_get( \array_merge( array( 'comment_post_ID' => $post_id ), $args ) );
+			$requests = 0;
+			$rendered = \apply_filters( 'comment_text', $text, $comment, array() );
+
+			if ( 'local' === $name ) {
+				$this->assertStringContainsString( $linked, $rendered, $name );
+			} else {
+				$this->assertStringContainsString( $text, $rendered, $name );
+				$this->assertSame( 0, $requests, $name );
+			}
+		}
+
+		// Core filters a comment text without the comment when it counts its links.
+		$requests = 0;
+		$this->assertStringContainsString( $text, \apply_filters( 'comment_text', $text, null, array() ) );
+		$this->assertSame( 0, $requests );
+
+		\remove_filter( 'pre_http_request', $count, 1 );
+	}
+
+	/**
+	 * Handles in the content and the excerpt of a received post are not looked up.
+	 *
+	 * @covers ::the_content
+	 * @covers ::the_excerpt
+	 */
+	public function test_received_posts_are_not_searched_for_mentions() {
+		$text     = 'hallo @username@example.org test';
+		$linked   = '<a rel="mention" class="u-url mention" href="https://example.org/users/username">@username</a>';
+		$requests = 0;
+		$count    = static function ( $pre ) use ( &$requests ) {
+			++$requests;
+
+			return $pre;
+		};
+
+		foreach ( array( Remote_Posts::POST_TYPE, 'post' ) as $post_type ) {
+			$GLOBALS['post'] = self::factory()->post->create_and_get( // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+				array(
+					'post_type'    => $post_type,
+					'post_content' => $text,
+					'post_excerpt' => $text,
+				)
+			);
+
+			$requests = 0;
+			\add_filter( 'pre_http_request', $count, 1 );
+			$content = \apply_filters( 'the_content', $text );
+			$excerpt = \get_the_excerpt( $GLOBALS['post'] );
+			\remove_filter( 'pre_http_request', $count, 1 );
+
+			if ( 'post' === $post_type ) {
+				$this->assertStringContainsString( $linked, $content );
+				$this->assertStringContainsString( $linked, $excerpt );
+			} else {
+				$this->assertStringContainsString( $text, $content );
+				$this->assertStringContainsString( $text, $excerpt );
+				$this->assertSame( 0, $requests );
+			}
+		}
+
+		unset( $GLOBALS['post'] );
 	}
 
 	/**
