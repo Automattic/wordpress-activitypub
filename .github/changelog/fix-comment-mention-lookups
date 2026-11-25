@@ -1,4 +1,4 @@
 Significance: patch
 Type: fixed
 
-Handles are only turned into mention links in content that the site sends to the Fediverse, no longer in every comment or in posts from other servers.
+Handles in comments are only turned into mention links when the comment is sent to the Fediverse.
