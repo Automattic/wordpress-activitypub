@@ -1,4 +1,4 @@
 Significance: patch
-Type: security
+Type: fixed
 
 Handles in comments are only turned into mention links when the comment is sent to the Fediverse.
