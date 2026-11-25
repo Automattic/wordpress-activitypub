@@ -247,12 +247,6 @@ parameters:
 			path: includes/class-scheduler.php
 
 		-
-			message: '#^Unable to resolve the template type TUrl in call to function wp_http_validate_url$#'
-			identifier: argument.templateType
-			count: 1
-			path: includes/class-search.php
-
-		-
 			message: '#^Call to function is_wp_error\(\) with non\-empty\-array\<mixed, mixed\> will always evaluate to false\.$#'
 			identifier: function.impossibleType
 			count: 1
