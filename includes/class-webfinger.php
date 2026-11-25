@@ -324,7 +324,7 @@ class Webfinger {
 				'headers'             => array( 'Accept' => 'application/jrd+json' ),
 				'limit_response_size' => Http::SMALL_RESPONSE_SIZE,
 			),
-			WEEK_IN_SECONDS
+			DAY_IN_SECONDS
 		);
 
 		if ( \is_wp_error( $response ) ) {
