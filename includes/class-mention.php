@@ -24,7 +24,7 @@ class Mention {
 	public static function init() {
 		\add_filter( 'the_content', array( self::class, 'the_content' ), 99 );
 		\add_filter( 'get_the_excerpt', array( self::class, 'the_excerpt' ), 99 );
-		\add_filter( 'comment_text', array( self::class, 'the_content' ) );
+		\add_filter( 'comment_text', array( self::class, 'comment_text' ), 10, 2 );
 		\add_filter( 'activitypub_extra_field_content', array( self::class, 'the_content' ) );
 		\add_filter( 'activitypub_extract_mentions', array( self::class, 'extract_mentions' ), 99, 2 );
 		\add_filter( 'activitypub_activity_object_array', array( self::class, 'filter_activity_object' ), 99 );
@@ -76,6 +76,27 @@ class Mention {
 		}
 
 		return enrich_content_data( $the_content, self::get_pattern( $the_content ), array( self::class, 'replace_with_links' ) );
+	}
+
+	/**
+	 * Filter to replace the mentions in a comment with links.
+	 *
+	 * In a comment, a handle is only a mention when the comment is sent to the Fediverse. A received
+	 * reply has its mentions as links already, and a comment that stays on this site mentions nobody.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string           $comment_text The comment text.
+	 * @param \WP_Comment|null $comment      Optional. The comment. Core passes none when it counts the links of a new comment. Default null.
+	 *
+	 * @return string The filtered comment text.
+	 */
+	public static function comment_text( $comment_text, $comment = null ) {
+		if ( ! $comment || ! Comment::should_be_federated( $comment ) ) {
+			return $comment_text;
+		}
+
+		return self::the_content( $comment_text );
 	}
 
 	/**
