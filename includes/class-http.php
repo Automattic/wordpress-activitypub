@@ -16,6 +16,20 @@ use Activitypub\Collection\Actors;
  */
 class Http {
 	/**
+	 * The response size limit for documents that are small by nature.
+	 *
+	 * Pass it as `limit_response_size` to `Http::get()` whenever the response is cached and the
+	 * document only takes a few kilobytes, for example a WebFinger document or the root of a
+	 * collection that is only read for its `totalItems`. With the default of 1 MiB the remote
+	 * server decides how large the cached entry gets.
+	 *
+	 * @since unreleased
+	 *
+	 * @var int
+	 */
+	const SMALL_RESPONSE_SIZE = 65536;
+
+	/**
 	 * Send a POST Request with the needed HTTP Headers
 	 *
 	 * @param string   $url     The URL endpoint.
