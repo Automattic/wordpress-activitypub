@@ -159,7 +159,7 @@ class Test_Term extends \WP_UnitTestCase {
 	 * Test category term with a parent category.
 	 *
 	 * @covers ::to_object
-	 * @covers ::get_id
+	 * @covers ::get_broader
 	 */
 	public function test_category_term_with_parent() {
 		$parent = self::factory()->term->create_and_get(
@@ -186,7 +186,6 @@ class Test_Term extends \WP_UnitTestCase {
 		$transformer = new Term( $child );
 		$object      = $transformer->to_object();
 
-		$this->assertEquals( 'Category', $object->get_type() );
 		$this->assertEquals( 'Category', $object->get_type() );
 
 		// Broader should reference the parent category's stable ID.
