@@ -2146,6 +2146,46 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A comment of a registered type is only a reaction as long as the comment list leaves its type out.
+	 *
+	 * @covers ::is_shown_as_reaction
+	 */
+	public function test_is_shown_as_reaction() {
+		$post_id = self::factory()->post->create();
+		$comment = self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) );
+		$types   = array();
+		foreach ( array( 'like', 'repost', 'quote' ) as $type ) {
+			// A pending reaction is a reaction too.
+			$types[ $type ] = self::factory()->comment->create(
+				array(
+					'comment_post_ID'  => $post_id,
+					'comment_type'     => $type,
+					'comment_approved' => 'quote' === $type ? 0 : 1,
+				)
+			);
+		}
+
+		$this->assertFalse( \Activitypub\Comment::is_shown_as_reaction( $comment ) );
+		$this->assertFalse( \Activitypub\Comment::is_shown_as_reaction( 0 ) );
+		$this->assertFalse( \Activitypub\Comment::is_shown_as_reaction( null ), 'No comment is no reaction, also with a comment in scope.' );
+		foreach ( $types as $type => $id ) {
+			$this->assertTrue( \Activitypub\Comment::is_shown_as_reaction( $id ), $type );
+		}
+
+		// Code that shows quotes as comments takes the type off the list the comment query leaves out.
+		$show_quotes = static function ( $query ) {
+			$query->query_vars['type__not_in'] = \array_values( \array_diff( (array) $query->query_vars['type__not_in'], array( 'quote' ) ) );
+		};
+		\add_action( 'pre_get_comments', $show_quotes, 20 );
+		$quote_shown = \Activitypub\Comment::is_shown_as_reaction( $types['quote'] );
+		$like_shown  = \Activitypub\Comment::is_shown_as_reaction( $types['like'] );
+		\remove_action( 'pre_get_comments', $show_quotes, 20 );
+
+		$this->assertFalse( $quote_shown );
+		$this->assertTrue( $like_shown );
+	}
+
+	/**
 	 * Test that an explicit request for an AP comment type is respected.
 	 *
 	 * @covers ::comment_query

@@ -866,6 +866,39 @@ class Comment {
 	}
 
 	/**
+	 * Whether a comment is only shown with the reactions, not in the comment list.
+	 *
+	 * The comment list leaves the registered types out, see comment_query(). Code that shows one
+	 * of them as a comment takes the type off that list on `pre_get_comments`, so the same list
+	 * is asked here: a comment that it still leaves out is only a reaction.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int|\WP_Comment $comment The comment or its ID.
+	 *
+	 * @return bool True if the comment list does not show the comment.
+	 */
+	public static function is_shown_as_reaction( $comment ) {
+		// Without one, get_comment() would return the comment in scope.
+		$comment = $comment ? \get_comment( $comment ) : null;
+
+		if ( ! $comment || ! self::is_registered_comment_type( $comment->comment_type ) ) {
+			return false;
+		}
+
+		$shown = \get_comments(
+			array(
+				'comment__in'  => array( (int) $comment->comment_ID ),
+				'type__not_in' => self::get_comment_type_slugs(),
+				'status'       => 'any',
+				'fields'       => 'ids',
+			)
+		);
+
+		return empty( $shown );
+	}
+
+	/**
 	 * Excludes likes and reposts from comment queries.
 	 *
 	 * @author Jan Boddez

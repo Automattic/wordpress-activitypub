@@ -63,6 +63,14 @@ class Interactions {
 			// Regular reply.
 			$target_url        = object_to_id( $activity['object']['inReplyTo'] );
 			$parent_comment_id = url_to_commentid( $target_url );
+
+			/*
+			 * A reaction is not in the comment list, so a reply to it would be counted as a comment
+			 * but never shown. A local reply is still stored, because that is how it is sent.
+			 */
+			if ( null === $user_id && $parent_comment_id && Comment::is_shown_as_reaction( $parent_comment_id ) ) {
+				return false;
+			}
 		} else {
 			// Check for quote.
 			$target_url = get_quote_url( $activity );

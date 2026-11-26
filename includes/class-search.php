@@ -310,6 +310,10 @@ class Search {
 			return new \WP_Error( 'activitypub_import_not_here', \__( 'This is not a reply to one of your posts.', 'activitypub' ) );
 		}
 
+		if ( Comment::is_shown_as_reaction( url_to_commentid( $target ) ) ) {
+			return new \WP_Error( 'activitypub_import_reply_to_reaction', \__( 'This is a reply to a reaction, which is not shown as a comment.', 'activitypub' ) );
+		}
+
 		// The checks the inbox runs before a received reply is stored, see Handler\Create::handle_create().
 		if ( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === get_activity_visibility( $activity ) ) {
 			return new \WP_Error( 'activitypub_import_not_public', \__( 'This reply is not public.', 'activitypub' ) );
