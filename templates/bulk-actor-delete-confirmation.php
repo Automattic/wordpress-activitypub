@@ -29,9 +29,9 @@ $GLOBALS['plugin_page'] = ''; // phpcs:ignore WordPress.WP.GlobalVariablesOverri
 require_once ABSPATH . 'wp-admin/admin-header.php';
 ?>
 <div class="wrap">
-	<h1><?php esc_html_e( 'Delete Users from Fediverse', 'activitypub' ); ?></h1>
+	<h1><?php esc_html_e( 'Remove Users from the Fediverse', 'activitypub' ); ?></h1>
 	<p><?php esc_html_e( 'You&#8217;ve just removed the capability to publish to the Fediverse for the selected users, do you want to also remove them from the Fediverse?', 'activitypub' ); ?></p>
-	<p><?php echo wp_kses( __( 'Fediverse deletion is optional but recommended to properly notify your followers. <strong>This action is irreversible.</strong>', 'activitypub' ), array( 'strong' => array() ) ); ?></p>
+	<p><?php echo wp_kses( __( 'Removing them from the Fediverse is optional but recommended to properly notify your followers. <strong>This cannot be undone.</strong>', 'activitypub' ), array( 'strong' => array() ) ); ?></p>
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<?php wp_nonce_field( 'bulk-users' ); ?>
 
@@ -53,7 +53,7 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 		</div>
 
 		<p class="submit">
-			<?php submit_button( __( 'Delete from Fediverse', 'activitypub' ), 'primary', 'submit', false ); ?>
+			<?php submit_button( __( 'Remove from Fediverse', 'activitypub' ), 'primary', 'submit', false ); ?>
 			<a href="<?php echo esc_url( $send_back ); ?>" class="button"><?php esc_html_e( 'Skip', 'activitypub' ); ?></a>
 		</p>
 	</form>
