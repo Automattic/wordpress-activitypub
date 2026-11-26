@@ -156,6 +156,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		$this->assertStringContainsString( 'src="https://local.example/cached.jpg"', $rendered );
 		$this->assertStringNotContainsString( 'example.com', $rendered );
+		$this->assertStringNotContainsString( 'style=', $rendered, 'The image of a post is sized by the theme.' );
 	}
 
 	/**
@@ -196,6 +197,19 @@ class Test_Blocks extends \WP_UnitTestCase {
 		);
 		$this->assertStringContainsString( 'style="max-width:100%;height:auto"', $stored );
 		$this->assertStringContainsString( 'alt="Cat"', $stored );
+
+		// An img that sanitization kept is sized the same way, with or without a cached file, whatever size or style it came with.
+		foreach ( array( $with_cache, $uncached ) as $kept ) {
+			$this->assertStringContainsString( 'style="max-width:100%;height:auto"', $kept );
+		}
+		$sized = Blocks::render_image_block(
+			array( 'url' => 'https://example.com/photo.jpg' ),
+			'<img src="https://example.com/photo.jpg" alt="Cat" width="3000" height="700" style="max-width:none" />',
+			new \WP_Block( $parsed, array( 'activitypub/commentId' => $comment_id ) )
+		);
+		$this->assertStringContainsString( 'style="max-width:100%;height:auto"', $sized );
+		$this->assertStringNotContainsString( 'max-width:none', $sized );
+
 		$this->assertSame( '<p>Image</p>', Blocks::render_image_description( array() ) );
 	}
 

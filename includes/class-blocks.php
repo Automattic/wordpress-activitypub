@@ -713,6 +713,19 @@ class Blocks {
 			$content = \sprintf( '<img src="%s" alt="%s" loading="lazy" style="max-width:100%%;height:auto" />', \esc_url( \htmlspecialchars( $url, ENT_QUOTES, 'UTF-8', true ) ), \esc_attr( $attrs['alt'] ) );
 		}
 
+		/*
+		 * An img that sanitization kept, on a site that allows images in comments, still has the
+		 * size the remote server gave it. Comments are also shown where no stylesheet limits
+		 * images, as in the comments list of the admin, so the image carries the limit itself.
+		 */
+		if ( $comment_id ) {
+			$processor = new \WP_HTML_Tag_Processor( $content );
+			if ( $processor->next_tag( array( 'tag_name' => 'IMG' ) ) ) {
+				$processor->set_attribute( 'style', 'max-width:100%;height:auto' );
+				$content = $processor->get_updated_html();
+			}
+		}
+
 		// Get entity ID from context, comment images are cached per comment.
 		$cache_context = $comment_id ? Comment_Media::CONTEXT : Media::CONTEXT;
 		$entity_id     = $comment_id ?: ( $block->context['postId'] ?? null );

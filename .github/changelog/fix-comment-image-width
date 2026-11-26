@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Images in replies no longer break the layout of the comments list on sites that allow images in comments.
