@@ -131,16 +131,21 @@ class Test_Term extends \WP_UnitTestCase {
 	public function test_category_term() {
 		$category = self::factory()->term->create_and_get(
 			array(
-				'taxonomy' => 'category',
-				'name'     => 'Test Category',
-				'slug'     => 'test-category',
+				'taxonomy'    => 'category',
+				'name'        => 'Test Category',
+				'description' => 'Test description of category',
+				'slug'        => 'test-category',
 			)
 		);
 
 		$transformer = new Term( $category );
 		$object      = $transformer->to_object();
 
-		$this->assertEquals( 'OrderedCollection', $object->get_type() );
+		$this->assertEquals( 'Category', $object->get_type() );
+
+		// Name and description.
+		$this->assertEquals( 'Test Category', $object->get_name() );
+		$this->assertEquals( 'Test description of category', $object->get_summary() );
 
 		// ID should use stable term_id-based URL.
 		$expected_id = \add_query_arg( 'term_id', $category->term_id, \home_url( '/' ) );
@@ -148,5 +153,44 @@ class Test_Term extends \WP_UnitTestCase {
 
 		// URL should be the term link.
 		$this->assertEquals( get_term_link( $category ), $object->get_url() );
+	}
+
+	/**
+	 * Test category term with a parent category.
+	 *
+	 * @covers ::to_object
+	 * @covers ::get_id
+	 */
+	public function test_category_term_with_parent() {
+		$parent = self::factory()->term->create_and_get(
+			array(
+				'taxonomy' => 'category',
+				'name'     => 'Parent Category',
+				'slug'     => 'parent-category',
+			)
+		);
+
+		$child = self::factory()->term->create_and_get(
+			array(
+				'taxonomy'    => 'category',
+				'name'        => 'Child Category',
+				'slug'        => 'child-category',
+				'description' => 'Child category description',
+				'parent'      => $parent->term_id,
+			)
+		);
+
+		// Ensure the child has the expected parent.
+		$this->assertEquals( $parent->term_id, $child->parent );
+
+		$transformer = new Term( $child );
+		$object      = $transformer->to_object();
+
+		$this->assertEquals( 'Category', $object->get_type() );
+		$this->assertEquals( 'Category', $object->get_type() );
+
+		// Broader should reference the parent category's stable ID.
+		$expected_broader = \add_query_arg( 'term_id', $parent->term_id, \home_url( '/' ) );
+		$this->assertEquals( $expected_broader, $object->get_broader() );
 	}
 }

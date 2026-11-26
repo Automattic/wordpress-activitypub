@@ -2911,4 +2911,71 @@ class Test_Post extends \WP_UnitTestCase {
 		$this->assertNotEmpty( $names );
 		$this->assertNotContains( null, $names );
 	}
+
+	/**
+	 * Test that post tags and categories are included in the ActivityStreams object.
+	 *
+	 * @covers ::to_object
+	 * @covers ::get_tag
+	 */
+	public function test_post_tags_and_categories_are_included() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post',
+				'post_content' => 'Test content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$tag = self::factory()->term->create_and_get(
+			array(
+				'taxonomy' => 'post_tag',
+				'name'     => 'Test Tag',
+				'slug'     => 'test-tag',
+			)
+		);
+
+		$category = self::factory()->term->create_and_get(
+			array(
+				'taxonomy'    => 'category',
+				'name'        => 'Test Category',
+				'slug'        => 'test-category',
+				'description' => 'Test category description',
+			)
+		);
+
+		\wp_set_post_terms( $post_id, array( $tag->term_id ), 'post_tag' );
+		\wp_set_post_terms( $post_id, array( $category->term_id ), 'category' );
+
+		$object = Post::transform( get_post( $post_id ) )->to_object();
+		$tags   = $object->get_tag();
+
+		$this->assertNotEmpty( $tags );
+
+		$hashtag = current(
+			array_filter(
+				$tags,
+				static function ( $tag ) {
+					return 'Hashtag' === $tag['type'];
+				}
+			)
+		);
+
+		$category = current(
+			array_filter(
+				$tags,
+				static function ( $tag ) {
+					return 'Category' === $tag['type'];
+				}
+			)
+		);
+
+		$this->assertNotFalse( $hashtag );
+		$this->assertSame( '#TestTag', $hashtag['name'] );
+		$this->assertSame( \get_term_link( $tag ), $hashtag['href'] );
+
+		$this->assertNotFalse( $category );
+		$this->assertSame( 'Test Category', $category['name'] );
+		$this->assertSame( 'Test category description', $category['summary'] );
+	}
 }

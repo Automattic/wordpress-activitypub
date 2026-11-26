@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Represent WordPress categories as FEP-2fa1 Category objects in term and post transformations

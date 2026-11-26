@@ -536,6 +536,10 @@ class Post extends Base {
 			}
 		}
 
+		foreach ( \get_the_category( $this->item->ID ) as $term ) {
+			$tags[] = ( new Term( $term ) )->to_object()->to_array( false );
+		}
+
 		$this->tags = \array_unique( $tags, SORT_REGULAR );
 
 		return $this->tags;
