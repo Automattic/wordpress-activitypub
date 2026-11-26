@@ -309,14 +309,22 @@ class Scheduler {
 				Remote_Actors::add_error( $actor->ID, 'Failed to fetch or parse metadata' );
 			} else {
 				/*
-				 * Only refresh when the remote still reports the same identity. A
-				 * different (or missing) id means a Move or a malformed response;
-				 * applying it would rewrite the cached guid in place and could
-				 * collide with another cached actor, so leave the record alone.
-				 * Updating by the known post ID otherwise refreshes it without the
-				 * redundant get_by_uri() lookup upsert() would do.
+				 * Only refresh when the remote still reports the same identity, or a new
+				 * id on the same origin that re-identifies this actor (FEP-d1cb). Any other
+				 * id means a Move or a malformed response; applying it would rewrite the
+				 * cached guid in place and could collide with another cached actor, so
+				 * leave the record alone. Updating by the known post ID otherwise
+				 * refreshes it without the redundant get_by_uri() lookup upsert() would do.
 				 */
 				$fetched_id = isset( $meta['id'] ) && \is_string( $meta['id'] ) ? \esc_url_raw( $meta['id'] ) : '';
+				if ( \esc_url_raw( $actor_uri ) !== $fetched_id ) {
+					$reidentified = Remote_Actors::reidentify( $meta );
+
+					if ( ! \is_wp_error( $reidentified ) && $reidentified->ID === $actor->ID ) {
+						$actor_uri = $fetched_id;
+					}
+				}
+
 				if ( \esc_url_raw( $actor_uri ) !== $fetched_id ) {
 					/*
 					 * Bump only the modified date, directly, so the skipped actor

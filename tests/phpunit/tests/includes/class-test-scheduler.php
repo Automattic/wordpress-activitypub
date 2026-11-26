@@ -1057,6 +1057,40 @@ class Test_Scheduler extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A new id on the same origin that lists the cached id as alias re-identifies the actor (FEP-d1cb).
+	 *
+	 * @covers ::update_remote_actors
+	 */
+	public function test_update_remote_actors_reidentifies_actor() {
+		$uri    = 'https://example.com/author/refresh-me';
+		$new_id = 'https://example.com/?author=5';
+		$id     = $this->create_outdated_actor( $uri );
+
+		$filter = static function ( $pre, $url_or_object ) use ( $uri, $new_id ) {
+			if ( $uri !== $url_or_object ) {
+				return $pre;
+			}
+
+			return array(
+				'type'              => 'Person',
+				'id'                => $new_id,
+				'inbox'             => $new_id . '&inbox',
+				'preferredUsername' => 'refreshme',
+				'name'              => 'New Name',
+				'alsoKnownAs'       => array( $uri ),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+
+		Scheduler::update_remote_actors();
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter, 10 );
+
+		$this->assertSame( $id, Remote_Actors::get_by_uri( $new_id )->ID, 'The cached actor is found under its new id.' );
+		$this->assertSame( 'New Name', \get_post( $id )->post_title, 'The re-identified actor is refreshed.' );
+	}
+
+	/**
 	 * A block added after an activity was stored stops it when the stored activity is processed.
 	 *
 	 * @covers ::process_inbox_activity
