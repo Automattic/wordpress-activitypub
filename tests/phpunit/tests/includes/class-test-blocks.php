@@ -10,6 +10,8 @@ namespace Activitypub\Tests;
 use Activitypub\Blocks;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Interactions;
+use Activitypub\Collection\Remote_Posts;
+use Activitypub\Tests\Remote_Request_Stub;
 use Activitypub\Transformer\Post;
 
 use function Activitypub\generate_image_block;
@@ -23,24 +25,96 @@ use function Activitypub\register_comment_type;
  * @coversDefaultClass \Activitypub\Blocks
  */
 class Test_Blocks extends \WP_UnitTestCase {
+	use Remote_Request_Stub;
+
+	/**
+	 * Tests render as a remote post through the global post; do not leave it to later tests.
+	 */
+	public function tear_down() {
+		unset( $GLOBALS['post'] );
+		parent::tear_down();
+	}
+
 	/**
 	 * URLs supplied by JSON are not HTML entity encoded.
 	 *
 	 * @covers ::render_image_block
 	 */
 	public function test_render_image_block_preserves_literal_url_entities() {
-		$url     = 'https://example.com/a&amp;b.jpg';
-		$seen    = null;
-		$filter  = static function ( $value ) use ( &$seen ) {
+		$url             = 'https://example.com/a&amp;b.jpg';
+		$seen            = null;
+		$filter          = static function ( $value ) use ( &$seen ) {
 			$seen = $value;
 			return false;
 		};
-		$content = '<img src="https://example.com/a&amp;amp;b.jpg" />';
+		$content         = '<img src="https://example.com/a&amp;amp;b.jpg" />';
+		$GLOBALS['post'] = self::factory()->post->create_and_get( array( 'post_type' => Remote_Posts::POST_TYPE ) );
 		\add_filter( 'activitypub_remote_media_url', $filter, 1 );
 		Blocks::render_image_block( array( 'url' => $url ), $content );
 		\remove_filter( 'activitypub_remote_media_url', $filter, 1 );
 
 		$this->assertSame( $url, $seen );
+	}
+
+	/**
+	 * No block of the plugin acts on its URL outside the ActivityPub path.
+	 *
+	 * Renders every registered activitypub/* block that takes a URL in a local post and in a
+	 * comment that was not received, so a new block is covered without a new test.
+	 *
+	 * @covers ::render_emoji_block
+	 * @covers ::render_image_block
+	 * @covers ::render_audio_block
+	 * @covers ::render_video_block
+	 */
+	public function test_blocks_act_on_urls_only_on_the_activitypub_path() {
+		$requests = array();
+		$count    = static function ( $url, $context ) use ( &$requests ) {
+			$requests[] = $context;
+			return $url;
+		};
+		\add_filter( 'activitypub_remote_media_url', $count, 0, 2 );
+		$this->stub_remote_requests();
+
+		$names = array();
+		foreach ( \WP_Block_Type_Registry::get_instance()->get_all_registered() as $name => $type ) {
+			if ( \str_starts_with( $name, 'activitypub/' ) && isset( $type->attributes['url'] ) ) {
+				$names[] = $name;
+			}
+		}
+		$this->assertContains( 'activitypub/emoji', $names );
+
+		$local_post    = self::factory()->post->create_and_get();
+		$local_comment = self::factory()->comment->create( array( 'comment_post_ID' => $local_post->ID ) );
+		$remote_post   = self::factory()->post->create_and_get( array( 'post_type' => Remote_Posts::POST_TYPE ) );
+		$received      = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $local_post->ID,
+				'comment_meta'    => array( 'protocol' => 'activitypub' ),
+			)
+		);
+		$block         = static function ( $name ) {
+			return \parse_blocks( \sprintf( '<!-- wp:%1$s {"url":"https://remote.example/x.png"} --><img src="https://remote.example/x.png" alt="" />:x:<!-- /wp:%1$s -->', $name ) )[0];
+		};
+
+		foreach ( $names as $name ) {
+			$GLOBALS['post'] = $local_post;
+			\render_block( $block( $name ) );
+			( new \WP_Block( $block( $name ), array( 'postId' => $local_post->ID ) ) )->render();
+			( new \WP_Block( $block( $name ), array( 'activitypub/commentId' => $local_comment ) ) )->render();
+			( new \WP_Block( $block( $name ), array( 'commentId' => $received ) ) )->render();
+		}
+		$this->assertSame( array(), $requests );
+		$this->assertSame( 0, $this->requests );
+
+		// The same blocks act on content of the ActivityPub path.
+		$GLOBALS['post'] = $remote_post;
+		\render_block( $block( 'activitypub/emoji' ) );
+		( new \WP_Block( $block( 'activitypub/emoji' ), array( 'activitypub/commentId' => $received ) ) )->render();
+
+		$this->unstub_remote_requests();
+		\remove_filter( 'activitypub_remote_media_url', $count, 0 );
+		$this->assertSame( array( 'emoji', 'emoji' ), $requests );
 	}
 
 	/**
@@ -72,6 +146,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 			return 'https://local.example/cached.jpg';
 		};
 
+		$GLOBALS['post'] = self::factory()->post->create_and_get( array( 'post_type' => Remote_Posts::POST_TYPE ) );
 		\add_filter( 'activitypub_remote_media_url', $cached, 20 );
 		$rendered = Blocks::render_image_block(
 			array( 'url' => 'https://example.com/photo.jpg' ),
@@ -81,6 +156,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		$this->assertStringContainsString( 'src="https://local.example/cached.jpg"', $rendered );
 		$this->assertStringNotContainsString( 'example.com', $rendered );
+		$this->assertStringNotContainsString( 'style=', $rendered, 'The image of a post is sized by the theme.' );
 	}
 
 	/**
@@ -90,20 +166,21 @@ class Test_Blocks extends \WP_UnitTestCase {
 	 * @covers ::render_image_description
 	 */
 	public function test_render_image_block_comment_context() {
-		$parsed  = \parse_blocks( generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' ) )[0];
-		$context = array();
-		$cached  = static function ( $url, $cache_context, $entity_id ) use ( &$context ) {
+		$parsed     = \parse_blocks( generate_image_block( 'https://example.com/photo.jpg', '<img src="https://example.com/photo.jpg" alt="Cat" />' ) )[0];
+		$context    = array();
+		$comment_id = self::factory()->comment->create( array( 'comment_meta' => array( 'protocol' => 'activitypub' ) ) );
+		$cached     = static function ( $url, $cache_context, $entity_id ) use ( &$context ) {
 			$context = array( $cache_context, $entity_id );
 			return 'https://local.example/cached.jpg';
 		};
 
 		\add_filter( 'activitypub_remote_media_url', $cached, 20, 3 );
-		$with_cache = ( new \WP_Block( $parsed, array( 'commentId' => 7 ) ) )->render();
+		$with_cache = ( new \WP_Block( $parsed, array( 'activitypub/commentId' => $comment_id ) ) )->render();
 		\remove_filter( 'activitypub_remote_media_url', $cached, 20 );
-		$uncached = ( new \WP_Block( $parsed, array( 'commentId' => 7 ) ) )->render();
-		$no_url   = Blocks::render_image_block( array( 'alt' => 'Cat' ), '<img src="https://example.com/photo.jpg" alt="Cat" />', new \WP_Block( $parsed, array( 'commentId' => 7 ) ) );
+		$uncached = ( new \WP_Block( $parsed, array( 'activitypub/commentId' => $comment_id ) ) )->render();
+		$no_url   = Blocks::render_image_block( array( 'alt' => 'Cat' ), '<img src="https://example.com/photo.jpg" alt="Cat" />', new \WP_Block( $parsed, array( 'activitypub/commentId' => $comment_id ) ) );
 
-		$this->assertSame( array( 'comment_media', 7 ), $context );
+		$this->assertSame( array( 'comment_media', $comment_id ), $context );
 		$this->assertStringContainsString( 'src="https://local.example/cached.jpg"', $with_cache );
 		$this->assertStringContainsString( 'src="https://example.com/photo.jpg"', $uncached );
 		$this->assertStringContainsString( 'alt="Cat"', $uncached );
@@ -116,10 +193,23 @@ class Test_Blocks extends \WP_UnitTestCase {
 				'alt' => 'Cat',
 			),
 			'',
-			new \WP_Block( $parsed, array( 'commentId' => 7 ) )
+			new \WP_Block( $parsed, array( 'activitypub/commentId' => $comment_id ) )
 		);
 		$this->assertStringContainsString( 'style="max-width:100%;height:auto"', $stored );
 		$this->assertStringContainsString( 'alt="Cat"', $stored );
+
+		// An img that sanitization kept is sized the same way, with or without a cached file, whatever size or style it came with.
+		foreach ( array( $with_cache, $uncached ) as $kept ) {
+			$this->assertStringContainsString( 'style="max-width:100%;height:auto"', $kept );
+		}
+		$sized = Blocks::render_image_block(
+			array( 'url' => 'https://example.com/photo.jpg' ),
+			'<img src="https://example.com/photo.jpg" alt="Cat" width="3000" height="700" style="max-width:none" />',
+			new \WP_Block( $parsed, array( 'activitypub/commentId' => $comment_id ) )
+		);
+		$this->assertStringContainsString( 'style="max-width:100%;height:auto"', $sized );
+		$this->assertStringNotContainsString( 'max-width:none', $sized );
+
 		$this->assertSame( '<p>Image</p>', Blocks::render_image_description( array() ) );
 	}
 
@@ -129,11 +219,12 @@ class Test_Blocks extends \WP_UnitTestCase {
 	 * @covers ::render_image_block
 	 */
 	public function test_render_image_block_preserves_generated_urls_through_kses() {
-		$seen   = null;
-		$filter = static function ( $value ) use ( &$seen ) {
+		$seen            = null;
+		$filter          = static function ( $value ) use ( &$seen ) {
 			$seen = $value;
 			return false;
 		};
+		$GLOBALS['post'] = self::factory()->post->create_and_get( array( 'post_type' => Remote_Posts::POST_TYPE ) );
 		\add_filter( 'activitypub_remote_media_url', $filter, 1 );
 		$results = array();
 		foreach ( array( 'https://example.com/photo.jpg?a=1&b=2', 'https://example.com/a&amp;b.jpg' ) as $url ) {
@@ -1903,5 +1994,22 @@ class Test_Blocks extends \WP_UnitTestCase {
 			),
 			$data['activitypub_quote']
 		);
+	}
+
+	/**
+	 * Test that a post with an emoji block in an attribute renders it as text.
+	 *
+	 * Blocks::init() turns such blocks back into text before do_blocks() renders them.
+	 *
+	 * @covers \Activitypub\Emoji::remove_blocks_in_tags
+	 */
+	public function test_the_content_renders_no_emoji_in_attributes() {
+		$block   = '<!-- wp:activitypub/emoji {"url":"https://example.com/emoji/blobcat.png"} -->:blobcat:<!-- /wp:activitypub/emoji -->';
+		$content = \apply_filters( 'the_content', '<p><a href="https://example.com/" title="' . $block . '">x</a></p>' );
+
+		$processor = new \WP_HTML_Tag_Processor( $content );
+		$this->assertTrue( $processor->next_tag( 'a' ) );
+		$this->assertSame( ':blobcat:', $processor->get_attribute( 'title' ) );
+		$this->assertFalse( $processor->next_tag( 'img' ) );
 	}
 }

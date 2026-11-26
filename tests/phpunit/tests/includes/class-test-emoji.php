@@ -350,6 +350,24 @@ class Test_Emoji extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The blobcat emoji img, as replace_from_json() writes it with the cached file.
+	 *
+	 * @return string The img tag.
+	 */
+	private function get_blobcat_img() {
+		return Emoji::get_img_tag( 'http://example.org/wp-content/uploads/activitypub/emoji/example.com/blobcat.png', 'blobcat' );
+	}
+
+	/**
+	 * The blobcat emoji block, as wrap_in_content() writes it.
+	 *
+	 * @return string The block.
+	 */
+	private function get_blobcat_block() {
+		return '<!-- wp:activitypub/emoji {"url":"https://example.com/emoji/blobcat.png"} -->:blobcat:<!-- /wp:activitypub/emoji -->';
+	}
+
+	/**
 	 * Texts with the blobcat shortcode, and whether it has a boundary on both sides.
 	 *
 	 * @return array[] The text and whether the shortcode is replaced.
@@ -385,7 +403,7 @@ class Test_Emoji extends \WP_UnitTestCase {
 	 * @param bool   $replaced Whether the shortcode is replaced.
 	 */
 	public function test_replace_from_json_needs_boundaries( $text, $replaced ) {
-		$img      = Emoji::get_img_tag( 'http://example.org/wp-content/uploads/activitypub/emoji/example.com/blobcat.png', 'blobcat' );
+		$img      = $this->get_blobcat_img();
 		$expected = $replaced ? \str_ireplace( ':blobcat:', $img, $text ) : $text;
 
 		$this->assertSame( $expected, Emoji::replace_from_json( $text, \wp_json_encode( $this->get_blobcat_tags() ) ) );
@@ -401,10 +419,85 @@ class Test_Emoji extends \WP_UnitTestCase {
 	 * @param bool   $wrapped Whether the shortcode is wrapped.
 	 */
 	public function test_wrap_needs_boundaries( $text, $wrapped ) {
-		$block    = '<!-- wp:activitypub/emoji {"url":"https://example.com/emoji/blobcat.png"} -->:blobcat:<!-- /wp:activitypub/emoji -->';
+		$block    = $this->get_blobcat_block();
 		$expected = $wrapped ? \str_ireplace( ':blobcat:', $block, $text ) : $text;
 
 		$this->assertSame( $expected, Emoji::wrap_in_content( $text, array( 'tag' => $this->get_blobcat_tags() ) ) );
+	}
+
+	/**
+	 * Texts with the blobcat shortcode inside and outside of markup, with `%s` where it is replaced.
+	 *
+	 * @return array[] The text and the expected result.
+	 */
+	public function markup_provider() {
+		return array(
+			'in an attribute'          => array( '<p><a title=":blobcat:">x</a></p>', '<p><a title=":blobcat:">x</a></p>' ),
+			'in an unquoted attribute' => array( '<a title=:blobcat:>x</a>', '<a title=:blobcat:>x</a>' ),
+			'in an HTML comment'       => array( '<!-- :blobcat: -->', '<!-- :blobcat: -->' ),
+			'in an attribute and text' => array( '<a title=":blobcat:">:blobcat:</a>', '<a title=":blobcat:">%s</a>' ),
+			'between tags'             => array( '<p>Hi</p>:blobcat:<p>there</p>', '<p>Hi</p>%s<p>there</p>' ),
+		);
+	}
+
+	/**
+	 * Test replace_from_json only replaces shortcodes outside of tags and HTML comments.
+	 *
+	 * @dataProvider markup_provider
+	 * @covers ::replace_from_json
+	 *
+	 * @param string $text     The text.
+	 * @param string $expected The expected result, `%s` for the replacement.
+	 */
+	public function test_replace_from_json_skips_markup( $text, $expected ) {
+		$img = $this->get_blobcat_img();
+
+		$this->assertSame( \str_replace( '%s', $img, $expected ), Emoji::replace_from_json( $text, \wp_json_encode( $this->get_blobcat_tags() ) ) );
+	}
+
+	/**
+	 * Test wrap_in_content only wraps shortcodes outside of tags and HTML comments.
+	 *
+	 * @dataProvider markup_provider
+	 * @covers ::wrap_in_content
+	 *
+	 * @param string $text     The text.
+	 * @param string $expected The expected result, `%s` for the replacement.
+	 */
+	public function test_wrap_skips_markup( $text, $expected ) {
+		$block = $this->get_blobcat_block();
+
+		$this->assertSame( \str_replace( '%s', $block, $expected ), Emoji::wrap_in_content( $text, array( 'tag' => $this->get_blobcat_tags() ) ) );
+	}
+
+	/**
+	 * Stored content with emoji blocks in markup, and the expected result.
+	 *
+	 * @return array[] The content and the expected result.
+	 */
+	public function stored_blocks_provider() {
+		$block = $this->get_blobcat_block();
+
+		return array(
+			'in an attribute'       => array( '<p><a title="' . $block . '">x</a></p>', '<p><a title=":blobcat:">x</a></p>' ),
+			'in an HTML comment'    => array( '<!-- a ' . $block . ' -->', '<!-- a :blobcat: -->' ),
+			'in text'               => array( '<p>Hi ' . $block . '</p>', '<p>Hi ' . $block . '</p>' ),
+			'in an attribute, text' => array( '<a title="' . $block . '">' . $block . '</a>', '<a title=":blobcat:">' . $block . '</a>' ),
+			'no emoji block'        => array( '<p>Hi :blobcat:</p>', '<p>Hi :blobcat:</p>' ),
+		);
+	}
+
+	/**
+	 * Test remove_blocks_in_tags keeps emoji blocks only in text.
+	 *
+	 * @dataProvider stored_blocks_provider
+	 * @covers ::remove_blocks_in_tags
+	 *
+	 * @param string $content  The stored content.
+	 * @param string $expected The expected result.
+	 */
+	public function test_remove_blocks_in_tags( $content, $expected ) {
+		$this->assertSame( $expected, Emoji::remove_blocks_in_tags( $content ) );
 	}
 
 	/**
@@ -427,7 +520,7 @@ class Test_Emoji extends \WP_UnitTestCase {
 		);
 
 		$this->assertSame(
-			'Alice ' . Emoji::get_img_tag( 'http://example.org/wp-content/uploads/activitypub/emoji/example.com/blobcat.png', 'blobcat' ),
+			'Alice ' . $this->get_blobcat_img(),
 			Emoji::replace_from_json( 'Alice :Blobcat:', $emoji_json )
 		);
 	}

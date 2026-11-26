@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Cache\Avatar;
+use Activitypub\Cache\Comment_Media;
 use Activitypub\Cache\Emoji as Emoji_Cache;
 use Activitypub\Cache\File;
 use Activitypub\Cache\Media;
@@ -18,6 +19,8 @@ use Activitypub\Collection\Following;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\OAuth\Client;
+use Activitypub\OAuth\Token;
 use Activitypub\Transformer\Factory;
 
 use function Activitypub\unescape_guid;
@@ -240,6 +243,18 @@ class Migration {
 		if ( \version_compare( $version_from_db, '9.4.0', '<' ) && ! \wp_next_scheduled( 'activitypub_remove_duplicate_cache_files' ) ) {
 			// A filesystem walk, so off the upgrade request and onto cron.
 			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_remove_duplicate_cache_files' );
+		}
+		if ( \version_compare( $version_from_db, '9.4.4', '<' ) ) {
+			self::clear_remote_media_caches();
+		}
+
+		if ( \version_compare( $version_from_db, '9.4.4', '<' ) ) {
+			self::migrate_oauth_token_keys();
+		}
+
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			// Files cached before may not be readable for the web server, they are downloaded again.
+			self::clear_remote_media_caches();
 		}
 
 		/*
@@ -1411,6 +1426,43 @@ class Migration {
 	}
 
 	/**
+	 * Delete the cached copies of remote media.
+	 *
+	 * Avatars, emoji, comment images and remote post media are downloaded again the next time
+	 * they are shown. Two kinds of older content link to the files directly and lose those
+	 * images: remote posts stored before 8.0, whose attachments are in `ap_posts/`, and emoji in
+	 * comments received with 7.9. The stats images are made on this site and stay.
+	 *
+	 * This runs on the upgrade request, so the caches are gone even where cron doesn't run, and
+	 * whether caching is on or not. A site without a cache folder does no work. A request that
+	 * runs out of time before the end never stores the new database version, so the migration
+	 * runs this again once its lock expires; what was deleted stays deleted.
+	 *
+	 * @since 9.4.4
+	 *
+	 * @return void
+	 */
+	public static function clear_remote_media_caches() {
+		// Without creating the year/month upload folder, as wp_upload_dir() does by default.
+		$basedir = \wp_upload_dir( null, false )['basedir'];
+		if ( ! \is_dir( $basedir . '/activitypub' ) ) {
+			return;
+		}
+
+		$directories = array(
+			Avatar::get_base_dir(),
+			Emoji_Cache::get_base_dir(),
+			Comment_Media::get_base_dir(),
+			Media::get_base_dir(),
+			'/activitypub/ap_posts/',
+		);
+
+		foreach ( $directories as $directory ) {
+			File::delete_directory( $basedir . $directory );
+		}
+	}
+
+	/**
 	 * Delete outbox items that belonged to the Application actor.
 	 *
 	 * The Application used to queue Reject activities through the Outbox as user
@@ -1441,5 +1493,78 @@ class Migration {
 		foreach ( $items as $item_id ) {
 			\wp_delete_post( $item_id, true );
 		}
+	}
+
+	/**
+	 * Move OAuth tokens to keys that carry the site's table prefix.
+	 *
+	 * On a single site the tokens move, so connected apps keep working. On a multisite network,
+	 * or when sites share the user tables, the user meta is shared by all sites and a token does
+	 * not name the site it was issued on, so the tokens are deleted and apps have to be connected
+	 * again.
+	 *
+	 * @since 9.4.4
+	 *
+	 * @return void
+	 */
+	public static function migrate_oauth_token_keys() {
+		global $wpdb;
+
+		$shared = \is_multisite() || \defined( 'CUSTOM_USER_META_TABLE' );
+
+		if ( $shared ) {
+			// The first site deletes the tokens of all sites, so every site removes its own user tracking.
+			$client_post_ids = \get_posts(
+				array(
+					'post_type'   => Client::POST_TYPE,
+					'post_status' => 'any',
+					'numberposts' => -1,
+					'fields'      => 'ids',
+				)
+			);
+
+			foreach ( $client_post_ids as $client_post_id ) {
+				\delete_post_meta( $client_post_id, Token::USER_META_KEY );
+			}
+		}
+
+		$token_like   = $wpdb->esc_like( Token::META_PREFIX ) . '%';
+		$refresh_like = $wpdb->esc_like( Token::REFRESH_INDEX_PREFIX ) . '%';
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$user_ids = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT DISTINCT user_id FROM {$wpdb->usermeta} WHERE meta_key LIKE %s OR meta_key LIKE %s",
+				$token_like,
+				$refresh_like
+			)
+		);
+
+		if ( empty( $user_ids ) ) {
+			return;
+		}
+
+		if ( $shared ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->query(
+				$wpdb->prepare(
+					"DELETE FROM {$wpdb->usermeta} WHERE meta_key LIKE %s OR meta_key LIKE %s",
+					$token_like,
+					$refresh_like
+				)
+			);
+		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->query(
+				$wpdb->prepare(
+					"UPDATE {$wpdb->usermeta} SET meta_key = CONCAT( %s, meta_key ) WHERE meta_key LIKE %s OR meta_key LIKE %s",
+					$wpdb->get_blog_prefix(),
+					$token_like,
+					$refresh_like
+				)
+			);
+		}
+
+		\wp_cache_delete_multiple( $user_ids, 'user_meta' );
 	}
 }

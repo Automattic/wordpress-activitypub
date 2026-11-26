@@ -128,6 +128,103 @@ class Test_Undo extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that an Undo removes a follower whose Follow is no longer in the inbox.
+	 *
+	 * @dataProvider undo_follow_without_inbox_item_provider
+	 * @covers ::handle_undo
+	 *
+	 * @param string       $undo_actor  The actor of the Undo.
+	 * @param array|string $undo_object The object of the Undo, the followed actor is filled in.
+	 * @param bool         $removed     Whether the follower is removed.
+	 * @param bool         $blog        Whether the blog actor is followed instead of the user.
+	 * @param string|null  $inbox_actor The actor of a Follow with the same ID in the inbox, if any.
+	 */
+	public function test_handle_undo_follow_without_inbox_item( $undo_actor, $undo_object, $removed, $blog = false, $inbox_actor = null ) {
+		$follower = 'https://example.com/users/follower';
+		$other    = 'https://example.com/users/other';
+
+		if ( $blog ) {
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		}
+		$user_id = $blog ? Actors::BLOG_USER_ID : self::$user_id;
+
+		$mock_actor_metadata = function ( $pre, $url ) {
+			return array(
+				'id'                => $url,
+				'type'              => 'Person',
+				'preferredUsername' => 'follower',
+				'inbox'             => $url . '/inbox',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata, 10, 2 );
+
+		// Followers without a Follow in the inbox, like after an inbox purge.
+		Followers::add( $user_id, $follower );
+		Followers::add( $user_id, $other );
+
+		if ( \is_array( $undo_object ) && ! isset( $undo_object['object'] ) ) {
+			$undo_object['object'] = Actors::get_by_id( $user_id )->get_id();
+		}
+
+		// A Follow with the same ID by another actor is in the inbox.
+		if ( $inbox_actor ) {
+			Inbox_Collection::add(
+				Activity::init_from_array(
+					array(
+						'id'     => $undo_object['id'],
+						'type'   => 'Follow',
+						'actor'  => $inbox_actor,
+						'object' => $undo_object['object'],
+					)
+				),
+				$user_id
+			);
+		}
+
+		Undo::handle_undo(
+			array(
+				'id'     => 'https://example.com/undo/1',
+				'type'   => 'Undo',
+				'actor'  => $undo_actor,
+				'object' => $undo_object,
+			),
+			$user_id
+		);
+
+		$followers = \wp_list_pluck( Followers::get_many( $user_id ), 'guid' );
+		$this->assertSame( ! $removed, \in_array( $follower, $followers, true ) );
+		$this->assertContains( $other, $followers, 'Only the actor of the Undo ends its follow.' );
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata );
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * Data provider for Undo of a Follow that is not in the inbox.
+	 *
+	 * @return array[]
+	 */
+	public function undo_follow_without_inbox_item_provider() {
+		$follower = 'https://example.com/users/follower';
+		$other    = 'https://example.com/users/other';
+		$follow   = array(
+			'id'    => 'https://example.com/follows/1',
+			'type'  => 'Follow',
+			'actor' => $follower,
+		);
+
+		return array(
+			'embedded follow'                => array( $follower, $follow, true ),
+			'embedded follow of the blog'    => array( $follower, $follow, true, true ),
+			'embedded follow, other actor'   => array( $other, $follow, false ),
+			'other actor in embedded follow' => array( $follower, \array_merge( $follow, array( 'actor' => $other ) ), false ),
+			'followed actor is not local'    => array( $follower, \array_merge( $follow, array( 'object' => 'https://example.net/users/someone' ) ), false ),
+			'bare follow id'                 => array( $follower, 'https://example.com/follows/1', false ),
+			'follow id of another actor'     => array( $follower, $follow, false, false, $other ),
+		);
+	}
+
+	/**
 	 * Data provider for follow undo tests.
 	 *
 	 * @return array Test cases with actor URLs and descriptions.

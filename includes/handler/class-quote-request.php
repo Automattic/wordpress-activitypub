@@ -16,9 +16,11 @@ use Activitypub\Proxy;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\get_meta_ids_by_value;
+use function Activitypub\get_target_post_id;
+use function Activitypub\is_post_publicly_queryable;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 use function Activitypub\user_can_activitypub;
 
 /**
@@ -52,8 +54,10 @@ class Quote_Request {
 	 */
 	public static function handle_quote_request( $activity, $user_ids, $activity_object = null, $context = null ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$state   = true;
-		$post_id = \url_to_postid( object_to_uri( $activity['object'] ) );
-		$post    = $post_id ? \get_post( $post_id ) : null;
+		$post_id = get_target_post_id( object_to_id( $activity['object'] ) );
+
+		// Only a post anyone can see can be quoted; any other post is answered like one that does not exist.
+		$post = is_post_publicly_queryable( $post_id ) ? \get_post( $post_id ) : null;
 
 		if ( ! $post ) {
 			$user_id = \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids;
@@ -92,7 +96,7 @@ class Quote_Request {
 				$state = false;
 				break;
 			case ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS:
-				$follower = Remote_Actors::get_by_uri( object_to_uri( $activity['actor'] ) );
+				$follower = Remote_Actors::get_by_uri( object_to_id( $activity['actor'] ) );
 				$state    = ! \is_wp_error( $follower ) && Followers::follows( $follower->ID, $user_id );
 				break;
 			case ACTIVITYPUB_INTERACTION_POLICY_ANYONE:
@@ -107,7 +111,7 @@ class Quote_Request {
 		 * A policy that rejects needs no proof, so the post is only fetched for an approval.
 		 */
 		if ( $state ) {
-			$instrument = Proxy::get( object_to_uri( $activity['instrument'] ) );
+			$instrument = Proxy::get( object_to_id( $activity['instrument'] ) );
 
 			/*
 			 * Without the post there is nothing to decide: a Reject would be final, and an Accept would be
@@ -118,7 +122,7 @@ class Quote_Request {
 			}
 
 			// The fetched post has to be the instrument itself; an alias or redirect could otherwise lend another post's author.
-			$state = is_same_actor( $instrument['id'] ?? null, object_to_uri( $activity['instrument'] ) ) && is_same_actor( $instrument['attributedTo'] ?? null, $activity['actor'] );
+			$state = is_same_actor( $instrument['id'] ?? null, object_to_id( $activity['instrument'] ) ) && is_same_actor( $instrument['attributedTo'] ?? null, $activity['actor'] );
 		}
 
 		if ( $state ) {
@@ -272,7 +276,7 @@ class Quote_Request {
 			return;
 		}
 
-		$activity_object['instrument'] = object_to_uri( $activity_object['instrument'] );
+		$activity_object['instrument'] = object_to_id( $activity_object['instrument'] );
 
 		$meta_id = get_meta_ids_by_value( 'post', $post_id, '_activitypub_quoted_by', $activity_object['instrument'] )[0] ?? \add_post_meta( $post_id, '_activitypub_quoted_by', $activity_object['instrument'] );
 
@@ -301,7 +305,7 @@ class Quote_Request {
 		$activity->set_actor( $actor->get_id() );
 		$activity->set_object( $activity_object );
 		$activity->set_result( $url );
-		$activity->add_to( object_to_uri( $activity_object['actor'] ) );
+		$activity->add_to( object_to_id( $activity_object['actor'] ) );
 
 		add_to_outbox( $activity, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
 	}
@@ -328,7 +332,7 @@ class Quote_Request {
 			return;
 		}
 
-		$activity_object['instrument'] = object_to_uri( $activity_object['instrument'] );
+		$activity_object['instrument'] = object_to_id( $activity_object['instrument'] );
 
 		// Only send minimal data.
 		$activity_object = \array_intersect_key(
@@ -346,7 +350,7 @@ class Quote_Request {
 		$activity->set_type( 'Reject' );
 		$activity->set_actor( $actor->get_id() );
 		$activity->set_object( $activity_object );
-		$activity->add_to( object_to_uri( $activity_object['actor'] ) );
+		$activity->add_to( object_to_id( $activity_object['actor'] ) );
 
 		add_to_outbox( $activity, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
 	}

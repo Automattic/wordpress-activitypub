@@ -30,6 +30,25 @@ class Router {
 		\add_filter( 'query_vars', array( self::class, 'add_query_vars' ) );
 
 		\add_action( 'parse_query', array( self::class, 'fix_is_home_check' ) );
+
+		// The API option decides whether the well-known API paths are rewrite rules.
+		\add_action( 'add_option_activitypub_api', array( self::class, 'reset_rewrite_rules' ) );
+		\add_action( 'update_option_activitypub_api', array( self::class, 'reset_rewrite_rules' ) );
+	}
+
+	/**
+	 * Rebuild the rewrite rules on the next request.
+	 *
+	 * A flush in the current request would keep the rules collected on `init`, which still follow
+	 * the old value of the option. Without stored rules, WordPress builds them again on the next
+	 * request, after `init` has added the rules for the new value.
+	 *
+	 * @since unreleased
+	 *
+	 * @return void
+	 */
+	public static function reset_rewrite_rules() {
+		\delete_option( 'rewrite_rules' );
 	}
 
 	/**
@@ -68,19 +87,25 @@ class Router {
 			);
 		}
 
-		// Authorization Server Metadata (RFC 8414). The issuer has no path, so path-suffixed variants belong to other issuers.
-		\add_rewrite_rule(
-			'^\.well-known/oauth-authorization-server/?$',
-			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/authorization-server-metadata',
-			'top'
-		);
+		/*
+		 * The routes behind these paths only exist when the API is enabled. Without them, the
+		 * rules would only answer with a 404 and take the paths from other OAuth plugins.
+		 */
+		if ( \get_option( 'activitypub_api', false ) ) {
+			// Authorization Server Metadata (RFC 8414). The issuer has no path, so path-suffixed variants belong to other issuers.
+			\add_rewrite_rule(
+				'^\.well-known/oauth-authorization-server/?$',
+				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/authorization-server-metadata',
+				'top'
+			);
 
-		// Client Configuration (FEP-65ca).
-		\add_rewrite_rule(
-			'^\.well-known/activitypub-client-config/?$',
-			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/client-config',
-			'top'
-		);
+			// Client Configuration (FEP-65ca).
+			\add_rewrite_rule(
+				'^\.well-known/activitypub-client-config/?$',
+				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/client-config',
+				'top'
+			);
+		}
 
 		// Must precede the generic @username rule, which would otherwise match "application" as an actor username.
 		\add_rewrite_rule( '^@application\/?$', 'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/application', 'top' );
@@ -171,6 +196,19 @@ class Router {
 			return $template;
 		}
 
+		/*
+		 * The same for a comment: the tombstone above only matches the exact URL, and
+		 * `Comment::should_be_federated()` lets a trashed or spam comment through so its
+		 * Delete can fire. Only an approved comment is served.
+		 *
+		 * Its post is not checked: a federated comment is an object of its own and stays
+		 * reachable under its ID when the post becomes non-public. Hiding it would delete it
+		 * on servers that refetch it; withdrawing it is a Delete, sent when it is trashed.
+		 */
+		if ( $queried_object instanceof \WP_Comment && '1' !== $queried_object->comment_approved ) {
+			return $template;
+		}
+
 		$activitypub_template = false;
 
 		if ( $activitypub_object ) {
@@ -232,6 +270,13 @@ class Router {
 				\status_header( 401 );
 
 				// Fallback as template_loader can't return http headers.
+				return $template;
+			}
+
+			// A signer blocked site-wide gets no ActivityPub document. Rest\Server::reject_blocked_sender() does this for the REST routes.
+			if ( Moderation::is_actor_blocked( $verification ) ) {
+				\status_header( 403 );
+
 				return $template;
 			}
 		}

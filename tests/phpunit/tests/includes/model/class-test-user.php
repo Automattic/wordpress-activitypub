@@ -10,6 +10,8 @@ namespace Activitypub\Tests\Model;
 use Activitypub\Model\User;
 use Activitypub\Move;
 
+use function Activitypub\get_rest_url_by_path;
+
 /**
  * Test class for Activitypub User.
  *
@@ -233,5 +235,33 @@ class Test_User extends \WP_UnitTestCase {
 		$this->assertSame( 'http://example.com/header.jpg', User::from_wp_user( $user_id )->get_image()['url'] );
 
 		\remove_theme_mod( 'header_image' );
+	}
+
+	/**
+	 * Test that the OAuth endpoints are only advertised when the API is enabled.
+	 *
+	 * @covers ::get_endpoints
+	 */
+	public function test_oauth_endpoints_need_the_api() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
+
+		$oauth = array( 'oauthAuthorizationEndpoint', 'oauthTokenEndpoint', 'oauthRegistrationEndpoint' );
+
+		\delete_option( 'activitypub_api' );
+		$endpoints = User::from_wp_user( $user_id )->get_endpoints();
+
+		foreach ( $oauth as $key ) {
+			$this->assertArrayNotHasKey( $key, $endpoints );
+		}
+		$this->assertArrayHasKey( 'sharedInbox', $endpoints );
+
+		\update_option( 'activitypub_api', '1' );
+		$endpoints = User::from_wp_user( $user_id )->get_endpoints();
+
+		foreach ( $oauth as $key ) {
+			$this->assertArrayHasKey( $key, $endpoints );
+		}
+		$this->assertSame( get_rest_url_by_path( 'oauth/authorize' ), $endpoints['oauthAuthorizationEndpoint'] );
 	}
 }

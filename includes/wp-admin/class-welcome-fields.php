@@ -419,7 +419,7 @@ class Welcome_Fields {
 					<p><?php \esc_html_e( 'Learn what the Fediverse is and why it matters.', 'activitypub' ); ?></p>
 				</div>
 				<div class="step-action">
-					<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&help-tab=getting-started#tab-link-getting-started' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
+					<a href="<?php echo \esc_url( \wp_nonce_url( \admin_url( 'options-general.php?page=activitypub&help-tab=getting-started#tab-link-getting-started' ), 'activitypub_help_tab' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
 						<?php \esc_html_e( 'View intro', 'activitypub' ); ?>
 					</a>
 				</div>
@@ -532,7 +532,7 @@ class Welcome_Fields {
 					<p><?php \esc_html_e( 'Discover blocks, privacy, and more.', 'activitypub' ); ?></p>
 				</div>
 				<div class="step-action">
-					<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&help-tab=editor-blocks#tab-link-editor-blocks' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
+					<a href="<?php echo \esc_url( \wp_nonce_url( \admin_url( 'options-general.php?page=activitypub&help-tab=editor-blocks#tab-link-editor-blocks' ), 'activitypub_help_tab' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
 						<?php \esc_html_e( 'Explore features', 'activitypub' ); ?>
 					</a>
 				</div>
@@ -550,7 +550,7 @@ class Welcome_Fields {
 		?>
 		</div><!-- closing welcome-container div -->
 		<div class="activitypub-welcome-footer">
-			<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&welcome=0' ) ); ?>" class="skip-steps-link">
+			<a href="<?php echo \esc_url( \wp_nonce_url( \admin_url( 'options-general.php?page=activitypub&welcome=0' ), 'activitypub_welcome' ) ); ?>" class="skip-steps-link">
 				<?php \esc_html_e( 'Skip these steps', 'activitypub' ); ?>
 			</a>
 		</div>

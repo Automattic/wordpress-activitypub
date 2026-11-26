@@ -12,17 +12,33 @@ use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
 use Activitypub\Proxy;
+use Activitypub\Signature;
 use Activitypub\Tombstone;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
+use function Activitypub\unescape_guid;
 
 /**
  * Handles Delete requests.
  */
 class Delete {
+	/**
+	 * The inbox request of the current Delete of an object, to verify its signature when needed.
+	 *
+	 * @var \WP_REST_Request|null
+	 */
+	private static $request = null;
+
+	/**
+	 * The actor that signed the current request, false if it is not verified yet.
+	 *
+	 * @var string|false
+	 */
+	private static $signer = false;
+
 	/**
 	 * Initialize the class, registering WordPress hooks.
 	 *
@@ -109,7 +125,7 @@ class Delete {
 				}
 
 				// Check if Object is an Actor.
-				if ( object_to_uri( $activity['object'] ) === $activity['actor'] ) {
+				if ( object_to_id( $activity['object'] ) === $activity['actor'] ) {
 					self::delete_remote_actor( $activity, $user_ids );
 				} else { // Assume an object otherwise.
 					self::delete_object( $activity, $user_ids );
@@ -117,6 +133,9 @@ class Delete {
 				// Maybe handle Delete Activity for other Object Types.
 				break;
 		}
+
+		// The request belongs to this Delete only.
+		self::reset();
 	}
 
 	/**
@@ -130,8 +149,8 @@ class Delete {
 	 * @return bool True if a stamp on a local quote post was revoked.
 	 */
 	private static function revoke_quote_authorization( $activity, $user_ids ) {
-		$stamp_uri = object_to_uri( $activity['object'] ?? '' );
-		$actor     = object_to_uri( $activity['actor'] ?? '' );
+		$stamp_uri = object_to_id( $activity['object'] ?? '' );
+		$actor     = object_to_id( $activity['actor'] ?? '' );
 
 		// An actor deleting itself is never a stamp, and a stamp always lives on its issuer's host.
 		if ( ! $stamp_uri || $stamp_uri === $actor || ! is_same_host( $stamp_uri, $actor ) ) {
@@ -169,9 +188,10 @@ class Delete {
 
 		/*
 		 * Signature verification is deferred for Deletes, so the body is untrusted: the
-		 * revocation is honoured only if the stamp really no longer resolves.
+		 * revocation is honoured only if the quoted author signed it or the stamp really
+		 * no longer resolves.
 		 */
-		if ( ! Tombstone::exists( $stamp_uri ) ) {
+		if ( ! self::is_signed_by( $actor ) && ! Tombstone::exists( $stamp_uri ) ) {
 			return false;
 		}
 
@@ -196,9 +216,12 @@ class Delete {
 	 */
 	public static function delete_object( $activity, $user_ids ) {
 		$result = self::maybe_delete_interaction( $activity );
+		$post   = Remote_Posts::get_by_guid( object_to_id( $activity['object'] ) );
 
-		if ( ! $result ) {
-			$result = self::maybe_delete_post( $activity );
+		// An object can be both, for example a reply of a followed actor is also in the reader.
+		if ( ! $result || ! \is_wp_error( $post ) ) {
+			$post_result = self::maybe_delete_post( $activity, $post );
+			$result      = $result ? $result : $post_result;
 		}
 
 		$success = ( $result && ! \is_wp_error( $result ) );
@@ -247,7 +270,7 @@ class Delete {
 	 * @return bool True on success, false otherwise.
 	 */
 	public static function maybe_delete_follower( $activity ) {
-		$actor = object_to_uri( $activity['actor'] ?? '' );
+		$actor = object_to_id( $activity['actor'] ?? '' );
 
 		// Confirm at the actor's URI; an inline Tombstone is only an untrusted claim.
 		if ( ! \is_string( $actor ) || ! $actor || ! Tombstone::exists( $actor ) ) {
@@ -259,7 +282,8 @@ class Delete {
 
 		$follower = Remote_Actors::get_by_uri( $actor );
 
-		if ( ! \is_wp_error( $follower ) ) {
+		// Only the actor stored under exactly the URL that is gone, not one the lookup also matches.
+		if ( ! \is_wp_error( $follower ) && unescape_guid( $follower->guid ) === $actor ) {
 			self::maybe_delete_interactions( $follower->ID );
 			self::maybe_delete_posts( $follower->ID );
 			$state = Remote_Actors::delete( $follower->ID );
@@ -353,11 +377,20 @@ class Delete {
 	 * @return bool True on success, false otherwise.
 	 */
 	public static function maybe_delete_interaction( $activity ) {
-		$id       = object_to_uri( $activity['object'] );
+		$id       = object_to_id( $activity['object'] );
 		$comments = Interactions::get_by_id( $id );
 
-		if ( $comments && Tombstone::exists( $id ) ) {
-			// The object is gone from its own host, so the cached copy goes with it.
+		if ( ! $comments ) {
+			return false;
+		}
+
+		$owner_ids = array();
+		foreach ( $comments as $comment ) {
+			$owner_ids[] = (int) \get_comment_meta( $comment->comment_ID, '_activitypub_remote_actor_id', true );
+		}
+
+		if ( self::is_signed_by_owner( $activity, $owner_ids ) || Tombstone::exists( $id ) ) {
+			// The object is deleted, so the cached copy goes with it.
 			Proxy::purge( $id );
 
 			foreach ( $comments as $comment ) {
@@ -374,19 +407,29 @@ class Delete {
 	/**
 	 * Delete a post from the Posts collection.
 	 *
-	 * @param array $activity The delete activity.
+	 * @since unreleased Added the `$post` parameter.
+	 *
+	 * @param array                   $activity The delete activity.
+	 * @param \WP_Post|\WP_Error|null $post     Optional. The reader post of the object, if already looked up. Default null.
 	 *
 	 * @return bool|\WP_Error True on success, false or WP_Error on failure.
 	 */
-	public static function maybe_delete_post( $activity ) {
-		$id = object_to_uri( $activity['object'] );
+	public static function maybe_delete_post( $activity, $post = null ) {
+		$id   = object_to_id( $activity['object'] );
+		$post = $post ?? Remote_Posts::get_by_guid( $id );
 
-		// Check if the object exists and is a tombstone.
-		if ( Tombstone::exists( $id ) ) {
-			// The object is gone from its own host, so the cached copy goes with it.
+		$owner_id = \is_wp_error( $post ) ? 0 : (int) \get_post_meta( $post->ID, '_activitypub_remote_actor_id', true );
+		$signed   = self::is_signed_by_owner( $activity, array( $owner_id ) );
+
+		// The owner signed the Delete, or the object is gone from its own host.
+		if ( $signed || Tombstone::exists( $id ) ) {
+			// The object is deleted, so the cached copy goes with it.
 			Proxy::purge( $id );
 
-			return Remote_Posts::delete_by_guid( $id );
+			// Only the post stored under exactly the URL that is gone, not one the lookup also matches.
+			if ( ! \is_wp_error( $post ) && unescape_guid( $post->guid ) === $id ) {
+				return Remote_Posts::delete( $post->ID );
+			}
 		}
 
 		return false;
@@ -417,8 +460,12 @@ class Delete {
 	 * remote actor's keys may legitimately be gone before the Delete
 	 * arrives.
 	 *
+	 * The request of a Delete of an object is kept, so its signature can be
+	 * checked later when a local copy is deleted, see is_signed_by().
+	 *
 	 * @since 8.2.0 The `$force_signature` parameter is now respected.
 	 * @since 9.4.0 Limited to POST deliveries to an inbox route.
+	 * @since unreleased Keeps the request of a Delete of an object.
 	 *
 	 * @param bool             $defer           Whether to defer signature verification.
 	 * @param \WP_REST_Request $request         The request object.
@@ -447,10 +494,80 @@ class Delete {
 		$json = $request->get_json_params();
 
 		if ( isset( $json['type'] ) && 'Delete' === $json['type'] ) {
+			/*
+			 * The actor of a Delete of an object still exists, so its signature can be checked,
+			 * without making it a requirement. It is checked only when a local copy is about to be
+			 * deleted, see is_signed_by().
+			 */
+			$actor = object_to_id( $json['actor'] ?? '' );
+			self::reset( ( $actor && object_to_id( $json['object'] ?? '' ) !== $actor ) ? $request : null );
+
 			return true;
 		}
 
 		return $defer;
+	}
+
+	/**
+	 * Check whether the actor that signed the Delete owns all the objects.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $activity  The Delete activity.
+	 * @param int[] $owner_ids The IDs of the remote actors that own the objects.
+	 *
+	 * @return bool True if the signer of the Delete owns all the objects.
+	 */
+	private static function is_signed_by_owner( $activity, $owner_ids ) {
+		if ( ! $owner_ids ) {
+			return false;
+		}
+
+		foreach ( $owner_ids as $owner_id ) {
+			if ( ! Remote_Actors::has_uri( $owner_id, $activity['actor'] ?? '' ) ) {
+				return false;
+			}
+		}
+
+		return self::is_signed_by( $activity['actor'] ?? '' );
+	}
+
+	/**
+	 * Check whether the current Delete is signed by an actor.
+	 *
+	 * The signature is verified on the first call only, and only for the Delete of an object.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array|string $actor The actor.
+	 *
+	 * @return bool True if the signature verified and its key belongs to the actor.
+	 */
+	private static function is_signed_by( $actor ) {
+		if ( ! self::$request ) {
+			return false;
+		}
+
+		if ( false === self::$signer ) {
+			$signer       = Signature::verify_http_signature( self::$request );
+			self::$signer = \is_string( $signer ) ? $signer : '';
+		}
+
+		return is_same_actor( self::$signer, $actor );
+	}
+
+	/**
+	 * Set the request of the current Delete and forget the signer of the previous one.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_REST_Request|null $request Optional. The request of a Delete of an object. Default null.
+	 *
+	 * @return void
+	 */
+	private static function reset( $request = null ) {
+		self::$request = $request;
+		self::$signer  = false;
 	}
 
 	/**
@@ -462,7 +579,7 @@ class Delete {
 	 */
 	public static function outbox_activity( $activity ) {
 		if ( 'Delete' === $activity->get_type() ) {
-			$activity->set_object( object_to_uri( $activity->get_object() ) );
+			$activity->set_object( object_to_id( $activity->get_object() ) );
 		}
 
 		return $activity;
@@ -487,7 +604,7 @@ class Delete {
 			return;
 		}
 
-		Tombstone::bury( object_to_uri( $object ) );
+		Tombstone::bury( object_to_id( $object ) );
 
 		if ( \is_object( $object ) ) {
 			Tombstone::bury( $object->get_id(), $object->get_url() );

@@ -248,7 +248,7 @@ class Stats_Image extends File {
 		$dest_name = \sprintf( 'stats-%d-%s.png', $year, $hash );
 		$dest_path = $paths['basedir'] . '/' . $dest_name;
 
-		static::get_filesystem()->move( $tmp_file, $dest_path, true );
+		static::move_to_cache( $tmp_file, $dest_path );
 
 		// Keep as PNG for maximum compatibility when sharing on social networks.
 		return $dest_path;

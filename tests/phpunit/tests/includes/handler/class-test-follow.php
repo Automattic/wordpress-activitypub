@@ -312,10 +312,10 @@ class Test_Follow extends \WP_UnitTestCase {
 
 		Remote_Actors::upsert(
 			array(
-				'id'                 => $actor_url,
-				'type'               => 'Person',
-				'inbox'              => $inbox_url,
-				'preferred_username' => 'alice',
+				'id'                => $actor_url,
+				'type'              => 'Person',
+				'inbox'             => $inbox_url,
+				'preferredUsername' => 'alice',
 			)
 		);
 

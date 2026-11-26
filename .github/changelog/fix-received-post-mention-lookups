@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Handles in posts from other servers are no longer looked up when the post is shown.

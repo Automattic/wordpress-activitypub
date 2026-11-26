@@ -7,9 +7,11 @@
 
 namespace Activitypub\Handler;
 
+use Activitypub\Collection\Actors;
+use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox as Inbox_Collection;
 
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 
 /**
  * Handle Undo requests.
@@ -42,7 +44,7 @@ class Undo {
 		 * present yet unparseable must be rejected rather than skipping the check — passing
 		 * null there would re-open the undo-by-id attack.
 		 */
-		$actor = isset( $activity['actor'] ) ? object_to_uri( $activity['actor'] ) : null;
+		$actor = isset( $activity['actor'] ) ? object_to_id( $activity['actor'] ) : null;
 
 		if ( isset( $activity['actor'] ) && empty( $actor ) ) {
 			$result = new \WP_Error(
@@ -51,7 +53,30 @@ class Undo {
 				array( 'status' => 400 )
 			);
 		} else {
-			$result = Inbox_Collection::undo( object_to_uri( $activity['object'] ), $actor );
+			$result = Inbox_Collection::undo( object_to_id( $activity['object'] ), $actor );
+
+			/*
+			 * The Follow may be gone from the inbox (purged or wiped). An embedded Follow names the
+			 * follower and the followed actor, so the follow is removed by those. Only the actor of
+			 * the Undo can end its own follow.
+			 */
+			if (
+				\is_wp_error( $result ) &&
+				'activitypub_inbox_item_not_found' === $result->get_error_code() &&
+				'Follow' === ( $activity['object']['type'] ?? '' ) &&
+				null !== $actor &&
+				object_to_id( $activity['object']['actor'] ?? '' ) === $actor
+			) {
+				$user_id = Actors::get_id_by_resource( object_to_id( $activity['object']['object'] ?? '' ) );
+
+				if ( ! \is_wp_error( $user_id ) ) {
+					$follower = Followers::get_by_uri( $user_id, $actor );
+
+					if ( ! \is_wp_error( $follower ) ) {
+						$result = Followers::remove( $follower, $user_id );
+					}
+				}
+			}
 		}
 
 		if ( $result && ! \is_wp_error( $result ) ) {
@@ -64,7 +89,7 @@ class Undo {
 		 * @param array              $activity The ActivityPub activity data.
 		 * @param int[]              $user_ids The local user IDs.
 		 * @param bool               $success  True on success, false on failure.
-		 * @param \WP_Comment|string $result   The target, based on the activity that is being undone.
+		 * @param bool|\WP_Error     $result   Whether the follower or the comment was removed, or the error why not.
 		 */
 		\do_action( 'activitypub_handled_undo', $activity, (array) $user_ids, $success, $result );
 	}

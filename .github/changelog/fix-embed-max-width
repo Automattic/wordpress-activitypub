@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Embedded posts in the Reply and Quote blocks no longer stick out of the page on small screens.

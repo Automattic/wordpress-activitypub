@@ -199,6 +199,10 @@ class Generic_Object {
 	/**
 	 * Convert JSON input to an array and pre-fill the object.
 	 *
+	 * A key sets a property only in its ActivityStreams spelling, keys are case-sensitive.
+	 *
+	 * @since 9.4.4 Keys in another spelling of a property are ignored.
+	 *
 	 * @param array $data The array.
 	 *
 	 * @return void
@@ -206,9 +210,22 @@ class Generic_Object {
 	public function from_array( $data ) {
 		foreach ( $data as $key => $value ) {
 			if ( null !== $value ) {
-				// Convert camelCase to snake_case if not prefixed with '_'.
-				if ( ! \str_starts_with( $key, '_' ) ) {
-					$key = camel_to_snake_case( $key );
+				$key = (string) $key;
+
+				if ( \str_starts_with( $key, '_' ) ) {
+					// Taken as it is, and the setter lowercases its name.
+					if ( \strtolower( $key ) !== $key ) {
+						continue;
+					}
+				} else {
+					// Convert camelCase to snake_case.
+					$property = camel_to_snake_case( $key );
+
+					if ( snake_to_camel_case( $property ) !== $key ) {
+						continue;
+					}
+
+					$key = $property;
 				}
 
 				\call_user_func( array( $this, 'set_' . $key ), $value );

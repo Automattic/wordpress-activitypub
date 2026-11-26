@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 7.1
-Stable tag: 9.4.3
+Stable tag: 9.4.4
 Requires PHP: 7.4
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -87,6 +87,8 @@ The plugin uses PHP Constants to enable, disable or change its default behaviour
 * `ACTIVITYPUB_REST_NAMESPACE` - Change the default Namespace of the REST endpoint. Default: `activitypub/1.0`.
 * `ACTIVITYPUB_EXCERPT_LENGTH` - Change the length of the Excerpt. Default: `400`.
 * `ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS` - Change the number of attachments, that should be federated. Default: `4`.
+* `ACTIVITYPUB_MAX_IMAGE_PIXELS` - Change the largest image from other servers that is cached or imported, in pixels (width × height). Default: `33177600` (7680×4320).
+* `ACTIVITYPUB_MAX_GIF_PIXELS` - Change the largest GIF from other servers that is cached or imported, in pixels (width × height). Default: `921600` (1280×720).
 * `ACTIVITYPUB_HASHTAGS_REGEXP` - Change the default regex to detect hashtext in a text. Default: `(?:(?<=\s)|(?<=<p>)|(?<=<br>)|^)#([A-Za-z0-9_]+)(?:(?=\s|[[:punct:]]|$))`.
 * `ACTIVITYPUB_USERNAME_REGEXP` - Change the default regex to detect @-replies in a text. Default: `(?:([\p{L}\p{M}\p{N}\._+%-]+)@((?:[\p{L}\p{M}\p{N}_-]+\.)+(?:[Xx][Nn]--[A-Za-z0-9-]*[A-Za-z0-9]|[\p{Latin}\p{M}]+|(?:(?![\x00-\x7F])[\p{L}\p{M}])+)))`. The pattern is used with the `u` modifier.
 * `ACTIVITYPUB_URL_REGEXP` - Change the default regex to detect urls in a text. Default: `(www.|http:|https:)+[^\s]+[\w\/]`.
@@ -116,6 +118,28 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 9.4.4 - 2026-11-18
+#### Security
+- Connected apps now only have access to the site they were connected on. On multisite networks, apps have to be connected again after the update.
+- Improve how content from other servers is matched by its address.
+- Improve how custom emoji from other servers are shown in content and names.
+- Improve how emoji and images from other servers are handled.
+- Improve how incoming activities and profiles are read.
+- Improve how signatures of incoming requests are read.
+- Improve how the follow, reply and reaction buttons look up Fediverse profiles.
+- Only remove a profile or post when a deleted ID matches it exactly.
+
+#### Fixed
+- Fix remote profiles with special characters in their address showing up twice after they were updated.
+- Fix the post sidebar on the Social Web screen running into the window edges on WordPress 7.2, and a console error when the screen loads.
+- Fixed a fatal error when Stream 4.5.0 or newer is active.
+- Live updates in apps connected through the ActivityPub API now reach every open app or browser tab, not only the first one.
+- Mentions, hashtags and links are now linked the same way in every language version of a post or profile.
+- Rate limit new follower notification emails to prevent repeated notifications when an actor cycles follow and unfollow.
+- The blog profile can be found by its Fediverse handle again when an author uses the same name in the WebFinger plugin.
+- The page for connecting apps is no longer shown while the ActivityPub API is turned off.
+- WooCommerce order notes and other comments of single items show in the admin again while ActivityPub is active.
 
 ### 9.4.3 - 2026-11-05
 #### Security

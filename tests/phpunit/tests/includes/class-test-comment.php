@@ -9,6 +9,7 @@ namespace Activitypub\Tests;
 
 use Activitypub\Collection\Remote_Posts;
 use Activitypub\Comment;
+use Activitypub\Emoji;
 
 use function Activitypub\generate_image_block;
 use function Activitypub\process_remote_images;
@@ -19,6 +20,7 @@ use function Activitypub\process_remote_images;
  * @coversDefaultClass \Activitypub\Comment
  */
 class Test_Comment extends \WP_UnitTestCase {
+	use Equal_Html;
 	use Uri_Test_Cases;
 
 	/**
@@ -239,7 +241,7 @@ class Test_Comment extends \WP_UnitTestCase {
 		\remove_filter( 'activitypub_pre_download_url', $download );
 
 		$this->assertStringNotContainsString( '<img', $rendered );
-		$this->assertStringNotContainsString( 'activitypub/image', Comment::render_blocks( $comment->comment_content ) );
+		$this->assertSame( $comment->comment_content, Comment::render_blocks( $comment->comment_content ) );
 	}
 
 	/**
@@ -396,19 +398,86 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Emoji rendering still works without a received comment.
+	 * A received comment renders its blocks only once it is approved, so showing a pending or spam comment downloads nothing.
 	 *
 	 * @covers ::render_blocks
 	 */
-	public function test_render_emoji_without_a_received_comment() {
-		$url      = \wp_upload_dir()['baseurl'] . '/activitypub/emoji/party.png';
-		$content  = '<!-- wp:activitypub/emoji ' . \wp_json_encode( array( 'url' => $url ) ) . ' -->:party:<!-- /wp:activitypub/emoji -->';
-		$comment  = self::factory()->comment->create_and_get();
-		$rendered = Comment::render_blocks( $content, $comment );
+	public function test_unapproved_received_comment_downloads_nothing() {
+		$calls = 0;
+		$count = static function ( $url ) use ( &$calls ) {
+			++$calls;
+			return $url;
+		};
+		\add_filter( 'activitypub_remote_media_url', $count, 0 );
 
-		$this->assertStringContainsString( '<img', $rendered );
-		$this->assertStringContainsString( 'class="emoji"', $rendered );
-		$this->assertSame( $rendered, Comment::render_blocks( $content ) );
+		$content    = '<!-- wp:activitypub/emoji {"url":"https://remote.example/x.png"} -->:x:<!-- /wp:activitypub/emoji -->';
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => self::factory()->post->create(),
+				'comment_content'  => $content,
+				'comment_approved' => '0',
+				'comment_meta'     => array( 'protocol' => 'activitypub' ),
+			)
+		);
+
+		foreach ( array( 'hold', 'spam' ) as $status ) {
+			\wp_set_comment_status( $comment_id, $status );
+			$rendered = Comment::render_blocks( $content, \get_comment( $comment_id ) );
+			$this->assertStringNotContainsString( '<img', $rendered, $status );
+			$this->assertStringContainsString( ':x:', $rendered, $status );
+		}
+		$this->assertSame( 0, $calls );
+
+		\wp_set_comment_status( $comment_id, 'approve' );
+		$this->assertStringContainsString( '<img', Comment::render_blocks( $content, \get_comment( $comment_id ) ) );
+		$this->assertSame( 1, $calls );
+
+		\remove_filter( 'activitypub_remote_media_url', $count, 0 );
+	}
+
+	/**
+	 * No block of the plugin renders or downloads in a comment that was not received.
+	 *
+	 * Loops over every registered activitypub/* block, so a new block is covered without a new test.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_local_comment_renders_no_plugin_block() {
+		$requests = 0;
+		$count    = static function ( $result ) use ( &$requests ) {
+			++$requests;
+			return $result;
+		};
+		\add_filter( 'activitypub_remote_media_url', $count, 0 );
+		\add_filter( 'activitypub_pre_download_url', $count, 0 );
+
+		$names = \array_filter(
+			\array_keys( \WP_Block_Type_Registry::get_instance()->get_all_registered() ),
+			static function ( $name ) {
+				return \str_starts_with( $name, 'activitypub/' );
+			}
+		);
+		$this->assertContains( 'activitypub/emoji', $names );
+
+		$subscriber = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		foreach ( array( 0, $subscriber ) as $user_id ) {
+			$comment = self::factory()->comment->create_and_get(
+				array(
+					'user_id'          => $user_id,
+					'comment_approved' => 1,
+				)
+			);
+			foreach ( $names as $name ) {
+				$content = \sprintf( '<!-- wp:%s {"url":"https://remote.example/x.png","updated":"2099-01-01T00:00:00Z"} -->:x:<!-- /wp:%s -->', $name, $name );
+
+				$this->assertSame( $content, Comment::render_blocks( $content, $comment ), $name );
+				$this->assertStringNotContainsString( '<img', \apply_filters( 'comment_text', $content, $comment, array() ), $name );
+			}
+		}
+
+		\remove_filter( 'activitypub_remote_media_url', $count, 0 );
+		\remove_filter( 'activitypub_pre_download_url', $count, 0 );
+		$this->assertSame( 0, $requests );
 	}
 
 	/**
@@ -593,6 +662,67 @@ class Test_Comment extends \WP_UnitTestCase {
 			Comment::should_be_federated( \get_comment( $comment_id ) ),
 			'An already-sent comment must still federate even when its parent post is not federated.'
 		);
+	}
+
+	/**
+	 * A comment with a block of the plugin that did not come from the inbox is spam, whatever its status was.
+	 *
+	 * @covers ::pre_comment_approved
+	 */
+	public function test_plugin_blocks_from_outside_the_inbox_are_spam() {
+		$base     = array(
+			'comment_type'    => 'comment',
+			'comment_post_ID' => self::factory()->post->create(),
+		);
+		$received = array( 'comment_meta' => array( 'protocol' => 'activitypub' ) );
+		$plugin   = $base + array( 'comment_content' => 'Hi <!-- wp:activitypub/emoji {"url":"https://remote.example/x.png"} -->:x:<!-- /wp:activitypub/emoji -->' );
+		$outside  = array(
+			$plugin,
+			// The parser accepts any whitespace before `wp:`.
+			$base + array( 'comment_content' => 'Hi <!--   wp:activitypub/emoji {"url":"https://remote.example/x.png"} -->:x:<!--   /wp:activitypub/emoji -->' ),
+			$base + array( 'comment_content' => "Hi <!--\n\twp:activitypub/image {\"url\":\"https://remote.example/x.png\"} /-->" ),
+			// Nested in another block.
+			$base + array( 'comment_content' => '<!-- wp:group --><div><!-- wp:activitypub/emoji {"url":"https://remote.example/x.png"} -->:x:<!-- /wp:activitypub/emoji --></div><!-- /wp:group -->' ),
+		);
+		$allowed = array(
+			// Comment editors such as Verbum save core blocks.
+			$base + array( 'comment_content' => '<!-- wp:paragraph --><p>Hi</p><!-- /wp:paragraph -->' ),
+			$base + array( 'comment_content' => 'Hi <!-- a note -->' ),
+		);
+
+		foreach ( array( 1, 0, '1' ) as $approved ) {
+			foreach ( $outside as $comment_data ) {
+				$this->assertSame( 'spam', Comment::pre_comment_approved( $approved, $comment_data ), $comment_data['comment_content'] );
+				$this->assertSame( $approved, Comment::pre_comment_approved( $approved, $comment_data + $received ), $comment_data['comment_content'] );
+			}
+			foreach ( $allowed as $comment_data ) {
+				$this->assertSame( $approved, Comment::pre_comment_approved( $approved, $comment_data ), $comment_data['comment_content'] );
+			}
+		}
+		$this->assertSame( 'trash', Comment::pre_comment_approved( 'trash', $plugin ) );
+
+		// Through core's wp_new_comment().
+		\wp_set_current_user( 0 );
+		\kses_init();
+		\update_option( 'comment_moderation', '0' );
+		\update_option( 'comment_previously_approved', '0' );
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
+		$comment_id = \wp_new_comment(
+			\wp_slash(
+				array(
+					'comment_post_ID'      => self::factory()->post->create(),
+					'comment_author'       => 'Visitor',
+					'comment_author_email' => 'visitor@example.com',
+					'comment_author_url'   => '',
+					'comment_content'      => $plugin['comment_content'],
+				)
+			),
+			true
+		);
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+
+		$this->assertIsInt( $comment_id );
+		$this->assertSame( 'spam', \wp_get_comment_status( $comment_id ) );
 	}
 
 	/**
@@ -1538,6 +1668,19 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An empty ID finds no comment, even when comments with a source_id exist.
+	 *
+	 * @covers ::object_id_to_comment
+	 */
+	public function test_object_id_to_comment_with_empty_id() {
+		$comment_id = self::factory()->comment->create();
+		\add_comment_meta( $comment_id, 'source_id', 'https://example.com/1' );
+
+		$this->assertFalse( Comment::object_id_to_comment( '' ) );
+		$this->assertFalse( Comment::object_id_to_comment( null, array( 'status' => 'any' ) ) );
+	}
+
+	/**
 	 * Test pre_comment_approved filter.
 	 *
 	 * @covers ::pre_comment_approved
@@ -2000,6 +2143,68 @@ class Test_Comment extends \WP_UnitTestCase {
 		$this->assertContains( 'pingback', $query->query_vars['type__not_in'] );
 		$this->assertContains( 'like', $query->query_vars['type__not_in'] );
 		$this->assertContains( 'repost', $query->query_vars['type__not_in'] );
+	}
+
+	/**
+	 * The replies to a comment are left out of the comment list while its type is, and comments are threaded.
+	 *
+	 * @covers ::hides_replies
+	 */
+	public function test_hides_replies() {
+		$post_id = self::factory()->post->create();
+		$comment = self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) );
+		$types   = array();
+		foreach ( array( 'like', 'repost', 'quote' ) as $type ) {
+			// A pending reaction counts too.
+			$types[ $type ] = self::factory()->comment->create(
+				array(
+					'comment_post_ID'  => $post_id,
+					'comment_type'     => $type,
+					'comment_approved' => 'quote' === $type ? 0 : 1,
+				)
+			);
+		}
+		$threaded = \get_option( 'thread_comments' );
+		\update_option( 'thread_comments', '1' );
+
+		$this->assertFalse( \Activitypub\Comment::hides_replies( $comment ) );
+		$this->assertFalse( \Activitypub\Comment::hides_replies( 0 ) );
+		$this->assertFalse( \Activitypub\Comment::hides_replies( null ), 'No comment hides nothing, also with a comment in scope.' );
+		foreach ( $types as $type => $id ) {
+			$this->assertTrue( \Activitypub\Comment::hides_replies( $id ), $type );
+		}
+
+		// Code that shows quotes as comments takes the type off the list the comment query leaves out.
+		$show_quotes = static function ( $query ) {
+			$query->query_vars['type__not_in'] = \array_values( \array_diff( (array) $query->query_vars['type__not_in'], array( 'quote' ) ) );
+		};
+		\add_action( 'pre_get_comments', $show_quotes, 20 );
+		$quote_hides = \Activitypub\Comment::hides_replies( $types['quote'] );
+		$like_hides  = \Activitypub\Comment::hides_replies( $types['like'] );
+		\remove_action( 'pre_get_comments', $show_quotes, 20 );
+
+		$this->assertFalse( $quote_hides );
+		$this->assertTrue( $like_hides );
+
+		// In the admin, comments on a stored remote post are hidden, the question is still only about the type.
+		$remote = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => self::factory()->post->create( array( 'post_type' => \Activitypub\Collection\Remote_Posts::POST_TYPE ) ),
+				'comment_type'    => 'quote',
+			)
+		);
+		\set_current_screen( 'edit-comments' );
+		\add_action( 'pre_get_comments', $show_quotes, 20 );
+		$remote_hides = \Activitypub\Comment::hides_replies( $remote );
+		\remove_action( 'pre_get_comments', $show_quotes, 20 );
+		\set_current_screen( 'front' );
+		$this->assertFalse( $remote_hides );
+
+		// Without threads every comment is listed on its own, so no reply is hidden.
+		\update_option( 'thread_comments', '0' );
+		$flat_hides = \Activitypub\Comment::hides_replies( $types['quote'] );
+		\update_option( 'thread_comments', $threaded );
+		$this->assertFalse( $flat_hides );
 	}
 
 	/**
@@ -2969,10 +3174,10 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that hostile markup on an ActivityPub comment is stripped by the allowlist.
+	 * Test that markup in the name of an ActivityPub comment stays escaped.
 	 *
 	 * On comments carrying a remote actor, `comment_author` comes from the remote actor's name.
-	 * The decode there is deliberate, so the KSES allowlist is the only thing standing behind it.
+	 * Only the emoji the plugin writes are restored, anything else is left as text.
 	 *
 	 * @covers ::unescape_emoji
 	 */
@@ -2983,9 +3188,7 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		$result = Comment::unescape_emoji( \esc_html( $hostile ), $comment_id );
 
-		$this->assertStringNotContainsString( 'onerror', $result, 'Event handlers must not survive.' );
-		$this->assertStringNotContainsString( '<script', $result, 'Script elements must not survive.' );
-		$this->assertStringNotContainsString( 'evil.example', $result, 'A remote emoji source must not survive the source callback.' );
+		$this->assertSame( \esc_html( $hostile ), $result, 'The name should stay escaped.' );
 	}
 
 	/**
@@ -3029,34 +3232,111 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Only the emoji the plugin writes for a name are restored, other markup stays escaped.
+	 *
+	 * Goes through core's comment_author(), so the escaping is the one core applies.
+	 *
+	 * @covers ::unescape_emoji
+	 * @covers ::render_emoji
+	 */
+	public function test_unescape_emoji_restores_only_its_own_emoji() {
+		list( , $img ) = $this->emoji_img();
+		$other         = \str_replace( 'party', 'other', $img );
+
+		list( $comment_id ) = $this->create_activitypub_comment( 'Party :party: ' . $other . ' &lt;b&gt;' );
+
+		$output = \get_echo( 'comment_author', array( $comment_id ) );
+
+		// Only the emoji the plugin wrote is markup, the other img and the entities stay text.
+		$this->assert_equal_html( 'Party ' . $img . ' ' . \esc_html( $other ) . ' &lt;b&gt;', $output );
+	}
+
+	/**
+	 * An img with the name of one of the actor's emoji gets the source of that emoji, not its own.
+	 *
+	 * @covers ::unescape_emoji
+	 */
+	public function test_unescape_emoji_takes_the_source_from_the_emoji() {
+		list( , $img ) = $this->emoji_img();
+		$other         = \str_replace( 'party.png', 'other.png', $img );
+
+		list( $comment_id ) = $this->create_activitypub_comment( 'Party ' . $other );
+
+		$output = \get_echo( 'comment_author', array( $comment_id ) );
+
+		$this->assert_equal_html( 'Party ' . $img, $output, 'The img should carry the source of the emoji.' );
+	}
+
+	/**
+	 * A stored comment with an emoji block in an attribute renders it as text.
+	 *
+	 * @covers ::render_blocks
+	 */
+	public function test_render_blocks_renders_no_emoji_in_attributes() {
+		$block   = '<!-- wp:activitypub/emoji {"url":"https://example.com/emoji/blobcat.png"} -->:blobcat:<!-- /wp:activitypub/emoji -->';
+		$content = '<p><a href="https://example.com/" title="' . $block . '">x</a> ' . $block . '</p>';
+
+		list( $comment_id ) = $this->create_activitypub_comment();
+		\add_comment_meta( $comment_id, 'protocol', 'activitypub' );
+		$output = Comment::render_blocks( $content, \get_comment( $comment_id ) );
+
+		$processor = new \WP_HTML_Tag_Processor( $output );
+		$this->assertTrue( $processor->next_tag( 'a' ) );
+		$this->assertSame( ':blobcat:', $processor->get_attribute( 'title' ) );
+		$this->assertStringNotContainsString( 'wp:activitypub/emoji', $output, 'The block in text is still rendered.' );
+	}
+
+	/**
 	 * Create a comment that looks like it came from a remote actor.
+	 *
+	 * @param string $author Optional. The stored author name. Default 'Party :party:'.
 	 *
 	 * @return array The comment ID and the remote actor's post ID.
 	 */
-	protected function create_activitypub_comment() {
+	protected function create_activitypub_comment( $author = 'Party :party:' ) {
 		$post_id       = self::factory()->post->create();
 		$actor_post_id = self::factory()->post->create();
-		$comment_id    = self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) );
+		$comment_id    = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'comment_author'  => $author,
+			)
+		);
 
 		\add_comment_meta( $comment_id, '_activitypub_remote_actor_id', $actor_post_id );
+
+		list( $src ) = $this->emoji_img();
+		\add_post_meta(
+			$actor_post_id,
+			'_activitypub_emoji',
+			\wp_slash(
+				\wp_json_encode(
+					array(
+						array(
+							'type' => 'Emoji',
+							'name' => ':party:',
+							'icon' => array( 'url' => $src ),
+						),
+					)
+				)
+			)
+		);
 
 		return array( $comment_id, $actor_post_id );
 	}
 
 	/**
-	 * Build a custom emoji img tag and its source URL.
+	 * Build the custom emoji img tag render_emoji() writes, and its source URL.
+	 *
+	 * The source is already local, so the cache keeps it as it is.
 	 *
 	 * @return array The source URL and the img tag.
 	 */
 	protected function emoji_img() {
 		$upload_dir = \wp_upload_dir();
 		$src        = $upload_dir['baseurl'] . '/activitypub/emoji/party.png';
-		$img        = \sprintf(
-			'<img src="%s" alt=":party:" title=":party:" class="emoji" width="20" height="20" draggable="false" />',
-			$src
-		);
 
-		return array( $src, $img );
+		return array( $src, Emoji::get_img_tag( $src, 'party' ) );
 	}
 
 	/**

@@ -20,9 +20,9 @@ use function Activitypub\is_ap_post;
 use function Activitypub\is_post_disabled;
 use function Activitypub\is_same_host;
 use function Activitypub\object_id_to_comment;
+use function Activitypub\object_to_id;
 use function Activitypub\object_to_uri;
 use function Activitypub\process_remote_images;
-use function Activitypub\unescape_guid;
 use function Activitypub\url_to_commentid;
 
 /**
@@ -51,7 +51,7 @@ class Interactions {
 		 * provenance and taking over that id (the update owner-check would then reject the
 		 * genuine author). Local outbox replies ($user_id set) are trusted.
 		 */
-		if ( null === $user_id && ! is_same_host( $activity['actor'] ?? '', $activity['object'] ?? '' ) ) {
+		if ( null === $user_id && ! is_same_host( $activity['actor'] ?? '', object_to_id( $activity['object'] ?? '' ) ) ) {
 			return false;
 		}
 
@@ -61,8 +61,16 @@ class Interactions {
 
 		if ( ! empty( $activity['object']['inReplyTo'] ) ) {
 			// Regular reply.
-			$target_url        = object_to_uri( $activity['object']['inReplyTo'] );
+			$target_url        = object_to_id( $activity['object']['inReplyTo'] );
 			$parent_comment_id = url_to_commentid( $target_url );
+
+			/*
+			 * A reply to a comment that is only shown as a reaction would be counted but never
+			 * shown. A local reply is still stored, because that is how it is sent.
+			 */
+			if ( null === $user_id && Comment::hides_replies( $parent_comment_id ) ) {
+				return false;
+			}
 		} else {
 			// Check for quote.
 			$target_url = get_quote_url( $activity );
@@ -142,7 +150,7 @@ class Interactions {
 		}
 
 		// Determine comment_ID, by the same identifier add_comment() stored it under.
-		$object_id    = object_to_uri( $activity['object'] );
+		$object_id    = object_to_id( $activity['object'] );
 		$comment      = object_id_to_comment( \esc_url_raw( $object_id ) );
 		$comment_data = \get_comment( $comment, ARRAY_A );
 
@@ -167,7 +175,7 @@ class Interactions {
 		 * handled-update success flag stays false.
 		 */
 		$owner_id = (int) \get_comment_meta( $comment_data['comment_ID'], '_activitypub_remote_actor_id', true );
-		if ( $owner_id ? object_to_uri( $activity['actor'] ) !== unescape_guid( \get_post_field( 'guid', $owner_id, 'raw' ) ) : ! is_same_host( $activity['actor'], $object_id ) ) {
+		if ( $owner_id ? ! Remote_Actors::has_uri( $owner_id, $activity['actor'] ) : ! is_same_host( $activity['actor'], $object_id ) ) {
 			return new \WP_Error(
 				'activitypub_update_forbidden',
 				\__( 'The Update actor does not own the target comment.', 'activitypub' )
@@ -222,7 +230,7 @@ class Interactions {
 			return false;
 		}
 
-		$url               = object_to_uri( $activity['object'] );
+		$url               = object_to_id( $activity['object'] );
 		$parent_comment_id = url_to_commentid( $url );
 		$comment_post_id   = get_target_post_id( $url, $parent_comment_id );
 
@@ -259,6 +267,11 @@ class Interactions {
 	 * @return array The interactions as WP_Comment objects.
 	 */
 	public static function get_by_id( $url ) {
+		// An empty ID would match every interaction stored with an empty source_id or source_url.
+		if ( ! $url ) {
+			return array();
+		}
+
 		$args = array(
 			'nopaging'   => true,
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
@@ -481,7 +494,7 @@ class Interactions {
 	 * @return array|false The prepared fields, or false when actor data is unavailable.
 	 */
 	private static function prepare_remote_comment_data( $activity ) {
-		$actor_id = object_to_uri( $activity['actor'] ?? null );
+		$actor_id = object_to_id( $activity['actor'] ?? null );
 		$actor    = get_remote_metadata_by_actor( $actor_id );
 
 		if ( ! $actor || \is_wp_error( $actor ) ) {
@@ -586,10 +599,10 @@ class Interactions {
 	private static function prepare_remote_comment_meta( $activity ) {
 		$comment_meta = array(
 			'protocol'  => 'activitypub',
-			'source_id' => \esc_url_raw( object_to_uri( $activity['object'] ) ),
+			'source_id' => \esc_url_raw( object_to_id( $activity['object'] ) ),
 		);
 
-		$actor_uri = object_to_uri( $activity['actor'] ?? null );
+		$actor_uri = object_to_id( $activity['actor'] ?? null );
 		if ( $actor_uri ) {
 			$remote_actor = Remote_Actors::get_by_uri( $actor_uri );
 			if ( ! \is_wp_error( $remote_actor ) ) {

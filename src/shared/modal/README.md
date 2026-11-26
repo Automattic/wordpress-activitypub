@@ -118,6 +118,7 @@ The modal controller provides these actions automatically in your namespace:
 * `actions.openModal()` – Opens the modal.
 * `actions.closeModal()` – Closes the modal.
 * `actions.toggleModal()` – Toggles modal open/closed.
+* `actions.copyToClipboard()` – Copies the value of the `input` next to the button, inside a `.activitypub-dialog__button-group`. It writes the result to `context.copyButtonText` and `context.copyStatus`, so the block needs both in its context, a `role="status"` element bound to `context.copyStatus`, and the `copy` and `copied` strings in its `i18n` config.
 
 ## Customize Modal Behavior
 

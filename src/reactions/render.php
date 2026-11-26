@@ -237,6 +237,7 @@ $context = array(
 if ( $attributes['showActions'] ) {
 	$context['modal']['intent']   = '';
 	$context['copyButtonText']    = __( 'Copy', 'activitypub' );
+	$context['copyStatus']        = '';
 	$context['errorMessage']      = '';
 	$context['isError']           = false;
 	$context['isLoading']         = false;
@@ -393,11 +394,12 @@ ob_start();
 			<button
 				aria-label="<?php esc_attr_e( 'Copy URL to clipboard', 'activitypub' ); ?>"
 				class="wp-element-button"
-				data-wp-on--click="actions.copyPostUrl"
+				data-wp-on--click="actions.copyToClipboard"
 				type="button"
 			>
 				<span data-wp-text="context.copyButtonText"></span>
 			</button>
+			<span class="screen-reader-text" data-wp-text="context.copyStatus" role="status"></span>
 		</div>
 	</div>
 	<div class="activitypub-dialog__section">

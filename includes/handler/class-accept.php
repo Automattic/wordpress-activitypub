@@ -16,7 +16,7 @@ use function Activitypub\add_to_outbox;
 use function Activitypub\get_object_id;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 
 /**
  * Handle Accept requests.
@@ -78,7 +78,7 @@ class Accept {
 			return;
 		}
 
-		$actor_post = Remote_Actors::get_by_uri( object_to_uri( $accept['object']['object'] ?? '' ) );
+		$actor_post = Remote_Actors::get_by_uri( object_to_id( $accept['object']['object'] ?? '' ) );
 
 		if ( \is_wp_error( $actor_post ) ) {
 			return;
@@ -119,21 +119,21 @@ class Accept {
 		}
 
 		// The request's `object` is the quoted URI; our post is its `instrument`.
-		$post_id = \url_to_postid( object_to_uri( $request->get_instrument() ) );
+		$post_id = \url_to_postid( object_to_id( $request->get_instrument() ) );
 		$post    = $post_id ? \get_post( $post_id ) : null;
 
 		if ( ! $post ) {
 			return;
 		}
 
-		$quoted_uri = object_to_uri( $request->get_object() );
+		$quoted_uri = object_to_id( $request->get_object() );
 
 		// An Accept for a request the post has since superseded with another quoted URL is ignored.
 		if ( \get_post_meta( $post->ID, '_activitypub_quote_request', true ) !== $quoted_uri ) {
 			return;
 		}
 
-		$stamp_uri = object_to_uri( $accept['result'] ?? '' );
+		$stamp_uri = object_to_id( $accept['result'] ?? '' );
 
 		if ( ! $stamp_uri ) {
 			return;
@@ -172,9 +172,9 @@ class Accept {
 		if (
 			\is_wp_error( $stamp ) ||
 			'QuoteAuthorization' !== ( $stamp['type'] ?? '' ) ||
-			object_to_uri( $stamp['interactingObject'] ?? '' ) !== get_object_id( $post ) ||
+			object_to_id( $stamp['interactingObject'] ?? '' ) !== get_object_id( $post ) ||
 			// The stored URL is what the author pasted into the block; the stamp names the canonical object id.
-			! \in_array( object_to_uri( $stamp['interactionTarget'] ?? '' ), array( $quoted_uri, object_to_uri( $quoted['id'] ?? '' ) ), true ) ||
+			! \in_array( object_to_id( $stamp['interactionTarget'] ?? '' ), array( $quoted_uri, object_to_id( $quoted['id'] ?? '' ) ), true ) ||
 			! is_same_actor( $stamp['attributedTo'] ?? '', $accept['actor'] ?? '' )
 		) {
 			/** This action is documented in includes/handler/class-accept.php */

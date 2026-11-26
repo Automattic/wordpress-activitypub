@@ -101,9 +101,10 @@ class Replies_Controller extends \WP_REST_Controller {
 			 * publicly queryable, so we don't leak metadata for private,
 			 * draft, password-protected, or local-only posts — including
 			 * posts that were once federated and have since been made
-			 * non-public.
+			 * non-public. An unapproved, trashed or spam comment has no
+			 * collection either.
 			 */
-			$publicly_queryable = $wp_object && is_post_publicly_queryable( $wp_object->comment_post_ID );
+			$publicly_queryable = $wp_object && '1' === $wp_object->comment_approved && is_post_publicly_queryable( $wp_object->comment_post_ID );
 		} else {
 			$wp_object          = \get_post( $id );
 			$publicly_queryable = $wp_object && is_post_publicly_queryable( $wp_object );

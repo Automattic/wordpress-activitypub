@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+The information an app provides about itself when it connects to the site is limited in size.

@@ -380,6 +380,8 @@ class Test_Mailer extends WP_UnitTestCase {
 			return $args;
 		};
 		add_filter( 'wp_mail', $wp_mail_callback );
+		// The cooldown is only kept for a mail that was sent, so sending must not depend on the local mail transport.
+		add_filter( 'pre_wp_mail', '__return_true' );
 
 		// First follow: notification email should be sent.
 		Mailer::new_follower( $activity, self::$user_id, true, $remote_actor );
@@ -401,6 +403,7 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		remove_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
 		remove_filter( 'wp_mail', $wp_mail_callback );
+		remove_filter( 'pre_wp_mail', '__return_true' );
 	}
 
 	/**
@@ -1167,6 +1170,111 @@ class Test_Mailer extends WP_UnitTestCase {
 		\remove_filter( 'pre_get_remote_metadata_by_actor', $remote_metadata_callback );
 		\remove_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
 		\remove_filter( 'wp_mail', $wp_mail_callback );
+	}
+
+	/**
+	 * A recipient gets a limited number of notification mails per hour, whatever causes them, and is told once when more will not be sent.
+	 *
+	 * @covers ::maybe_send_mail
+	 * @covers ::send_limit_notice
+	 * @covers ::new_follower
+	 * @covers ::direct_message
+	 * @covers ::mention
+	 */
+	public function test_notification_mails_share_one_allowance_per_recipient() {
+		$user_id = self::$user_id;
+		$href    = Actors::get_by_id( $user_id )->get_id();
+		foreach ( array( 'new_follower', 'new_dm', 'new_mention' ) as $option ) {
+			\update_user_option( $user_id, 'activitypub_mailer_' . $option, '1' );
+		}
+
+		$three_mails = static function ( $limit, $bucket ) {
+			return 'mail' === $bucket ? 3 : $limit;
+		};
+		\add_filter( 'activitypub_rate_limit', $three_mails, 10, 2 );
+
+		// Two of each kind, every one from another server.
+		$count = $this->count_mails(
+			static function () use ( $user_id, $href ) {
+				foreach ( array( 'new_follower', 'direct_message', 'mention', 'new_follower', 'direct_message', 'mention' ) as $number => $method ) {
+					$activity = array(
+						'type'   => 'new_follower' === $method ? 'Follow' : 'Create',
+						'actor'  => \sprintf( 'https://server-%d.example/users/1', $number ),
+						'to'     => 'direct_message' === $method ? array( $href ) : array(),
+						'object' => array(
+							'id'      => \sprintf( 'https://server-%d.example/notes/1', $number ),
+							'content' => 'Test',
+							'tag'     => 'mention' === $method ? array(
+								array(
+									'type' => 'Mention',
+									'href' => $href,
+									'name' => '@test',
+								),
+							) : array(),
+						),
+					);
+
+					if ( 'new_follower' === $method ) {
+						Mailer::new_follower( $activity, $user_id, true );
+					} else {
+						Mailer::$method( $activity, array( $user_id ) );
+					}
+				}
+			}
+		);
+
+		\remove_filter( 'activitypub_rate_limit', $three_mails, 10 );
+
+		// Three notifications, and one notice that further ones will not be sent.
+		$this->assertSame( 4, $count );
+	}
+
+	/**
+	 * Mails about replies and reactions from the Fediverse are counted per address, and a local comment is not counted.
+	 *
+	 * @covers ::throttle_comment_recipients
+	 * @covers ::maybe_throttle_mail
+	 * @covers ::send_limit_notice
+	 */
+	public function test_comment_mails_are_counted_per_address() {
+		$two_mails = static function ( $limit, $bucket ) {
+			return 'comment_mail' === $bucket ? 2 : $limit;
+		};
+		\add_filter( 'activitypub_rate_limit', $two_mails, 10, 2 );
+
+		$author    = 'author@example.com';
+		$moderator = 'moderator@example.com';
+		$post_id   = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$received  = array(
+			'comment_post_ID' => $post_id,
+			'comment_meta'    => array( 'protocol' => 'activitypub' ),
+		);
+		$sent      = array();
+
+		$notices = $this->count_mails(
+			static function () use ( $received, $author, $moderator, &$sent ) {
+				for ( $i = 0; $i < 3; $i++ ) {
+					$sent[] = \apply_filters( 'comment_notification_recipients', array( $author ), self::factory()->comment->create( $received ) );
+				}
+
+				// The moderation mail to the same author counts against the same address.
+				$sent[] = \apply_filters( 'comment_moderation_recipients', array( $moderator, $author ), self::factory()->comment->create( $received ) );
+			}
+		);
+
+		$local = \apply_filters( 'comment_notification_recipients', array( $author ), self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) ) );
+
+		// The author approving a reply gets no mail from WordPress, so their own address is not counted.
+		\wp_set_current_user( self::factory()->user->create( array( 'user_email' => $author ) ) );
+		$own = \apply_filters( 'comment_notification_recipients', array( $author ), self::factory()->comment->create( $received ) );
+		\wp_set_current_user( 0 );
+
+		\remove_filter( 'activitypub_rate_limit', $two_mails, 10 );
+
+		$this->assertSame( array( array( $author ), array( $author ), array(), array( $moderator ) ), $sent );
+		$this->assertSame( 1, $notices, 'One notice for the first mail that is not sent.' );
+		$this->assertSame( array( $author ), $local, 'A local comment is not counted.' );
+		$this->assertSame( array( $author ), $own, 'The current user\'s own address is not counted.' );
 	}
 
 	/**

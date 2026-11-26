@@ -11,7 +11,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox as Outbox_Collection;
 use Activitypub\Moderation;
 
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 use function Activitypub\unfollow;
 
 /**
@@ -41,7 +41,7 @@ class Undo {
 	 */
 	public static function handle_undo( $data, $user_id = null ) {
 		$object = $data['object'] ?? '';
-		$id     = object_to_uri( $object );
+		$id     = object_to_id( $object );
 
 		if ( empty( $id ) ) {
 			/*
@@ -52,7 +52,7 @@ class Undo {
 			 * bodies don't bypass the local unfollow logic.
 			 */
 			if ( \is_array( $object ) && 'Follow' === ( $object['type'] ?? '' ) ) {
-				$embedded_actor = object_to_uri( $object['actor'] ?? '' );
+				$embedded_actor = object_to_id( $object['actor'] ?? '' );
 				$user_actor     = Actors::get_by_id( $user_id );
 
 				if ( \is_wp_error( $user_actor ) || ! $embedded_actor || $embedded_actor !== $user_actor->get_id() ) {
@@ -67,7 +67,7 @@ class Undo {
 					);
 				}
 
-				$target = object_to_uri( $object['object'] ?? '' );
+				$target = object_to_id( $object['object'] ?? '' );
 
 				if ( $target ) {
 					return unfollow( $target, $user_id );
@@ -101,7 +101,7 @@ class Undo {
 		switch ( $activity_type ) {
 			case 'Follow':
 				$stored = \json_decode( $outbox_item->post_content, true );
-				$target = object_to_uri( $stored['object'] ?? '' );
+				$target = object_to_id( $stored['object'] ?? '' );
 
 				if ( $target ) {
 					return unfollow( $target, $user_id );
@@ -111,7 +111,7 @@ class Undo {
 
 			case 'Block':
 				$stored    = \json_decode( $outbox_item->post_content, true );
-				$actor_uri = \is_array( $stored ) ? object_to_uri( $stored['object'] ?? '' ) : '';
+				$actor_uri = \is_array( $stored ) ? object_to_id( $stored['object'] ?? '' ) : '';
 
 				if ( $actor_uri ) {
 					Moderation::remove_user_block( $user_id, Moderation::TYPE_ACTOR, $actor_uri );

@@ -1,0 +1,27 @@
+name: Playground Preview - Build
+
+# Packages the PR as a plugin zip (read-only).
+# Playground Preview - Publish picks it up and posts the preview button as a comment.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# A newer push cancels the older build, so publish skips it instead of failing on a stale SHA.
+concurrency:
+  group: playground-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # Dependency updates need no preview.
+    if: ${{ !startsWith(github.head_ref, 'dependabot/') }}
+    uses: WordPress/action-wp-playground-pr-preview/.github/workflows/preview-build.yml@1b15093d61b5e98cdfeb31466f34ade495762cd7 # v4.0.0
+    with:
+      artifacts: activitypub=preview/activitypub.zip
+      # build/ is committed, so the archive is the release zip as-is (export-ignore applies).
+      build-command: |
+        mkdir -p preview
+        git archive --prefix=activitypub/ -o preview/activitypub.zip HEAD

@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Comments in the trash, marked as spam or waiting for approval are no longer shown to other servers, whatever address they are requested with.

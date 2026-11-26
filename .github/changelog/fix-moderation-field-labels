@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+The fields for adding blocked domains, blocked keywords and blocklist subscriptions now have labels, so screen readers announce what each field is for instead of only its example text.

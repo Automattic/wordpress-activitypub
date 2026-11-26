@@ -11,6 +11,7 @@ use Activitypub\Cache\Comment_Media;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Tests\Equal_Html;
+use Activitypub\Tests\Image_Download_Stub;
 use Activitypub\Tests\Uri_Test_Cases;
 
 use function Activitypub\get_id_hash;
@@ -23,6 +24,7 @@ use function Activitypub\object_id_to_comment;
  */
 class Test_Interactions extends \WP_UnitTestCase {
 	use Equal_Html;
+	use Image_Download_Stub;
 	use Uri_Test_Cases;
 
 	/**
@@ -258,12 +260,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$downloads = 0;
 		$download  = static function () use ( &$downloads ) {
 			++$downloads;
-			$file = \wp_tempnam( 'comment-image.jpg' );
-			\copy( AP_TESTS_DIR . '/data/assets/test.jpg', $file );
-			return array(
-				'file'      => $file,
-				'mime_type' => 'image/jpeg',
-			);
+			return self::image_download();
 		};
 		Comment_Media::init();
 		\add_filter( 'activitypub_pre_download_url', $download );
@@ -914,6 +911,21 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An empty ID finds no interaction, even one stored with an empty source_url.
+	 *
+	 * @covers ::get_by_id
+	 */
+	public function test_get_by_id_with_empty_id() {
+		$comment_id = self::factory()->comment->create( array( 'comment_post_ID' => self::$post_id ) );
+		\add_comment_meta( $comment_id, 'protocol', 'activitypub' );
+		\add_comment_meta( $comment_id, 'source_id', 'https://remote.example/notes/1' );
+		\add_comment_meta( $comment_id, 'source_url', '' );
+
+		$this->assertSame( array(), Interactions::get_by_id( '' ) );
+		$this->assertSame( array(), Interactions::get_by_id( null ) );
+	}
+
+	/**
 	 * Test get interaction by actor with remote actor optimization.
 	 *
 	 * @covers ::get_by_actor
@@ -1375,7 +1387,16 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$emoji_data = get_post_meta( $actor_post_id, '_activitypub_emoji', true );
 		$this->assertNotEmpty( $emoji_data );
 
-		// Test emoji replacement on display via comment_text filter (blocks are rendered).
+		// A comment that is not approved yet shows the shortcodes as text.
+		\wp_set_comment_status( $comment_id, 'hold' );
+		$comment      = get_comment( $comment_id );
+		$pending_text = apply_filters( 'comment_text', $comment->comment_content, $comment );
+		$this->assertStringNotContainsString( '<img', $pending_text );
+		$this->assertStringContainsString( ':kappa:', $pending_text );
+
+		// Test emoji replacement on display via comment_text filter (blocks are rendered once approved).
+		\wp_set_comment_status( $comment_id, 'approve' );
+		$comment                 = get_comment( $comment_id );
 		$comment_text_with_emoji = apply_filters( 'comment_text', $comment->comment_content, $comment );
 		$this->assertStringContainsString( 'kappa.png" alt="kappa" title="kappa" class="emoji"', $comment_text_with_emoji );
 		$this->assertStringContainsString( 'smile.png" alt="smile" title="smile" class="emoji"', $comment_text_with_emoji );
@@ -1663,6 +1684,72 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertEquals( 'quote', $comment->comment_type, 'Comment type should be set to quote' );
 
 		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10 );
+	}
+
+	/**
+	 * A reply to a quote is not stored while quotes are only shown with the reactions and comments are threaded.
+	 *
+	 * The comment list would count the reply and never show it. Once quotes are shown as
+	 * comments, as the quotes-as-comments snippet does, replies to them are stored again.
+	 * A reply by a local user is always stored, that is how it is sent.
+	 *
+	 * @covers ::add_comment
+	 */
+	public function test_add_comment_refuses_a_reply_to_a_reaction() {
+		$quote = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => self::$post_id,
+				'comment_type'    => 'quote',
+				'comment_meta'    => array(
+					'protocol'  => 'activitypub',
+					'source_id' => 'https://example.com/note/quote',
+				),
+			)
+		);
+		$reply = static function ( $id ) {
+			return array(
+				'type'   => 'Create',
+				'actor'  => 'https://example.com/users/testuser',
+				'object' => array(
+					'type'      => 'Note',
+					'id'        => $id,
+					'content'   => \sprintf( '<p>A reply to the quote, %s.</p>', \basename( $id ) ),
+					'inReplyTo' => 'https://example.com/note/quote',
+				),
+			);
+		};
+
+		\add_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10, 2 );
+
+		$this->assertFalse( Interactions::add_comment( $reply( 'https://example.com/note/reply-1' ) ) );
+		$this->assertEmpty( \get_comments( array( 'parent' => $quote ) ), 'The reply must not be stored.' );
+
+		$local = Interactions::add_comment( $reply( 'https://example.com/note/reply-2' ), self::$user_id );
+		$this->assertSame( $quote, (int) \get_comment( $local )->comment_parent, 'A local reply is stored.' );
+
+		// What the quotes-as-comments snippet does.
+		$show_quotes = static function ( $query ) {
+			if ( ! empty( $query->query_vars['type__not_in'] ) && \is_array( $query->query_vars['type__not_in'] ) ) {
+				$query->query_vars['type__not_in'] = \array_values( \array_diff( $query->query_vars['type__not_in'], array( 'quote' ) ) );
+			}
+		};
+		\add_action( 'pre_get_comments', $show_quotes, 20 );
+		$shown = Interactions::add_comment( $reply( 'https://example.com/note/reply-3' ) );
+		\remove_action( 'pre_get_comments', $show_quotes, 20 );
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10 );
+
+		$this->assertSame( $quote, (int) \get_comment( $shown )->comment_parent, 'A reply to a quote that is shown as a comment is stored.' );
+
+		// Without threads the reply is listed on its own, so it is stored.
+		$threaded = \get_option( 'thread_comments' );
+		\update_option( 'thread_comments', '0' );
+		\add_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10, 2 );
+		$flat = Interactions::add_comment( $reply( 'https://example.com/note/reply-4' ) );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10 );
+		\update_option( 'thread_comments', $threaded );
+
+		$this->assertSame( $quote, (int) \get_comment( $flat )->comment_parent, 'Without threads a reply to a quote is stored.' );
 	}
 
 	/**
@@ -2290,7 +2377,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertEquals( 'activitypub_update_forbidden', $result->get_error_code() );
 		$this->assertStringNotContainsString( 'HACKED', \get_comment( $comment_id )->comment_content );
 
-		// A media object is found by its url, which has to be on the actor's host as well.
+		// A media object is found by its id, not by its url, so a url that names the comment finds nothing.
 		$result = Interactions::update_comment(
 			array(
 				'actor'  => 'https://attacker.example/users/evil',
@@ -2304,7 +2391,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 				),
 			)
 		);
-		$this->assertWPError( $result );
+		$this->assertFalse( $result );
 		$this->assertStringNotContainsString( 'HACKED', \get_comment( $comment_id )->comment_content );
 
 		// The author on the comment's own host can still update it.

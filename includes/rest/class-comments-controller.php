@@ -20,6 +20,8 @@ use function Activitypub\is_post_publicly_queryable;
  * @see https://www.w3.org/TR/activitypub/#followers
  */
 class Comments_Controller extends \WP_REST_Controller {
+	use Rate_Limit;
+
 	/**
 	 * The namespace of this controller's route.
 	 *
@@ -56,7 +58,10 @@ class Comments_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_item' ),
-					'permission_callback' => '__return_true',
+					// Unauthenticated, and it WebFingers a host the caller names, so the only gate is how often one caller may ask.
+					'permission_callback' => function ( $request ) {
+						return $this->rate_limit( 'remote_reply', 10, $request );
+					},
 					'args'                => array(
 						'resource' => array(
 							'description' => 'The resource to reply to.',
@@ -89,9 +94,10 @@ class Comments_Controller extends \WP_REST_Controller {
 		 * BEFORE the local-only guard below, so that any comment on a non-
 		 * publicly-queryable parent returns the same "not found" shape — we
 		 * never want an outsider to distinguish "comment exists but is local"
-		 * from "comment missing" when the parent post is private.
+		 * from "comment missing" when the parent post is private. An
+		 * unapproved, trashed or spam comment is not found either.
 		 */
-		if ( ! is_post_publicly_queryable( $comment->comment_post_ID ) ) {
+		if ( '1' !== $comment->comment_approved || ! is_post_publicly_queryable( $comment->comment_post_ID ) ) {
 			return new \WP_Error( 'activitypub_comment_not_found', \__( 'Comment not found', 'activitypub' ), array( 'status' => 404 ) );
 		}
 

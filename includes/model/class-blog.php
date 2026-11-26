@@ -415,15 +415,17 @@ class Blog extends Actor {
 	 */
 	public function get_endpoints() {
 		$endpoints = array(
-			'sharedInbox'                => get_rest_url_by_path( 'inbox' ),
-			'oauthAuthorizationEndpoint' => get_rest_url_by_path( 'oauth/authorize' ),
-			'oauthTokenEndpoint'         => get_rest_url_by_path( 'oauth/token' ),
-			'oauthRegistrationEndpoint'  => get_rest_url_by_path( 'oauth/clients' ),
-			'proxyUrl'                   => get_rest_url_by_path( 'proxy' ),
-			'proxyEventStream'           => get_rest_url_by_path( 'proxy/stream' ),
+			'sharedInbox'      => get_rest_url_by_path( 'inbox' ),
+			'proxyUrl'         => get_rest_url_by_path( 'proxy' ),
+			'proxyEventStream' => get_rest_url_by_path( 'proxy/stream' ),
 		);
 
 		if ( \get_option( 'activitypub_api', false ) ) {
+			// The OAuth routes only exist when the API is enabled.
+			$endpoints['oauthAuthorizationEndpoint'] = get_rest_url_by_path( 'oauth/authorize' );
+			$endpoints['oauthTokenEndpoint']         = get_rest_url_by_path( 'oauth/token' );
+			$endpoints['oauthRegistrationEndpoint']  = get_rest_url_by_path( 'oauth/clients' );
+
 			/*
 			 * RFC 6570 template. add_query_arg() picks the ?/& separator (plain permalinks already
 			 * carry a query string) and does not encode values, so the {q} placeholder stays intact.

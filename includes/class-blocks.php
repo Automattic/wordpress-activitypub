@@ -88,6 +88,9 @@ class Blocks {
 		\add_filter( 'activitypub_import_mastodon_post_data', array( self::class, 'filter_import_mastodon_post_data' ), 10, 2 );
 		\add_filter( 'activitypub_attachments', array( self::class, 'add_stats_image_attachment' ), 10, 2 );
 
+		// Before do_blocks() at 9.
+		\add_filter( 'the_content', array( Emoji::class, 'remove_blocks_in_tags' ), 8 );
+
 		\add_action( 'activitypub_before_get_content', array( self::class, 'add_post_transformation_callbacks' ) );
 		\add_filter( 'activitypub_the_content', array( self::class, 'remove_post_transformation_callbacks' ) );
 	}
@@ -231,6 +234,7 @@ class Blocks {
 					'url'     => array( 'type' => 'string' ),
 					'updated' => array( 'type' => 'string' ),
 				),
+				'uses_context'    => array( 'postId', 'activitypub/commentId' ),
 				'render_callback' => array( self::class, 'render_emoji_block' ),
 			)
 		);
@@ -243,7 +247,7 @@ class Blocks {
 					'urlEncoded' => array( 'type' => 'boolean' ),
 					'alt'        => array( 'type' => 'string' ),
 				),
-				'uses_context'    => array( 'postId', 'commentId' ),
+				'uses_context'    => array( 'postId', 'activitypub/commentId' ),
 				'render_callback' => array( self::class, 'render_image_block' ),
 			)
 		);
@@ -254,6 +258,7 @@ class Blocks {
 				'attributes'      => array(
 					'url' => array( 'type' => 'string' ),
 				),
+				'uses_context'    => array( 'postId', 'activitypub/commentId' ),
 				'render_callback' => array( self::class, 'render_audio_block' ),
 			)
 		);
@@ -264,6 +269,7 @@ class Blocks {
 				'attributes'      => array(
 					'url' => array( 'type' => 'string' ),
 				),
+				'uses_context'    => array( 'postId', 'activitypub/commentId' ),
 				'render_callback' => array( self::class, 'render_video_block' ),
 			)
 		);
@@ -616,17 +622,41 @@ class Blocks {
 	}
 
 	/**
+	 * Whether a block of the plugin may act on its URL: download it, cache it or build an img from it.
+	 *
+	 * These blocks belong to content the ActivityPub path stores: received comments and remote
+	 * posts. Other code can render the same blocks, so the callback checks where the content came
+	 * from. A comment is identified by the plugin's own context key, which only
+	 * Comment::render_blocks() sets. Without it, the post in context, or the global post, decides.
+	 *
+	 * @since 9.4.4
+	 *
+	 * @param \WP_Block|null $block The block instance.
+	 *
+	 * @return bool True for a block of a received comment or a remote post.
+	 */
+	private static function is_activitypub_content( $block ) {
+		$comment_id = $block->context['activitypub/commentId'] ?? 0;
+		if ( $comment_id ) {
+			return Comment::was_received( $comment_id );
+		}
+
+		return is_ap_post( $block->context['postId'] ?? null );
+	}
+
+	/**
 	 * Render the emoji block.
 	 *
 	 * Replaces emoji shortcode with cached img tag at runtime.
 	 *
-	 * @param array  $attrs   The block attributes.
-	 * @param string $content The block inner content (emoji shortcode).
+	 * @param array          $attrs   The block attributes.
+	 * @param string         $content The block inner content (emoji shortcode).
+	 * @param \WP_Block|null $block   Optional. The block instance.
 	 *
 	 * @return string The rendered emoji img tag.
 	 */
-	public static function render_emoji_block( $attrs, $content ) {
-		if ( empty( $attrs['url'] ) || empty( $content ) ) {
+	public static function render_emoji_block( $attrs, $content, $block = null ) {
+		if ( empty( $attrs['url'] ) || empty( $content ) || ! self::is_activitypub_content( $block ) ) {
 			return $content;
 		}
 
@@ -665,7 +695,11 @@ class Blocks {
 	 * @return string The rendered content with cached URL, or the image description if a comment image has no URL.
 	 */
 	public static function render_image_block( $attrs, $content, $block = null ) {
-		$comment_id = $block->context['commentId'] ?? null;
+		if ( ! self::is_activitypub_content( $block ) ) {
+			return $content;
+		}
+
+		$comment_id = $block->context['activitypub/commentId'] ?? null;
 
 		// Only blocks that carry their alt text can rebuild a missing img.
 		if ( empty( $attrs['url'] ) || ( empty( $content ) && ! isset( $attrs['alt'] ) ) ) {
@@ -677,6 +711,19 @@ class Blocks {
 		if ( isset( $attrs['alt'] ) && ( ! $processor->next_tag( array( 'tag_name' => 'IMG' ) ) || ! $processor->get_attribute( 'src' ) ) ) {
 			// Comment sanitization removes img attributes; retain them in the block instead.
 			$content = \sprintf( '<img src="%s" alt="%s" loading="lazy" style="max-width:100%%;height:auto" />', \esc_url( \htmlspecialchars( $url, ENT_QUOTES, 'UTF-8', true ) ), \esc_attr( $attrs['alt'] ) );
+		}
+
+		/*
+		 * An img that sanitization kept, on a site that allows images in comments, still has the
+		 * size the remote server gave it. Comments are also shown where no stylesheet limits
+		 * images, as in the comments list of the admin, so the image carries the limit itself.
+		 */
+		if ( $comment_id ) {
+			$processor = new \WP_HTML_Tag_Processor( $content );
+			if ( $processor->next_tag( array( 'tag_name' => 'IMG' ) ) ) {
+				$processor->set_attribute( 'style', 'max-width:100%;height:auto' );
+				$content = $processor->get_updated_html();
+			}
 		}
 
 		// Get entity ID from context, comment images are cached per comment.
@@ -751,13 +798,14 @@ class Blocks {
 	 *
 	 * Replaces remote audio URL with cached URL at runtime.
 	 *
-	 * @param array  $attrs   The block attributes.
-	 * @param string $content The block inner content (audio tag).
+	 * @param array          $attrs   The block attributes.
+	 * @param string         $content The block inner content (audio tag).
+	 * @param \WP_Block|null $block   Optional. The block instance.
 	 *
 	 * @return string The rendered content with cached URL.
 	 */
-	public static function render_audio_block( $attrs, $content ) {
-		if ( empty( $attrs['url'] ) || empty( $content ) ) {
+	public static function render_audio_block( $attrs, $content, $block = null ) {
+		if ( empty( $attrs['url'] ) || empty( $content ) || ! self::is_activitypub_content( $block ) ) {
 			return $content;
 		}
 
@@ -792,13 +840,14 @@ class Blocks {
 	 *
 	 * Replaces remote video URL with cached URL at runtime.
 	 *
-	 * @param array  $attrs   The block attributes.
-	 * @param string $content The block inner content (video tag).
+	 * @param array          $attrs   The block attributes.
+	 * @param string         $content The block inner content (video tag).
+	 * @param \WP_Block|null $block   Optional. The block instance.
 	 *
 	 * @return string The rendered content with cached URL.
 	 */
-	public static function render_video_block( $attrs, $content ) {
-		if ( empty( $attrs['url'] ) || empty( $content ) ) {
+	public static function render_video_block( $attrs, $content, $block = null ) {
+		if ( empty( $attrs['url'] ) || empty( $content ) || ! self::is_activitypub_content( $block ) ) {
 			return $content;
 		}
 
@@ -1018,6 +1067,13 @@ class Blocks {
 		);
 
 		$args = \wp_parse_args( $args, $defaults );
+
+		$has_header = ! $args['is_compact'] || ! empty( $args['title'] ) || ! empty( $args['title_binding'] );
+		$title_id   = '';
+		if ( $has_header ) {
+			// The dialog is named by its heading, so the heading always needs an id.
+			$title_id = ! empty( $args['id'] ) ? $args['id'] . '-title' : \wp_unique_id( 'activitypub-modal-title-' );
+		}
 		?>
 
 		<div
@@ -1029,16 +1085,17 @@ class Blocks {
 			<?php endif; ?>
 			role="dialog"
 			aria-modal="true"
+			<?php if ( $title_id ) : ?>
+				aria-labelledby="<?php echo \esc_attr( $title_id ); ?>"
+			<?php endif; ?>
 			hidden
 		>
 			<div class="activitypub-modal__frame">
-				<?php if ( ! $args['is_compact'] || ! empty( $args['title'] ) || ! empty( $args['title_binding'] ) ) : ?>
+				<?php if ( $has_header ) : ?>
 					<div class="activitypub-modal__header">
 						<h2
 							class="activitypub-modal__title"
-							<?php if ( ! empty( $args['id'] ) ) : ?>
-								id="<?php echo \esc_attr( $args['id'] . '-title' ); ?>"
-							<?php endif; ?>
+							id="<?php echo \esc_attr( $title_id ); ?>"
 							<?php if ( ! empty( $args['title_binding'] ) ) : ?>
 								data-wp-text="<?php echo \esc_attr( $args['title_binding'] ); ?>"
 							<?php endif; ?>

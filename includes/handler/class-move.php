@@ -15,7 +15,7 @@ use Activitypub\Proxy;
 
 use function Activitypub\is_actor;
 use function Activitypub\is_same_domain;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 
 /**
  * Handle Move requests.
@@ -60,7 +60,7 @@ class Move {
 		}
 
 		// Only the old or the new actor may send the Move; checked before anything is fetched.
-		if ( ! \in_array( object_to_uri( $activity['actor'] ?? null ), array( $origin_uri, $target_uri ), true ) ) {
+		if ( ! \in_array( object_to_id( $activity['actor'] ?? null ), array( $origin_uri, $target_uri ), true ) ) {
 			return;
 		}
 
@@ -125,11 +125,11 @@ class Move {
 	 */
 	private static function extract_target( $activity ) {
 		if ( ! empty( $activity['target'] ) ) {
-			return object_to_uri( $activity['target'] );
+			return object_to_id( $activity['target'] );
 		}
 
 		if ( ! empty( $activity['object'] ) ) {
-			return object_to_uri( $activity['object'] );
+			return object_to_id( $activity['object'] );
 		}
 
 		return null;
@@ -148,15 +148,15 @@ class Move {
 	 */
 	private static function extract_origin( $activity ) {
 		if ( ! empty( $activity['target'] ) && ! empty( $activity['object'] ) ) {
-			return object_to_uri( $activity['object'] );
+			return object_to_id( $activity['object'] );
 		}
 
 		if ( ! empty( $activity['origin'] ) ) {
-			return object_to_uri( $activity['origin'] );
+			return object_to_id( $activity['origin'] );
 		}
 
 		if ( ! empty( $activity['actor'] ) ) {
-			return object_to_uri( $activity['actor'] );
+			return object_to_id( $activity['actor'] );
 		}
 
 		return null;
@@ -191,7 +191,7 @@ class Move {
 		}
 
 		// Only one of the two actors may send the Move.
-		if ( ! \in_array( object_to_uri( $activity['actor'] ?? null ), array( $origin_object['id'], $target_object['id'] ), true ) ) {
+		if ( ! \in_array( object_to_id( $activity['actor'] ?? null ), array( $origin_object['id'], $target_object['id'] ), true ) ) {
 			return false;
 		}
 
@@ -211,6 +211,6 @@ class Move {
 		}
 
 		// Check if the origin points at the target.
-		return object_to_uri( $origin_object['movedTo'] ?? null ) === $target_object['id'];
+		return object_to_id( $origin_object['movedTo'] ?? null ) === $target_object['id'];
 	}
 }

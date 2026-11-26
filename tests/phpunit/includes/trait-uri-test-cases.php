@@ -45,6 +45,23 @@ trait Uri_Test_Cases {
 	}
 
 	/**
+	 * Pairs of a stored ID and a different ID that URL escaping turns into the stored one, or that is stored the same way.
+	 *
+	 * @return array<string, string[]> Test cases: stored ID, requested ID.
+	 */
+	public function escaped_uri_provider() {
+		return array(
+			'caret dropped'    => array( 'https://example.com/uri-test/note', 'https://example.com/uri-test/note^' ),
+			'backtick dropped' => array( 'https://example.com/uri-test/note', 'https://example.com/uri-test/note`' ),
+			'braces dropped'   => array( 'https://example.com/uri-test/note', 'https://example.com/uri-test/{note}' ),
+			'quote dropped'    => array( 'https://example.com/uri-test/note', 'https://example.com/uri-test/no"te' ),
+			'entity rewritten' => array( 'https://example.com/uri-test/?x=1&y=2', 'https://example.com/uri-test/?x=1&#38;y=2' ),
+			'named entity'     => array( 'https://example.com/uri-test/?a=1&b=2', 'https://example.com/uri-test/?a=1&amp;b=2' ),
+			'numeric entity'   => array( 'https://example.com/uri-test/?a=1&b=2', 'https://example.com/uri-test/?a=1&#038;b=2' ),
+		);
+	}
+
+	/**
 	 * Pairs of a stored handle and a different handle that the database collation treats as equal.
 	 *
 	 * @return array<string, string[]> Test cases: stored handle, requested handle.

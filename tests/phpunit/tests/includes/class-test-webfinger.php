@@ -228,13 +228,7 @@ class Test_Webfinger extends \WP_UnitTestCase {
 				new \WP_Error(
 					'webfinger_missing_links',
 					__( 'No valid Link elements found.', 'activitypub' ),
-					array(
-						'status' => 400,
-						'data'   => array(
-							'subject' => 'acct:test@example.org',
-							'aliases' => array( 'https://example.org/?author=1' ),
-						),
-					)
+					array( 'status' => 400 )
 				),
 			),
 			array(
@@ -248,14 +242,7 @@ class Test_Webfinger extends \WP_UnitTestCase {
 				new \WP_Error(
 					'webfinger_missing_links',
 					__( 'No valid Link elements found.', 'activitypub' ),
-					array(
-						'status' => 400,
-						'data'   => array(
-							'subject' => 'acct:test@example.org',
-							'aliases' => array( 'https://example.org/?author=1' ),
-							'links'   => array(),
-						),
-					)
+					array( 'status' => 400 )
 				),
 			),
 			array(
@@ -269,19 +256,7 @@ class Test_Webfinger extends \WP_UnitTestCase {
 				new \WP_Error(
 					'webfinger_url_no_activitypub',
 					__( 'The Site supports WebFinger but not ActivityPub', 'activitypub' ),
-					array(
-						'status' => 400,
-						'data'   => array(
-							'subject' => 'acct:test@example.org',
-							'aliases' => array( 'https://example.org/?author=1' ),
-							'links'   => array(
-								array(
-									'rel'  => 'http://webfinger.net/rel/profile-page',
-									'href' => 'https://example.org/?author=1',
-								),
-							),
-						),
-					)
+					array( 'status' => 400 )
 				),
 			),
 			array(
@@ -1234,5 +1209,102 @@ class Test_Webfinger extends \WP_UnitTestCase {
 		\remove_filter( 'pre_http_request', $filter );
 
 		$this->assertSame( 'https://example.com/intent/object?uri={uri}', $result );
+	}
+
+	/**
+	 * Test that a lookup refusing the remote document hands on its status and nothing of the document.
+	 *
+	 * Every lookup that checks the document is listed here, so a new one has to decide what its
+	 * error carries.
+	 *
+	 * @dataProvider the_refused_document_provider
+	 * @covers ::resolve
+	 * @covers ::uri_to_acct
+	 * @covers ::get_intent_endpoint
+	 * @covers ::get_remote_follow_endpoint
+	 *
+	 * @param callable $lookup The lookup to run.
+	 * @param string   $body   The document the remote server answers with.
+	 */
+	public function test_refused_document_carries_only_the_status( $lookup, $body ) {
+		$filter = static function () use ( $body ) {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => $body,
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		try {
+			$result = $lookup();
+		} finally {
+			\remove_filter( 'pre_http_request', $filter );
+		}
+
+		$this->assertWPError( $result );
+		$this->assertSame( array( 'status' => 400 ), $result->get_error_data() );
+	}
+
+	/**
+	 * Every lookup that checks the document, with one that is not what it asked for.
+	 *
+	 * @return array[]
+	 */
+	public function the_refused_document_provider() {
+		$document   = \wp_json_encode( array( 'key' => 'value' ) );
+		$no_ap_link = \wp_json_encode(
+			array(
+				'subject' => 'https://remote.example/users/a',
+				'links'   => array(
+					array(
+						'rel'  => 'http://webfinger.net/rel/profile-page',
+						'href' => 'https://remote.example/@a',
+					),
+				),
+			)
+		);
+
+		return array(
+			'resolve, no links'                => array( static fn() => Webfinger::resolve( 'a@remote.example' ), $document ),
+			'resolve, no ActivityPub link'     => array( static fn() => Webfinger::resolve( 'b@remote.example' ), $no_ap_link ),
+			'uri_to_acct, no acct'             => array( static fn() => Webfinger::uri_to_acct( 'c@remote.example' ), $document ),
+			'intent endpoint, no links'        => array( static fn() => Webfinger::get_intent_endpoint( 'd@remote.example', 'like' ), $document ),
+			'intent endpoint, no intent'       => array( static fn() => Webfinger::get_intent_endpoint( 'e@remote.example', 'like' ), $no_ap_link ),
+			'remote follow endpoint, no links' => array( static fn() => Webfinger::get_remote_follow_endpoint( 'f@remote.example' ), $document ),
+		);
+	}
+
+	/**
+	 * A WebFinger lookup asks for a small document and keeps the response for a day.
+	 *
+	 * @covers ::get_data
+	 */
+	public function test_get_data_limits_the_response_size() {
+		$limit   = null;
+		$lookup  = null;
+		$capture = static function ( $pre, $args, $url ) use ( &$limit, &$lookup ) {
+			if ( \str_contains( $url, '/.well-known/webfinger' ) ) {
+				$limit  = $args['limit_response_size'] ?? null;
+				$lookup = $url;
+
+				return array(
+					'response' => array( 'code' => 200 ),
+					'headers'  => array(),
+					'body'     => '{}',
+				);
+			}
+
+			return $pre;
+		};
+		\add_filter( 'pre_http_request', $capture, 10, 3 );
+
+		Webfinger::get_data( 'acct:alice@remote.example' );
+
+		\remove_filter( 'pre_http_request', $capture, 10 );
+
+		$this->assertSame( Http::SMALL_RESPONSE_SIZE, $limit );
+
+		$expires = (int) \get_option( '_transient_timeout_' . Http::generate_cache_key( $lookup ) );
+		$this->assertEqualsWithDelta( \time() + DAY_IN_SECONDS, $expires, 5 );
 	}
 }

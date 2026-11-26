@@ -3,6 +3,8 @@ import ServerSideRender from '@wordpress/server-side-render';
 import { SelectControl, PanelBody, Disabled, ExternalLink, Button, TextControl } from '@wordpress/components';
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
+// eslint-disable-next-line import/no-extraneous-dependencies
+import { speak } from '@wordpress/a11y';
 import { useState, useEffect, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { useUserOptions } from '../shared/use-user-options';
@@ -84,6 +86,7 @@ export default function Edit( { attributes, setAttributes } ) {
 	const handleCopy = () => {
 		navigator.clipboard.writeText( imageUrl ).then( () => {
 			setCopied( true );
+			speak( __( 'Copied!', 'activitypub' ) );
 			setTimeout( () => setCopied( false ), 2000 );
 		} );
 	};

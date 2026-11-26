@@ -23,6 +23,7 @@ createModalStore( 'activitypub/follow-me' );
  * @property {string}  blockId         The block ID.
  * @property {string}  buttonStyle     The button style.
  * @property {string}  copyButtonText  The copy button text.
+ * @property {string}  copyStatus      Text for the copy status region.
  * @property {string}  errorMessage    The error message.
  * @property {boolean} isError         Whether the remote profile input has an error.
  * @property {boolean} isLoading       Whether the remote profile is being submitted.
@@ -36,31 +37,6 @@ createModalStore( 'activitypub/follow-me' );
 
 const { actions, callbacks } = store( 'activitypub/follow-me', {
 	actions: {
-		/**
-		 * Copy the webfinger to clipboard.
-		 */
-		copyToClipboard() {
-			const context = getContext();
-			const { i18n } = getConfig();
-
-			// Use the Clipboard API to copy text.
-			navigator.clipboard.writeText( context.webfinger ).then(
-				() => {
-					// Update button text to show success.
-					context.copyButtonText = i18n.copied;
-
-					// Reset button text after 1 second.
-					setTimeout( () => {
-						context.copyButtonText = i18n.copy;
-					}, 1000 );
-				},
-				( error ) => {
-					// eslint-disable-next-line no-console -- Log error if copying fails.
-					console.error( 'Could not copy text: ', error );
-				}
-			);
-		},
-
 		/**
 		 * Update the remote profile value.
 		 *

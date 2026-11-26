@@ -17,7 +17,7 @@ use Activitypub\Webfinger;
 use function Activitypub\add_to_outbox;
 use function Activitypub\get_stored_id_forms;
 use function Activitypub\is_activity;
-use function Activitypub\object_to_uri;
+use function Activitypub\object_to_id;
 use function Activitypub\user_can_act_as_blog;
 
 /**
@@ -81,7 +81,7 @@ class Outbox {
 			$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
 		}
 
-		$object_id = object_to_uri( self::get_object_id( $activity ) );
+		$object_id = object_to_id( self::get_object_id( $activity ) );
 		$title     = self::get_object_title( $activity->get_object() );
 
 		if ( ! $object_id || ! \is_string( $object_id ) ) {
@@ -145,6 +145,15 @@ class Outbox {
 		);
 
 		\remove_filter( 'activitypub_is_activitypub_request', '__return_true' );
+
+		/*
+		 * The actor the row is signed as, recorded now: a local delivery checks the activity against
+		 * it, and when the row is sent the user may no longer resolve, for example once deleted.
+		 */
+		$sender = Actors::get_by_id( $user_id );
+		if ( ! \is_wp_error( $sender ) ) {
+			$outbox_item['meta_input']['_activitypub_activity_actor_id'] = $sender->get_id();
+		}
 
 		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
 		if ( $has_kses ) {
@@ -550,7 +559,7 @@ class Outbox {
 			return $data->get_id();
 		}
 
-		return object_to_uri( $data->get_actor() );
+		return object_to_id( $data->get_actor() );
 	}
 
 	/**

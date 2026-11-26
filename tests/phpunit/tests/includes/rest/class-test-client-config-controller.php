@@ -125,6 +125,8 @@ class Test_Client_Config_Controller extends \Activitypub\Tests\Test_REST_Control
 	 */
 	public function test_get_item_optional_links() {
 		\update_option( 'users_can_register', 1 );
+		// On multisite, the network setting decides whether users can register.
+		\update_site_option( 'registration', 'user' );
 
 		$privacy_page = self::factory()->post->create(
 			array(

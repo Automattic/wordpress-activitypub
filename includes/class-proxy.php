@@ -11,7 +11,9 @@ namespace Activitypub;
  * The one way to get a remote ActivityPub object.
  *
  * Resolves an acct through WebFinger, answers from the cache, and on a miss fetches the
- * object with a signed request, checks that it is served under its own id, and stores it.
+ * object with a signed request, checks that it is served as ActivityPub
+ * (`application/activity+json`, or `application/ld+json` with the ActivityStreams profile)
+ * and under its own id, and stores it.
  * The REST `proxyUrl` endpoint and the older fetch helpers go through here.
  *
  * Entries are transients, so the backing store is the site's persistent object cache where
@@ -71,7 +73,7 @@ class Proxy {
 			return $pre;
 		}
 
-		$url = object_to_uri( $id );
+		$url = object_to_id( $id );
 
 		if ( Webfinger::is_acct( $url ) ) {
 			$url = Webfinger::resolve( $url );
@@ -240,7 +242,7 @@ class Proxy {
 			$id = $id['id'] ?? null;
 		}
 
-		$url = object_to_uri( $id );
+		$url = object_to_id( $id );
 
 		return \is_string( $url ) && '' !== $url ? \strip_fragment_from_url( $url ) : '';
 	}
@@ -420,6 +422,18 @@ class Proxy {
 		$effective_url = Http::effective_url( $response );
 		if ( $effective_url ) {
 			$final_url = $effective_url;
+		}
+
+		// Only a document served as ActivityPub is one, as Mastodon requires.
+		if ( ! is_activitypub_content_type( \wp_remote_retrieve_header( $response, 'content-type' ) ) ) {
+			return new \WP_Error(
+				'activitypub_invalid_content_type',
+				\__( 'The response is not an ActivityPub document.', 'activitypub' ),
+				array(
+					'status' => 400,
+					'object' => $url,
+				)
+			);
 		}
 
 		$data = \json_decode( \wp_remote_retrieve_body( $response ), true );

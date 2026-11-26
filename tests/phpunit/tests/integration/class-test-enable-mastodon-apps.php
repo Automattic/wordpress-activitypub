@@ -7,11 +7,13 @@
 
 namespace Activitypub\Tests\Integration;
 
+use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Integration\Enable_Mastodon_Apps;
 use Activitypub\Transformer\Comment;
 use Activitypub\Transformer\Post;
+use Enable_Mastodon_Apps\Entity\Account;
 use Enable_Mastodon_Apps\Entity\Status;
 
 /**
@@ -84,6 +86,52 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 			'preferredUsername' => 'error',
 		),
 	);
+
+	/**
+	 * Non-media attachments must not prevent a remote status from loading.
+	 */
+	public function test_activity_to_status_skips_non_media_attachments() {
+		$method = new \ReflectionMethod( Enable_Mastodon_Apps::class, 'activity_to_status' );
+		$method->setAccessible( true );
+		$status = $method->invoke(
+			null,
+			array(
+				'id'         => 'https://example.org/posts/1',
+				'type'       => 'Note',
+				'published'  => '2026-01-01T12:00:00Z',
+				'content'    => 'A post with mixed attachments.',
+				'attachment' => array(
+					array(
+						'type'  => 'PropertyValue',
+						'name'  => 'Website',
+						'value' => 'https://example.org/',
+					),
+					array(
+						'type'      => 'Document',
+						'url'       => 'https://example.org/file.pdf',
+						'mediaType' => 'application/pdf',
+					),
+					array(
+						'type'      => 'Document',
+						'mediaType' => 'image/jpeg',
+					),
+					array(
+						'type'      => 'Document',
+						'url'       => 'https://example.org/image.jpg',
+						'mediaType' => 'image/jpeg',
+						'name'      => 'An image',
+					),
+				),
+			),
+			new Account()
+		);
+
+		$this->assertInstanceOf( Status::class, $status );
+		$this->assertSame( array( 0 ), array_keys( $status->media_attachments ) );
+		$this->assertSame( 'https://example.org/image.jpg', $status->media_attachments[0]->url );
+		$this->assertSame( 'image', $status->media_attachments[0]->type );
+		$this->assertSame( 'An image', $status->media_attachments[0]->description );
+	}
 
 	/**
 	 * Set up.
@@ -400,6 +448,45 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 			array( 'user@example.com', 'user' ),
 			array( 'https://example.com', 'https://example.com' ),
 		);
+	}
+
+	/**
+	 * A Mastodon client edits only the fields it sees, the published ones.
+	 *
+	 * Fields are matched by position, so a draft in the list would take the edit meant for a published field.
+	 *
+	 * @covers ::set_extra_fields
+	 */
+	public function test_set_extra_fields_leaves_unpublished_fields_alone() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$fields  = array();
+		foreach ( array( 'draft', 'publish' ) as $order => $status ) {
+			$fields[ $status ] = self::factory()->post->create(
+				array(
+					'post_type'   => Extra_Fields::USER_POST_TYPE,
+					'post_author' => $user_id,
+					'post_status' => $status,
+					'post_title'  => $status,
+					'menu_order'  => $order,
+				)
+			);
+		}
+
+		$method = new \ReflectionMethod( Enable_Mastodon_Apps::class, 'set_extra_fields' );
+		$method->setAccessible( true );
+		$method->invoke(
+			null,
+			$user_id,
+			array(
+				array(
+					'name'  => 'edited',
+					'value' => 'Edited',
+				),
+			)
+		);
+
+		$this->assertSame( 'edited', \get_post( $fields['publish'] )->post_title, 'The published field takes the edit.' );
+		$this->assertSame( 'draft', \get_post( $fields['draft'] )->post_title, 'A draft is neither edited nor removed.' );
 	}
 
 	/**

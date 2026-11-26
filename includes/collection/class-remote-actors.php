@@ -16,7 +16,9 @@ use Activitypub\Webfinger;
 use function Activitypub\get_id_hash;
 use function Activitypub\get_stored_id_forms;
 use function Activitypub\is_actor;
+use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
+use function Activitypub\object_to_id;
 use function Activitypub\object_to_uri;
 use function Activitypub\unescape_guid;
 
@@ -301,6 +303,22 @@ class Remote_Actors {
 
 		// One round trip, however many followers the actor has, because a persistent cache charges per call.
 		\wp_cache_delete_multiple( $keys, 'activitypub' );
+	}
+
+	/**
+	 * Check whether a stored remote actor is the actor with the given URI.
+	 *
+	 * The guid of a remote actor post is its actor URI, see get_by_uri().
+	 *
+	 * @since unreleased
+	 *
+	 * @param int          $post_id The ID of the remote actor post.
+	 * @param array|string $actor   The actor.
+	 *
+	 * @return bool True if the post belongs to the actor.
+	 */
+	public static function has_uri( $post_id, $actor ) {
+		return $post_id && is_same_actor( unescape_guid( \get_post_field( 'guid', $post_id, 'raw' ) ), $actor );
 	}
 
 	/**
@@ -847,7 +865,7 @@ class Remote_Actors {
 	 * @return string|null Normalized actor URI or null if unable to resolve.
 	 */
 	public static function normalize_identifier( $actor ) {
-		$actor = object_to_uri( $actor );
+		$actor = object_to_id( $actor );
 		if ( ! \is_string( $actor ) ) {
 			return null;
 		}
@@ -857,7 +875,7 @@ class Remote_Actors {
 		// If it's an email-like webfinger address, resolve it.
 		if ( \filter_var( $actor, FILTER_VALIDATE_EMAIL ) ) {
 			$resolved = Webfinger::resolve( $actor );
-			return \is_wp_error( $resolved ) ? null : object_to_uri( $resolved );
+			return \is_wp_error( $resolved ) ? null : object_to_id( $resolved );
 		}
 
 		// If it's a URL without scheme, add https://.

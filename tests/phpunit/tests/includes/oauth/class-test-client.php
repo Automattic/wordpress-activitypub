@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\OAuth;
 
+use Activitypub\Http;
 use Activitypub\OAuth\Client;
 use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Token;
@@ -425,6 +426,25 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get method returns error for an empty client ID, even when clients exist.
+	 *
+	 * @covers ::get
+	 */
+	public function test_get_empty_client_id() {
+		$this->create_client(
+			array(
+				'name'          => 'Test Client',
+				'redirect_uris' => array( 'https://example.com/callback' ),
+			)
+		);
+
+		$result = Client::get( '' );
+
+		$this->assertInstanceOf( \WP_Error::class, $result );
+		$this->assertEquals( 'activitypub_client_not_found', $result->get_error_code() );
+	}
+
+	/**
 	 * An unknown client is not discovered outside a REST request, a discovered one still loads.
 	 *
 	 * The consent form on wp-login.php is not rate-limited, so it must not fetch client metadata.
@@ -728,6 +748,29 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that deleting all clients also revokes their tokens.
+	 *
+	 * @covers ::delete_all
+	 */
+	public function test_delete_all_revokes_tokens() {
+		$client  = Client::register(
+			array(
+				'name'          => 'Delete All Test Client',
+				'redirect_uris' => array( 'https://example.com/callback' ),
+			)
+		);
+		$user_id = $this->factory->user->create( array( 'role' => 'editor' ) );
+		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
+		$token = Token::create( $user_id, $client['client_id'], array( Scope::READ ) );
+
+		$this->assertNotWPError( Token::validate( $token['access_token'] ) );
+
+		Client::delete_all();
+
+		$this->assertSame( array(), Token::get_all_for_user( $user_id ) );
+	}
+
+	/**
 	 * Test delete method with non-existent client.
 	 *
 	 * @covers ::delete
@@ -989,6 +1032,44 @@ class Test_Client extends \WP_UnitTestCase {
 		$this->assertEquals( 'https://example.com/cimd-client', $metadata['client_id'] );
 		$this->assertEquals( 'CIMD Name', $metadata['client_name'] );
 		$this->assertEquals( array( 'https://example.com/cimd-callback' ), $metadata['redirect_uris'] );
+	}
+
+	/**
+	 * The client metadata document is fetched with a size limit, because its name and redirect URIs are stored.
+	 *
+	 * @covers ::fetch_client_metadata
+	 */
+	public function test_fetch_client_metadata_limits_the_response_size() {
+		$limit   = null;
+		$resolve = static function () {
+			return array(
+				'ipv4' => array( '93.184.216.34' ),
+				'ipv6' => array(),
+			);
+		};
+		$capture = static function ( $pre, $args ) use ( &$limit ) {
+			$limit = $args['limit_response_size'] ?? null;
+
+			return array(
+				'response' => array( 'code' => 200 ),
+				'headers'  => array(),
+				'body'     => '{"client_id":"https://app.example/client.json"}',
+			);
+		};
+
+		$method = new \ReflectionMethod( Client::class, 'fetch_client_metadata' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		\add_filter( 'activitypub_pre_resolve_public_host', $resolve );
+		\add_filter( 'pre_http_request', $capture, 10, 2 );
+		$metadata = $method->invoke( null, 'https://app.example/client.json' );
+		\remove_filter( 'pre_http_request', $capture, 10 );
+		\remove_filter( 'activitypub_pre_resolve_public_host', $resolve );
+
+		$this->assertSame( Http::SMALL_RESPONSE_SIZE, $limit );
+		$this->assertSame( 'https://app.example/client.json', $metadata['client_id'] );
 	}
 
 	/**

@@ -7,6 +7,7 @@
 
 namespace Activitypub\OAuth;
 
+use Activitypub\Http;
 use Activitypub\Sanitize;
 
 use function Activitypub\get_url_authority;
@@ -164,6 +165,15 @@ class Client {
 	 * @return Client|\WP_Error The client or error.
 	 */
 	public static function get( $client_id ) {
+		// Core ignores an empty meta value, so the query would match any client.
+		if ( ! $client_id ) {
+			return new \WP_Error(
+				'activitypub_client_not_found',
+				\__( 'OAuth client not found.', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
 		// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Client lookup by ID is necessary.
 		$posts = \get_posts(
 			array(
@@ -333,11 +343,12 @@ class Client {
 		}
 
 		$args = array(
-			'timeout'     => 10,
-			'headers'     => array(
+			'timeout'             => 10,
+			'headers'             => array(
 				'Accept' => 'application/cimd+json, application/json, application/ld+json, application/activity+json',
 			),
-			'redirection' => 0, // CIMDs prohibit following redirects to prevent client impersonation.
+			'redirection'         => 0, // CIMDs prohibit following redirects to prevent client impersonation.
+			'limit_response_size' => Http::SMALL_RESPONSE_SIZE, // The name and the redirect URIs are stored, so the document must not get large.
 		);
 
 		/*
@@ -927,6 +938,9 @@ class Client {
 	 * @return int The number of clients deleted.
 	 */
 	public static function delete_all() {
+		// Revoke the tokens first, the users are found through the client posts.
+		Token::revoke_all();
+
 		$post_ids = \get_posts(
 			array(
 				'post_type'   => self::POST_TYPE,
@@ -939,9 +953,6 @@ class Client {
 		foreach ( $post_ids as $post_id ) {
 			\wp_delete_post( $post_id, true );
 		}
-
-		// Also revoke all tokens stored in user meta.
-		Token::revoke_all();
 
 		return \count( $post_ids );
 	}

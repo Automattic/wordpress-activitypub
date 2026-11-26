@@ -10,11 +10,13 @@ namespace Activitypub\WP_Admin;
 use Activitypub\Application;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
+use Activitypub\OAuth\Server;
 use Activitypub\Proxy;
 use Activitypub\Sanitize;
 use Activitypub\Scheduler;
 use Activitypub\Webfinger;
 
+use function Activitypub\get_rest_url_by_path;
 use function Activitypub\user_can_activitypub;
 
 /**
@@ -32,6 +34,9 @@ class Health_Check {
 	public static function init() {
 		\add_filter( 'site_status_tests', array( self::class, 'add_tests' ) );
 		\add_filter( 'debug_information', array( self::class, 'debug_information' ) );
+
+		// Core's admin-ajax action for the async test `activitypub_wellknown`, see add_tests().
+		\add_action( 'wp_ajax_health-check-activitypub-wellknown', array( self::class, 'ajax_well_known_api' ) );
 
 		// Ensure schedules are registered when viewing the ActivityPub settings page.
 		\add_action( 'load-settings_page_activitypub', array( self::class, 'ensure_schedules_registered' ) );
@@ -148,6 +153,25 @@ class Health_Check {
 			'test'  => array( self::class, 'test_rest_api_accessibility' ),
 		);
 
+		/*
+		 * The well-known paths are rewrite rules, which only work with pretty permalinks.
+		 *
+		 * Async, because the test makes two requests to the site. It runs over admin-ajax, not
+		 * REST: both paths are served by REST routes, and a plugin that restricts the REST API
+		 * would otherwise also stop the test that reports it. Core builds the action by
+		 * prefixing `health-check-` and replacing the first underscore with a hyphen, so the
+		 * test name has exactly one underscore. The weekly cron run keeps only the counters, not
+		 * the description, so it skips the requests.
+		 */
+		if ( \get_option( 'activitypub_api', false ) && \get_option( 'permalink_structure' ) ) {
+			$tests['async']['activitypub_test_well_known_api'] = array(
+				'label'             => \__( 'ActivityPub API Discovery Test', 'activitypub' ),
+				'test'              => 'activitypub_wellknown',
+				'async_direct_test' => array( self::class, 'test_well_known_api' ),
+				'skip_cron'         => true,
+			);
+		}
+
 		$tests['direct']['activitypub_test_outbox_rate'] = array(
 			'label' => \__( 'Outbox Activity Rate Test', 'activitypub' ),
 			'test'  => array( self::class, 'test_outbox_rate' ),
@@ -247,6 +271,20 @@ class Health_Check {
 
 		// Try to access author URL.
 		$response = Proxy::get( $actor->get_id() );
+
+		if ( \is_wp_error( $response ) && 'activitypub_invalid_content_type' === $response->get_error_code() ) {
+			return new \WP_Error(
+				'author_url_wrong_content_type',
+				\sprintf(
+					// translators: %s: Author URL.
+					\__(
+						'Your author URL <code>%s</code> is not served as <code>application/activity+json</code>. Please check if a caching plugin or your web server changes the content type.',
+						'activitypub'
+					),
+					$actor->get_id()
+				)
+			);
+		}
 
 		if ( \is_wp_error( $response ) ) {
 			return new \WP_Error(
@@ -780,6 +818,135 @@ class Health_Check {
 		$result['actions']        = \sprintf(
 			'<p>%s</p>',
 			\__( 'Check your security plugin settings and ensure ActivityPub endpoints are accessible to unauthenticated requests.', 'activitypub' )
+		);
+
+		return $result;
+	}
+
+	/**
+	 * Serve the ActivityPub API discovery test to the Site Health screen.
+	 *
+	 * Same nonce and capability core uses for Site Health. The screen reads `response.data`,
+	 * hence `wp_send_json_success()`.
+	 *
+	 * @since unreleased
+	 *
+	 * @return void
+	 */
+	public static function ajax_well_known_api() {
+		\check_ajax_referer( 'health-check-site-status' );
+
+		if ( ! \current_user_can( 'view_site_health_checks' ) ) {
+			\wp_send_json_error( null, 403 );
+		}
+
+		\wp_send_json_success( self::test_well_known_api() );
+	}
+
+	/**
+	 * ActivityPub API discovery test.
+	 *
+	 * Apps find the OAuth server (RFC 8414) and the client configuration (FEP-65ca) under
+	 * `/.well-known/`. Another plugin or the web server can answer these paths before WordPress
+	 * reaches the plugin's rewrite rules, so the test requests them and checks that the answer is
+	 * the plugin's own document.
+	 *
+	 * @since unreleased
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_well_known_api() {
+		$result = array(
+			'label'       => \__( 'ActivityPub API discovery works', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'Apps can find the ActivityPub API of your site.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_well_known_api',
+		);
+
+		$documents = array(
+			'oauth-authorization-server' => static function ( $data ) {
+				$metadata = Server::get_metadata();
+
+				return isset( $data['issuer'], $data['authorization_endpoint'] )
+					&& $metadata['issuer'] === $data['issuer']
+					&& $metadata['authorization_endpoint'] === $data['authorization_endpoint'];
+			},
+			'activitypub-client-config'  => static function ( $data ) {
+				$links = isset( $data['links'] ) && \is_array( $data['links'] ) ? $data['links'] : array();
+
+				return \in_array( get_rest_url_by_path( 'client-config/1.0' ), \array_column( $links, 'href' ), true );
+			},
+		);
+
+		$problems = array();
+
+		foreach ( $documents as $name => $is_own_document ) {
+			$url      = \home_url( '/.well-known/' . $name );
+			$response = \wp_safe_remote_get(
+				$url,
+				array(
+					'timeout' => 5,
+					'cookies' => array(),
+					'headers' => array( 'Accept' => 'application/json' ),
+				)
+			);
+
+			if ( \is_wp_error( $response ) ) {
+				$problems[] = \sprintf(
+					/* translators: 1: URL, 2: Error message. */
+					\__( '<code>%1$s</code> is not reachable: %2$s', 'activitypub' ),
+					\esc_html( $url ),
+					\esc_html( $response->get_error_message() )
+				);
+				continue;
+			}
+
+			$status_code = \wp_remote_retrieve_response_code( $response );
+
+			if ( $status_code < 200 || $status_code >= 300 ) {
+				$problems[] = \sprintf(
+					/* translators: 1: URL, 2: HTTP status code. */
+					\__( '<code>%1$s</code> is not reachable: HTTP %2$d', 'activitypub' ),
+					\esc_html( $url ),
+					$status_code
+				);
+				continue;
+			}
+
+			$data = \json_decode( \wp_remote_retrieve_body( $response ), true );
+
+			if ( ! \is_array( $data ) || ! $is_own_document( $data ) ) {
+				$problems[] = \sprintf(
+					/* translators: %s: URL. */
+					\__( 'Another plugin or the web server answers <code>%s</code> instead of ActivityPub.', 'activitypub' ),
+					\esc_html( $url )
+				);
+			}
+		}
+
+		if ( empty( $problems ) ) {
+			return $result;
+		}
+
+		$result['status']         = 'recommended';
+		$result['label']          = \__( 'Apps cannot find the ActivityPub API of your site', 'activitypub' );
+		$result['badge']['color'] = 'orange';
+		$result['description']    = \sprintf(
+			'<p>%s</p><p>%s</p>',
+			\implode( '</p><p>', $problems ),
+			\__( 'Apps that look up the ActivityPub API at these addresses get another service, or nothing, and cannot sign in. Apps that use the endpoints listed in your profile still work.', 'activitypub' )
+		);
+		$result['actions']        = \sprintf(
+			'<p>%s</p>',
+			\__( 'Check which plugin answers these addresses, for example another OAuth or single sign-on plugin, and turn that feature off. If no plugin does, check the configuration of your web server.', 'activitypub' )
 		);
 
 		return $result;
