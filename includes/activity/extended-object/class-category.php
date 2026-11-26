@@ -7,7 +7,9 @@
  * @package Activitypub
  */
 
-namespace Activitypub\Activity;
+namespace Activitypub\Activity\Extended_Object;
+
+use Activitypub\Activity\Base_Object;
 
 /**
  * Represents a category as a SKOS concept.

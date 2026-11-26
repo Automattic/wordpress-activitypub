@@ -8,7 +8,7 @@
 namespace Activitypub\Transformer;
 
 use Activitypub\Activity\Base_Object;
-use Activitypub\Activity\Category;
+use Activitypub\Activity\Extended_Object\Category;
 
 /**
  * Term Transformer Class.
