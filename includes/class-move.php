@@ -221,6 +221,43 @@ class Move {
 	}
 
 	/**
+	 * Cancel the move of an ActivityPub Actor.
+	 *
+	 * The profile no longer points at the new account. Followers that already moved stay with it,
+	 * and the Move stays in the outbox.
+	 *
+	 * `Move::cancel( 'https://example.com/?author=123' );`
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $from The account URL.
+	 *
+	 * @return true|\WP_Error True on success, WP_Error if the account is not found or has not moved.
+	 */
+	public static function cancel( $from ) {
+		$user = Actors::get_by_various( $from );
+
+		if ( \is_wp_error( $user ) ) {
+			return $user;
+		}
+
+		if ( ! $user->get_moved_to() ) {
+			return new \WP_Error( 'activitypub_not_moved', \__( 'The account has not moved.', 'activitypub' ) );
+		}
+
+		if ( $user->get__id() > 0 ) {
+			\delete_user_option( $user->get__id(), 'activitypub_moved_to' );
+		} else {
+			\delete_option( 'activitypub_blog_user_moved_to' );
+		}
+
+		// Deleting the option sends nothing, and receivers drop the move with the next profile Update.
+		Actor_Scheduler::schedule_profile_update( $user->get__id() );
+
+		return true;
+	}
+
+	/**
 	 * Move a remote actor to its new id.
 	 *
 	 * Our users who follow the old actor follow the new one (FEP-7628), and their blocks carry over.

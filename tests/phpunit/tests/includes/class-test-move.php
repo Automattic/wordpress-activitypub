@@ -437,6 +437,69 @@ class Test_Move extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Cancelling a move removes the movedTo and federates a profile Update without it.
+	 *
+	 * @covers ::cancel
+	 */
+	public function test_cancel_removes_moved_to() {
+		$from = Actors::get_by_id( self::$user_id )->get_id();
+		$to   = 'https://newsite.com/user/1';
+
+		$filter = function () use ( $from, $to ) {
+			return array(
+				'id'          => $to,
+				'type'        => 'Person',
+				'alsoKnownAs' => array( $from ),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		Move::externally( $from, $to );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertTrue( Move::cancel( $from ) );
+		$this->assertNull( Actors::get_by_id( self::$user_id )->get_moved_to() );
+
+		// The Update of the cancel replaces the pending one of the move.
+		$updates = $this->get_federated_updates();
+
+		$this->assertCount( 1, $updates );
+		$this->assertFalse( \property_exists( \json_decode( $updates[0]->post_content )->object, 'movedTo' ), 'The Update must no longer carry the movedTo.' );
+	}
+
+	/**
+	 * Cancelling the move of the blog actor removes its movedTo.
+	 *
+	 * @covers ::cancel
+	 */
+	public function test_cancel_with_blog_actor() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		\update_option( 'activitypub_blog_user_moved_to', 'https://newsite.com/user/0' );
+
+		$from = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
+
+		$this->assertTrue( Move::cancel( $from ) );
+		$this->assertNull( Actors::get_by_id( Actors::BLOG_USER_ID )->get_moved_to() );
+		$this->assertFalse( \get_option( 'activitypub_blog_user_moved_to' ) );
+
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * An account that has not moved has nothing to cancel, and no Update is sent.
+	 *
+	 * @covers ::cancel
+	 */
+	public function test_cancel_without_move() {
+		$result = Move::cancel( Actors::get_by_id( self::$user_id )->get_id() );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'activitypub_not_moved', $result->get_error_code() );
+		$this->assertEmpty( $this->get_federated_updates() );
+	}
+
+	/**
 	 * Test the internally() method with valid input.
 	 *
 	 * @covers ::internally
