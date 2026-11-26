@@ -2146,16 +2146,16 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * A comment of a registered type is only a reaction as long as the comment list leaves its type out.
+	 * The replies to a comment are left out of the comment list while its type is, and comments are threaded.
 	 *
-	 * @covers ::is_shown_as_reaction
+	 * @covers ::hides_replies
 	 */
-	public function test_is_shown_as_reaction() {
+	public function test_hides_replies() {
 		$post_id = self::factory()->post->create();
 		$comment = self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) );
 		$types   = array();
 		foreach ( array( 'like', 'repost', 'quote' ) as $type ) {
-			// A pending reaction is a reaction too.
+			// A pending reaction counts too.
 			$types[ $type ] = self::factory()->comment->create(
 				array(
 					'comment_post_ID'  => $post_id,
@@ -2164,12 +2164,13 @@ class Test_Comment extends \WP_UnitTestCase {
 				)
 			);
 		}
+		\update_option( 'thread_comments', '1' );
 
-		$this->assertFalse( \Activitypub\Comment::is_shown_as_reaction( $comment ) );
-		$this->assertFalse( \Activitypub\Comment::is_shown_as_reaction( 0 ) );
-		$this->assertFalse( \Activitypub\Comment::is_shown_as_reaction( null ), 'No comment is no reaction, also with a comment in scope.' );
+		$this->assertFalse( \Activitypub\Comment::hides_replies( $comment ) );
+		$this->assertFalse( \Activitypub\Comment::hides_replies( 0 ) );
+		$this->assertFalse( \Activitypub\Comment::hides_replies( null ), 'No comment hides nothing, also with a comment in scope.' );
 		foreach ( $types as $type => $id ) {
-			$this->assertTrue( \Activitypub\Comment::is_shown_as_reaction( $id ), $type );
+			$this->assertTrue( \Activitypub\Comment::hides_replies( $id ), $type );
 		}
 
 		// Code that shows quotes as comments takes the type off the list the comment query leaves out.
@@ -2177,12 +2178,30 @@ class Test_Comment extends \WP_UnitTestCase {
 			$query->query_vars['type__not_in'] = \array_values( \array_diff( (array) $query->query_vars['type__not_in'], array( 'quote' ) ) );
 		};
 		\add_action( 'pre_get_comments', $show_quotes, 20 );
-		$quote_shown = \Activitypub\Comment::is_shown_as_reaction( $types['quote'] );
-		$like_shown  = \Activitypub\Comment::is_shown_as_reaction( $types['like'] );
+		$quote_hides = \Activitypub\Comment::hides_replies( $types['quote'] );
+		$like_hides  = \Activitypub\Comment::hides_replies( $types['like'] );
 		\remove_action( 'pre_get_comments', $show_quotes, 20 );
 
-		$this->assertFalse( $quote_shown );
-		$this->assertTrue( $like_shown );
+		$this->assertFalse( $quote_hides );
+		$this->assertTrue( $like_hides );
+
+		// In the admin, comments on a stored remote post are hidden, the question is still only about the type.
+		$remote = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => self::factory()->post->create( array( 'post_type' => \Activitypub\Collection\Remote_Posts::POST_TYPE ) ),
+				'comment_type'    => 'quote',
+			)
+		);
+		\set_current_screen( 'edit-comments' );
+		\add_action( 'pre_get_comments', $show_quotes, 20 );
+		$remote_hides = \Activitypub\Comment::hides_replies( $remote );
+		\remove_action( 'pre_get_comments', $show_quotes, 20 );
+		\set_current_screen( 'front' );
+		$this->assertFalse( $remote_hides );
+
+		// Without threads every comment is listed on its own, so no reply is hidden.
+		\update_option( 'thread_comments', '0' );
+		$this->assertFalse( \Activitypub\Comment::hides_replies( $types['quote'] ) );
 	}
 
 	/**

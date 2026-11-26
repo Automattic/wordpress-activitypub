@@ -302,15 +302,16 @@ class Search {
 			return new \WP_Error( 'activitypub_import_other_host', \__( 'The author of this reply is not on the server it comes from.', 'activitypub' ) );
 		}
 
-		$target  = object_to_id( $object['inReplyTo'] );
-		$post_id = get_target_post_id( $target, url_to_commentid( $target ) );
+		$target     = object_to_id( $object['inReplyTo'] );
+		$comment_id = url_to_commentid( $target );
+		$post_id    = get_target_post_id( $target, $comment_id );
 
 		// The notice shows the post's title, so it has to be one anyone can read. Stored remote posts are public.
 		if ( ! $post_id || ( ! is_ap_post( $post_id ) && ! is_post_publicly_queryable( $post_id ) ) ) {
 			return new \WP_Error( 'activitypub_import_not_here', \__( 'This is not a reply to one of your posts.', 'activitypub' ) );
 		}
 
-		if ( Comment::is_shown_as_reaction( url_to_commentid( $target ) ) ) {
+		if ( Comment::hides_replies( $comment_id ) ) {
 			return new \WP_Error( 'activitypub_import_reply_to_reaction', \__( 'This is a reply to a reaction, which is not shown as a comment.', 'activitypub' ) );
 		}
 

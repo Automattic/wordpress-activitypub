@@ -1687,7 +1687,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * A reply to a quote is not stored while quotes are only shown with the reactions.
+	 * A reply to a quote is not stored while quotes are only shown with the reactions and comments are threaded.
 	 *
 	 * The comment list would count the reply and never show it. Once quotes are shown as
 	 * comments, as the quotes-as-comments snippet does, replies to them are stored again.
@@ -1713,7 +1713,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 				'object' => array(
 					'type'      => 'Note',
 					'id'        => $id,
-					'content'   => '<p>A reply to the quote.</p>',
+					'content'   => \sprintf( '<p>A reply to the quote, %s.</p>', \basename( $id ) ),
 					'inReplyTo' => 'https://example.com/note/quote',
 				),
 			);
@@ -1740,6 +1740,15 @@ class Test_Interactions extends \WP_UnitTestCase {
 		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10 );
 
 		$this->assertSame( $quote, (int) \get_comment( $shown )->comment_parent, 'A reply to a quote that is shown as a comment is stored.' );
+
+		// Without threads the reply is listed on its own, so it is stored.
+		\update_option( 'thread_comments', '0' );
+		\add_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10, 2 );
+		$flat = Interactions::add_comment( $reply( 'https://example.com/note/reply-4' ) );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10 );
+		\update_option( 'thread_comments', '1' );
+
+		$this->assertSame( $quote, (int) \get_comment( $flat )->comment_parent, 'Without threads a reply to a quote is stored.' );
 	}
 
 	/**
