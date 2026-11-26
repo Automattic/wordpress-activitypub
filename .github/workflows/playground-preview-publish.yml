@@ -8,6 +8,10 @@ on:
 
 jobs:
   publish:
+    # Skip fork PRs: a bot comment would make a link to fork-built code look vetted.
+    # The check lives here because the build workflow comes from the PR and can be changed by it.
+    # Dependency updates need no preview; the build skips them too.
+    if: github.event.workflow_run.head_repository.full_name == github.repository && !startsWith(github.event.workflow_run.head_branch, 'dependabot/')
     permissions:
       contents: write
       pull-requests: write
@@ -19,6 +23,8 @@ jobs:
         {
           "$schema": "https://playground.wordpress.net/blueprint-schema.json",
           "landingPage": "/wp-admin/options-general.php?page=activitypub",
+          "preferredVersions": { "php": "8.2", "wp": "latest" },
+          "features": { "networking": true },
           "login": true,
           "steps": [
             {
