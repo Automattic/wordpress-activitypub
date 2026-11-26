@@ -104,12 +104,12 @@ class Term extends Base {
 	}
 
 	/**
-	 * Returns the description of the term as plain text.
+	 * Returns the description of the term, without tags.
 	 *
 	 * @return string The term's description, or an empty string.
 	 */
 	public function get_summary() {
-		return \wp_specialchars_decode( \wp_strip_all_tags( $this->item->description ), ENT_QUOTES );
+		return \wp_strip_all_tags( $this->item->description );
 	}
 
 	/**
