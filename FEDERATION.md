@@ -44,6 +44,7 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 - [FEP-ae0c: Fediverse Relay Protocols](https://codeberg.org/fediverse/fep/src/branch/main/fep/ae0c/fep-ae0c.md)
 - [FEP-dc88: MathML in ActivityPub](https://codeberg.org/fediverse/fep/src/branch/main/fep/dc88/fep-dc88.md)
 - [FEP-fe34: Origin-based security model](https://codeberg.org/fediverse/fep/src/branch/main/fep/fe34/fep-fe34.md) (checks that activities, objects and keys are on the same host as their actor, and only trusts a fetched object served under its own `id`; compares hosts, not full origins, and does not accept other objects of the same origin)
+- [FEP-2fa1: Federated Categories](https://codeberg.org/fediverse/fep/src/branch/main/fep/2fa1/fep-2fa1.md) (mapping to remote categories is not yet implemented)
 
 ## ActivityPub
 
@@ -158,6 +159,10 @@ The context is included as `https://purl.archive.org/miscellany`.
 
 When a quoted author revokes a `QuoteAuthorization` by deleting the stamp, the plugin clears the stamp
 and sends an `Update` of the quote post, but does not forward the `Delete` to the post's audience.
+
+**[FEP-2fa1](https://codeberg.org/fediverse/fep/src/branch/main/fep/2fa1/fep-2fa1.md)**
+
+- `Object` - `Category` tags for WordPress categories, with `broader` for the parent category
 
 **[GoToSocial](https://gotosocial.org/ns)**
 
