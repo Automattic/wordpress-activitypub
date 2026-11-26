@@ -1,4 +1,4 @@
 Significance: patch
 Type: fixed
 
-Replies to a quote are no longer stored while quotes are only shown as reactions, so posts no longer count comments that are never shown.
+With threaded comments, replies to a quote are no longer stored while quotes are only shown as reactions, so posts no longer count comments that are never shown.

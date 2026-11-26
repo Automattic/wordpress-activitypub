@@ -1742,11 +1742,12 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertSame( $quote, (int) \get_comment( $shown )->comment_parent, 'A reply to a quote that is shown as a comment is stored.' );
 
 		// Without threads the reply is listed on its own, so it is stored.
+		$threaded = \get_option( 'thread_comments' );
 		\update_option( 'thread_comments', '0' );
 		\add_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10, 2 );
 		$flat = Interactions::add_comment( $reply( 'https://example.com/note/reply-4' ) );
 		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10 );
-		\update_option( 'thread_comments', '1' );
+		\update_option( 'thread_comments', $threaded );
 
 		$this->assertSame( $quote, (int) \get_comment( $flat )->comment_parent, 'Without threads a reply to a quote is stored.' );
 	}

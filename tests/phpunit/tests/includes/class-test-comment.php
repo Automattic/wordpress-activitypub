@@ -2164,6 +2164,7 @@ class Test_Comment extends \WP_UnitTestCase {
 				)
 			);
 		}
+		$threaded = \get_option( 'thread_comments' );
 		\update_option( 'thread_comments', '1' );
 
 		$this->assertFalse( \Activitypub\Comment::hides_replies( $comment ) );
@@ -2201,7 +2202,9 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		// Without threads every comment is listed on its own, so no reply is hidden.
 		\update_option( 'thread_comments', '0' );
-		$this->assertFalse( \Activitypub\Comment::hides_replies( $types['quote'] ) );
+		$flat_hides = \Activitypub\Comment::hides_replies( $types['quote'] );
+		\update_option( 'thread_comments', $threaded );
+		$this->assertFalse( $flat_hides );
 	}
 
 	/**
