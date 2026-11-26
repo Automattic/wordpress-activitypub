@@ -63,6 +63,14 @@ class Interactions {
 			// Regular reply.
 			$target_url        = object_to_id( $activity['object']['inReplyTo'] );
 			$parent_comment_id = url_to_commentid( $target_url );
+
+			/*
+			 * A reply to a comment that is only shown as a reaction would be counted but never
+			 * shown. A local reply is still stored, because that is how it is sent.
+			 */
+			if ( null === $user_id && Comment::hides_replies( $parent_comment_id ) ) {
+				return false;
+			}
 		} else {
 			// Check for quote.
 			$target_url = get_quote_url( $activity );

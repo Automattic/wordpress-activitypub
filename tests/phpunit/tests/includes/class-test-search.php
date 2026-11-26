@@ -441,6 +441,35 @@ class Test_Search extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A reply to a reaction is not offered for import, the comment list would not show it.
+	 *
+	 * @covers \Activitypub\Search::enhance_admin_comment_search
+	 * @covers \Activitypub\Search::is_importable_reply
+	 */
+	public function test_admin_search_refuses_a_reply_to_a_reaction() {
+		self::factory()->comment->create(
+			array(
+				'comment_post_ID' => self::factory()->post->create(),
+				'comment_type'    => 'quote',
+				'comment_meta'    => array(
+					'protocol'  => 'activitypub',
+					'source_id' => 'https://1.1.1.1/notes/quote',
+				),
+			)
+		);
+
+		$url     = 'https://1.1.1.1/notes/11';
+		$filters = $this->serve_reply( $url, array( 'inReplyTo' => 'https://1.1.1.1/notes/quote' ) );
+
+		$notice = $this->admin_search_notice( $url );
+
+		$this->stop_serving( $filters );
+
+		$this->assertStringContainsString( 'This is a reply to a reaction, which is not shown as a comment.', $notice );
+		$this->assertStringNotContainsString( 'action=activitypub_import_reply', $notice );
+	}
+
+	/**
 	 * After a failed import the comments screen says why storing the reply failed.
 	 *
 	 * @covers \Activitypub\Search::enhance_admin_comment_search

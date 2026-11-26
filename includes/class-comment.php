@@ -866,6 +866,36 @@ class Comment {
 	}
 
 	/**
+	 * Whether the comment list leaves out the replies to a comment.
+	 *
+	 * The comment list leaves out the registered types, see comment_query(), and with threaded
+	 * comments a reply is only shown below its parent, so a reply to such a comment is counted
+	 * but never shown. Code that shows one of the types as a comment takes it off that list on
+	 * `pre_get_comments`, so the same list is asked here. The hook runs without the query, which
+	 * also leaves out the post types that hide their comments in the admin.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int|\WP_Comment $comment The comment or its ID.
+	 *
+	 * @return bool True if the replies to the comment are not shown.
+	 */
+	public static function hides_replies( $comment ) {
+		// Without one, get_comment() would return the comment in scope.
+		$comment = $comment ? \get_comment( $comment ) : null;
+
+		if ( ! $comment || ! \get_option( 'thread_comments' ) || ! self::is_registered_comment_type( $comment->comment_type ) ) {
+			return false;
+		}
+
+		$query = new \WP_Comment_Query();
+		$query->parse_query( array( 'type__not_in' => self::get_comment_type_slugs() ) );
+		\do_action_ref_array( 'pre_get_comments', array( &$query ) );
+
+		return \in_array( $comment->comment_type, (array) $query->query_vars['type__not_in'], true );
+	}
+
+	/**
 	 * Excludes likes and reposts from comment queries.
 	 *
 	 * @author Jan Boddez

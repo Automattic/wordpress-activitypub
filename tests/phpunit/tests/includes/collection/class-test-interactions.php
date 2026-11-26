@@ -1687,6 +1687,72 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A reply to a quote is not stored while quotes are only shown with the reactions and comments are threaded.
+	 *
+	 * The comment list would count the reply and never show it. Once quotes are shown as
+	 * comments, as the quotes-as-comments snippet does, replies to them are stored again.
+	 * A reply by a local user is always stored, that is how it is sent.
+	 *
+	 * @covers ::add_comment
+	 */
+	public function test_add_comment_refuses_a_reply_to_a_reaction() {
+		$quote = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => self::$post_id,
+				'comment_type'    => 'quote',
+				'comment_meta'    => array(
+					'protocol'  => 'activitypub',
+					'source_id' => 'https://example.com/note/quote',
+				),
+			)
+		);
+		$reply = static function ( $id ) {
+			return array(
+				'type'   => 'Create',
+				'actor'  => 'https://example.com/users/testuser',
+				'object' => array(
+					'type'      => 'Note',
+					'id'        => $id,
+					'content'   => \sprintf( '<p>A reply to the quote, %s.</p>', \basename( $id ) ),
+					'inReplyTo' => 'https://example.com/note/quote',
+				),
+			);
+		};
+
+		\add_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10, 2 );
+
+		$this->assertFalse( Interactions::add_comment( $reply( 'https://example.com/note/reply-1' ) ) );
+		$this->assertEmpty( \get_comments( array( 'parent' => $quote ) ), 'The reply must not be stored.' );
+
+		$local = Interactions::add_comment( $reply( 'https://example.com/note/reply-2' ), self::$user_id );
+		$this->assertSame( $quote, (int) \get_comment( $local )->comment_parent, 'A local reply is stored.' );
+
+		// What the quotes-as-comments snippet does.
+		$show_quotes = static function ( $query ) {
+			if ( ! empty( $query->query_vars['type__not_in'] ) && \is_array( $query->query_vars['type__not_in'] ) ) {
+				$query->query_vars['type__not_in'] = \array_values( \array_diff( $query->query_vars['type__not_in'], array( 'quote' ) ) );
+			}
+		};
+		\add_action( 'pre_get_comments', $show_quotes, 20 );
+		$shown = Interactions::add_comment( $reply( 'https://example.com/note/reply-3' ) );
+		\remove_action( 'pre_get_comments', $show_quotes, 20 );
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10 );
+
+		$this->assertSame( $quote, (int) \get_comment( $shown )->comment_parent, 'A reply to a quote that is shown as a comment is stored.' );
+
+		// Without threads the reply is listed on its own, so it is stored.
+		$threaded = \get_option( 'thread_comments' );
+		\update_option( 'thread_comments', '0' );
+		\add_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10, 2 );
+		$flat = Interactions::add_comment( $reply( 'https://example.com/note/reply-4' ) );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10 );
+		\update_option( 'thread_comments', $threaded );
+
+		$this->assertSame( $quote, (int) \get_comment( $flat )->comment_parent, 'Without threads a reply to a quote is stored.' );
+	}
+
+	/**
 	 * Test that a remote quote gets the comment allowlist, not the post one.
 	 *
 	 * @covers ::add_comment

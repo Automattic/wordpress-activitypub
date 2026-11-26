@@ -2146,6 +2146,68 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The replies to a comment are left out of the comment list while its type is, and comments are threaded.
+	 *
+	 * @covers ::hides_replies
+	 */
+	public function test_hides_replies() {
+		$post_id = self::factory()->post->create();
+		$comment = self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) );
+		$types   = array();
+		foreach ( array( 'like', 'repost', 'quote' ) as $type ) {
+			// A pending reaction counts too.
+			$types[ $type ] = self::factory()->comment->create(
+				array(
+					'comment_post_ID'  => $post_id,
+					'comment_type'     => $type,
+					'comment_approved' => 'quote' === $type ? 0 : 1,
+				)
+			);
+		}
+		$threaded = \get_option( 'thread_comments' );
+		\update_option( 'thread_comments', '1' );
+
+		$this->assertFalse( \Activitypub\Comment::hides_replies( $comment ) );
+		$this->assertFalse( \Activitypub\Comment::hides_replies( 0 ) );
+		$this->assertFalse( \Activitypub\Comment::hides_replies( null ), 'No comment hides nothing, also with a comment in scope.' );
+		foreach ( $types as $type => $id ) {
+			$this->assertTrue( \Activitypub\Comment::hides_replies( $id ), $type );
+		}
+
+		// Code that shows quotes as comments takes the type off the list the comment query leaves out.
+		$show_quotes = static function ( $query ) {
+			$query->query_vars['type__not_in'] = \array_values( \array_diff( (array) $query->query_vars['type__not_in'], array( 'quote' ) ) );
+		};
+		\add_action( 'pre_get_comments', $show_quotes, 20 );
+		$quote_hides = \Activitypub\Comment::hides_replies( $types['quote'] );
+		$like_hides  = \Activitypub\Comment::hides_replies( $types['like'] );
+		\remove_action( 'pre_get_comments', $show_quotes, 20 );
+
+		$this->assertFalse( $quote_hides );
+		$this->assertTrue( $like_hides );
+
+		// In the admin, comments on a stored remote post are hidden, the question is still only about the type.
+		$remote = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => self::factory()->post->create( array( 'post_type' => \Activitypub\Collection\Remote_Posts::POST_TYPE ) ),
+				'comment_type'    => 'quote',
+			)
+		);
+		\set_current_screen( 'edit-comments' );
+		\add_action( 'pre_get_comments', $show_quotes, 20 );
+		$remote_hides = \Activitypub\Comment::hides_replies( $remote );
+		\remove_action( 'pre_get_comments', $show_quotes, 20 );
+		\set_current_screen( 'front' );
+		$this->assertFalse( $remote_hides );
+
+		// Without threads every comment is listed on its own, so no reply is hidden.
+		\update_option( 'thread_comments', '0' );
+		$flat_hides = \Activitypub\Comment::hides_replies( $types['quote'] );
+		\update_option( 'thread_comments', $threaded );
+		$this->assertFalse( $flat_hides );
+	}
+
+	/**
 	 * Test that an explicit request for an AP comment type is respected.
 	 *
 	 * @covers ::comment_query
