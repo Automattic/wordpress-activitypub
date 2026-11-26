@@ -196,7 +196,7 @@ class Move {
 		}
 
 		// Normalize alsoKnownAs to a list of ids (some JSON-LD payloads use a string or objects).
-		$also_known_as = \array_map( '\Activitypub\object_to_uri', (array) ( $target_object['alsoKnownAs'] ?? array() ) );
+		$also_known_as = \array_map( '\Activitypub\object_to_id', (array) ( $target_object['alsoKnownAs'] ?? array() ) );
 		if ( empty( $also_known_as ) ) {
 			return false;
 		}
