@@ -9,9 +9,13 @@ namespace Activitypub\Tests\Handler;
 
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Following;
+use Activitypub\Collection\Inbox;
+use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
 use Activitypub\Handler\Move;
+use Activitypub\Moderation;
 
 use function Activitypub\get_id_hash;
 use function Activitypub\object_to_uri;
@@ -642,7 +646,175 @@ class Test_Move extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * A move to a target id with `&` ends up on the moved actor, not on a second one.
+	 * A Move sent by the new actor (pull mode) is accepted when the old actor points at it.
+	 *
+	 * @covers ::handle_move
+	 */
+	public function test_handle_move_pull_mode() {
+		$origin = 'https://old.example/users/dave';
+		$target = 'https://new.example/users/dave';
+
+		$id     = Remote_Actors::upsert( $this->actor( $origin ) );
+		$filter = $this->mock_remote(
+			array(
+				$origin => $this->actor( $origin, array( 'movedTo' => $target ) ),
+				$target => $this->actor( $target, array( 'alsoKnownAs' => array( $origin ) ) ),
+			)
+		);
+
+		Move::handle_move(
+			array(
+				'type'   => 'Move',
+				'actor'  => $target,
+				'object' => $origin,
+				'target' => $target,
+			),
+			$this->user_id
+		);
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertNotWPError( Remote_Actors::get_by_uri( $target ) );
+		$this->assertNull( \get_post( $id ), 'The old actor must be merged away.' );
+	}
+
+	/**
+	 * A `copiedTo` origin stays active, so it is not merged away.
+	 *
+	 * @covers ::handle_move
+	 */
+	public function test_handle_move_ignores_copied_to() {
+		$origin = 'https://old.example/users/gina';
+		$target = 'https://new.example/users/gina';
+
+		$id     = Remote_Actors::upsert( $this->actor( $origin ) );
+		$filter = $this->mock_remote(
+			array(
+				$origin => $this->actor( $origin, array( 'copiedTo' => $target ) ),
+				$target => $this->actor( $target, array( 'alsoKnownAs' => array( $origin ) ) ),
+			)
+		);
+
+		Move::handle_move(
+			array(
+				'type'   => 'Move',
+				'actor'  => $origin,
+				'object' => $origin,
+				'target' => $target,
+			),
+			$this->user_id
+		);
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertSame( $id, Remote_Actors::get_by_uri( $origin )->ID );
+		$this->assertWPError( Remote_Actors::get_by_uri( $target ) );
+	}
+
+	/**
+	 * A remote actor can not move to an actor on this site.
+	 *
+	 * @covers ::handle_move
+	 */
+	public function test_handle_move_rejects_local_target() {
+		$origin = 'https://old.example/users/hank';
+		$target = \home_url( '/?author=' . $this->user_id );
+
+		$id     = Remote_Actors::upsert( $this->actor( $origin ) );
+		$filter = $this->mock_remote(
+			array(
+				$origin => $this->actor( $origin, array( 'movedTo' => $target ) ),
+				$target => $this->actor( $target, array( 'alsoKnownAs' => array( $origin ) ) ),
+			)
+		);
+
+		Move::handle_move(
+			array(
+				'type'   => 'Move',
+				'actor'  => $origin,
+				'object' => $origin,
+				'target' => $target,
+			),
+			$this->user_id
+		);
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertSame( $id, Remote_Actors::get_by_uri( $origin )->ID );
+	}
+
+	/**
+	 * A Move to an actor the site blocks is not applied.
+	 *
+	 * @covers ::handle_move
+	 */
+	public function test_handle_move_rejects_site_blocked_target() {
+		$origin = 'https://old.example/users/ivy';
+		$target = 'https://blocked.example/users/ivy';
+
+		Moderation::add_site_block( Moderation::TYPE_DOMAIN, 'blocked.example' );
+		$id     = Remote_Actors::upsert( $this->actor( $origin ) );
+		$filter = $this->mock_remote(
+			array(
+				$origin => $this->actor( $origin, array( 'movedTo' => $target ) ),
+				$target => $this->actor( $target, array( 'alsoKnownAs' => array( $origin ) ) ),
+			)
+		);
+
+		Move::handle_move(
+			array(
+				'type'   => 'Move',
+				'actor'  => $origin,
+				'object' => $origin,
+				'target' => $target,
+			),
+			$this->user_id
+		);
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+		Moderation::remove_site_block( Moderation::TYPE_DOMAIN, 'blocked.example' );
+
+		$this->assertSame( $id, Remote_Actors::get_by_uri( $origin )->ID );
+		$this->assertWPError( Remote_Actors::get_by_uri( $target ) );
+	}
+
+	/**
+	 * The shared inbox hands one Move to every recipient; it is handled once, on the shared hook.
+	 *
+	 * @covers ::handle_move
+	 */
+	public function test_handle_move_runs_once_from_shared_inbox() {
+		$origin   = 'https://old.example/users/kim';
+		$activity = array(
+			'type'   => 'Move',
+			'actor'  => $origin,
+			'object' => $origin,
+			'target' => 'https://new.example/users/kim',
+		);
+
+		Remote_Actors::upsert( $this->actor( $origin ) );
+
+		$fetches = 0;
+		$filter  = function ( $pre, $url_or_object ) use ( &$fetches, $origin ) {
+			++$fetches;
+			return object_to_uri( $url_or_object ) === $origin ? $this->actor( $origin ) : $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+
+		\do_action( 'activitypub_inbox_move', $activity, $this->user_id, null, Inbox::CONTEXT_SHARED_INBOX );
+		\do_action( 'activitypub_inbox_move', $activity, $this->user_id_2, null, Inbox::CONTEXT_SHARED_INBOX );
+		$per_recipient = $fetches;
+
+		\do_action( 'activitypub_inbox_shared_move', $activity, array( $this->user_id, $this->user_id_2 ), null, Inbox::CONTEXT_SHARED_INBOX );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertSame( 0, $per_recipient, 'The per-recipient calls must not fetch.' );
+		$this->assertGreaterThan( 0, $fetches, 'The shared hook handles the Move.' );
+	}
+
+	/**
+	 * A target id with a query string ends up on the moved post, not on a second one.
 	 *
 	 * @covers ::handle_move
 	 */
@@ -650,31 +822,198 @@ class Test_Move extends \WP_UnitTestCase {
 		$origin = 'https://old.example/users/lena';
 		$target = 'https://new.example/?author=7&type=actor';
 
-		$origin_object = array(
-			'type'    => 'Person',
-			'id'      => $origin,
-			'url'     => $origin,
-			'inbox'   => $origin . '/inbox',
-			'movedTo' => $target,
-		);
-		$target_object = array(
-			'type'        => 'Person',
-			'id'          => $target,
-			'url'         => $target,
-			'inbox'       => 'https://new.example/inbox',
-			'alsoKnownAs' => array( $origin ),
+		\get_user_by( 'id', $this->user_id )->add_cap( 'activitypub' );
+		$id = Remote_Actors::upsert( $this->actor( $origin ) );
+		\add_post_meta( $id, Following::FOLLOWING_META_KEY, (string) $this->user_id );
+
+		$filter = $this->mock_remote(
+			array(
+				$origin => $this->actor( $origin, array( 'movedTo' => $target ) ),
+				$target => $this->actor( $target, array( 'alsoKnownAs' => array( $origin ) ) ),
+			)
 		);
 
-		$id = Remote_Actors::upsert( $origin_object );
+		Move::handle_move(
+			array(
+				'type'   => 'Move',
+				'actor'  => $origin,
+				'object' => $origin,
+				'target' => $target,
+			),
+			$this->user_id
+		);
 
-		$filter = static function ( $pre, $url_or_object ) use ( $origin, $origin_object, $target, $target_object ) {
-			$url = object_to_uri( $url_or_object );
-			if ( $url === $origin ) {
-				return $origin_object;
-			}
-			if ( $url === $target ) {
-				return $target_object;
-			}
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$moved = Remote_Actors::get_by_uri( $target );
+		$this->assertNull( \get_post( $id ), 'The old actor must be merged away.' );
+		$this->assertContains( (string) $this->user_id, \get_post_meta( $moved->ID, Following::PENDING_META_KEY, false ) );
+
+		$actors = \get_posts(
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'post_status' => 'any',
+				'fields'      => 'ids',
+				'numberposts' => -1,
+			)
+		);
+		$this->assertSame( array( $moved->ID ), $actors, 'Only the new actor may be left.' );
+	}
+
+	/**
+	 * A new actor can not take over an old one that does not point at it.
+	 *
+	 * @covers ::handle_move
+	 */
+	public function test_handle_move_pull_mode_requires_origin_consent() {
+		$origin = 'https://old.example/users/erin';
+		$target = 'https://new.example/users/erin';
+
+		$id     = Remote_Actors::upsert( $this->actor( $origin ) );
+		$filter = $this->mock_remote(
+			array(
+				$origin => $this->actor( $origin ),
+				$target => $this->actor( $target, array( 'alsoKnownAs' => array( $origin ) ) ),
+			)
+		);
+
+		Move::handle_move(
+			array(
+				'type'   => 'Move',
+				'actor'  => $target,
+				'object' => $origin,
+				'target' => $target,
+			),
+			$this->user_id
+		);
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertWPError( Remote_Actors::get_by_uri( $target ) );
+		$this->assertSame( $id, Remote_Actors::get_by_uri( $origin )->ID );
+	}
+
+	/**
+	 * Only the old or the new actor may send the Move.
+	 *
+	 * @covers ::handle_move
+	 */
+	public function test_handle_move_rejects_third_party_actor() {
+		$origin = 'https://old.example/users/frank';
+		$target = 'https://new.example/users/frank';
+
+		$id     = Remote_Actors::upsert( $this->actor( $origin ) );
+		$filter = $this->mock_remote(
+			array(
+				$origin => $this->actor( $origin, array( 'movedTo' => $target ) ),
+				$target => $this->actor( $target, array( 'alsoKnownAs' => array( $origin ) ) ),
+			)
+		);
+
+		Move::handle_move(
+			array(
+				'type'   => 'Move',
+				'actor'  => 'https://third.example/users/mallory',
+				'object' => $origin,
+				'target' => $target,
+			),
+			$this->user_id
+		);
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertWPError( Remote_Actors::get_by_uri( $target ) );
+		$this->assertSame( $id, Remote_Actors::get_by_uri( $origin )->ID );
+	}
+
+	/**
+	 * Any actor type can move, not only a Person.
+	 *
+	 * @covers ::handle_move
+	 */
+	public function test_handle_move_accepts_group() {
+		$origin = 'https://old.example/@blog';
+		$target = 'https://new.example/@blog';
+
+		$id     = Remote_Actors::upsert( $this->actor( $origin, array( 'type' => 'Group' ) ) );
+		$filter = $this->mock_remote(
+			array(
+				$origin => $this->actor(
+					$origin,
+					array(
+						'type'    => 'Group',
+						'movedTo' => $target,
+					)
+				),
+				$target => $this->actor(
+					$target,
+					array(
+						'type'        => 'Group',
+						'alsoKnownAs' => array( $origin ),
+					)
+				),
+			)
+		);
+
+		Move::handle_move(
+			array(
+				'type'   => 'Move',
+				'actor'  => $origin,
+				'object' => $origin,
+				'target' => $target,
+			),
+			$this->user_id
+		);
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertNotWPError( Remote_Actors::get_by_uri( $target ) );
+		$this->assertNull( \get_post( $id ), 'The old actor must be merged away.' );
+	}
+
+	/**
+	 * A Move for an actor we do not store fetches nothing.
+	 *
+	 * @covers ::handle_move
+	 */
+	public function test_handle_move_skips_unknown_origin() {
+		$fetches = 0;
+		$filter  = static function ( $pre ) use ( &$fetches ) {
+			++$fetches;
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		Move::handle_move(
+			array(
+				'type'   => 'Move',
+				'actor'  => 'https://old.example/users/unknown',
+				'object' => 'https://old.example/users/unknown',
+				'target' => 'https://new.example/users/unknown',
+			),
+			$this->user_id
+		);
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertSame( 0, $fetches );
+	}
+
+	/**
+	 * A Move to a site-blocked target fetches nothing.
+	 *
+	 * @covers ::handle_move
+	 */
+	public function test_handle_move_does_not_fetch_blocked_target() {
+		$origin = 'https://old.example/users/noa';
+		$target = 'https://blocked.example/users/noa';
+
+		Moderation::add_site_block( Moderation::TYPE_DOMAIN, 'blocked.example' );
+		Remote_Actors::upsert( $this->actor( $origin ) );
+
+		$fetched = array();
+		$filter  = static function ( $pre, $url_or_object ) use ( &$fetched ) {
+			$fetched[] = object_to_uri( $url_or_object );
 			return $pre;
 		};
 		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
@@ -683,27 +1022,227 @@ class Test_Move extends \WP_UnitTestCase {
 			array(
 				'type'   => 'Move',
 				'actor'  => $origin,
-				'object' => $target,
+				'object' => $origin,
+				'target' => $target,
+			),
+			$this->user_id
+		);
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+		Moderation::remove_site_block( Moderation::TYPE_DOMAIN, 'blocked.example' );
+
+		$this->assertNotContains( $target, $fetched );
+	}
+
+	/**
+	 * A target that can not be stored (no inbox) leaves the old actor as it was.
+	 *
+	 * @covers ::handle_move
+	 */
+	public function test_handle_move_keeps_origin_when_target_can_not_be_stored() {
+		$origin = 'https://old.example/users/ola';
+		$target = 'https://new.example/users/ola';
+
+		$id     = Remote_Actors::upsert( $this->actor( $origin ) );
+		$broken = $this->actor( $target, array( 'alsoKnownAs' => array( $origin ) ) );
+		unset( $broken['inbox'] );
+
+		$filter = $this->mock_remote(
+			array(
+				$origin => $this->actor( $origin, array( 'movedTo' => $target ) ),
+				$target => $broken,
+			)
+		);
+
+		Move::handle_move(
+			array(
+				'type'   => 'Move',
+				'actor'  => $origin,
+				'object' => $origin,
+				'target' => $target,
 			),
 			$this->user_id
 		);
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 
-		$this->assertSame( $id, Remote_Actors::get_by_uri( $target )->ID, 'The moved actor must be found by its new id.' );
-		$this->assertSame(
-			1,
-			\count(
-				\get_posts(
-					array(
-						'post_type'   => Remote_Actors::POST_TYPE,
-						'post_status' => 'any',
-						'fields'      => 'ids',
-						'numberposts' => -1,
-					)
-				)
+		$this->assertSame( $id, Remote_Actors::get_by_uri( $origin )->ID, 'The old actor must stay where it was.' );
+		$this->assertWPError( Remote_Actors::get_by_uri( $target ) );
+	}
+
+	/**
+	 * An update that fails without an error (wp_update_post() returns 0) leaves the old actor as it was.
+	 *
+	 * @covers ::handle_move
+	 */
+	public function test_handle_move_keeps_origin_when_update_fails() {
+		$origin = 'https://old.example/users/uma';
+		$target = 'https://new.example/users/uma';
+
+		$id = Remote_Actors::upsert( $this->actor( $origin ) );
+
+		$filter = $this->mock_remote(
+			array(
+				$origin => $this->actor( $origin, array( 'movedTo' => $target ) ),
+				$target => $this->actor( $target, array( 'alsoKnownAs' => array( $origin ) ) ),
+			)
+		);
+		\add_filter( 'wp_insert_post_empty_content', '__return_true' );
+
+		Move::handle_move(
+			array(
+				'type'   => 'Move',
+				'actor'  => $origin,
+				'object' => $origin,
+				'target' => $target,
 			),
-			'No second actor may be created.'
+			$this->user_id
+		);
+
+		\remove_filter( 'wp_insert_post_empty_content', '__return_true' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertSame( $id, Remote_Actors::get_by_uri( $origin )->ID, 'The old actor must stay where it was.' );
+		$this->assertWPError( Remote_Actors::get_by_uri( $target ) );
+	}
+
+	/**
+	 * A merge stores the fresh copy of the new actor, so the new Follows reach its current inbox.
+	 *
+	 * @covers ::handle_move
+	 */
+	public function test_handle_move_merge_refreshes_target() {
+		$origin = 'https://old.example/users/vic';
+		$target = 'https://new.example/users/vic';
+
+		Remote_Actors::upsert( $this->actor( $origin ) );
+		$target_id = Remote_Actors::upsert( $this->actor( $target, array( 'inbox' => 'https://new.example/old-inbox' ) ) );
+
+		$filter = $this->mock_remote(
+			array(
+				$origin => $this->actor( $origin, array( 'movedTo' => $target ) ),
+				$target => $this->actor( $target, array( 'alsoKnownAs' => array( $origin ) ) ),
+			)
+		);
+
+		Move::handle_move(
+			array(
+				'type'   => 'Move',
+				'actor'  => $origin,
+				'object' => $origin,
+				'target' => $target,
+			),
+			$this->user_id
+		);
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertSame( $target . '/inbox', \get_post_meta( $target_id, '_activitypub_inbox', true ) );
+	}
+
+	/**
+	 * A merge into a new actor whose fresh copy can not be stored (no inbox) keeps the old actor.
+	 *
+	 * @covers ::handle_move
+	 */
+	public function test_handle_move_merge_keeps_origin_when_target_can_not_be_stored() {
+		$origin = 'https://old.example/users/wes';
+		$target = 'https://new.example/users/wes';
+
+		$origin_id = Remote_Actors::upsert( $this->actor( $origin ) );
+		Remote_Actors::upsert( $this->actor( $target ) );
+		\add_post_meta( $origin_id, Following::FOLLOWING_META_KEY, (string) $this->user_id );
+
+		$broken = $this->actor( $target, array( 'alsoKnownAs' => array( $origin ) ) );
+		unset( $broken['inbox'] );
+
+		$filter = $this->mock_remote(
+			array(
+				$origin => $this->actor( $origin, array( 'movedTo' => $target ) ),
+				$target => $broken,
+			)
+		);
+
+		Move::handle_move(
+			array(
+				'type'   => 'Move',
+				'actor'  => $origin,
+				'object' => $origin,
+				'target' => $target,
+			),
+			$this->user_id
+		);
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertSame( $origin_id, Remote_Actors::get_by_uri( $origin )->ID, 'The old actor must not be merged away.' );
+		$this->assertContains( (string) $this->user_id, \get_post_meta( $origin_id, Following::FOLLOWING_META_KEY, false ) );
+		$this->assertCount( 0, $this->get_follows( $this->user_id, $target ) );
+	}
+
+	/**
+	 * Build a remote actor document.
+	 *
+	 * @param string $id    The actor id.
+	 * @param array  $extra Extra properties.
+	 *
+	 * @return array The actor document.
+	 */
+	private function actor( $id, $extra = array() ) {
+		return \array_merge(
+			array(
+				'type'  => 'Person',
+				'id'    => $id,
+				'url'   => $id,
+				'name'  => 'Actor',
+				'inbox' => $id . '/inbox',
+			),
+			$extra
+		);
+	}
+
+	/**
+	 * Serve remote documents by URL.
+	 *
+	 * @param array $documents The documents, keyed by URL.
+	 *
+	 * @return callable The filter, to remove it again.
+	 */
+	private function mock_remote( $documents ) {
+		$filter = static function ( $pre, $url_or_object ) use ( $documents ) {
+			return $documents[ object_to_uri( $url_or_object ) ] ?? $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+
+		return $filter;
+	}
+
+	/**
+	 * Get the Follow activities a user sent to an actor.
+	 *
+	 * @param int    $user_id  The user ID.
+	 * @param string $actor_id The followed actor id.
+	 *
+	 * @return int[] The outbox post IDs.
+	 */
+	private function get_follows( $user_id, $actor_id ) {
+		return \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'any',
+				'author'      => $user_id,
+				'fields'      => 'ids',
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $actor_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Follow',
+					),
+				),
+			)
 		);
 	}
 }
