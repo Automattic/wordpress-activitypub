@@ -125,6 +125,7 @@ class Test_Remote_Actors extends \WP_UnitTestCase {
 		$actor     = array(
 			'id'        => $actor_url,
 			'type'      => 'Person',
+			'inbox'     => 'https://example.com/inbox',
 			'publicKey' => $key_url,
 		);
 		$key       = array(
@@ -184,6 +185,7 @@ class Test_Remote_Actors extends \WP_UnitTestCase {
 		$this->responses[ $fetched ]                   = array(
 			'id'        => $fetched,
 			'type'      => 'Person',
+			'inbox'     => 'https://example.com/inbox',
 			'publicKey' => array(
 				'id'           => $fetched . '#main-key',
 				'owner'        => $fetched,
@@ -216,6 +218,7 @@ class Test_Remote_Actors extends \WP_UnitTestCase {
 		$actor = array(
 			'id'        => 'https://attacker.example/users/mallory',
 			'type'      => 'Person',
+			'inbox'     => 'https://example.com/inbox',
 			'publicKey' => array(
 				'id'           => 'https://attacker.example/users/mallory#main-key',
 				'owner'        => 'https://attacker.example/users/mallory',
@@ -351,6 +354,7 @@ class Test_Remote_Actors extends \WP_UnitTestCase {
 		$actor     = array(
 			'id'        => $id,
 			'type'      => 'Person',
+			'inbox'     => 'https://example.com/inbox',
 			'publicKey' => $key,
 		);
 		if ( $reference ) {
@@ -2028,6 +2032,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 				return array(
 					'id'        => 'https://example.com/user',
 					'type'      => 'Person',
+					'inbox'     => 'https://example.com/inbox',
 					'publicKey' => array(
 						'id'           => 'https://example.com/user#main-key',
 						'owner'        => 'https://example.com/user',
@@ -2278,6 +2283,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 			return array(
 				'id'        => 'https://example.com/author/x509',
 				'type'      => 'Person',
+				'inbox'     => 'https://example.com/inbox',
 				'publicKey' => array(
 					'id'           => 'https://example.com/author#main-key',
 					'owner'        => 'https://example.com/author',

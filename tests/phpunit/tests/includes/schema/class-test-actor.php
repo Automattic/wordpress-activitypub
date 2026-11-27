@@ -48,17 +48,19 @@ class Test_Actor extends \WP_UnitTestCase {
 		);
 
 		return array(
-			'actor'              => array( $actor, true ),
-			'without id'         => array( \array_diff_key( $actor, array( 'id' => true ) ), false ),
-			'without inbox'      => array( \array_diff_key( $actor, array( 'inbox' => true ) ), false ),
-			'inbox not a uri'    => array( \array_merge( $actor, array( 'inbox' => 'inbox' ) ), false ),
-			'shared inbox'       => array( \array_merge( $actor, array( 'endpoints' => array( 'sharedInbox' => 'https://example.com/inbox' ) ) ), true ),
-			'key without pem'    => array( \array_merge( $actor, array( 'publicKey' => array( 'id' => 'https://example.com/actor#main-key' ) ) ), false ),
-			'without public key' => array( \array_diff_key( $actor, array( 'publicKey' => true ) ), true ),
-			'public key as uri'  => array( \array_merge( $actor, array( 'publicKey' => 'https://example.com/actor/key' ) ), true ),
-			'public key no uri'  => array( \array_merge( $actor, array( 'publicKey' => 'key' ) ), false ),
-			'summary null'       => array( \array_merge( $actor, array( 'summary' => null ) ), true ),
-			'name not a string'  => array( \array_merge( $actor, array( 'name' => array( 'Alice' ) ) ), false ),
+			'actor'               => array( $actor, true ),
+			'without id'          => array( \array_diff_key( $actor, array( 'id' => true ) ), false ),
+			'without inbox'       => array( \array_diff_key( $actor, array( 'inbox' => true ) ), false ),
+			'inbox not a uri'     => array( \array_merge( $actor, array( 'inbox' => 'inbox' ) ), false ),
+			'shared inbox'        => array( \array_merge( $actor, array( 'endpoints' => array( 'sharedInbox' => 'https://example.com/inbox' ) ) ), true ),
+			'only shared inbox'   => array( \array_merge( \array_diff_key( $actor, array( 'inbox' => true ) ), array( 'endpoints' => array( 'sharedInbox' => 'https://example.com/inbox' ) ) ), true ),
+			'shared inbox no uri' => array( \array_merge( \array_diff_key( $actor, array( 'inbox' => true ) ), array( 'endpoints' => array( 'sharedInbox' => 'inbox' ) ) ), false ),
+			'key without pem'     => array( \array_merge( $actor, array( 'publicKey' => array( 'id' => 'https://example.com/actor#main-key' ) ) ), false ),
+			'without public key'  => array( \array_diff_key( $actor, array( 'publicKey' => true ) ), true ),
+			'public key as uri'   => array( \array_merge( $actor, array( 'publicKey' => 'https://example.com/actor/key' ) ), true ),
+			'public key no uri'   => array( \array_merge( $actor, array( 'publicKey' => 'key' ) ), false ),
+			'summary null'        => array( \array_merge( $actor, array( 'summary' => null ) ), true ),
+			'name not a string'   => array( \array_merge( $actor, array( 'name' => array( 'Alice' ) ) ), false ),
 		);
 	}
 }

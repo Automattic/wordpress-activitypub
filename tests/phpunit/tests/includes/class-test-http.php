@@ -32,8 +32,9 @@ class Test_Http extends \WP_UnitTestCase {
 		$this->stub_remote_requests();
 		$id                     = 'https://example.com/notes/legacy';
 		$this->responses[ $id ] = array(
-			'id'   => $id,
-			'type' => 'Note',
+			'id'           => $id,
+			'type'         => 'Note',
+			'attributedTo' => 'https://example.com/users/alice',
 		);
 		$started                = \time();
 

@@ -15,6 +15,7 @@ use Activitypub\Schema\Arrive;
 use Activitypub\Schema\Collection;
 use Activitypub\Schema\Cryptographic_Key;
 use Activitypub\Schema\Image;
+use Activitypub\Schema\Key;
 use Activitypub\Schema\Note;
 use Activitypub\Schema\Page;
 use Activitypub\Schema\Question;
@@ -98,6 +99,20 @@ class Test_Registry extends \WP_UnitTestCase {
 			'names another class' => array( array( 'type' => 'Registry' ), Unexpected::class ),
 			'not letters'         => array( array( 'type' => 'Schema\\Activity' ), Unexpected::class ),
 			'no type'             => array( array(), Unexpected::class ),
+			'key without type'    => array(
+				array(
+					'id'           => 'https://example.com/actor#main-key',
+					'publicKeyPem' => 'pem',
+				),
+				Key::class,
+			),
+			'typed, with a pem'   => array(
+				array(
+					'type'         => 'Unknown',
+					'publicKeyPem' => 'pem',
+				),
+				Unexpected::class,
+			),
 			'type not string'     => array( array( 'type' => array( 'Accept' ) ), Unexpected::class ),
 		);
 	}

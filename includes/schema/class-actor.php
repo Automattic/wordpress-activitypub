@@ -14,6 +14,20 @@ namespace Activitypub\Schema;
  */
 class Actor extends Base_Object {
 	/**
+	 * An actor needs somewhere to deliver to: its inbox or a shared inbox. A schema can only require
+	 * each of them on its own.
+	 *
+	 * @return true|\WP_Error True if valid, an error with status 400 if not.
+	 */
+	protected function check() {
+		if ( isset( $this->data['inbox'] ) || isset( $this->data['endpoints']['sharedInbox'] ) ) {
+			return true;
+		}
+
+		return new \WP_Error( 'activitypub_actor_without_inbox', \__( 'The actor has no inbox.', 'activitypub' ), array( 'status' => 400 ) );
+	}
+
+	/**
 	 * The properties of an actor.
 	 *
 	 * @return array The properties, keyed by name.
@@ -23,7 +37,7 @@ class Actor extends Base_Object {
 			parent::get_properties(),
 			array(
 				'id'        => $this->required( $this->uri() ),
-				'inbox'     => $this->required( $this->uri() ),
+				'inbox'     => $this->uri(),
 				'outbox'    => $this->uri(),
 				'followers' => $this->uri(),
 				'following' => $this->uri(),

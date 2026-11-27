@@ -85,6 +85,11 @@ class Registry {
 			return new Activity_Object( $data );
 		}
 
+		// A key served on its own often has no type: the only kind known by its shape, see `Remote_Actors::get_public_key()`.
+		if ( '' === $type && isset( $data['publicKeyPem'] ) ) {
+			return new Key( $data );
+		}
+
 		return new Unexpected( $data );
 	}
 }
