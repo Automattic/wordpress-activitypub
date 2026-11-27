@@ -48,6 +48,9 @@ class Test_Collection extends \WP_UnitTestCase {
 			'with items'          => array( \array_merge( $collection, array( 'orderedItems' => array( 'https://example.org/actor' ) ) ), true ),
 			'items not a list'    => array( \array_merge( $collection, array( 'orderedItems' => array( 'first' => 'https://example.org/actor' ) ) ), false ),
 			'item false'          => array( \array_merge( $collection, array( 'orderedItems' => false ) ), false ),
+			'item empty string'   => array( \array_merge( $collection, array( 'orderedItems' => '' ) ), false ),
+			'item whitespace'     => array( \array_merge( $collection, array( 'orderedItems' => '  ' ) ), false ),
+			'no items'            => array( \array_merge( $collection, array( 'orderedItems' => array() ) ), true ),
 			'items with false'    => array( \array_merge( $collection, array( 'orderedItems' => array( false ) ) ), false ),
 			'single item'         => array( \array_merge( $collection, array( 'orderedItems' => 'https://example.org/actor' ) ), true ),
 			'items as objects'    => array(

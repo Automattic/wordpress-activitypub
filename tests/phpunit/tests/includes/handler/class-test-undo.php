@@ -561,4 +561,29 @@ class Test_Undo extends \WP_UnitTestCase {
 		$request->method( 'get_json_params' )->willReturn( $json_params );
 		return $request;
 	}
+
+	/**
+	 * The deprecated check still refuses what it refused: it asks the schema of its type.
+	 *
+	 * @covers ::validate_object
+	 */
+	public function test_deprecated_validate_object_asks_the_schema() {
+		$this->setExpectedDeprecated( 'Activitypub\\Handler\\Undo::validate_object' );
+
+		$request = new \WP_REST_Request( 'POST' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'  => 'Undo',
+					'actor' => 'https://example.com/actor',
+				)
+			)
+		);
+
+		$this->assertFalse( Undo::validate_object( true, null, $request ), 'An invalid Undo is refused.' );
+
+		$request->set_body( \wp_json_encode( array( 'type' => 'Like' ) ) );
+		$this->assertTrue( Undo::validate_object( true, null, $request ), 'Another type keeps the result.' );
+	}
 }

@@ -14,13 +14,18 @@ namespace Activitypub\Schema;
  */
 class Collection extends Base_Object {
 	/**
-	 * The items are a URI or a list: core reads any other scalar as an empty list (`rest_is_array()`).
+	 * The items are one URI or a list: core reads any other scalar, an empty string included, as an
+	 * empty list (`rest_is_array()`), which `to_list()` would turn into a list of one bogus item.
 	 *
 	 * @return true|\WP_Error True if valid, an error with status 400 if not.
 	 */
 	protected function check() {
 		foreach ( array( 'items', 'orderedItems' ) as $key ) {
-			if ( isset( $this->data[ $key ] ) && ! \is_string( $this->data[ $key ] ) && ! \is_array( $this->data[ $key ] ) ) {
+			if ( ! isset( $this->data[ $key ] ) || \is_array( $this->data[ $key ] ) ) {
+				continue;
+			}
+
+			if ( ! \is_string( $this->data[ $key ] ) || true !== \rest_validate_value_from_schema( $this->data[ $key ], $this->uri(), $key ) ) {
 				return new \WP_Error( 'activitypub_invalid_items', \__( 'The items of the collection are not a list.', 'activitypub' ), array( 'status' => 400 ) );
 			}
 		}

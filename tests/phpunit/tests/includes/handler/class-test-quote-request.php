@@ -1093,4 +1093,31 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 
 		\delete_post_meta( self::$post_id, '_activitypub_quoted_by' );
 	}
+
+	/**
+	 * The deprecated check still refuses what it refused: it asks the schema of its type.
+	 *
+	 * @covers ::validate_object
+	 */
+	public function test_deprecated_validate_object_asks_the_schema() {
+		$this->setExpectedDeprecated( 'Activitypub\\Handler\\Quote_Request::validate_object' );
+
+		$request = new \WP_REST_Request( 'POST' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'id'     => 'https://example.com/request/1',
+					'type'   => 'QuoteRequest',
+					'actor'  => 'https://example.com/actor',
+					'object' => 'https://local.example/post/1',
+				)
+			)
+		);
+
+		$this->assertFalse( Quote_Request::validate_object( true, null, $request ), 'An invalid QuoteRequest is refused.' );
+
+		$request->set_body( \wp_json_encode( array( 'type' => 'Like' ) ) );
+		$this->assertTrue( Quote_Request::validate_object( true, null, $request ), 'Another type keeps the result.' );
+	}
 }

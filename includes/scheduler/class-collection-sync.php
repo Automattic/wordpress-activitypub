@@ -70,7 +70,8 @@ class Collection_Sync {
 			return;
 		}
 
-		$remote_followers = $data['orderedItems'];
+		// A follower can be listed by its id or embedded; it is compared by its id.
+		$remote_followers = \array_map( '\Activitypub\object_to_id', $data['orderedItems'] );
 
 		// Get our authority.
 		$home_authority = get_url_authority( \home_url() );

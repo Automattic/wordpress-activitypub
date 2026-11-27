@@ -984,4 +984,20 @@ class Test_Proxy extends \WP_UnitTestCase {
 		$this->assertFalse( \get_option( '_transient_activitypub_object_' . \hash( 'sha256', $id ) ) );
 		$this->assertFalse( \get_option( '_transient_timeout_activitypub_object_' . \hash( 'sha256', $id ) ) );
 	}
+
+	/**
+	 * An actor whose id has a fragment updates itself: the full ids are compared.
+	 *
+	 * @covers ::put
+	 */
+	public function test_put_takes_an_actor_with_a_fragment_id() {
+		$actor = array(
+			'id'    => 'https://example.com/profile#me',
+			'type'  => 'Person',
+			'inbox' => 'https://example.com/inbox',
+		);
+
+		$this->assertSame( $actor, Proxy::put( $actor, $actor['id'] ) );
+		$this->assertWPError( Proxy::put( $actor, 'https://example.com/profile' ), 'A signer without the fragment is another id.' );
+	}
 }

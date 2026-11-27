@@ -206,9 +206,11 @@ class Proxy {
 	 * @return array|\WP_Error The document, or an error.
 	 */
 	public static function put( $data, $signer ) {
-		$id = \is_array( $data ) && isset( $data['id'] ) && \is_string( $data['id'] ) ? \strip_fragment_from_url( $data['id'] ) : '';
+		$id = \is_array( $data ) && isset( $data['id'] ) && \is_string( $data['id'] ) ? $data['id'] : '';
 
+		// The full ids are compared: an actor's id can have a fragment (`/profile#me`), as its signer's then has.
 		$same_origin = is_actor( $data ) ? $id === $signer : is_same_host( $id, $signer );
+		$id          = \strip_fragment_from_url( $id );
 
 		if ( '' === $id || ! $same_origin ) {
 			return new \WP_Error(

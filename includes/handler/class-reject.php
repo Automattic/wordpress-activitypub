@@ -11,6 +11,7 @@ use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Proxy;
+use Activitypub\Schema\Registry;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\is_same_actor;
@@ -177,11 +178,21 @@ class Reject {
 	 * @param array            $param   The object data.
 	 * @param \WP_REST_Request $request The request object.
 	 *
-	 * @return bool The validation result, unchanged.
+	 * @return bool The validation result: for a Reject, what its schema says.
 	 */
-	public static function validate_object( $valid, $param, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Kept for callers of the removed check.
+	public static function validate_object( $valid, $param, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- The signature of the removed check.
 		\_deprecated_function( __METHOD__, 'unreleased' );
 
-		return $valid;
+		$activity = $request->get_json_params();
+
+		if ( empty( $activity['type'] ) ) {
+			return false;
+		}
+
+		if ( 'Reject' !== $activity['type'] ) {
+			return $valid;
+		}
+
+		return $valid && true === Registry::get( $activity )->validate();
 	}
 }

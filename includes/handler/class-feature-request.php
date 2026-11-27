@@ -13,6 +13,7 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Proxy;
+use Activitypub\Schema\Registry;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\get_meta_ids_by_value;
@@ -363,11 +364,21 @@ class Feature_Request {
 	 * @param array            $param   The object data.
 	 * @param \WP_REST_Request $request The request object.
 	 *
-	 * @return bool The validation result, unchanged.
+	 * @return bool The validation result: for a FeatureRequest, what its schema says.
 	 */
-	public static function validate_object( $valid, $param, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Kept for callers of the removed check.
+	public static function validate_object( $valid, $param, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- The signature of the removed check.
 		\_deprecated_function( __METHOD__, 'unreleased' );
 
-		return $valid;
+		$activity = $request->get_json_params();
+
+		if ( empty( $activity['type'] ) ) {
+			return false;
+		}
+
+		if ( 'FeatureRequest' !== $activity['type'] ) {
+			return $valid;
+		}
+
+		return $valid && true === Registry::get( $activity )->validate();
 	}
 }
