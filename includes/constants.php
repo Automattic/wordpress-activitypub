@@ -16,9 +16,6 @@ defined( 'ACTIVITYPUB_MAX_IMAGE_PIXELS' ) || define( 'ACTIVITYPUB_MAX_IMAGE_PIXE
 // The largest GIF, which may have many frames of that size: 1280×720, the limit Mastodon has for GIFs.
 defined( 'ACTIVITYPUB_MAX_GIF_PIXELS' ) || define( 'ACTIVITYPUB_MAX_GIF_PIXELS', 921600 );
 defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?:(?<=\s)|(?<=<p>)|(?<=<br>)|^)#([A-Za-z0-9_]+)(?:(?=\s|[[:punct:]]|$))' );
-// Letters and digits of any script, so internationalized handles match too. It needs the `u` modifier: without it `\p{…}` matches single bytes.
-// The top-level label is Latin letters, punycode or all non-ASCII, so text written right after a handle (`.com-thanks`, `.com今日は`) is not part of it.
-defined( 'ACTIVITYPUB_USERNAME_REGEXP' ) || define( 'ACTIVITYPUB_USERNAME_REGEXP', '(?:([\p{L}\p{M}\p{N}\._+%-]+)@((?:[\p{L}\p{M}\p{N}_-]+\.)+(?:[Xx][Nn]--[A-Za-z0-9-]*[A-Za-z0-9]|[\p{Latin}\p{M}]+|(?:(?![\x00-\x7F])[\p{L}\p{M}])+)))' );
 defined( 'ACTIVITYPUB_URL_REGEXP' ) || define( 'ACTIVITYPUB_URL_REGEXP', '(https?:|www\.)\S+[\w\/]' );
 defined( 'ACTIVITYPUB_CUSTOM_POST_CONTENT' ) || define( 'ACTIVITYPUB_CUSTOM_POST_CONTENT', "[ap_title type=\"html\"]\n\n[ap_content]\n\n[ap_hashtags]" );
 defined( 'ACTIVITYPUB_DISABLE_REWRITES' ) || define( 'ACTIVITYPUB_DISABLE_REWRITES', false );
@@ -34,6 +31,11 @@ if ( ! defined( 'ACTIVITYPUB_DISABLE_REMOTE_CACHE' ) && defined( 'ACTIVITYPUB_DI
 defined( 'ACTIVITYPUB_DISABLE_REMOTE_CACHE' ) || define( 'ACTIVITYPUB_DISABLE_REMOTE_CACHE', false );
 
 // The following constants are invariable and define values used throughout the plugin.
+
+// Letters and digits of any script, so internationalized handles match too. It needs the `u` modifier: without it `\p{…}` matches single bytes.
+// The top-level label is Latin letters, punycode or all non-ASCII, so text written right after a handle (`.com-thanks`, `.com今日は`) is not part of it.
+define( 'ACTIVITYPUB_USERNAME_LOCAL_PART_REGEXP', '[\p{L}\p{M}\p{N}\._+%-]+' );
+define( 'ACTIVITYPUB_USERNAME_REGEXP', '(?:(' . ACTIVITYPUB_USERNAME_LOCAL_PART_REGEXP . ')@((?:[\p{L}\p{M}\p{N}_-]+\.)+(?:[Xx][Nn]--[A-Za-z0-9-]*[A-Za-z0-9]|[\p{Latin}\p{M}]+|(?:(?![\x00-\x7F])[\p{L}\p{M}])+)))' );
 
 /*
  * Mastodon HTML sanitizer.

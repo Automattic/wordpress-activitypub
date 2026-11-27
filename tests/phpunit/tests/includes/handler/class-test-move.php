@@ -58,22 +58,24 @@ class Test_Move extends \WP_UnitTestCase {
 
 		// Mock the HTTP response for the origin object.
 		$origin_object = array(
-			'type'    => 'Person',
-			'id'      => $origin,
-			'url'     => $origin,
-			'name'    => 'Old Profile',
-			'inbox'   => 'https://example.com/old-profile/inbox',
-			'movedTo' => $target,
+			'type'              => 'Person',
+			'preferredUsername' => 'old-profile',
+			'id'                => $origin,
+			'url'               => $origin,
+			'name'              => 'Old Profile',
+			'inbox'             => 'https://example.com/old-profile/inbox',
+			'movedTo'           => $target,
 		);
 
 		// Mock the HTTP response for the target object.
 		$target_object = array(
-			'type'        => 'Person',
-			'id'          => $target,
-			'url'         => $target,
-			'name'        => 'New Profile',
-			'inbox'       => 'https://example.com/new-profile/inbox',
-			'alsoKnownAs' => array(
+			'type'              => 'Person',
+			'preferredUsername' => 'new-profile',
+			'id'                => $target,
+			'url'               => $target,
+			'name'              => 'New Profile',
+			'inbox'             => 'https://example.com/new-profile/inbox',
+			'alsoKnownAs'       => array(
 				$origin,
 			),
 		);
@@ -146,11 +148,12 @@ class Test_Move extends \WP_UnitTestCase {
 		);
 
 		$origin_object        = array(
-			'type'    => 'Person',
-			'id'      => $origin,
-			'url'     => $origin,
-			'inbox'   => 'https://example.org/origin/inbox',
-			'movedTo' => $mismatched_id,
+			'type'              => 'Person',
+			'preferredUsername' => 'origin',
+			'id'                => $origin,
+			'url'               => $origin,
+			'inbox'             => 'https://example.org/origin/inbox',
+			'movedTo'           => $mismatched_id,
 		);
 		$documents[ $origin ] = $origin_object;
 
@@ -199,11 +202,12 @@ class Test_Move extends \WP_UnitTestCase {
 		// Create a follower for the origin.
 		$id = Remote_Actors::upsert(
 			array(
-				'inbox' => 'https://example.com/old-profile/inbox',
-				'name'  => 'Old Profile',
-				'type'  => 'Person',
-				'id'    => $origin,
-				'url'   => $origin,
+				'inbox'             => 'https://example.com/old-profile/inbox',
+				'name'              => 'Old Profile',
+				'type'              => 'Person',
+				'preferredUsername' => 'old-profile',
+				'id'                => $origin,
+				'url'               => $origin,
 			)
 		);
 
@@ -250,6 +254,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$test_follower->set_inbox( 'https://example.com/test/inbox' );
 		$test_follower->set_name( 'Test Profile' );
 		$test_follower->set_type( 'Person' );
+		$test_follower->set_preferred_username( 'test-profile' );
 		$test_follower->set_id( 'https://example.com/test-profile' );
 		$test_follower->set_url( 'https://example.com/test-profile' );
 
@@ -299,6 +304,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$target_follower = new Actor();
 		$target_follower->set_inbox( 'https://example.com/new-profile/inbox' );
 		$target_follower->set_type( 'Person' );
+		$target_follower->set_preferred_username( 'new-profile' );
 		$target_follower->set_id( $target );
 		$target_follower->set_url( $target );
 		$target_id = Remote_Actors::upsert( $target_follower );
@@ -311,12 +317,13 @@ class Test_Move extends \WP_UnitTestCase {
 				return array(
 					'body'     => \wp_json_encode(
 						array(
-							'type'        => 'Person',
-							'id'          => $target,
-							'url'         => $target,
-							'name'        => 'New Profile',
-							'inbox'       => 'https://example.com/new-profile/inbox',
-							'alsoKnownAs' => array( $origin ),
+							'type'              => 'Person',
+							'preferredUsername' => 'new-profile',
+							'id'                => $target,
+							'url'               => $target,
+							'name'              => 'New Profile',
+							'inbox'             => 'https://example.com/new-profile/inbox',
+							'alsoKnownAs'       => array( $origin ),
 						)
 					),
 					'response' => array( 'code' => 200 ),
@@ -326,12 +333,13 @@ class Test_Move extends \WP_UnitTestCase {
 				return array(
 					'body'     => \wp_json_encode(
 						array(
-							'type'    => 'Person',
-							'id'      => $origin,
-							'url'     => $origin,
-							'name'    => 'Old Profile',
-							'inbox'   => 'https://example.com/old-profile/inbox',
-							'movedTo' => $target,
+							'type'              => 'Person',
+							'preferredUsername' => 'old-profile',
+							'id'                => $origin,
+							'url'               => $origin,
+							'name'              => 'Old Profile',
+							'inbox'             => 'https://example.com/old-profile/inbox',
+							'movedTo'           => $target,
 						)
 					),
 					'response' => array( 'code' => 200 ),
@@ -374,6 +382,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$target_follower = new Actor();
 		$target_follower->set_inbox( 'https://example.com/new-profile/inbox' );
 		$target_follower->set_type( 'Person' );
+		$target_follower->set_preferred_username( 'new-profile' );
 		$target_follower->set_id( $target );
 		$target_follower->set_url( $target );
 		$target_id = Remote_Actors::upsert( $target_follower );
@@ -381,6 +390,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$origin_follower = new Actor();
 		$origin_follower->set_inbox( 'https://example.com/old-profile/inbox' );
 		$origin_follower->set_type( 'Person' );
+		$origin_follower->set_preferred_username( 'old-profile' );
 		$origin_follower->set_id( $origin );
 		$origin_follower->set_url( $origin );
 		$origin_id = Remote_Actors::upsert( $origin_follower );
@@ -420,12 +430,13 @@ class Test_Move extends \WP_UnitTestCase {
 
 			if ( $url === $target ) {
 				return array(
-					'type'        => 'Person',
-					'id'          => $target,
-					'url'         => $target,
-					'name'        => 'New Profile',
-					'inbox'       => 'https://example.com/new-profile/inbox',
-					'alsoKnownAs' => array(
+					'type'              => 'Person',
+					'preferredUsername' => 'new-profile',
+					'id'                => $target,
+					'url'               => $target,
+					'name'              => 'New Profile',
+					'inbox'             => 'https://example.com/new-profile/inbox',
+					'alsoKnownAs'       => array(
 						$origin,
 					),
 				);
@@ -433,12 +444,13 @@ class Test_Move extends \WP_UnitTestCase {
 
 			if ( $url === $origin ) {
 				return array(
-					'type'    => 'Person',
-					'id'      => $origin,
-					'url'     => $origin,
-					'name'    => 'Old Profile',
-					'inbox'   => 'https://example.com/old-profile/inbox',
-					'movedTo' => $target,
+					'type'              => 'Person',
+					'preferredUsername' => 'old-profile',
+					'id'                => $origin,
+					'url'               => $origin,
+					'name'              => 'Old Profile',
+					'inbox'             => 'https://example.com/old-profile/inbox',
+					'movedTo'           => $target,
 				);
 			}
 
@@ -484,17 +496,19 @@ class Test_Move extends \WP_UnitTestCase {
 		$origin = 'https://example.com/old-profile3';
 
 		$origin_object = array(
-			'type'    => 'Person',
-			'id'      => $origin,
-			'inbox'   => 'https://example.com/old-profile3/inbox',
-			'movedTo' => $target,
+			'type'              => 'Person',
+			'preferredUsername' => 'old-profile3',
+			'id'                => $origin,
+			'inbox'             => 'https://example.com/old-profile3/inbox',
+			'movedTo'           => $target,
 		);
 
 		$target_object = array(
-			'type'        => 'Person',
-			'id'          => $target,
-			'inbox'       => 'https://example.com/new-profile3/inbox',
-			'alsoKnownAs' => array(
+			'type'              => 'Person',
+			'preferredUsername' => 'new-profile3',
+			'id'                => $target,
+			'inbox'             => 'https://example.com/new-profile3/inbox',
+			'alsoKnownAs'       => array(
 				array(
 					'id'   => $origin,
 					'type' => 'Person',
@@ -536,22 +550,24 @@ class Test_Move extends \WP_UnitTestCase {
 		$origin = 'https://example.com/old-profile';
 
 		$origin_object = array(
-			'type'    => 'Person',
-			'id'      => $origin,
-			'url'     => 'https://example.com/@oldprofile',
-			'name'    => 'Old Profile',
-			'inbox'   => 'https://example.com/old-profile/inbox',
-			'movedTo' => $target,
+			'type'              => 'Person',
+			'preferredUsername' => 'old-profile',
+			'id'                => $origin,
+			'url'               => 'https://example.com/@oldprofile',
+			'name'              => 'Old Profile',
+			'inbox'             => 'https://example.com/old-profile/inbox',
+			'movedTo'           => $target,
 		);
 
 		// Target's alsoKnownAs contains the origin's url, not its id.
 		$target_object = array(
-			'type'        => 'Person',
-			'id'          => $target,
-			'url'         => $target,
-			'name'        => 'New Profile',
-			'inbox'       => 'https://example.com/new-profile/inbox',
-			'alsoKnownAs' => array(
+			'type'              => 'Person',
+			'preferredUsername' => 'new-profile',
+			'id'                => $target,
+			'url'               => $target,
+			'name'              => 'New Profile',
+			'inbox'             => 'https://example.com/new-profile/inbox',
+			'alsoKnownAs'       => array(
 				'https://example.com/@oldprofile',
 			),
 		);
@@ -594,23 +610,25 @@ class Test_Move extends \WP_UnitTestCase {
 		$origin = 'https://example.com/old-profile2';
 
 		$origin_object = array(
-			'type'      => 'Person',
-			'id'        => $origin,
-			'url'       => $origin,
-			'name'      => 'Old Profile',
-			'inbox'     => 'https://example.com/old-profile2/inbox',
-			'movedTo'   => $target,
-			'webfinger' => 'olduser@example.com',
+			'type'              => 'Person',
+			'preferredUsername' => 'old-profile2',
+			'id'                => $origin,
+			'url'               => $origin,
+			'name'              => 'Old Profile',
+			'inbox'             => 'https://example.com/old-profile2/inbox',
+			'movedTo'           => $target,
+			'webfinger'         => 'olduser@example.com',
 		);
 
 		// Target's alsoKnownAs contains the origin's webfinger, not its id.
 		$target_object = array(
-			'type'        => 'Person',
-			'id'          => $target,
-			'url'         => $target,
-			'name'        => 'New Profile',
-			'inbox'       => 'https://example.com/new-profile2/inbox',
-			'alsoKnownAs' => array(
+			'type'              => 'Person',
+			'preferredUsername' => 'new-profile2',
+			'id'                => $target,
+			'url'               => $target,
+			'name'              => 'New Profile',
+			'inbox'             => 'https://example.com/new-profile2/inbox',
+			'alsoKnownAs'       => array(
 				'olduser@example.com',
 			),
 		);
@@ -1191,11 +1209,12 @@ class Test_Move extends \WP_UnitTestCase {
 	private function actor( $id, $extra = array() ) {
 		return \array_merge(
 			array(
-				'type'  => 'Person',
-				'id'    => $id,
-				'url'   => $id,
-				'name'  => 'Actor',
-				'inbox' => $id . '/inbox',
+				'type'              => 'Person',
+				'preferredUsername' => 'actor',
+				'id'                => $id,
+				'url'               => $id,
+				'name'              => 'Actor',
+				'inbox'             => $id . '/inbox',
 			),
 			$extra
 		);

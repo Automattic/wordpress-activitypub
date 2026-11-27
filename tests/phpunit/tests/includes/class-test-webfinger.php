@@ -293,6 +293,38 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	public function the_guess_provider() {
 		return array(
 			array(
+				array(
+					'id'                => 'https://example.org/users/alice%40victim.example',
+					'preferredUsername' => 'alice%40victim.example',
+				),
+				'example.org@example.org',
+			),
+			array(
+				array( 'id' => 'https://example.org/users/ren%C3%A9e' ),
+				'renée@example.org',
+			),
+			array(
+				array(
+					'id'                => 'https://example.org/users/42',
+					'preferredUsername' => '@alice',
+				),
+				'42@example.org',
+			),
+			array(
+				array(
+					'id'                => 'https://example.org/users/42',
+					'preferredUsername' => 'alïce',
+				),
+				'alïce@example.org',
+			),
+			array(
+				array(
+					'id'                => 'https://example.org/users/42',
+					'preferredUsername' => 'alice',
+				),
+				'alice@example.org',
+			),
+			array(
 				'http://example.org/?author=1',
 				'example.org@example.org',
 			),

@@ -90,7 +90,6 @@ The plugin uses PHP Constants to enable, disable or change its default behaviour
 * `ACTIVITYPUB_MAX_IMAGE_PIXELS` - Change the largest image from other servers that is cached or imported, in pixels (width × height). Default: `33177600` (7680×4320).
 * `ACTIVITYPUB_MAX_GIF_PIXELS` - Change the largest GIF from other servers that is cached or imported, in pixels (width × height). Default: `921600` (1280×720).
 * `ACTIVITYPUB_HASHTAGS_REGEXP` - Change the default regex to detect hashtext in a text. Default: `(?:(?<=\s)|(?<=<p>)|(?<=<br>)|^)#([A-Za-z0-9_]+)(?:(?=\s|[[:punct:]]|$))`.
-* `ACTIVITYPUB_USERNAME_REGEXP` - Change the default regex to detect @-replies in a text. Default: `(?:([\p{L}\p{M}\p{N}\._+%-]+)@((?:[\p{L}\p{M}\p{N}_-]+\.)+(?:[Xx][Nn]--[A-Za-z0-9-]*[A-Za-z0-9]|[\p{Latin}\p{M}]+|(?:(?![\x00-\x7F])[\p{L}\p{M}])+)))`. The pattern is used with the `u` modifier.
 * `ACTIVITYPUB_URL_REGEXP` - Change the default regex to detect urls in a text. Default: `(www.|http:|https:)+[^\s]+[\w\/]`.
 * `ACTIVITYPUB_CUSTOM_POST_CONTENT` - Change the default template for Activities. Default: `<strong>[ap_title]</strong>\n\n[ap_content]\n\n[ap_hashtags]\n\n[ap_shortlink]`.
 * `ACTIVITYPUB_AUTHORIZED_FETCH` - Enable AUTHORIZED_FETCH.

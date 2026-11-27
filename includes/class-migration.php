@@ -255,6 +255,9 @@ class Migration {
 		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
 			// Files cached before may not be readable for the web server, they are downloaded again.
 			self::clear_remote_media_caches();
+
+			// Older handles were cached without verification and cannot be trusted for lookups.
+			\delete_post_meta_by_key( '_activitypub_acct' );
 		}
 
 		/*

@@ -441,9 +441,10 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 
 		$metadata = static function () use ( $actor_url ) {
 			return array(
-				'id'    => $actor_url,
-				'type'  => 'Person',
-				'inbox' => str_replace( '/users/', '/inbox/', $actor_url ),
+				'id'                => $actor_url,
+				'type'              => 'Person',
+				'preferredUsername' => 'follower',
+				'inbox'             => str_replace( '/users/', '/inbox/', $actor_url ),
 			);
 		};
 		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata );
@@ -581,10 +582,11 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 		// Mock HTTP requests for actor metadata.
 		$pre_get_remote_metadata_callback = function () use ( $actor_url ) {
 			return array(
-				'id'    => $actor_url,
-				'actor' => $actor_url,
-				'type'  => 'Person',
-				'inbox' => str_replace( '/users/', '/inbox/', $actor_url ),
+				'id'                => $actor_url,
+				'actor'             => $actor_url,
+				'type'              => 'Person',
+				'preferredUsername' => 'follower',
+				'inbox'             => str_replace( '/users/', '/inbox/', $actor_url ),
 			);
 		};
 		add_filter( 'pre_get_remote_metadata_by_actor', $pre_get_remote_metadata_callback );

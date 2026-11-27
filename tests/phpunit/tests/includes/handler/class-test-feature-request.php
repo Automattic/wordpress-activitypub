@@ -252,9 +252,10 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 
 		$pre = function () use ( $actor ) {
 			return array(
-				'id'    => $actor,
-				'type'  => 'Person',
-				'inbox' => str_replace( '/users/', '/inbox/', $actor ),
+				'id'                => $actor,
+				'type'              => 'Person',
+				'preferredUsername' => 'follower',
+				'inbox'             => str_replace( '/users/', '/inbox/', $actor ),
 			);
 		};
 		add_filter( 'pre_get_remote_metadata_by_actor', $pre );

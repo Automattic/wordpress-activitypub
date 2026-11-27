@@ -1090,9 +1090,10 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		// Blocking an actor stores its profile, so serve one without a request.
 		$profile = static function ( $response, $url ) use ( $actor ) {
 			return $actor === $url ? array(
-				'id'    => $actor,
-				'type'  => 'Person',
-				'inbox' => $actor . '/inbox',
+				'id'                => $actor,
+				'type'              => 'Person',
+				'preferredUsername' => 'sender',
+				'inbox'             => $actor . '/inbox',
 			) : $response;
 		};
 		\add_filter( 'activitypub_pre_http_get_remote_object', $profile, 10, 2 );

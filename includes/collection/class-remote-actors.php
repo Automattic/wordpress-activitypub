@@ -18,6 +18,7 @@ use function Activitypub\get_stored_id_forms;
 use function Activitypub\is_actor;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
+use function Activitypub\is_valid_preferred_username;
 use function Activitypub\object_to_id;
 use function Activitypub\object_to_uri;
 use function Activitypub\unescape_guid;
@@ -551,6 +552,15 @@ class Remote_Actors {
 	public static function fetch_by_acct( $acct ) {
 		$acct = Sanitize::webfinger( $acct );
 
+		// Actors without a verified acct are stored with an empty one, so only a handle may be looked up.
+		if ( ! Webfinger::is_acct( $acct ) ) {
+			return new \WP_Error(
+				'activitypub_actor_not_found',
+				\__( 'Actor not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
 		// Check local DB for acct post meta.
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -580,13 +590,8 @@ class Remote_Actors {
 			return $profile_uri;
 		}
 
-		$post = self::fetch_by_uri( $profile_uri );
-
-		if ( ! \is_wp_error( $post ) ) {
-			\update_post_meta( $post->ID, '_activitypub_acct', $acct );
-		}
-
-		return $post;
+		// The acct is not stored here: only its own host has named the actor, the actor's host has not named the acct.
+		return self::fetch_by_uri( $profile_uri );
 	}
 
 	/**
@@ -742,9 +747,9 @@ class Remote_Actors {
 			return $actor;
 		}
 
-		if ( ! $actor->get_webfinger() ) {
-			$actor->set_webfinger( self::get_acct( $post->ID ) );
-		}
+		// Use the stored acct or a guess, not the handle the actor declares.
+		$acct = self::get_acct( $post->ID );
+		$actor->set_webfinger( $acct ? $acct : null );
 
 		return $actor;
 	}
@@ -774,6 +779,14 @@ class Remote_Actors {
 			);
 		}
 
+		if ( ! is_valid_preferred_username( $actor->get_preferred_username() ) ) {
+			return new \WP_Error(
+				'activitypub_invalid_actor_data',
+				\__( 'Invalid actor data', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
+
 		if ( ! empty( $actor->get_endpoints()['sharedInbox'] ) ) {
 			$inbox = $actor->get_endpoints()['sharedInbox'];
 		} elseif ( ! empty( $actor->get_inbox() ) ) {
@@ -786,12 +799,7 @@ class Remote_Actors {
 			);
 		}
 
-		if ( $actor->get_webfinger() ) {
-			$webfinger = Sanitize::webfinger( $actor->get_webfinger() );
-		} else {
-			$webfinger = Webfinger::uri_to_acct( $actor->get_id() );
-			$webfinger = \is_wp_error( $webfinger ) ? Webfinger::guess( $actor ) : Sanitize::webfinger( $webfinger );
-		}
+		$webfinger = self::get_verified_acct( $actor );
 
 		list( $actor_json, $actor_array ) = self::serialize_for_storage( $actor );
 
@@ -1055,42 +1063,52 @@ class Remote_Actors {
 	/**
 	 * Get the acct of a remote actor.
 	 *
-	 * @uses Webfinger::uri_to_acct to resolve the acct by the actor URI.
-	 * @uses Webfinger::guess       to guess a acct if the actors acct is not resolvable.
-	 *
 	 * @param int $id The ID of the remote actor.
 	 *
-	 * @return string The acct of the remote actor or empty string on failure.
+	 * @return string The stored acct, a guess, or an empty string on failure.
 	 */
 	public static function get_acct( $id ) {
 		$acct = \get_post_meta( $id, '_activitypub_acct', true );
-
 		if ( $acct ) {
 			return $acct;
 		}
 
 		$post = \get_post( $id );
-
 		if ( ! $post ) {
 			return '';
 		}
 
-		$acct = Webfinger::uri_to_acct( unescape_guid( $post->guid ) );
+		// A guess is for display only and must not be stored for handle lookups.
+		return Sanitize::webfinger( Webfinger::guess( $post ) );
+	}
 
+	/**
+	 * Get the acct of an actor from WebFinger, verified from both sides.
+	 *
+	 * WebFinger for the actor names the acct, and WebFinger for the acct has to name the actor.
+	 * Every acct that is stored comes from here.
+	 *
+	 * @param Actor $actor The remote actor.
+	 *
+	 * @return string The acct, or an empty string when it is not verified.
+	 */
+	private static function get_verified_acct( $actor ) {
+		$actor_id = $actor->get_id();
+		$acct     = Webfinger::uri_to_acct( $actor_id );
+
+		// Some servers answer WebFinger only for acct: resources.
 		if ( \is_wp_error( $acct ) ) {
-			$actor = Actor::init_from_json( $post->post_content );
-			if ( \is_wp_error( $actor ) ) {
+			$candidate = $actor->get_preferred_username() . '@' . \wp_parse_url( $actor_id, PHP_URL_HOST );
+			if ( ! Webfinger::is_acct( $candidate ) ) {
 				return '';
 			}
 
-			$acct = Webfinger::guess( $actor );
+			$acct = Webfinger::uri_to_acct( $candidate );
 		}
 
-		$acct = Sanitize::webfinger( $acct );
+		$acct = \is_wp_error( $acct ) ? '' : Sanitize::webfinger( $acct );
 
-		\update_post_meta( $id, '_activitypub_acct', $acct );
-
-		return $acct;
+		return Webfinger::is_acct( $acct ) && Webfinger::resolve( $acct ) === $actor_id ? $acct : '';
 	}
 
 	/**
