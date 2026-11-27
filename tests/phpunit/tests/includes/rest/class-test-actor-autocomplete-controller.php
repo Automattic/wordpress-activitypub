@@ -160,7 +160,7 @@ class Test_Actor_Autocomplete_Controller extends \WP_UnitTestCase {
 	public function test_matches_remote_actor_by_handle() {
 		$this->authenticate();
 
-		Remote_Actors::create(
+		$post_id = Remote_Actors::create(
 			array(
 				'id'                => 'https://remote.example.com/users/42',
 				'type'              => 'Person',
@@ -169,9 +169,11 @@ class Test_Actor_Autocomplete_Controller extends \WP_UnitTestCase {
 				'preferredUsername' => 'bob123',
 			)
 		);
+		// Search reads the handle confirmed at ingestion, which can differ from the display guess.
+		\update_post_meta( $post_id, '_activitypub_acct', 'bob@social.example.org' );
 
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/autocomplete' );
-		$request->set_param( 'q', 'bob123' );
+		$request->set_param( 'q', 'bob@social.example.org' );
 
 		$data = rest_get_server()->dispatch( $request )->get_data();
 

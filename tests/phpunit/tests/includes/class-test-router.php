@@ -263,10 +263,11 @@ class Test_Router extends \WP_UnitTestCase {
 			'activitypub_pre_http_get_remote_object',
 			static function () use ( $actor, $keys ) {
 				return array(
-					'id'        => $actor,
-					'type'      => 'Person',
-					'inbox'     => $actor . '/inbox',
-					'publicKey' => array(
+					'id'                => $actor,
+					'type'              => 'Person',
+					'preferredUsername' => 'signer',
+					'inbox'             => $actor . '/inbox',
+					'publicKey'         => array(
 						'id'           => $actor . '#main-key',
 						'owner'        => $actor,
 						'publicKeyPem' => $keys['public_key'],

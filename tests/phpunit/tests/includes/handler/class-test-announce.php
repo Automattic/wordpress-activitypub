@@ -265,9 +265,10 @@ class Test_Announce extends \WP_UnitTestCase {
 		$fetch        = function ( $pre, $url_or_object ) use ( $activity_url ) {
 			if ( 'https://example.com/user' === $url_or_object ) {
 				return array(
-					'id'    => 'https://example.com/user',
-					'type'  => 'Person',
-					'inbox' => 'https://example.com/user/inbox',
+					'id'                => 'https://example.com/user',
+					'type'              => 'Person',
+					'preferredUsername' => 'user',
+					'inbox'             => 'https://example.com/user/inbox',
 				);
 			}
 
@@ -315,9 +316,10 @@ class Test_Announce extends \WP_UnitTestCase {
 		$fetch        = function ( $pre, $url_or_object ) use ( $activity_url ) {
 			if ( 'https://example.com/user' === $url_or_object ) {
 				return array(
-					'id'    => 'https://example.com/user',
-					'type'  => 'Person',
-					'inbox' => 'https://example.com/user/inbox',
+					'id'                => 'https://example.com/user',
+					'type'              => 'Person',
+					'preferredUsername' => 'user',
+					'inbox'             => 'https://example.com/user/inbox',
 				);
 			}
 
