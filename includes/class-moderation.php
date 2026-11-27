@@ -134,7 +134,8 @@ class Moderation {
 		$user_agent  = \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_USER_AGENT'] ?? '' ) );
 
 		// Fall back to WordPress comment disallowed list.
-		return \wp_check_comment_disallowed_list( $activity->to_json( false ), '', '', $activity->get_content(), $remote_addr, $user_agent );
+		// An activity without content (Follow, Like, Delete) has none, and core matches strings only.
+		return \wp_check_comment_disallowed_list( $activity->to_json( false ), '', '', (string) $activity->get_content(), $remote_addr, $user_agent );
 	}
 
 	/**

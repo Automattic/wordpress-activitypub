@@ -332,7 +332,7 @@ class Search {
 		if (
 			Moderation::activity_is_blocked_site_wide( $ap_activity ) ||
 			Moderation::activity_is_blocked_by_content_owner( $ap_activity ) ||
-			\wp_check_comment_disallowed_list( $ap_activity->to_json( false ), '', '', $ap_activity->get_content(), '', '' )
+			\wp_check_comment_disallowed_list( $ap_activity->to_json( false ), '', '', (string) $ap_activity->get_content(), '', '' )
 		) {
 			return new \WP_Error( 'activitypub_import_blocked', \__( 'This reply is blocked by your moderation settings.', 'activitypub' ) );
 		}
