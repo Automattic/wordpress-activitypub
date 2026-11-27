@@ -216,8 +216,8 @@ class Test_Avatar extends WP_UnitTestCase {
 	/**
 	 * A value that is not a valid actor id never addresses the folder all avatars are in.
 	 *
-	 * @covers ::get_storage_paths
-	 * @covers ::save
+	 * @covers \Activitypub\Cache\Avatar::get_storage_paths
+	 * @covers \Activitypub\Cache\Avatar::save
 	 */
 	public function test_an_invalid_id_does_not_reach_the_other_avatars() {
 		$base = \untrailingslashit( \wp_upload_dir()['basedir'] . Avatar::get_base_dir() );

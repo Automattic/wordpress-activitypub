@@ -1,4 +1,4 @@
 Significance: patch
 Type: changed
 
-Cached profile pictures of remote accounts are stored by account address, so they no longer depend on internal IDs.
+Cached profile pictures of remote accounts are stored by account address, so they no longer depend on internal IDs. For these pictures, the `activitypub_remote_media_url` filter now passes the address of the account in place of a post ID.
