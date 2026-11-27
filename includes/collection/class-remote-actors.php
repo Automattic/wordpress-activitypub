@@ -8,6 +8,7 @@
 namespace Activitypub\Collection;
 
 use Activitypub\Activity\Actor;
+use Activitypub\Cache\Avatar;
 use Activitypub\Emoji;
 use Activitypub\Proxy;
 use Activitypub\Sanitize;
@@ -178,6 +179,9 @@ class Remote_Actors {
 			}
 
 			global $wpdb;
+
+			// The cached avatar is stored under the old id, and nothing would find it after the change.
+			Avatar::invalidate_entity( unescape_guid( $post->guid ) );
 
 			// wp_update_post() never changes a guid, so it is written in the form an insert stores, with its hash.
 			list( $guid ) = get_stored_id_forms( $id );

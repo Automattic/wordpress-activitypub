@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Collection;
 
+use Activitypub\Cache\Avatar;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
@@ -2901,6 +2902,12 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$post_id = Remote_Actors::upsert( $this->reidentified_actor( $alias ) );
 		\add_post_meta( $post_id, Followers::FOLLOWER_META_KEY, $user );
 
+		// The avatar cached for the actor is stored under its old id.
+		$avatar = Avatar::get_storage_paths( $alias )['basedir'];
+		\wp_mkdir_p( $avatar );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		\file_put_contents( $avatar . '/avatar.jpg', 'avatar' );
+
 		$actor  = $this->reidentified_actor( $id, array( $alias ) );
 		$filter = $this->serve_documents( array( $alias => $actor ) );
 
@@ -2912,6 +2919,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$this->assertSame( $post_id, Remote_Actors::get_by_uri( $id )->ID, 'The actor is found under its new id, also after the update.' );
 		$this->assertWPError( Remote_Actors::get_by_uri( $alias ), 'The alias is no longer stored as an id.' );
 		$this->assertSame( array( (string) $user ), \get_post_meta( $post_id, Followers::FOLLOWER_META_KEY, false ), 'The relationships stay with the actor.' );
+		$this->assertDirectoryDoesNotExist( $avatar, 'No avatar is left behind under the old id.' );
 
 		// A later Update of the same actor is a normal update.
 		$this->assertSame( $post_id, Remote_Actors::upsert( $actor ) );
