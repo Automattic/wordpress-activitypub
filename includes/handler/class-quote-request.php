@@ -13,13 +13,13 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Proxy;
+use Activitypub\Schema\Registry;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\get_meta_ids_by_value;
 use function Activitypub\get_target_post_id;
 use function Activitypub\is_post_publicly_queryable;
 use function Activitypub\is_same_actor;
-use function Activitypub\is_same_host;
 use function Activitypub\object_to_id;
 use function Activitypub\user_can_activitypub;
 
@@ -38,8 +38,6 @@ class Quote_Request {
 		\add_action( 'activitypub_inbox_quote_request', array( self::class, 'handle_quote_request' ), 10, 4 );
 		\add_action( 'activitypub_rest_inbox_disallowed', array( self::class, 'handle_blocked_request' ), 10, 3 );
 		\add_action( 'delete_comment', array( self::class, 'handle_quote_delete' ), 10, 2 );
-
-		\add_filter( 'activitypub_validate_object', array( self::class, 'validate_object' ), 10, 3 );
 	}
 
 	/**
@@ -356,15 +354,19 @@ class Quote_Request {
 	}
 
 	/**
-	 * Validate the object.
+	 * Validate the object of an activity.
 	 *
-	 * @param bool             $valid   The validation state.
-	 * @param string           $param   The object parameter.
+	 * @deprecated unreleased The schema of the type checks the activity in the inbox, see `Activitypub\Schema\Quote_Request`.
+	 *
+	 * @param bool|\WP_Error   $valid   The validation result.
+	 * @param array            $param   The object data.
 	 * @param \WP_REST_Request $request The request object.
 	 *
-	 * @return bool The validation state: true if valid, false if not.
+	 * @return bool|\WP_Error The validation result: for a QuoteRequest, what its schema says.
 	 */
-	public static function validate_object( $valid, $param, $request ) {
+	public static function validate_object( $valid, $param, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- The signature of the removed check.
+		\_deprecated_function( __METHOD__, 'unreleased' );
+
 		$activity = $request->get_json_params();
 
 		if ( empty( $activity['type'] ) ) {
@@ -375,16 +377,11 @@ class Quote_Request {
 			return $valid;
 		}
 
-		if ( ! isset( $activity['actor'], $activity['object'], $activity['instrument'] ) ) {
-			return false;
+		// An earlier refusal (false or an error) stands.
+		if ( true !== $valid ) {
+			return $valid;
 		}
 
-		// The instrument is the quoting object, authored by the actor, so it must live on the
-		// actor's host. Otherwise a remote server could bind a third-party reference to a local post.
-		if ( ! is_same_host( $activity['actor'], $activity['instrument'] ) ) {
-			return false;
-		}
-
-		return $valid;
+		return true === Registry::get( $activity )->validate();
 	}
 }

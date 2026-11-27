@@ -7,6 +7,8 @@
 
 namespace Activitypub;
 
+use Activitypub\Schema\Registry;
+
 /**
  * The one way to get a remote ActivityPub object.
  *
@@ -141,6 +143,13 @@ class Proxy {
 		 */
 		$same_host = $origin_known && is_same_host( $url, $final_url );
 
+		// The schema of the document's type: checked, then normalized. A document that fails is handled like a failed fetch.
+		if ( ! \is_wp_error( $object ) ) {
+			$schema = Registry::get( $object );
+			$valid  = $schema->validate();
+			$object = \is_wp_error( $valid ) ? $valid : $schema->sanitize();
+		}
+
 		if ( \is_wp_error( $object ) ) {
 			// A call that bypassed the cache must not leave a failure behind for the others.
 			if ( $same_host && $args['cached'] ) {
@@ -179,6 +188,55 @@ class Proxy {
 		}
 
 		return $object;
+	}
+
+	/**
+	 * Take a document that arrived embedded in a verified activity, as if it had been fetched.
+	 *
+	 * Only after the signature check, with the verified actor as `$signer`. Only the signer's origin
+	 * vouches for a document: an actor only for itself, any other object only on its own host. The
+	 * document then gets the same schema check as a fetch and is stored the same way, so every later
+	 * `get()` serves this copy without fetching it.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array  $data   The embedded document.
+	 * @param string $signer The id of the actor that signed the activity.
+	 *
+	 * @return array|\WP_Error The document, or an error.
+	 */
+	public static function put( $data, $signer ) {
+		$id = \is_array( $data ) && isset( $data['id'] ) && \is_string( $data['id'] ) ? $data['id'] : '';
+
+		// The full ids are compared: an actor's id can have a fragment (`/profile#me`), as its signer's then has.
+		$same_origin = is_actor( $data ) ? $id === $signer : is_same_host( $id, $signer );
+		$id          = \strip_fragment_from_url( $id );
+
+		if ( '' === $id || ! $same_origin ) {
+			return new \WP_Error(
+				'activitypub_foreign_document',
+				\__( 'The document is not on the origin of the actor that sent it.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		$schema = Registry::get( $data );
+		$valid  = $schema->validate();
+		if ( \is_wp_error( $valid ) ) {
+			return $valid;
+		}
+
+		$data = $schema->sanitize();
+		if ( \is_wp_error( $data ) ) {
+			return $data;
+		}
+
+		/** This filter is documented in includes/class-proxy.php */
+		$ttl = (int) \apply_filters( 'activitypub_proxy_cache_ttl', HOUR_IN_SECONDS, $id, $data );
+
+		self::cache_set( $id, $data, $ttl );
+
+		return $data;
 	}
 
 	/**

@@ -1299,8 +1299,9 @@ class Test_Delete extends \WP_UnitTestCase {
 		$this->stub_remote_requests();
 		$id                     = 'https://example.com/users/cached-only';
 		$actor                  = array(
-			'id'   => $id,
-			'type' => 'Person',
+			'id'    => $id,
+			'type'  => 'Person',
+			'inbox' => $id . '/inbox',
 		);
 		$this->responses[ $id ] = $actor;
 		$this->assertWPError( Remote_Actors::get_by_uri( $id ) );

@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Incoming activities and fetched posts and profiles are now checked for a complete shape before the plugin uses them.

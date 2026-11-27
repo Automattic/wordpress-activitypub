@@ -145,26 +145,16 @@ class Update {
 	 * @return void
 	 */
 	public static function update_actor( $activity, $user_ids ) {
-		/*
-		 * Prefer the actor data embedded in the activity object, as it contains
-		 * the fresh data sent by the remote server.
-		 */
-		$actor = $activity['object'] ?? null;
+		$signer = object_to_id( $activity['actor'] );
+		$actor  = $activity['object'] ?? null;
 
 		/*
-		 * The object may be a string IRI instead of an embedded object,
-		 * in which case we need to fetch the actor data remotely.
-		 * We use Proxy::get() directly instead of
-		 * get_remote_metadata_by_actor() because the latter returns the
-		 * stale locally cached copy via fetch_by_uri().
+		 * An embedded actor is the fresh data sent by the remote server. It goes through the Proxy like
+		 * a fetch: only the signer vouches for itself, and it gets the actor schema. An actor that is
+		 * only named is fetched; Proxy::get() instead of get_remote_metadata_by_actor(), which returns
+		 * the stale locally cached copy via fetch_by_uri().
 		 */
-		if ( ! \is_array( $actor ) || ! isset( $actor['id'] ) ) {
-			$object = Proxy::get( $activity['actor'], array( 'cached' => false ) );
-
-			if ( ! \is_wp_error( $object ) && \is_array( $object ) ) {
-				$actor = $object;
-			}
-		}
+		$actor = \is_array( $actor ) ? Proxy::put( $actor, $signer ) : Proxy::get( $signer, array( 'cached' => false ) );
 
 		/*
 		 * An actor may only update itself. Bind the updated object to the activity
@@ -172,7 +162,7 @@ class Update {
 		 * cannot overwrite another host's cached actor by sending an Update whose
 		 * object.id points at a victim actor.
 		 */
-		if ( \is_array( $actor ) && isset( $actor['id'] ) && object_to_id( $actor ) === object_to_id( $activity['actor'] ) ) {
+		if ( \is_array( $actor ) && object_to_id( $actor ) === $signer ) {
 			$state = Remote_Actors::upsert( $actor );
 		} else {
 			$state = new \WP_Error( 'activitypub_update_failed', \__( 'Update failed: missing, invalid, or unauthorized actor object in Update activity.', 'activitypub' ) );

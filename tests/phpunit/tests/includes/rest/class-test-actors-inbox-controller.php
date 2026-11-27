@@ -128,8 +128,9 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$response = \rest_do_request( $request );
 
 		$this->assertEquals( 400, $response->get_status() );
-		$this->assertEquals( 'rest_missing_callback_param', $response->get_data()['code'] );
-		$this->assertEquals( 'object', $response->get_data()['data']['params'][0] );
+		// The schema of the type decides which properties it needs, in the route's validate_callback.
+		$this->assertEquals( 'rest_property_required', $response->get_data()['code'] );
+		$this->assertStringContainsString( 'object', $response->get_data()['message'] );
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
 	}
@@ -359,7 +360,8 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		// Dispatch the request.
 		$response = \rest_do_request( $request );
 		$this->assertEquals( 400, $response->get_status() );
-		$this->assertEquals( 'rest_invalid_param', $response->get_data()['code'] );
+		// The schema of a Create wants the object embedded.
+		$this->assertEquals( 'rest_invalid_type', $response->get_data()['code'] );
 
 		// Valid request, because of a valid object.
 		$json['object'] = array(

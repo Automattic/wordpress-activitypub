@@ -162,6 +162,7 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 			array(
 				'id'        => $actor_id,
 				'type'      => 'Person',
+				'inbox'     => 'https://example.com/inbox',
 				'publicKey' => array(
 					'id'           => $actor_id . '#main-key',
 					'owner'        => $actor_id,
@@ -247,6 +248,7 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		$this->responses[ $signer ] = array(
 			'id'        => $signer,
 			'type'      => 'Person',
+			'inbox'     => 'https://example.com/inbox',
 			'publicKey' => array(
 				'id'           => $signer . '#main-key',
 				'owner'        => $signer,
@@ -256,6 +258,7 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		$this->responses['https://example.com/users/alice'] = array(
 			'id'        => 'https://example.com/users/alice',
 			'type'      => 'Person',
+			'inbox'     => 'https://example.com/inbox',
 			'publicKey' => array(
 				'id'           => 'https://example.com/users/alice#main-key',
 				'owner'        => 'https://example.com/users/alice',
@@ -989,8 +992,9 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 
 		$actors = array(
 			array(
-				'type' => 'Person',
-				'url'  => 'https://remote.example/users/alice',
+				'type'  => 'Person',
+				'inbox' => 'https://example.com/inbox',
+				'url'   => 'https://remote.example/users/alice',
 			),
 			null,
 		);

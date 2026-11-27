@@ -91,76 +91,6 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
-	 * Test that validate_object accepts a well-formed FeatureRequest.
-	 *
-	 * @covers ::validate_object
-	 */
-	public function test_validate_object_passes_for_valid_feature_request() {
-		$activity = $this->create_feature_request_activity();
-
-		$request = new \WP_REST_Request( 'POST', '/inbox' );
-		$request->set_body( wp_json_encode( $activity ) );
-		$request->set_header( 'Content-Type', 'application/json' );
-
-		$valid = Feature_Request::validate_object( true, 'object', $request );
-		$this->assertTrue( $valid );
-	}
-
-	/**
-	 * Test that validate_object rejects a FeatureRequest missing required keys.
-	 *
-	 * @covers ::validate_object
-	 */
-	public function test_validate_object_fails_for_missing_instrument() {
-		$activity = $this->create_feature_request_activity();
-		unset( $activity['instrument'] );
-
-		$request = new \WP_REST_Request( 'POST', '/inbox' );
-		$request->set_body( wp_json_encode( $activity ) );
-		$request->set_header( 'Content-Type', 'application/json' );
-
-		$valid = Feature_Request::validate_object( true, 'object', $request );
-		$this->assertFalse( $valid );
-	}
-
-	/**
-	 * Test that validate_object rejects an instrument hosted off the actor's domain.
-	 *
-	 * @covers ::validate_object
-	 */
-	public function test_validate_object_fails_for_cross_host_instrument() {
-		$activity               = $this->create_feature_request_activity();
-		$activity['instrument'] = 'https://victim.example/users/alice/featured/1';
-
-		$request = new \WP_REST_Request( 'POST', '/inbox' );
-		$request->set_body( wp_json_encode( $activity ) );
-		$request->set_header( 'Content-Type', 'application/json' );
-
-		$valid = Feature_Request::validate_object( true, 'object', $request );
-		$this->assertFalse( $valid );
-	}
-
-	/**
-	 * Test that validate_object passes through unrelated activity types unchanged.
-	 *
-	 * @covers ::validate_object
-	 */
-	public function test_validate_object_passes_through_other_types() {
-		$activity = array(
-			'type'   => 'Follow',
-			'actor'  => 'https://x',
-			'object' => 'https://y',
-		);
-
-		$request = new \WP_REST_Request( 'POST', '/inbox' );
-		$request->set_body( wp_json_encode( $activity ) );
-		$request->set_header( 'Content-Type', 'application/json' );
-
-		$valid = Feature_Request::validate_object( true, 'object', $request );
-		$this->assertTrue( $valid );
-	}
-
-	/**
 	 * Test the blocked-request path emits a Reject for FeatureRequest activities.
 	 *
 	 * @covers ::handle_blocked_request
@@ -804,5 +734,35 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 		$this->assertSame( $other_id, Feature_Request::add_stamp( self::$user_id, $stored ) );
 
 		\delete_user_meta( self::$user_id, '_activitypub_featured_by' );
+	}
+
+	/**
+	 * The deprecated check still refuses what it refused: it asks the schema of its type.
+	 *
+	 * @covers ::validate_object
+	 */
+	public function test_deprecated_validate_object_asks_the_schema() {
+		$this->setExpectedDeprecated( 'Activitypub\\Handler\\Feature_Request::validate_object' );
+
+		$request = new \WP_REST_Request( 'POST' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'id'     => 'https://example.com/request/1',
+					'type'   => 'FeatureRequest',
+					'actor'  => 'https://example.com/actor',
+					'object' => 'https://local.example/actor',
+				)
+			)
+		);
+
+		$this->assertFalse( Feature_Request::validate_object( true, null, $request ), 'An invalid FeatureRequest is refused.' );
+
+		$error = new \WP_Error( 'earlier', 'Refused earlier.' );
+		$this->assertSame( $error, Feature_Request::validate_object( $error, null, $request ), 'An earlier error stands.' );
+
+		$request->set_body( \wp_json_encode( array( 'type' => 'Like' ) ) );
+		$this->assertTrue( Feature_Request::validate_object( true, null, $request ), 'Another type keeps the result.' );
 	}
 }

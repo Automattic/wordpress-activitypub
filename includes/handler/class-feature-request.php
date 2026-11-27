@@ -13,11 +13,11 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Proxy;
+use Activitypub\Schema\Registry;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\get_meta_ids_by_value;
 use function Activitypub\is_same_actor;
-use function Activitypub\is_same_host;
 use function Activitypub\object_to_id;
 use function Activitypub\user_can_activitypub;
 
@@ -48,8 +48,6 @@ class Feature_Request {
 	public static function init() {
 		\add_action( 'activitypub_inbox_feature_request', array( self::class, 'handle_feature_request' ), 10, 4 );
 		\add_action( 'activitypub_rest_inbox_disallowed', array( self::class, 'handle_blocked_request' ), 10, 3 );
-
-		\add_filter( 'activitypub_validate_object', array( self::class, 'validate_object' ), 10, 3 );
 	}
 
 	/**
@@ -358,15 +356,19 @@ class Feature_Request {
 	}
 
 	/**
-	 * Validate the object on incoming FeatureRequest activities.
+	 * Validate the object of an activity.
 	 *
-	 * @param bool             $valid   The current validation state.
-	 * @param string           $param   The object parameter name.
+	 * @deprecated unreleased The schema of the type checks the activity in the inbox, see `Activitypub\Schema\Feature_Request`.
+	 *
+	 * @param bool|\WP_Error   $valid   The validation result.
+	 * @param array            $param   The object data.
 	 * @param \WP_REST_Request $request The request object.
 	 *
-	 * @return bool
+	 * @return bool|\WP_Error The validation result: for a FeatureRequest, what its schema says.
 	 */
-	public static function validate_object( $valid, $param, $request ) {
+	public static function validate_object( $valid, $param, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- The signature of the removed check.
+		\_deprecated_function( __METHOD__, 'unreleased' );
+
 		$activity = $request->get_json_params();
 
 		if ( empty( $activity['type'] ) ) {
@@ -377,16 +379,11 @@ class Feature_Request {
 			return $valid;
 		}
 
-		if ( ! isset( $activity['actor'], $activity['object'], $activity['instrument'] ) ) {
-			return false;
+		// An earlier refusal (false or an error) stands.
+		if ( true !== $valid ) {
+			return $valid;
 		}
 
-		// The instrument is the requester's own object, so it must live on the actor's host.
-		// Otherwise a remote server could stamp a local actor with a third-party reference.
-		if ( ! is_same_host( $activity['actor'], $activity['instrument'] ) ) {
-			return false;
-		}
-
-		return $valid;
+		return true === Registry::get( $activity )->validate();
 	}
 }

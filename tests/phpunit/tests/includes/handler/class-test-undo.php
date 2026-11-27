@@ -551,193 +551,6 @@ class Test_Undo extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test validate_object with various scenarios.
-	 *
-	 * @dataProvider validate_object_provider
-	 * @covers ::validate_object
-	 *
-	 * @param array  $request_data     The request data to test.
-	 * @param bool   $input_valid      The input valid state.
-	 * @param bool   $expected_result  The expected validation result.
-	 * @param string $description      Description of the test case.
-	 */
-	public function test_validate_object( $request_data, $input_valid, $expected_result, $description ) {
-		$request = $this->create_mock_request( $request_data );
-		$result  = Undo::validate_object( $input_valid, 'object', $request );
-
-		$this->assertEquals( $expected_result, $result, $description );
-	}
-
-	/**
-	 * Data provider for validate_object tests.
-	 *
-	 * @return array Test cases with request data, input valid state, expected result, and description.
-	 */
-	public function validate_object_provider() {
-		$valid_undo_activity = array(
-			'type'   => 'Undo',
-			'actor'  => 'https://example.com/actor',
-			'object' => array(
-				'id'     => 'https://example.com/activity/123',
-				'type'   => 'Follow',
-				'actor'  => 'https://example.com/actor',
-				'object' => 'https://example.com/target',
-			),
-		);
-
-		return array(
-			// Valid cases.
-			'valid_undo_activity'               => array(
-				$valid_undo_activity,
-				true,
-				true,
-				'Valid Undo activity should pass validation',
-			),
-
-			// Non-Undo activities should preserve original state.
-			'non_undo_activity_preserves_true'  => array(
-				array(
-					'type'   => 'Create',
-					'actor'  => 'https://example.com/actor',
-					'object' => array(
-						'type'    => 'Note',
-						'content' => 'Hello world',
-					),
-				),
-				true,
-				true,
-				'Non-Undo activity should preserve original valid state (true)',
-			),
-			'non_undo_activity_preserves_false' => array(
-				array(
-					'type'   => 'Create',
-					'actor'  => 'https://example.com/actor',
-					'object' => array(
-						'type'    => 'Note',
-						'content' => 'Hello world',
-					),
-				),
-				false,
-				false,
-				'Non-Undo activity should preserve original valid state (false)',
-			),
-
-			// Invalid cases - missing top-level fields.
-			'empty_json_params'                 => array(
-				array(),
-				true,
-				false,
-				'Empty JSON params should fail validation',
-			),
-			'missing_type'                      => array(
-				array(
-					'actor'  => 'https://example.com/actor',
-					'object' => array(
-						'id'     => 'https://example.com/activity/123',
-						'type'   => 'Follow',
-						'actor'  => 'https://example.com/actor',
-						'object' => 'https://example.com/target',
-					),
-				),
-				true,
-				false,
-				'Missing type should fail validation',
-			),
-			'missing_actor'                     => array(
-				array(
-					'type'   => 'Undo',
-					'object' => array(
-						'id'     => 'https://example.com/activity/123',
-						'type'   => 'Follow',
-						'actor'  => 'https://example.com/actor',
-						'object' => 'https://example.com/target',
-					),
-				),
-				true,
-				false,
-				'Missing actor should fail validation',
-			),
-			'missing_object'                    => array(
-				array(
-					'type'  => 'Undo',
-					'actor' => 'https://example.com/actor',
-				),
-				true,
-				false,
-				'Missing object should fail validation',
-			),
-
-			// Invalid cases - missing object fields.
-			'missing_object_id'                 => array(
-				array(
-					'type'   => 'Undo',
-					'actor'  => 'https://example.com/actor',
-					'object' => array(
-						'type'   => 'Follow',
-						'actor'  => 'https://example.com/actor',
-						'object' => 'https://example.com/target',
-					),
-				),
-				true,
-				false,
-				'Missing object.id should fail validation',
-			),
-			'missing_object_type'               => array(
-				array(
-					'type'   => 'Undo',
-					'actor'  => 'https://example.com/actor',
-					'object' => array(
-						'id'     => 'https://example.com/activity/123',
-						'actor'  => 'https://example.com/actor',
-						'object' => 'https://example.com/target',
-					),
-				),
-				true,
-				true,
-				'Missing object.type should validate (not required)',
-			),
-			'missing_object_actor'              => array(
-				array(
-					'type'   => 'Undo',
-					'actor'  => 'https://example.com/actor',
-					'object' => array(
-						'id'     => 'https://example.com/activity/123',
-						'type'   => 'Follow',
-						'object' => 'https://example.com/target',
-					),
-				),
-				true,
-				true,
-				'Missing object.actor should validate (not required)',
-			),
-			'missing_object_object'             => array(
-				array(
-					'type'   => 'Undo',
-					'actor'  => 'https://example.com/actor',
-					'object' => array(
-						'id'    => 'https://example.com/activity/123',
-						'type'  => 'Follow',
-						'actor' => 'https://example.com/actor',
-					),
-				),
-				true,
-				true,
-				'Missing object.object should validate (not required)',
-			),
-			'object_id'                         => array(
-				array(
-					'type'   => 'Undo',
-					'actor'  => 'https://example.com/actor',
-					'object' => 'https://example.com/activity/123',
-				),
-				true,
-				true,
-				'String object should validate',
-			),
-		);
-	}
-
-	/**
 	 * Create a mock WP_REST_Request object for testing.
 	 *
 	 * @param array $json_params The JSON parameters to return.
@@ -747,5 +560,33 @@ class Test_Undo extends \WP_UnitTestCase {
 		$request = $this->createMock( \WP_REST_Request::class );
 		$request->method( 'get_json_params' )->willReturn( $json_params );
 		return $request;
+	}
+
+	/**
+	 * The deprecated check still refuses what it refused: it asks the schema of its type.
+	 *
+	 * @covers ::validate_object
+	 */
+	public function test_deprecated_validate_object_asks_the_schema() {
+		$this->setExpectedDeprecated( 'Activitypub\\Handler\\Undo::validate_object' );
+
+		$request = new \WP_REST_Request( 'POST' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'  => 'Undo',
+					'actor' => 'https://example.com/actor',
+				)
+			)
+		);
+
+		$this->assertFalse( Undo::validate_object( true, null, $request ), 'An invalid Undo is refused.' );
+
+		$error = new \WP_Error( 'earlier', 'Refused earlier.' );
+		$this->assertSame( $error, Undo::validate_object( $error, null, $request ), 'An earlier error stands.' );
+
+		$request->set_body( \wp_json_encode( array( 'type' => 'Like' ) ) );
+		$this->assertTrue( Undo::validate_object( true, null, $request ), 'Another type keeps the result.' );
 	}
 }

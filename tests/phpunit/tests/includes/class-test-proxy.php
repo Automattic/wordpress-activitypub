@@ -46,9 +46,10 @@ class Test_Proxy extends \WP_UnitTestCase {
 	 */
 	private function note( $id ) {
 		$this->responses[ $id ] = array(
-			'id'      => $id,
-			'type'    => 'Note',
-			'content' => 'Hi',
+			'id'           => $id,
+			'type'         => 'Note',
+			'attributedTo' => 'https://example.com/users/alice',
+			'content'      => 'Hi',
 		);
 
 		return $id;
@@ -85,6 +86,110 @@ class Test_Proxy extends \WP_UnitTestCase {
 		$this->assertSame( 404, $first->get_error_data()['status'] );
 		$this->assertWPError( $second );
 		$this->assertSame( 1, $this->requests );
+	}
+
+	/**
+	 * A fetched document is checked against the schema of its type, and a refused one is cached like a failed fetch.
+	 *
+	 * @covers ::get
+	 */
+	public function test_get_refuses_a_document_that_fails_its_schema() {
+		$id                     = 'https://example.com/actors/1';
+		$this->responses[ $id ] = array(
+			'id'   => $id,
+			'type' => 'Person',
+		);
+
+		$first  = Proxy::get( $id );
+		$second = Proxy::get( $id );
+
+		$this->assertWPError( $first );
+		$this->assertSame( 400, $first->get_error_data()['status'] );
+		$this->assertWPError( $second );
+		$this->assertSame( 1, $this->requests );
+	}
+
+	/**
+	 * A fetched document is handed on normalized, the same form the inbox args give.
+	 *
+	 * @covers ::get
+	 */
+	public function test_get_normalizes_a_document() {
+		$locale = static function () {
+			return 'de_DE';
+		};
+		\add_filter( 'locale', $locale );
+
+		$id                     = 'https://example.com/notes/maps';
+		$this->responses[ $id ] = array(
+			'id'           => $id,
+			'type'         => 'Note',
+			'attributedTo' => 'https://example.com/users/alice',
+			'content'      => 'Hello',
+			'contentMap'   => array( 'de' => 'Hallo' ),
+		);
+
+		$note = Proxy::get( $id );
+
+		\remove_filter( 'locale', $locale );
+
+		$this->assertSame( 'Hallo', $note['content'] );
+	}
+
+	/**
+	 * An embedded document from the signer's origin is stored like a fetch, and later served without one.
+	 *
+	 * @covers ::put
+	 */
+	public function test_put_stores_a_document_from_the_signers_origin() {
+		$actor = array(
+			'id'    => 'https://example.com/actors/1',
+			'type'  => 'Person',
+			'inbox' => 'https://example.com/actors/1/inbox',
+		);
+
+		$this->assertSame( $actor, Proxy::put( $actor, $actor['id'] ) );
+		$this->assertSame( $actor, Proxy::get( $actor['id'] ) );
+		$this->assertSame( 0, $this->requests );
+	}
+
+	/**
+	 * Only the signer's origin vouches for an embedded document, and it gets the schema check of a fetch.
+	 *
+	 * @dataProvider put_refused_provider
+	 * @covers ::put
+	 *
+	 * @param array  $data   The embedded document.
+	 * @param string $signer The signer.
+	 */
+	public function test_put_refuses( $data, $signer ) {
+		$this->assertWPError( Proxy::put( $data, $signer ) );
+		$this->assertSame( 0, $this->requests );
+	}
+
+	/**
+	 * Data provider for test_put_refuses.
+	 *
+	 * @return array The embedded document and the signer.
+	 */
+	public function put_refused_provider() {
+		$actor = array(
+			'id'    => 'https://example.com/actors/1',
+			'type'  => 'Person',
+			'inbox' => 'https://example.com/actors/1/inbox',
+		);
+		$note  = array(
+			'id'           => 'https://example.org/notes/1',
+			'type'         => 'Note',
+			'attributedTo' => 'https://example.com/users/alice',
+		);
+
+		return array(
+			'another actor on the host' => array( $actor, 'https://example.com/actors/2' ),
+			'object on another host'    => array( $note, 'https://example.com/actors/1' ),
+			'without id'                => array( array( 'type' => 'Note' ), 'https://example.com/actors/1' ),
+			'fails its schema'          => array( \array_diff_key( $actor, array( 'inbox' => true ) ), 'https://example.com/actors/1' ),
+		);
 	}
 
 	/**
@@ -198,8 +303,9 @@ class Test_Proxy extends \WP_UnitTestCase {
 				'response' => array( 'code' => 200 ),
 				'body'     => \wp_json_encode(
 					array(
-						'id'   => $id,
-						'type' => 'Note',
+						'id'           => $id,
+						'type'         => 'Note',
+						'attributedTo' => 'https://example.com/users/alice',
 					)
 				),
 				'headers'  => array( 'content-type' => $content_type ),
@@ -283,9 +389,10 @@ class Test_Proxy extends \WP_UnitTestCase {
 			'activitypub_pre_http_get_remote_object',
 			function ( $pre, $url ) {
 				return array(
-					'id'      => $url,
-					'type'    => 'Note',
-					'stubbed' => true,
+					'id'           => $url,
+					'type'         => 'Note',
+					'attributedTo' => 'https://example.com/users/alice',
+					'stubbed'      => true,
 				);
 			},
 			10,
@@ -317,8 +424,9 @@ class Test_Proxy extends \WP_UnitTestCase {
 			),
 		);
 		$this->responses[ $actor ] = array(
-			'id'   => $actor,
-			'type' => 'Person',
+			'id'    => $actor,
+			'type'  => 'Person',
+			'inbox' => 'https://example.com/inbox',
 		);
 
 		$this->assertSame( 'Person', Proxy::get( 'alice@example.com' )['type'] );
@@ -333,8 +441,9 @@ class Test_Proxy extends \WP_UnitTestCase {
 		$actor = 'https://example.com/users/alice';
 
 		$this->responses[ $actor ] = array(
-			'id'   => $actor,
-			'type' => 'Person',
+			'id'    => $actor,
+			'type'  => 'Person',
+			'inbox' => 'https://example.com/inbox',
 		);
 
 		Proxy::get( $actor . '#main-key' );
@@ -380,8 +489,9 @@ class Test_Proxy extends \WP_UnitTestCase {
 		$this->responses[ $requested ] = $this->redirected(
 			$declared,
 			array(
-				'id'   => $declared,
-				'type' => 'Note',
+				'id'           => $declared,
+				'type'         => 'Note',
+				'attributedTo' => 'https://example.com/users/alice',
 			)
 		);
 
@@ -407,8 +517,9 @@ class Test_Proxy extends \WP_UnitTestCase {
 	public function test_get_preserves_both_verification_origins( $first_origin, $declared, $final_known, $alias ) {
 		$requested                     = 'https://example.com/redirect';
 		$object                        = array(
-			'id'   => $declared,
-			'type' => 'Note',
+			'id'           => $declared,
+			'type'         => 'Note',
+			'attributedTo' => 'https://example.com/users/alice',
 		);
 		$this->responses[ $requested ] = $this->redirected( $first_origin, $object );
 		$this->responses[ $declared ]  = $this->redirected( $declared, $object );
@@ -586,8 +697,9 @@ class Test_Proxy extends \WP_UnitTestCase {
 	public function test_delete_refuses_a_media_object_from_another_host() {
 		$id                     = 'https://example.com/notes/1';
 		$this->responses[ $id ] = array(
-			'id'   => $id,
-			'type' => 'Note',
+			'id'           => $id,
+			'type'         => 'Note',
+			'attributedTo' => 'https://example.com/users/alice',
 		);
 
 		Proxy::get( $id );
@@ -622,8 +734,9 @@ class Test_Proxy extends \WP_UnitTestCase {
 		$actor                     = 'https://example.com/actor';
 		$key_id                    = $actor . '#main-key';
 		$this->responses[ $actor ] = array(
-			'id'   => $key_id,
-			'type' => 'Person',
+			'id'    => $key_id,
+			'type'  => 'Person',
+			'inbox' => 'https://example.com/inbox',
 		);
 
 		Proxy::get( $key_id );
@@ -660,8 +773,9 @@ class Test_Proxy extends \WP_UnitTestCase {
 			'headers'  => array( 'content-type' => 'application/activity+json' ),
 			'body'     => \wp_json_encode(
 				array(
-					'id'   => $id,
-					'type' => 'Note',
+					'id'           => $id,
+					'type'         => 'Note',
+					'attributedTo' => 'https://example.com/users/alice',
 				)
 			),
 		);
@@ -715,9 +829,10 @@ class Test_Proxy extends \WP_UnitTestCase {
 	public function test_a_document_cannot_forge_an_alias() {
 		$id                     = 'https://example.com/notes/1';
 		$this->responses[ $id ] = array(
-			'id'      => $id,
-			'type'    => 'Note',
-			'__alias' => array( 'https://example.org/users/victim' ),
+			'id'           => $id,
+			'type'         => 'Note',
+			'attributedTo' => 'https://example.com/users/alice',
+			'__alias'      => array( 'https://example.org/users/victim' ),
 		);
 
 		$first  = Proxy::get( $id );
@@ -841,8 +956,9 @@ class Test_Proxy extends \WP_UnitTestCase {
 		$declared  = 'https://example.org/users/v';
 
 		$this->responses[ $requested ] = array(
-			'id'   => $declared,
-			'type' => 'Note',
+			'id'           => $declared,
+			'type'         => 'Note',
+			'attributedTo' => 'https://example.com/users/alice',
 		);
 
 		$this->assertWPError( Proxy::get( $requested ) );
@@ -867,5 +983,75 @@ class Test_Proxy extends \WP_UnitTestCase {
 		$this->assertSame( 2, $this->requests );
 		$this->assertFalse( \get_option( '_transient_activitypub_object_' . \hash( 'sha256', $id ) ) );
 		$this->assertFalse( \get_option( '_transient_timeout_activitypub_object_' . \hash( 'sha256', $id ) ) );
+	}
+
+	/**
+	 * An actor whose id has a fragment updates itself: the full ids are compared.
+	 *
+	 * @covers ::put
+	 */
+	public function test_put_takes_an_actor_with_a_fragment_id() {
+		$actor = array(
+			'id'    => 'https://example.com/profile#me',
+			'type'  => 'Person',
+			'inbox' => 'https://example.com/inbox',
+		);
+
+		$this->assertSame( $actor, Proxy::put( $actor, $actor['id'] ) );
+		$this->assertWPError( Proxy::put( $actor, 'https://example.com/profile' ), 'A signer without the fragment is another id.' );
+	}
+
+	/**
+	 * A sanitizer that refuses a value fails the fetch and the embedded copy: nothing is cached with the error.
+	 *
+	 * @covers ::get
+	 * @covers ::put
+	 */
+	public function test_a_sanitizer_error_is_not_cached() {
+		$schema = new class() extends \Activitypub\Schema\Actor {
+			/**
+			 * The properties: a label whose callback refuses it.
+			 *
+			 * @return array The properties, keyed by name.
+			 */
+			protected function get_properties() {
+				$properties = parent::get_properties();
+
+				$properties['label'] = array(
+					'type'        => 'string',
+					'arg_options' => array(
+						'sanitize_callback' => static function () {
+							return new \WP_Error( 'my_plugin_label', 'No label.' );
+						},
+					),
+				);
+
+				return $properties;
+			}
+		};
+		$class  = \get_class( $schema );
+		$filter = static function ( $found, $data ) use ( $class ) {
+			return isset( $data['label'] ) ? new $class( $data ) : $found;
+		};
+		\add_filter( 'activitypub_schema', $filter, 10, 2 );
+
+		$actor                           = array(
+			'id'    => 'https://example.com/users/labelled',
+			'type'  => 'Person',
+			'inbox' => 'https://example.com/users/labelled/inbox',
+			'label' => 'x',
+		);
+		$this->responses[ $actor['id'] ] = $actor;
+
+		$fetched  = Proxy::get( $actor['id'] );
+		$embedded = Proxy::put( $actor, $actor['id'] );
+
+		\remove_filter( 'activitypub_schema', $filter );
+
+		$this->assertWPError( $fetched );
+		$this->assertWPError( $embedded );
+		$this->assertSame( 'my_plugin_label', $embedded->get_error_code() );
+		$again = Proxy::get( $actor['id'] );
+		$this->assertFalse( \is_array( $again ) && ( $again['label'] ?? null ) instanceof \WP_Error, 'No copy with the error in it was cached.' );
 	}
 }

@@ -98,7 +98,8 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		// Dispatch the request.
 		$response = \rest_do_request( $request );
 		$this->assertEquals( 400, $response->get_status() );
-		$this->assertEquals( 'rest_invalid_param', $response->get_data()['code'] );
+		// The schema of a Create wants the object embedded.
+		$this->assertEquals( 'rest_invalid_type', $response->get_data()['code'] );
 
 		// Valid request, because of a valid object.
 		$json['object'] = array(
@@ -520,6 +521,269 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	}
 
 	/**
+	 * Core checks the args per property, then the route's validate_callback runs the rules of the type.
+	 *
+	 * @dataProvider validate_request_provider
+	 * @covers ::validate_request
+	 * @covers ::get_activity_args
+	 *
+	 * @param array  $changes The changes to a valid QuoteRequest, null removes a property.
+	 * @param string $code    The expected error code, or '' for a request that passes validation.
+	 */
+	public function test_validate_request( $changes, $code ) {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$activity = \array_filter(
+			\array_merge(
+				array(
+					'id'         => 'https://remote.example/request/1',
+					'type'       => 'QuoteRequest',
+					'actor'      => 'https://remote.example/@test',
+					'object'     => 'https://local.example/post/1',
+					'instrument' => 'https://remote.example/note/1',
+				),
+				$changes
+			)
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $activity ) );
+
+		$response = \rest_do_request( $request );
+
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		if ( '' === $code ) {
+			$this->assertSame( 202, $response->get_status() );
+		} else {
+			$this->assertSame( 400, $response->get_status() );
+			$this->assertSame( $code, $response->get_data()['code'] );
+		}
+	}
+
+	/**
+	 * An error from the object filter stops the request, as a client error unless it says otherwise.
+	 *
+	 * @dataProvider validate_object_error_provider
+	 * @covers ::validate_request
+	 *
+	 * @param array $data     The error data the filter sets.
+	 * @param int   $expected The expected status.
+	 */
+	public function test_validate_object_filter_error( $data, $expected ) {
+		$filter = static function () use ( $data ) {
+			return new \WP_Error( 'my_plugin_refused', 'Refused.', $data );
+		};
+		\add_filter( 'activitypub_validate_object', $filter );
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'id'     => 'https://remote.example/like/1',
+					'type'   => 'Like',
+					'actor'  => 'https://remote.example/@test',
+					'object' => 'https://local.example/post/1',
+				)
+			)
+		);
+
+		$response = \rest_do_request( $request );
+
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\remove_filter( 'activitypub_validate_object', $filter );
+
+		$this->assertSame( $expected, $response->get_status() );
+		$this->assertSame( 'my_plugin_refused', $response->get_data()['code'] );
+	}
+
+	/**
+	 * Data provider for test_validate_object_filter_error.
+	 *
+	 * @return array The error data and the expected status.
+	 */
+	public function validate_object_error_provider() {
+		return array(
+			'no status'  => array( null, 400 ),
+			'own status' => array( array( 'status' => 403 ), 403 ),
+		);
+	}
+
+	/**
+	 * Data provider for test_validate_request.
+	 *
+	 * @return array The changes to a valid QuoteRequest and the expected error code.
+	 */
+	public function validate_request_provider() {
+		return array(
+			'valid'                 => array( array(), '' ),
+			'actor not a uri'       => array( array( 'actor' => 'alice' ), 'rest_invalid_param' ),
+			'type not letters'      => array( array( 'type' => 'as:QuoteRequest' ), 'rest_invalid_param' ),
+			'without object'        => array( array( 'object' => null ), 'rest_property_required' ),
+			'without instrument'    => array( array( 'instrument' => null ), 'activitypub_instrument_missing' ),
+			'instrument other host' => array( array( 'instrument' => 'https://other.example/note/1' ), 'activitypub_instrument_host' ),
+		);
+	}
+
+	/**
+	 * An activity without an object passes when its type does not need one.
+	 *
+	 * @covers ::validate_request
+	 * @covers ::get_activity_args
+	 */
+	public function test_validate_request_intransitive_activity() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'id'    => 'https://remote.example/arrive/1',
+					'type'  => 'Arrive',
+					'actor' => 'https://remote.example/@test',
+				)
+			)
+		);
+
+		$response = \rest_do_request( $request );
+
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$this->assertSame( 202, $response->get_status() );
+	}
+
+	/**
+	 * An inbox only takes activities: a document of another kind is refused, though its own schema would pass it.
+	 *
+	 * @dataProvider inbox_route_provider
+	 * @covers ::validate_request
+	 *
+	 * @param string $route The inbox route.
+	 */
+	public function test_validate_request_takes_only_activities( $route ) {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . $route );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'id'         => 'https://remote.example/followers',
+					'type'       => 'OrderedCollection',
+					'totalItems' => 0,
+				)
+			)
+		);
+
+		$response = \rest_do_request( $request );
+
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( 'activitypub_unexpected_type', $response->get_data()['code'] );
+	}
+
+	/**
+	 * A schema registered for a type is enforced by both inboxes, without a change to their routes:
+	 * the properties it requires, and the normalizing of a property it adds.
+	 *
+	 * @dataProvider inbox_route_provider
+	 * @covers ::validate_request
+	 * @covers ::get_activity_args
+	 *
+	 * @param string $route The inbox route.
+	 */
+	public function test_validate_request_uses_registered_schema( $route ) {
+		$schema = new class() extends \Activitypub\Schema\Activity {
+			/**
+			 * The properties: those of an activity, a required target and a trimmed label.
+			 *
+			 * @return array The properties, keyed by name.
+			 */
+			protected function get_properties() {
+				$properties = parent::get_properties();
+
+				$properties['target'] = $this->required( $properties['target'] );
+				$properties['label']  = array(
+					'type'        => 'string',
+					'arg_options' => array(
+						'sanitize_callback' => static function ( $value ) {
+							return \trim( $value );
+						},
+					),
+				);
+
+				return $properties;
+			}
+		};
+
+		$class    = \get_class( $schema );
+		$register = static function ( $found, $data, $type ) use ( $class ) {
+			return 'Offer' === $type ? new $class( $data ) : $found;
+		};
+
+		$label    = null;
+		$received = static function ( $data ) use ( &$label ) {
+			$label = $data['label'] ?? null;
+		};
+
+		\add_filter( 'activitypub_schema', $register, 10, 3 );
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\add_action( 'activitypub_inbox_offer', $received );
+		\add_action( 'activitypub_inbox_shared_offer', $received );
+
+		// The routes are built on `rest_api_init`, so they see a schema registered before it.
+		global $wp_rest_server;
+		$wp_rest_server = new \Spy_REST_Server();
+		\do_action( 'rest_api_init', $wp_rest_server );
+
+		$activity = array(
+			'id'     => 'https://remote.example/offer/1',
+			'type'   => 'Offer',
+			'actor'  => 'https://remote.example/@test',
+			'object' => 'https://remote.example/note/1',
+			'label'  => '  Offer  ',
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . $route );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $activity ) );
+
+		$without_target = \rest_do_request( $request );
+
+		$activity['target'] = 'https://remote.example/collection/1';
+		$request->set_body( \wp_json_encode( $activity ) );
+
+		$with_target = \rest_do_request( $request );
+
+		\remove_action( 'activitypub_inbox_shared_offer', $received );
+		\remove_action( 'activitypub_inbox_offer', $received );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\remove_filter( 'activitypub_schema', $register );
+
+		$this->assertSame( 400, $without_target->get_status() );
+		$this->assertSame( 'rest_property_required', $without_target->get_data()['code'] );
+		$this->assertSame( 202, $with_target->get_status() );
+		$this->assertSame( 'Offer', $label );
+	}
+
+	/**
+	 * Data provider for test_validate_request_uses_registered_schema.
+	 *
+	 * @return array The inbox routes.
+	 */
+	public function inbox_route_provider() {
+		return array(
+			'shared inbox' => array( '/inbox' ),
+			'actor inbox'  => array( '/users/1/inbox' ),
+		);
+	}
+
+	/**
 	 * Test get_item method.
 	 *
 	 * @doesNotPerformAssertions
@@ -777,7 +1041,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	}
 
 	/**
-	 * Test that a crafted activity type is sanitized so it can't pollute action hook names.
+	 * Test that a crafted activity type is refused, so it can't pollute action hook names.
 	 *
 	 * @covers ::create_item
 	 */
@@ -814,10 +1078,11 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 				)
 			);
 
-			\rest_do_request( $request );
+			$response = \rest_do_request( $request );
 
-			$this->assertNotNull( $captured_type, 'activitypub_inbox should fire' );
-			$this->assertSame( 'createevil', $captured_type, 'Crafted activity types should be normalized to the expected canonical value' );
+			// A crafted type is no type the plugin knows, so it is refused, not normalized into a hook name.
+			$this->assertSame( 400, $response->get_status() );
+			$this->assertNull( $captured_type, 'activitypub_inbox must not fire' );
 		} finally {
 			\remove_action( 'activitypub_inbox', $capture, 10 );
 			\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
@@ -1765,11 +2030,12 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $track_fetches );
 	}
 
+
 	/**
 	 * Test that language maps in the object are normalized by the sanitize callback.
 	 *
-	 * Verifies that the Language_Map trait's sanitize_callback on the `object`
-	 * arg resolves language maps to plain strings before activity processing.
+	 * Verifies that the schema's sanitize_callback on the `object` arg resolves
+	 * language maps to plain strings before activity processing.
 	 *
 	 * @covers ::create_item
 	 */

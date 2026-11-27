@@ -9,6 +9,7 @@ namespace Activitypub\Handler;
 
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Posts;
+use Activitypub\Schema\Registry;
 use Activitypub\Tombstone;
 
 use function Activitypub\get_activity_visibility;
@@ -29,7 +30,6 @@ class Create {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_handled_inbox_create', array( self::class, 'handle_create' ), 10, 3 );
-		\add_filter( 'activitypub_validate_object', array( self::class, 'validate_object' ), 10, 3 );
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'maybe_unbury' ), 10, 2 );
 	}
 
@@ -129,47 +129,6 @@ class Create {
 	}
 
 	/**
-	 * Validate the object.
-	 *
-	 * @param bool             $valid   The validation state.
-	 * @param string           $param   The object parameter.
-	 * @param \WP_REST_Request $request The request object.
-	 *
-	 * @return bool The validation state: true if valid, false if not.
-	 */
-	public static function validate_object( $valid, $param, $request ) {
-		$activity = $request->get_json_params();
-
-		if ( empty( $activity['type'] ) ) {
-			return false;
-		}
-
-		if ( 'Create' !== $activity['type'] ) {
-			return $valid;
-		}
-
-		if ( ! isset( $activity['object'] ) || ! \is_array( $activity['object'] ) ) {
-			return false;
-		}
-
-		if ( ! isset( $activity['object']['id'] ) ) {
-			return false;
-		}
-		if ( ! isset( $activity['object']['content'] ) ) {
-			/*
-			 * Image-only replies and quotes have something to show only when comment images are enabled;
-			 * other posts still need text. This runs before the signature check, so it leaves the host
-			 * checks to Interactions::add_comment().
-			 */
-			if ( ( ! is_activity_reply( $activity ) && ! is_quote_activity( $activity ) ) || ! Interactions::get_image_attachments( $activity['object'], false ) ) {
-				return false;
-			}
-		}
-
-		return $valid;
-	}
-
-	/**
 	 * Remove a URL from the tombstone registry when a Create or Update activity is sent.
 	 *
 	 * This handles the case where a post was soft-deleted (visibility changed to local/private)
@@ -191,5 +150,37 @@ class Create {
 		if ( $object ) {
 			Tombstone::remove( $object->get_id(), $object->get_url() );
 		}
+	}
+
+	/**
+	 * Validate the object of an activity.
+	 *
+	 * @deprecated unreleased The schema of the type checks the activity in the inbox, see `Activitypub\Schema\Create`.
+	 *
+	 * @param bool|\WP_Error   $valid   The validation result.
+	 * @param array            $param   The object data.
+	 * @param \WP_REST_Request $request The request object.
+	 *
+	 * @return bool|\WP_Error The validation result: for a Create, what its schema says.
+	 */
+	public static function validate_object( $valid, $param, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- The signature of the removed check.
+		\_deprecated_function( __METHOD__, 'unreleased' );
+
+		$activity = $request->get_json_params();
+
+		if ( empty( $activity['type'] ) ) {
+			return false;
+		}
+
+		if ( 'Create' !== $activity['type'] ) {
+			return $valid;
+		}
+
+		// An earlier refusal (false or an error) stands.
+		if ( true !== $valid ) {
+			return $valid;
+		}
+
+		return true === Registry::get( $activity )->validate();
 	}
 }

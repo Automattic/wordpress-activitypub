@@ -10,6 +10,7 @@ namespace Activitypub\Handler;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox as Inbox_Collection;
+use Activitypub\Schema\Registry;
 
 use function Activitypub\object_to_id;
 
@@ -24,7 +25,6 @@ class Undo {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_undo', array( self::class, 'handle_undo' ), 10, 2 );
-		\add_action( 'activitypub_validate_object', array( self::class, 'validate_object' ), 10, 3 );
 	}
 
 	/**
@@ -95,15 +95,19 @@ class Undo {
 	}
 
 	/**
-	 * Validate the object.
+	 * Validate the object of an activity.
 	 *
-	 * @param bool             $valid   The validation state.
-	 * @param string           $param   The object parameter.
+	 * @deprecated unreleased The schema of the type checks the activity in the inbox, see `Activitypub\Schema\Activity`.
+	 *
+	 * @param bool|\WP_Error   $valid   The validation result.
+	 * @param array            $param   The object data.
 	 * @param \WP_REST_Request $request The request object.
 	 *
-	 * @return bool The validation state: true if valid, false if not.
+	 * @return bool|\WP_Error The validation result: for an Undo, what its schema says.
 	 */
-	public static function validate_object( $valid, $param, $request ) {
+	public static function validate_object( $valid, $param, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- The signature of the removed check.
+		\_deprecated_function( __METHOD__, 'unreleased' );
+
 		$activity = $request->get_json_params();
 
 		if ( empty( $activity['type'] ) ) {
@@ -114,18 +118,11 @@ class Undo {
 			return $valid;
 		}
 
-		if ( ! isset( $activity['actor'], $activity['object'] ) ) {
-			return false;
+		// An earlier refusal (false or an error) stands.
+		if ( true !== $valid ) {
+			return $valid;
 		}
 
-		if ( ! \is_array( $activity['object'] ) && ! \is_string( $activity['object'] ) ) {
-			return false;
-		}
-
-		if ( \is_array( $activity['object'] ) && ! isset( $activity['object']['id'] ) ) {
-			return false;
-		}
-
-		return $valid;
+		return true === Registry::get( $activity )->validate();
 	}
 }

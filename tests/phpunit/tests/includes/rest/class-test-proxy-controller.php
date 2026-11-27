@@ -162,9 +162,10 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 		\wp_using_ext_object_cache( $persistent );
 		$id                     = 'https://example.com/notes/cached';
 		$this->responses[ $id ] = array(
-			'id'      => $id,
-			'type'    => 'Note',
-			'content' => 'Cached content.',
+			'id'           => $id,
+			'type'         => 'Note',
+			'attributedTo' => 'https://example.com/users/alice',
+			'content'      => 'Cached content.',
 		);
 		$request                = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
 		$request->set_body_params( array( 'id' => $id ) );
@@ -574,8 +575,9 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 				'response' => array( 'code' => 200 ),
 				'body'     => \wp_json_encode(
 					array(
-						'type' => 'Person',
-						'id'   => 'https://example.com/users/test',
+						'type'  => 'Person',
+						'id'    => 'https://example.com/users/test',
+						'inbox' => 'https://example.com/users/test/inbox',
 					)
 				),
 				'headers'  => array( 'content-type' => 'application/activity+json' ),
@@ -737,8 +739,9 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 				'response' => array( 'code' => 200 ),
 				'body'     => \wp_json_encode(
 					array(
-						'type' => 'Person',
-						'id'   => 'https://example.com/users/streamer',
+						'type'  => 'Person',
+						'id'    => 'https://example.com/users/streamer',
+						'inbox' => 'https://example.com/users/streamer/inbox',
 					)
 				),
 				'headers'  => array( 'content-type' => 'application/activity+json' ),

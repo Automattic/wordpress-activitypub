@@ -499,4 +499,95 @@ class Test_Collection_Sync extends \WP_UnitTestCase {
 		// Clean up.
 		remove_filter( 'activitypub_pre_http_get_remote_object', $mock_empty_for_authority );
 	}
+
+	/**
+	 * A follower listed as an embedded object counts by its id.
+	 *
+	 * @covers ::reconcile_followers
+	 */
+	public function test_reconcile_followers_reads_embedded_followers_by_id() {
+		$home_authority = get_url_authority( \home_url() );
+
+		$this->add_accepted_follow( $this->create_remote_actor( self::$remote_actors[0] ), self::$user_id );
+		$this->add_accepted_follow( $this->create_remote_actor( self::$remote_actors[1] ), self::$user_id );
+
+		$embedded = static function ( $preempt, $url_or_object ) {
+			if ( 'https://example.com/users/test/followers/sync' !== $url_or_object ) {
+				return $preempt;
+			}
+
+			return array(
+				'type'         => 'OrderedCollection',
+				'orderedItems' => array(
+					array(
+						'id'   => self::$remote_actors[0],
+						'type' => 'Person',
+					),
+					self::$remote_actors[1],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $embedded, 10, 2 );
+
+		Collection_Sync::reconcile_followers( self::$user_id, 'https://example.com/users/test', array( 'url' => 'https://example.com/users/test/followers/sync' ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $embedded );
+
+		$this->assertCount( 2, Following::get_by_authority( self::$user_id, $home_authority ) );
+	}
+
+	/**
+	 * A collection whose items are no list, no URI, or name a follower without an id is not
+	 * reconciled: every follow stays.
+	 *
+	 * @dataProvider blank_items_provider
+	 * @covers ::reconcile_followers
+	 *
+	 * @param mixed $items The items the remote collection lists.
+	 */
+	public function test_reconcile_followers_skips_blank_items( $items ) {
+		$home_authority = get_url_authority( \home_url() );
+
+		$this->add_accepted_follow( $this->create_remote_actor( self::$remote_actors[0] ), self::$user_id );
+
+		$blank = static function ( $preempt, $url_or_object ) use ( $items ) {
+			if ( 'https://example.com/users/test/followers/sync' !== $url_or_object ) {
+				return $preempt;
+			}
+
+			return array(
+				'type'         => 'OrderedCollection',
+				'orderedItems' => $items,
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $blank, 10, 2 );
+
+		Collection_Sync::reconcile_followers( self::$user_id, 'https://example.com/users/test', array( 'url' => 'https://example.com/users/test/followers/sync' ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $blank );
+
+		$this->assertCount( 1, Following::get_by_authority( self::$user_id, $home_authority ) );
+	}
+
+	/**
+	 * Data provider for test_reconcile_followers_skips_blank_items.
+	 *
+	 * @return array The items.
+	 */
+	public function blank_items_provider() {
+		return array(
+			'empty string' => array( '' ),
+			'whitespace'   => array( '  ' ),
+			'false'        => array( false ),
+			'no id'        => array(
+				array(
+					array(
+						'type' => 'Person',
+						'name' => 'Alice',
+					),
+				),
+			),
+			'one no id'    => array( array( self::$remote_actors[0], array( 'type' => 'Person' ) ) ),
+		);
+	}
 }
