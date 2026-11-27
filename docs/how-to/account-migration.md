@@ -71,6 +71,16 @@ wp activitypub move https://oldblog.com/author/you https://newblog.com/author/yo
 
 Your followers will be notified and redirected to your new blog.
 
+## Cancelling a move
+
+If your WordPress profile still points at an account you moved to, you can remove the `movedTo` on the site you moved away from:
+
+```bash
+wp activitypub move https://yourblog.com/author/username --cancel
+```
+
+The plugin sends a profile update without the `movedTo`, so servers no longer show the profile as moved. Followers that already moved stay with the other account, and the `Move` activity stays in your outbox.
+
 ## How it works
 
 Account migration uses the ActivityPub `Move` activity type ([FEP-7628](https://codeberg.org/fediverse/fep/src/branch/main/fep/7628/fep-7628.md)). The process relies on two actor properties:

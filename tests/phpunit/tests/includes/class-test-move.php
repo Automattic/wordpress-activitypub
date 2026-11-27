@@ -8,7 +8,11 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Followers;
+use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Remote_Actors;
+use Activitypub\Moderation;
 use Activitypub\Move;
 
 /**
@@ -433,6 +437,69 @@ class Test_Move extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Cancelling a move removes the movedTo and federates a profile Update without it.
+	 *
+	 * @covers ::cancel
+	 */
+	public function test_cancel_removes_moved_to() {
+		$from = Actors::get_by_id( self::$user_id )->get_id();
+		$to   = 'https://newsite.com/user/1';
+
+		$filter = function () use ( $from, $to ) {
+			return array(
+				'id'          => $to,
+				'type'        => 'Person',
+				'alsoKnownAs' => array( $from ),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		Move::externally( $from, $to );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertTrue( Move::cancel( $from ) );
+		$this->assertNull( Actors::get_by_id( self::$user_id )->get_moved_to() );
+
+		// The Update of the cancel replaces the pending one of the move.
+		$updates = $this->get_federated_updates();
+
+		$this->assertCount( 1, $updates );
+		$this->assertFalse( \property_exists( \json_decode( $updates[0]->post_content )->object, 'movedTo' ), 'The Update must no longer carry the movedTo.' );
+	}
+
+	/**
+	 * Cancelling the move of the blog actor removes its movedTo.
+	 *
+	 * @covers ::cancel
+	 */
+	public function test_cancel_with_blog_actor() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		\update_option( 'activitypub_blog_user_moved_to', 'https://newsite.com/user/0' );
+
+		$from = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
+
+		$this->assertTrue( Move::cancel( $from ) );
+		$this->assertNull( Actors::get_by_id( Actors::BLOG_USER_ID )->get_moved_to() );
+		$this->assertFalse( \get_option( 'activitypub_blog_user_moved_to' ) );
+
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * An account that has not moved has nothing to cancel, and no Update is sent.
+	 *
+	 * @covers ::cancel
+	 */
+	public function test_cancel_without_move() {
+		$result = Move::cancel( Actors::get_by_id( self::$user_id )->get_id() );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'activitypub_not_moved', $result->get_error_code() );
+		$this->assertEmpty( $this->get_federated_updates() );
+	}
+
+	/**
 	 * Test the internally() method with valid input.
 	 *
 	 * @covers ::internally
@@ -630,6 +697,181 @@ class Test_Move extends \WP_UnitTestCase {
 		\delete_option( 'activitypub_actor_mode' );
 		\update_option( 'home', $old_domain );
 		\add_filter( 'option_home', '_config_wp_home' );
+	}
+
+	/**
+	 * Our users who follow the old actor follow the new one, which is stored as its own post.
+	 *
+	 * @covers ::remote
+	 */
+	public function test_remote_follows_new_actor() {
+		$origin  = 'https://old.example/users/alice';
+		$target  = 'https://new.example/users/alice';
+		$user_id = self::factory()->user->create();
+
+		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
+		$id = Remote_Actors::upsert( $this->remote_actor( $origin ) );
+		\add_post_meta( $id, Following::FOLLOWING_META_KEY, (string) $user_id );
+
+		$post_id = Move::remote( \get_post( $id ), $this->remote_actor( $target ) );
+
+		$this->assertSame( Remote_Actors::get_by_uri( $target )->ID, $post_id );
+		$this->assertNull( \get_post( $id ), 'The old actor must be merged away.' );
+		$this->assertNotContains( (string) $user_id, \get_post_meta( $post_id, Following::FOLLOWING_META_KEY, false ), 'The new server has not accepted yet.' );
+		$this->assertContains( (string) $user_id, \get_post_meta( $post_id, Following::PENDING_META_KEY, false ) );
+		$this->assertCount( 1, $this->get_follows( $user_id, $target ), 'A Follow must be sent to the new actor.' );
+	}
+
+	/**
+	 * A merge keeps blocks of the old actor and follows the new one for our users.
+	 *
+	 * @covers ::remote
+	 */
+	public function test_remote_merge_keeps_blocks_and_follows() {
+		$origin    = 'https://old.example/users/bob';
+		$target    = 'https://new.example/users/bob';
+		$user_id   = self::factory()->user->create();
+		$blocker   = self::factory()->user->create();
+		$origin_id = Remote_Actors::upsert( $this->remote_actor( $origin ) );
+		$target_id = Remote_Actors::upsert( $this->remote_actor( $target ) );
+
+		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
+		\add_post_meta( $origin_id, Following::FOLLOWING_META_KEY, (string) $user_id );
+		\add_post_meta( $origin_id, Moderation::BLOCKED_ACTORS_META_KEY, (string) $blocker );
+
+		$this->assertSame( $target_id, Move::remote( \get_post( $origin_id ), $this->remote_actor( $target ) ) );
+
+		$this->assertNull( \get_post( $origin_id ), 'The old actor must be merged away.' );
+		$this->assertContains( (string) $blocker, \get_post_meta( $target_id, Moderation::BLOCKED_ACTORS_META_KEY, false ), 'The block must carry over.' );
+		$this->assertTrue( Moderation::is_actor_blocked( $target, $blocker ) );
+		$this->assertTrue( Moderation::is_actor_blocked( $origin, $blocker ), 'The old actor must stay blocked.' );
+		$this->assertContains( (string) $user_id, \get_post_meta( $target_id, Following::PENDING_META_KEY, false ) );
+		$this->assertCount( 1, $this->get_follows( $user_id, $target ) );
+	}
+
+	/**
+	 * Our users do not follow a new actor they block.
+	 *
+	 * @covers ::remote
+	 */
+	public function test_remote_does_not_follow_blocked_actor() {
+		$origin  = 'https://old.example/users/carol';
+		$target  = 'https://new.example/users/carol';
+		$user_id = self::factory()->user->create();
+
+		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
+		Moderation::add_user_block( $user_id, Moderation::TYPE_DOMAIN, 'new.example' );
+		$id = Remote_Actors::upsert( $this->remote_actor( $origin ) );
+		\add_post_meta( $id, Following::FOLLOWING_META_KEY, (string) $user_id );
+
+		$post_id = Move::remote( \get_post( $id ), $this->remote_actor( $target ) );
+
+		$this->assertEmpty( \get_post_meta( $post_id, Following::FOLLOWING_META_KEY, false ) );
+		$this->assertEmpty( \get_post_meta( $post_id, Following::PENDING_META_KEY, false ) );
+		$this->assertCount( 0, $this->get_follows( $user_id, $target ) );
+	}
+
+	/**
+	 * A user who blocks the new actor does not keep it as a follower.
+	 *
+	 * @covers ::remote
+	 */
+	public function test_remote_drops_follower_blocked_by_user() {
+		$origin  = 'https://old.example/users/jack';
+		$target  = 'https://new.example/users/jack';
+		$blocker = self::factory()->user->create();
+		$user_id = self::factory()->user->create();
+
+		Moderation::add_user_block( $blocker, Moderation::TYPE_DOMAIN, 'new.example' );
+		$id = Remote_Actors::upsert( $this->remote_actor( $origin ) );
+		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, (string) $blocker );
+		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, (string) $user_id );
+
+		$post_id = Move::remote( \get_post( $id ), $this->remote_actor( $target ) );
+
+		$followers = \get_post_meta( $post_id, Followers::FOLLOWER_META_KEY, false );
+		$this->assertNotContains( (string) $blocker, $followers );
+		$this->assertContains( (string) $user_id, $followers );
+	}
+
+	/**
+	 * A user who can no longer follow does not end up following the new actor without a Follow.
+	 *
+	 * @covers ::remote
+	 */
+	public function test_remote_does_not_keep_following_without_follow() {
+		$origin  = 'https://old.example/users/mia';
+		$target  = 'https://new.example/users/mia';
+		$user_id = self::factory()->user->create();
+
+		$id = Remote_Actors::upsert( $this->remote_actor( $origin ) );
+		\add_post_meta( $id, Following::FOLLOWING_META_KEY, (string) $user_id );
+
+		$post_id = Move::remote( \get_post( $id ), $this->remote_actor( $target ) );
+
+		$this->assertNotContains( (string) $user_id, \get_post_meta( $post_id, Following::FOLLOWING_META_KEY, false ), 'The new server never got a Follow.' );
+		$this->assertCount( 0, $this->get_follows( $user_id, $target ) );
+	}
+
+	/**
+	 * A move to the old actor itself keeps it, instead of merging it into itself and deleting it.
+	 *
+	 * @covers ::remote
+	 */
+	public function test_remote_to_itself_keeps_actor() {
+		$origin = 'https://old.example/users/cid';
+		$id     = Remote_Actors::upsert( $this->remote_actor( $origin ) );
+		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, '1' );
+
+		$this->assertWPError( Move::remote( \get_post( $id ), $this->remote_actor( $origin ) ) );
+		$this->assertSame( $id, Remote_Actors::get_by_uri( $origin )->ID );
+		$this->assertSame( array( '1' ), \get_post_meta( $id, Followers::FOLLOWER_META_KEY, false ) );
+	}
+
+	/**
+	 * Build a remote actor document.
+	 *
+	 * @param string $id The actor id.
+	 *
+	 * @return array The actor document.
+	 */
+	private function remote_actor( $id ) {
+		return array(
+			'type'  => 'Person',
+			'id'    => $id,
+			'url'   => $id,
+			'name'  => 'Actor',
+			'inbox' => $id . '/inbox',
+		);
+	}
+
+	/**
+	 * Get the Follow activities a user sent to an actor.
+	 *
+	 * @param int    $user_id  The user ID.
+	 * @param string $actor_id The followed actor id.
+	 *
+	 * @return int[] The outbox post IDs.
+	 */
+	private function get_follows( $user_id, $actor_id ) {
+		return \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'any',
+				'author'      => $user_id,
+				'fields'      => 'ids',
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $actor_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Follow',
+					),
+				),
+			)
+		);
 	}
 
 	/**

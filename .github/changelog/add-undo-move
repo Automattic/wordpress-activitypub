@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+You can now cancel a move with `wp activitypub move <url> --cancel`, so your profile no longer points at the other account.

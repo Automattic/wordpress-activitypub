@@ -215,6 +215,55 @@ class Remote_Actors {
 	}
 
 	/**
+	 * Merge a stored remote actor into another one.
+	 *
+	 * The followers, comments and Reader posts of the old actor go to the new one, and the old post
+	 * is deleted. The follows and blocks of our users do not carry over; use `Move::remote()` for that.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $from The post ID of the old actor.
+	 * @param int $to   The post ID of the new actor.
+	 *
+	 * @return void
+	 */
+	public static function merge( $from, $to ) {
+		global $wpdb;
+
+		foreach ( \array_diff( self::get_follower_ids( $from ), self::get_follower_ids( $to ) ) as $user_id ) {
+			\add_post_meta( $to, Followers::FOLLOWER_META_KEY, $user_id );
+		}
+
+		// Comments and Reader posts of the old actor belong to the new one now.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+		$where = array(
+			'meta_key'   => '_activitypub_remote_actor_id',
+			'meta_value' => (string) $from,
+		);
+
+		// The meta type and the cache group of its queries, which core names differently.
+		$types = array(
+			'comment' => 'comment',
+			'post'    => 'posts',
+		);
+
+		foreach ( $types as $type => $cache_group ) {
+			$table = $wpdb->{ \sprintf( '%smeta', $type ) };
+			$ids   = $wpdb->get_col( $wpdb->prepare( 'SELECT %i FROM %i WHERE meta_key = %s AND meta_value = %s', \sprintf( '%s_id', $type ), $table, $where['meta_key'], $where['meta_value'] ) );
+
+			if ( $ids ) {
+				$wpdb->update( $table, array( 'meta_value' => (string) $to ), $where );
+				\wp_cache_delete_multiple( $ids, \sprintf( '%s_meta', $type ) );
+				\wp_cache_set_last_changed( $cache_group );
+			}
+		}
+		// phpcs:enable
+
+		// Clears the inbox caches of the followers, which now include the new actor.
+		self::delete( $from );
+	}
+
+	/**
 	 * Get the IDs of the local users a remote actor follows.
 	 *
 	 * @since 9.4.0
@@ -1082,11 +1131,11 @@ class Remote_Actors {
 		 *
 		 * @since 5.6.0
 		 *
-		 * @param string      $url       The remote avatar URL.
-		 * @param string      $context   The context ('avatar', 'media', 'emoji').
-		 * @param int|null    $entity_id The entity ID (actor post ID, post ID, or null for emoji).
-		 * @param array       $options   Optional. Additional options like 'updated' timestamp.
+		 * @param string          $url       The remote avatar URL.
+		 * @param string          $context   The context ('avatar', 'media', 'emoji').
+		 * @param string|int|null $entity_id The entity identifier (the id of the actor, a post ID, or null for emoji).
+		 * @param array           $options   Optional. Additional options like 'updated' timestamp.
 		 */
-		return \apply_filters( 'activitypub_remote_media_url', $remote_avatar_url, 'avatar', $id, array() );
+		return \apply_filters( 'activitypub_remote_media_url', $remote_avatar_url, 'avatar', unescape_guid( $post->guid ), array() );
 	}
 }

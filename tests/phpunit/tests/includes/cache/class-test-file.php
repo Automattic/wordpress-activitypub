@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Cache;
 
 use Activitypub\Cache\Avatar;
+use Activitypub\Cache\Media;
 use Activitypub\Tests\Cache_Directory_Stream;
 use Activitypub\Tests\Image_Download_Stub;
 use Activitypub\Tests\Remote_Request_Stub;
@@ -476,9 +477,11 @@ class Test_File extends WP_UnitTestCase {
 
 	/**
 	 * Test get_storage_paths returns correct structure.
+	 *
+	 * Uses Media, because Avatar names its folders after a hash of the actor id.
 	 */
 	public function test_get_storage_paths() {
-		$paths = Avatar::get_storage_paths( 123 );
+		$paths = Media::get_storage_paths( 123 );
 
 		$this->assertIsArray( $paths );
 		$this->assertArrayHasKey( 'basedir', $paths );
