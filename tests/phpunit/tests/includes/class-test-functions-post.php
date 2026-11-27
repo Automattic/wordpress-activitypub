@@ -732,6 +732,42 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A more block between blocks cuts the summary, one inside another block does not.
+	 *
+	 * @covers \Activitypub\generate_post_summary
+	 */
+	public function test_generate_post_summary_more_block() {
+		$more = '<!-- wp:more --><!--more--><!-- /wp:more -->';
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_content' => '<!-- wp:paragraph --><p>Teaser</p><!-- /wp:paragraph -->' . $more . '<!-- wp:paragraph --><p>Rest</p><!-- /wp:paragraph -->',
+				'post_excerpt' => '',
+			)
+		);
+
+		$this->assertSame( 'Teaser', \Activitypub\generate_post_summary( $post ) );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:columns --><div class="wp-block-columns"><!-- wp:column --><div class="wp-block-column"><!-- wp:paragraph --><p>Teaser</p><!-- /wp:paragraph -->' . $more . '<!-- wp:paragraph --><p>Rest</p><!-- /wp:paragraph --></div><!-- /wp:column --></div><!-- /wp:columns -->',
+				'post_excerpt' => '',
+			)
+		);
+
+		// Outside the permalink, where the Create is built, and on it, where the object is fetched.
+		$this->assertSame( 'Teaser Rest', \Activitypub\generate_post_summary( $post_id ) );
+
+		$this->go_to( \get_permalink( $post_id ) );
+
+		$this->assertSame( 'Teaser Rest', \Activitypub\generate_post_summary( $post_id ) );
+
+		// A tag in the HTML of another block does not cut either.
+		$post->post_content = '<!-- wp:paragraph --><p>Teaser</p><!-- /wp:paragraph --><!-- wp:html --><p>Code</p><!--more--><!-- /wp:html --><!-- wp:paragraph --><p>Rest</p><!-- /wp:paragraph -->';
+
+		$this->assertSame( 'Teaser Code Rest', \Activitypub\generate_post_summary( $post ) );
+	}
+
+	/**
 	 * Building the summary puts the global post back the way it was.
 	 *
 	 * @covers \Activitypub\generate_post_summary

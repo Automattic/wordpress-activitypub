@@ -377,10 +377,25 @@ function generate_post_summary( $post, $length = 500 ) {
 	 * and the preview renders, so the summary would not match the one sent in the Create. Core gets
 	 * a copy cut at the tag instead. `get_post()` reloads a post that is not raw from the database,
 	 * which would drop the cut.
+	 *
+	 * Only a More block between blocks or classic content (one block without a name) cuts. A tag
+	 * inside another block, nested or in its HTML, would leave that block open, and core repeats
+	 * its text once for each open block. Core cuts itself where `$more` is 0, so the copy keeps no
+	 * tag. `get_extended()` cuts at the first tag, so a post with a nested tag before one between
+	 * blocks still repeats its text.
 	 */
+	$more_tag             = '/<!--more(.*?)?-->/'; // Core's pattern, from `get_extended()`.
 	$teaser               = clone $post;
-	$teaser->post_content = \get_extended( $post->post_content )['main'];
-	$teaser->filter       = 'raw';
+	$teaser->post_content = \preg_replace( $more_tag, '', $post->post_content ) ?? $post->post_content;
+	if ( $teaser->post_content !== $post->post_content ) {
+		foreach ( \parse_blocks( $post->post_content ) as $block ) {
+			if ( \in_array( $block['blockName'], array( null, 'core/more' ), true ) && \preg_match( $more_tag, $block['innerHTML'] ) ) {
+				$teaser->post_content = \get_extended( $post->post_content )['main'];
+				break;
+			}
+		}
+	}
+	$teaser->filter = 'raw';
 
 	$previous_post   = $GLOBALS['post'] ?? null;
 	$GLOBALS['post'] = $post; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
