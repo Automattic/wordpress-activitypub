@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Cached profile pictures of remote accounts are stored by account address, so they no longer depend on internal IDs.
