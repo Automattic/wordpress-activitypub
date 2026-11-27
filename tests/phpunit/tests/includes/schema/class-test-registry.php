@@ -82,39 +82,41 @@ class Test_Registry extends \WP_UnitTestCase {
 	 */
 	public function get_provider() {
 		return array(
-			'own class'           => array( array( 'type' => 'QuoteRequest' ), Quote_Request::class ),
-			'own class, vocab'    => array( array( 'type' => 'Arrive' ), Arrive::class ),
-			'own class, object'   => array( array( 'type' => 'Image' ), Image::class ),
-			'own class, poll'     => array( array( 'type' => 'Question' ), Question::class ),
-			'own class, stamp'    => array( array( 'type' => 'QuoteAuthorization' ), Quote_Authorization::class ),
-			'own class, key'      => array( array( 'type' => 'CryptographicKey' ), Cryptographic_Key::class ),
-			'activity kind'       => array( array( 'type' => 'Like' ), Activity::class ),
-			'actor kind'          => array( array( 'type' => 'Person' ), Actor::class ),
-			'collection kind'     => array( array( 'type' => 'OrderedCollection' ), Collection::class ),
-			'own class, post'     => array( array( 'type' => 'Note' ), Note::class ),
-			'own class, page'     => array( array( 'type' => 'Page' ), Page::class ),
-			'object kind'         => array( array( 'type' => 'Tombstone' ), Activity_Object::class ),
-			'unknown'             => array( array( 'type' => 'Unknown' ), Unexpected::class ),
-			'names another class' => array( array( 'type' => 'Registry' ), Unexpected::class ),
-			'names the root'      => array( array( 'type' => 'BaseObject' ), Unexpected::class ),
-			'names a group'       => array( array( 'type' => 'Request' ), Unexpected::class ),
-			'not letters'         => array( array( 'type' => 'Schema\\Activity' ), Unexpected::class ),
-			'no type'             => array( array(), Unexpected::class ),
-			'key without type'    => array(
+			'own class'            => array( array( 'type' => 'QuoteRequest' ), Quote_Request::class ),
+			'own class, vocab'     => array( array( 'type' => 'Arrive' ), Arrive::class ),
+			'own class, object'    => array( array( 'type' => 'Image' ), Image::class ),
+			'own class, poll'      => array( array( 'type' => 'Question' ), Question::class ),
+			'own class, stamp'     => array( array( 'type' => 'QuoteAuthorization' ), Quote_Authorization::class ),
+			'own class, key'       => array( array( 'type' => 'CryptographicKey' ), Cryptographic_Key::class ),
+			'activity kind'        => array( array( 'type' => 'Like' ), Activity::class ),
+			'actor kind'           => array( array( 'type' => 'Person' ), Actor::class ),
+			'collection kind'      => array( array( 'type' => 'OrderedCollection' ), Collection::class ),
+			'own class, post'      => array( array( 'type' => 'Note' ), Note::class ),
+			'own class, page'      => array( array( 'type' => 'Page' ), Page::class ),
+			'object kind'          => array( array( 'type' => 'Tombstone' ), Activity_Object::class ),
+			'unknown'              => array( array( 'type' => 'Unknown' ), Unexpected::class ),
+			'names another class'  => array( array( 'type' => 'Registry' ), Unexpected::class ),
+			'names the root'       => array( array( 'type' => 'BaseObject' ), Unexpected::class ),
+			'names a group'        => array( array( 'type' => 'Request' ), Unexpected::class ),
+			'names a kind'         => array( array( 'type' => 'ActivityObject' ), Unexpected::class ),
+			'names the actor kind' => array( array( 'type' => 'Actor' ), Unexpected::class ),
+			'not letters'          => array( array( 'type' => 'Schema\\Activity' ), Unexpected::class ),
+			'no type'              => array( array(), Unexpected::class ),
+			'key without type'     => array(
 				array(
 					'id'           => 'https://example.com/actor#main-key',
 					'publicKeyPem' => 'pem',
 				),
 				Key::class,
 			),
-			'typed, with a pem'   => array(
+			'typed, with a pem'    => array(
 				array(
 					'type'         => 'Unknown',
 					'publicKeyPem' => 'pem',
 				),
 				Unexpected::class,
 			),
-			'type not string'     => array( array( 'type' => array( 'Accept' ) ), Unexpected::class ),
+			'type not string'      => array( array( 'type' => array( 'Accept' ) ), Unexpected::class ),
 		);
 	}
 

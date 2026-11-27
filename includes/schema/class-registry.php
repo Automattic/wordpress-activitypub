@@ -26,6 +26,20 @@ use function Activitypub\is_collection;
  */
 class Registry {
 	/**
+	 * The classes no type of the vocabulary is called by: the root, the kinds the registry falls
+	 * back to and the groups. A document can not name them.
+	 *
+	 * @var string[]
+	 */
+	const NOT_TYPES = array(
+		Base_Object::class,
+		Activity_Object::class,
+		Actor::class,
+		Authorization::class,
+		Request::class,
+		Unexpected::class,
+	);
+	/**
 	 * Get the schema object for remote data, holding the data.
 	 *
 	 * @param mixed $data The remote data.
@@ -61,13 +75,12 @@ class Registry {
 
 		/*
 		 * The schema of the type: `QuoteRequest` is `Quote_Request`. Letters only, so a type can not
-		 * name another class. A group (`Request`) is abstract and the root is none of them, so only
-		 * the schema of a type is found by its name.
+		 * name another class, and only a class of a type, not one of `NOT_TYPES`.
 		 */
 		if ( \preg_match( '/^[A-Za-z]+$/', $type ) ) {
 			$class = __NAMESPACE__ . '\\' . \ucwords( camel_to_snake_case( $type ), '_' );
 
-			if ( \class_exists( $class ) && \is_subclass_of( $class, Base_Object::class ) && ( new \ReflectionClass( $class ) )->isInstantiable() ) {
+			if ( \class_exists( $class ) && \is_subclass_of( $class, Base_Object::class ) && ! \in_array( $class, self::NOT_TYPES, true ) ) {
 				return new $class( $data );
 			}
 		}
