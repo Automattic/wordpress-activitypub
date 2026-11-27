@@ -150,7 +150,13 @@ function get_comment_ancestors( $comment ) {
  * Registers a ActivityPub comment type.
  *
  * @param string $comment_type Key for comment type.
- * @param array  $args         Optional. Array of arguments for registering a comment type. Default empty array.
+ * @param array  $args         {
+ *     Optional. Array of arguments for registering a comment type. Default empty array.
+ *
+ *     @type bool $reaction Whether the type is a reaction, shown in the Reactions block instead of the
+ *                          comment list and left out of the comment count. A type that carries its own
+ *                          content, like a quote, is not a reaction. Default true.
+ * }
  *
  * @return array The registered Activitypub comment type.
  */
@@ -179,6 +185,7 @@ function register_comment_type( $comment_type, $args = array() ) {
 			'excerpt'        => '',
 			'count_single'   => '%d',
 			'count_plural'   => '%d',
+			'reaction'       => true,
 		)
 	);
 

@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Quotes now show up as comments, so replies to a quote are no longer counted but hidden.

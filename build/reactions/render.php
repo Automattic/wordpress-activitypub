@@ -133,7 +133,7 @@ $show_avatars = 'facepile' === $attributes['displayStyle'] && get_option( 'show_
 // Fetch reactions.
 $reactions = array();
 
-foreach ( Comment::get_comment_types() as $_type => $type_object ) {
+foreach ( wp_list_filter( Comment::get_comment_types(), array( 'reaction' => true ) ) as $_type => $type_object ) {
 	$_comments = get_comments(
 		array(
 			'post_id' => $_post_id,
