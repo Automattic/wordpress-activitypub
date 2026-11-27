@@ -509,9 +509,13 @@ class Post extends Base {
 	/**
 	 * Returns a list of Tags, used in the Post.
 	 *
-	 * This includes Hash-Tags and Mentions.
+	 * This includes hashtags, mentions, and categories.
 	 *
-	 * @return array The list of Tags.
+	 * The default category is excluded for now, as it may or may not carry
+	 * meaningful information in the context of federation (see the discussion in
+	 * {@link https://github.com/Automattic/wordpress-activitypub/pull/4159 PR #4159}).
+	 *
+	 * @return array The list of tags.
 	 */
 	protected function get_tag() {
 		if ( false !== $this->tags ) {
@@ -536,7 +540,13 @@ class Post extends Base {
 			}
 		}
 
+		$default_category = (int) \get_option( 'default_category' );
+
 		foreach ( \get_the_category( $this->item->ID ) as $term ) {
+			if ( (int) $term->term_id === $default_category ) {
+				continue;
+			}
+
 			$tags[] = ( new Term( $term ) )->to_object()->to_array( false );
 		}
 
