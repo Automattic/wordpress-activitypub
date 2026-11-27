@@ -373,9 +373,10 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		// Blocking an actor stores its profile, so serve one without a request.
 		$profile = static function ( $response, $url ) use ( $actor ) {
 			return $actor === $url ? array(
-				'id'    => $actor,
-				'type'  => 'Person',
-				'inbox' => $actor . '/inbox',
+				'id'                => $actor,
+				'type'              => 'Person',
+				'preferredUsername' => 'sender',
+				'inbox'             => $actor . '/inbox',
 			) : $response;
 		};
 		\add_filter( 'activitypub_pre_http_get_remote_object', $profile, 10, 2 );
@@ -432,9 +433,10 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$recipient = self::factory()->user->create( array( 'role' => 'author' ) );
 		$profile   = static function ( $response, $url ) use ( $actor ) {
 			return $actor === $url ? array(
-				'id'    => $actor,
-				'type'  => 'Person',
-				'inbox' => $actor . '/inbox',
+				'id'                => $actor,
+				'type'              => 'Person',
+				'preferredUsername' => 'sender',
+				'inbox'             => $actor . '/inbox',
 			) : $response;
 		};
 		\add_filter( 'activitypub_pre_http_get_remote_object', $profile, 10, 2 );

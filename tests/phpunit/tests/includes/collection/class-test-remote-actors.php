@@ -1055,17 +1055,6 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 			),
 		);
 
-		$id = Remote_Actors::create( $actor );
-		$this->assertNotWPError( $id );
-
-		$post = Remote_Actors::fetch_by_various( 'https://remote.example.com/actor/charlie' );
-		$this->assertInstanceOf( 'WP_Post', $post );
-		$this->assertEquals( 'https://remote.example.com/actor/charlie', $post->guid );
-
-		\wp_delete_post( $id );
-
-		// Test 2: Acct identifier should call fetch_by_acct.
-		// Mock webfinger resolution.
 		$webfinger_callback = function ( $preempt, $parsed_args, $url ) {
 			if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
 				return array(
@@ -1088,6 +1077,16 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		};
 		add_filter( 'pre_http_request', $webfinger_callback, 10, 3 );
 
+		$id = Remote_Actors::create( $actor );
+		$this->assertNotWPError( $id );
+
+		$post = Remote_Actors::fetch_by_various( 'https://remote.example.com/actor/charlie' );
+		$this->assertInstanceOf( 'WP_Post', $post );
+		$this->assertEquals( 'https://remote.example.com/actor/charlie', $post->guid );
+
+		\wp_delete_post( $id );
+
+		// Test 2: Acct identifier should call fetch_by_acct.
 		$actor_callback = function ( $pre, $url_or_object ) use ( $actor ) {
 			if ( $url_or_object === $actor['id'] ) {
 				return $actor;
@@ -1122,6 +1121,35 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
+	 * Resolving an alias to a cached actor does not give that actor the alias as its stored handle.
+	 *
+	 * @covers ::fetch_by_acct
+	 */
+	public function test_fetch_by_acct_does_not_store_one_way_alias() {
+		$id      = 'https://remote.example.org/users/alice';
+		$post_id = Remote_Actors::create( $this->actor_for_uri( $id ) );
+		$this->assertIsInt( $post_id );
+
+		$this->stub_remote_requests();
+		$this->responses['https://alias.example.org/.well-known/webfinger?resource=acct%3Aalias%40alias.example.org'] = array(
+			'subject' => 'acct:alias@alias.example.org',
+			'links'   => array(
+				array(
+					'rel'  => 'self',
+					'type' => 'application/activity+json',
+					'href' => $id,
+				),
+			),
+		);
+		$found = Remote_Actors::fetch_by_acct( 'alias@alias.example.org' );
+		$this->unstub_remote_requests();
+
+		$this->assertInstanceOf( \WP_Post::class, $found );
+		$this->assertSame( $post_id, $found->ID );
+		$this->assertSame( '', \get_post_meta( $post_id, '_activitypub_acct', true ) );
+	}
+
+	/**
 	 * Test fetch_by_acct method.
 	 *
 	 * @covers ::fetch_by_acct
@@ -1140,17 +1168,6 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 			),
 		);
 
-		$id = Remote_Actors::create( $actor );
-		$this->assertNotWPError( $id );
-		\update_post_meta( $id, '_activitypub_acct', 'diana@remote.example.com' );
-
-		$post = Remote_Actors::fetch_by_acct( 'diana@remote.example.com' );
-		$this->assertInstanceOf( 'WP_Post', $post );
-		$this->assertEquals( $id, $post->ID );
-
-		\wp_delete_post( $id );
-
-		// Test 2: Webfinger resolution and remote fetch.
 		$webfinger_callback2 = function ( $preempt, $parsed_args, $url ) {
 			if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
 				return array(
@@ -1172,6 +1189,18 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 			return $preempt;
 		};
 		add_filter( 'pre_http_request', $webfinger_callback2, 10, 3 );
+
+		$id = Remote_Actors::create( $actor );
+		$this->assertNotWPError( $id );
+		\update_post_meta( $id, '_activitypub_acct', 'diana@remote.example.com' );
+
+		$post = Remote_Actors::fetch_by_acct( 'diana@remote.example.com' );
+		$this->assertInstanceOf( 'WP_Post', $post );
+		$this->assertEquals( $id, $post->ID );
+
+		\wp_delete_post( $id );
+
+		// Test 2: Webfinger resolution and remote fetch.
 
 		$actor_callback2 = function ( $pre, $url_or_object ) use ( $actor ) {
 			if ( $url_or_object === $actor['id'] ) {
@@ -1620,6 +1649,27 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	 *
 	 * @covers ::get_acct
 	 */
+	public function test_get_acct_guess_is_not_stored() {
+		$actor   = array(
+			'id'                => 'https://remote.example.com/actors/alice',
+			'type'              => 'Person',
+			'inbox'             => 'https://remote.example.com/actors/alice/inbox',
+			'preferredUsername' => 'alice',
+			'webfinger'         => 'claimed@elsewhere.example',
+		);
+		$post_id = Remote_Actors::create( $actor );
+
+		$this->assertIsInt( $post_id );
+		$this->assertSame( 'alice@remote.example.com', Remote_Actors::get_acct( $post_id ) );
+		$this->assertSame( 'alice@remote.example.com', Remote_Actors::get_actor( $post_id )->get_webfinger() );
+		$this->assertSame( '', \get_post_meta( $post_id, '_activitypub_acct', true ) );
+	}
+
+	/**
+	 * Test the get_acct method.
+	 *
+	 * @covers ::get_acct
+	 */
 	public function test_get_acct() {
 		// Test 1: Return cached acct from post meta.
 		$actor   = array(
@@ -1639,126 +1689,6 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		// Test 2: Return empty string for non-existent post.
 		$result = Remote_Actors::get_acct( 99999 );
 		$this->assertEquals( '', $result );
-
-		// Test 3: Successful uri_to_acct conversion.
-		$actor2   = array(
-			'id'                => 'https://remote.example.com/actor/webfinger-user',
-			'type'              => 'Person',
-			'url'               => 'https://remote.example.com/actor/webfinger-user',
-			'inbox'             => 'https://remote.example.com/actor/webfinger-user/inbox',
-			'name'              => 'Webfinger User',
-			'preferredUsername' => 'webfinger',
-		);
-		$post_id2 = Remote_Actors::create( $actor2 );
-
-		// Mock successful Webfinger::uri_to_acct.
-		$webfinger_callback_test3 = function ( $preempt, $parsed_args, $url ) {
-			if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
-				return array(
-					'response' => array( 'code' => 200 ),
-					'body'     => wp_json_encode(
-						array(
-							'subject' => 'acct:webfinger@remote.example.com',
-							'links'   => array(
-								array(
-									'rel'  => 'self',
-									'type' => 'application/activity+json',
-									'href' => 'https://remote.example.com/actor/webfinger-user',
-								),
-							),
-						)
-					),
-				);
-			}
-			return $preempt;
-		};
-		\add_filter( 'pre_http_request', $webfinger_callback_test3, 10, 3 );
-
-		$result = Remote_Actors::get_acct( $post_id2 );
-		$this->assertEquals( 'webfinger@remote.example.com', $result );
-
-		// Verify it was cached.
-		$cached_acct = \get_post_meta( $post_id2, '_activitypub_acct', true );
-		$this->assertEquals( 'webfinger@remote.example.com', $cached_acct );
-
-		\remove_filter( 'pre_http_request', $webfinger_callback_test3 );
-		\wp_delete_post( $post_id2, true );
-
-		// Test 4: Fallback to Webfinger::guess when uri_to_acct fails.
-		$actor3   = array(
-			'id'                => 'https://remote.example.com/actor/guess-user',
-			'type'              => 'Person',
-			'url'               => 'https://remote.example.com/actor/guess-user',
-			'inbox'             => 'https://remote.example.com/actor/guess-user/inbox',
-			'name'              => 'Guess User',
-			'preferredUsername' => 'guess',
-		);
-		$post_id3 = Remote_Actors::create( $actor3 );
-
-		// Mock failed Webfinger::uri_to_acct (returns WP_Error).
-		$webfinger_callback_test4 = function ( $preempt, $parsed_args, $url ) {
-			if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
-				return array(
-					'response' => array( 'code' => 404 ),
-					'body'     => 'Not Found',
-				);
-			}
-			return $preempt;
-		};
-		\add_filter( 'pre_http_request', $webfinger_callback_test4, 10, 3 );
-
-		$result = Remote_Actors::get_acct( $post_id3 );
-		$this->assertEquals( 'guess@remote.example.com', $result );
-
-		// Verify it was cached (without acct: prefix).
-		$cached_acct = \get_post_meta( $post_id3, '_activitypub_acct', true );
-		$this->assertEquals( 'guess@remote.example.com', $cached_acct );
-
-		\remove_filter( 'pre_http_request', $webfinger_callback_test4 );
-		\wp_delete_post( $post_id3, true );
-
-		// Test 5: Handle acct: prefix removal.
-		$actor4   = array(
-			'id'                => 'https://remote.example.com/actor/acct-prefix-user',
-			'type'              => 'Person',
-			'url'               => 'https://remote.example.com/actor/acct-prefix-user',
-			'inbox'             => 'https://remote.example.com/actor/acct-prefix-user/inbox',
-			'name'              => 'Acct Prefix User',
-			'preferredUsername' => 'acctprefix',
-		);
-		$post_id4 = Remote_Actors::create( $actor4 );
-
-		// Mock Webfinger::uri_to_acct returning acct: prefixed result.
-		$webfinger_callback_test5 = function ( $preempt, $parsed_args, $url ) {
-			if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
-				return array(
-					'response' => array( 'code' => 200 ),
-					'body'     => wp_json_encode(
-						array(
-							'subject' => 'acct:acctprefix@remote.example.com',
-							'links'   => array(
-								array(
-									'rel'  => 'self',
-									'type' => 'application/activity+json',
-									'href' => 'https://remote.example.com/actor/acct-prefix-user',
-								),
-							),
-						)
-					),
-				);
-			}
-			return $preempt;
-		};
-		\add_filter( 'pre_http_request', $webfinger_callback_test5, 10, 3 );
-
-		$result = Remote_Actors::get_acct( $post_id4 );
-		$this->assertEquals( 'acctprefix@remote.example.com', $result );
-
-		// Verify cached value has acct: prefix removed.
-		$cached_acct = \get_post_meta( $post_id4, '_activitypub_acct', true );
-		$this->assertEquals( 'acctprefix@remote.example.com', $cached_acct );
-
-		\remove_filter( 'pre_http_request', $webfinger_callback_test5 );
 	}
 
 	/**
@@ -2404,6 +2334,91 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
+	 * An acct-only server can confirm a username, including a handle on a second domain.
+	 *
+	 * @dataProvider preferred_username_handles
+	 * @covers ::create
+	 *
+	 * @param string $subject  The canonical handle.
+	 * @param string $actor_id The actor named by the canonical handle.
+	 * @param string $expected The handle that may be stored.
+	 */
+	public function test_verify_preferred_username( $subject, $actor_id, $expected ) {
+		$id    = 'https://social.example.org/actors/42';
+		$actor = array(
+			'id'                => $id,
+			'type'              => 'Person',
+			'inbox'             => $id . '/inbox',
+			'preferredUsername' => 'alice',
+		);
+
+		$this->stub_remote_requests();
+		$document = array(
+			'subject' => 'acct:' . $subject,
+			'links'   => array(
+				array(
+					'rel'  => 'self',
+					'type' => 'application/activity+json',
+					'href' => $id,
+				),
+			),
+		);
+		$this->responses['https://social.example.org/.well-known/webfinger?resource=acct%3Aalice%40social.example.org'] = $document;
+		$document['links'][0]['href'] = $actor_id;
+		$host                         = \substr( \strstr( $subject, '@' ), 1 );
+		$this->responses[ 'https://' . $host . '/.well-known/webfinger?resource=' . \rawurlencode( 'acct:' . $subject ) ] = $document;
+
+		$post_id = Remote_Actors::create( $actor );
+		$this->unstub_remote_requests();
+
+		$this->assertIsInt( $post_id );
+		$this->assertSame( $expected, \get_post_meta( $post_id, '_activitypub_acct', true ) );
+	}
+
+	/**
+	 * WebFinger subject, its self link, and the handle that may be stored.
+	 *
+	 * @return array[]
+	 */
+	public function preferred_username_handles() {
+		return array(
+			'same host'       => array( 'alice@social.example.org', 'https://social.example.org/actors/42', 'alice@social.example.org' ),
+			'second domain'   => array( 'alice@example.org', 'https://social.example.org/actors/42', 'alice@example.org' ),
+			'different actor' => array( 'alice@example.org', 'https://social.example.org/actors/99', '' ),
+		);
+	}
+
+	/**
+	 * An invalid preferredUsername must neither create nor overwrite an actor.
+	 *
+	 * @covers ::create
+	 * @covers ::upsert
+	 */
+	public function test_reject_invalid_preferred_username() {
+		$id    = 'https://social.example.org/users/alice';
+		$actor = array(
+			'id'    => $id,
+			'type'  => 'Person',
+			'inbox' => $id . '/inbox',
+		);
+
+		$this->assertWPError( Remote_Actors::create( $actor ) );
+		foreach ( array( '@alice', 'alice%40victim.example', '', array( 'alice' ) ) as $invalid ) {
+			$result = Remote_Actors::create( $actor + array( 'preferredUsername' => $invalid ) );
+			$this->assertWPError( $result );
+			$this->assertSame( 'activitypub_invalid_actor_data', $result->get_error_code() );
+		}
+		$this->assertWPError( Remote_Actors::get_by_uri( $id ) );
+
+		$post_id = Remote_Actors::create( $actor + array( 'preferredUsername' => 'alice' ) );
+		$this->assertIsInt( $post_id );
+		$this->assertSame( 'alice@social.example.org', Remote_Actors::get_acct( $post_id ) );
+		$before = \get_post( $post_id )->post_content;
+		$this->assertWPError( Remote_Actors::upsert( $actor + array( 'preferredUsername' => 'alice@example.org' ) ) );
+		$this->assertSame( $before, \get_post( $post_id )->post_content );
+	}
+
+	/**
 	 * Test that webfinger acct is stored when creating an actor.
 	 *
 	 * @covers ::create
@@ -2585,7 +2600,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
-	 * Test that webfinger acct is stored when provided in actor data.
+	 * A declared handle alone does not establish ownership.
 	 *
 	 * @covers ::create
 	 */
@@ -2604,9 +2619,10 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$post_id = Remote_Actors::create( $actor );
 		$this->assertIsInt( $post_id );
 
-		// Verify custom webfinger was stored.
+		// The claim is unverified; only the display guess is available.
 		$stored_acct = \get_post_meta( $post_id, '_activitypub_acct', true );
-		$this->assertEquals( 'custom@example.org', $stored_acct );
+		$this->assertSame( '', $stored_acct );
+		$this->assertSame( 'actordatawf@example.com', Remote_Actors::get_acct( $post_id ) );
 	}
 
 	/**
@@ -2828,16 +2844,18 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	public function test_merge() {
 		$origin_id = Remote_Actors::upsert(
 			array(
-				'id'    => 'https://old.example.com/users/ben',
-				'type'  => 'Person',
-				'inbox' => 'https://old.example.com/users/ben/inbox',
+				'id'                => 'https://old.example.com/users/ben',
+				'type'              => 'Person',
+				'inbox'             => 'https://old.example.com/users/ben/inbox',
+				'preferredUsername' => 'ben',
 			)
 		);
 		$target_id = Remote_Actors::upsert(
 			array(
-				'id'    => 'https://new.example.com/users/ben',
-				'type'  => 'Person',
-				'inbox' => 'https://new.example.com/users/ben/inbox',
+				'id'                => 'https://new.example.com/users/ben',
+				'type'              => 'Person',
+				'inbox'             => 'https://new.example.com/users/ben/inbox',
+				'preferredUsername' => 'ben',
 			)
 		);
 		\add_post_meta( $origin_id, Followers::FOLLOWER_META_KEY, '1' );

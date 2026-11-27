@@ -577,6 +577,19 @@ function is_actor( $data ) {
 }
 
 /**
+ * Check whether an actor's preferredUsername can be used as the local part of a handle.
+ *
+ * @since unreleased
+ *
+ * @param mixed $username The actor's preferredUsername.
+ * @return bool Whether the entire value matches the username pattern.
+ */
+function is_valid_preferred_username( $username ) {
+	// Percent escapes belong to acct: URIs. An actor supplies its username as plain text.
+	return \is_string( $username ) && ! \str_contains( $username, '%' ) && \preg_match( '/\A' . ACTIVITYPUB_USERNAME_LOCAL_PART_REGEXP . '\z/u', $username );
+}
+
+/**
  * Check if an `$data` is a Collection.
  *
  * @see https://www.w3.org/ns/activitystreams#collections

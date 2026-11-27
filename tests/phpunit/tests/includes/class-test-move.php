@@ -837,11 +837,12 @@ class Test_Move extends \WP_UnitTestCase {
 	 */
 	private function remote_actor( $id ) {
 		return array(
-			'type'  => 'Person',
-			'id'    => $id,
-			'url'   => $id,
-			'name'  => 'Actor',
-			'inbox' => $id . '/inbox',
+			'type'              => 'Person',
+			'preferredUsername' => 'actor',
+			'id'                => $id,
+			'url'               => $id,
+			'name'              => 'Actor',
+			'inbox'             => $id . '/inbox',
 		);
 	}
 

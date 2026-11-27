@@ -17,6 +17,8 @@ use Activitypub\OAuth\Scope;
 use Activitypub\Rest\Server;
 use Activitypub\Tests\OAuth_Token_Stub;
 
+use function Activitypub\get_authority;
+
 /**
  * Test class for Actors_Inbox_Controller.
  *
@@ -542,7 +544,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 				'headers'     => array(
 					'Content-Type' => 'application/activity+json',
 					'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
-					'Host'         => \wp_parse_url( $actor->get_inbox(), PHP_URL_HOST ),
+					'Host'         => get_authority( $actor->get_inbox() ),
 				),
 			),
 			$actor->get_inbox()

@@ -538,11 +538,12 @@ class Test_Following extends \WP_UnitTestCase {
 	public function mock_remote_actor( $response, $url ) {
 		if ( 'https://example.com/actor/1' === $url ) {
 			$response = array(
-				'id'    => $url,
-				'type'  => 'Person',
-				'url'   => $url,
-				'name'  => 'John Doe',
-				'inbox' => 'https://example.com/inbox',
+				'id'                => $url,
+				'type'              => 'Person',
+				'preferredUsername' => 'john',
+				'url'               => $url,
+				'name'              => 'John Doe',
+				'inbox'             => 'https://example.com/inbox',
 			);
 		}
 
