@@ -337,12 +337,6 @@ parameters:
 			path: includes/handler/class-delete.php
 
 		-
-			message: '#^Action callback returns bool but should not return anything\.$#'
-			identifier: return.void
-			count: 1
-			path: includes/handler/class-undo.php
-
-		-
 			message: '#^Method Activitypub\\Handler\\Outbox\\Follow\:\:handle_follow\(\) should return int\|WP_Error but returns array\.$#'
 			identifier: return.type
 			count: 1
