@@ -605,6 +605,37 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	}
 
 	/**
+	 * An inbox only takes activities: a document of another kind is refused, though its own schema would pass it.
+	 *
+	 * @dataProvider inbox_route_provider
+	 * @covers ::validate_request
+	 *
+	 * @param string $route The inbox route.
+	 */
+	public function test_validate_request_takes_only_activities( $route ) {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . $route );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'id'         => 'https://remote.example/followers',
+					'type'       => 'OrderedCollection',
+					'totalItems' => 0,
+				)
+			)
+		);
+
+		$response = \rest_do_request( $request );
+
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( 'activitypub_unexpected_type', $response->get_data()['code'] );
+	}
+
+	/**
 	 * A schema registered for a type is enforced by both inboxes, without a change to their routes:
 	 * the properties it requires, and the normalizing of a property it adds.
 	 *

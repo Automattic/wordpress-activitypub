@@ -17,17 +17,61 @@ use function Activitypub\is_collection;
  * Finds the schema object for remote data: the one of its type, else the one of its kind.
  * A type of no kind the plugin knows is not parsed.
  *
+ * Example usage:
+ *
+ * $schema = ( new Registry() )->get( $document );                   // Any kind, as the Proxy fetches.
+ * $schema = Registry::limit( Activity::class )->get( $activity );   // Only activities, as an inbox receives.
+ *
  * @since unreleased
  */
 class Registry {
+	/**
+	 * The class a schema has to be.
+	 *
+	 * @var string
+	 */
+	protected $kind = Base_Object::class;
+
+	/**
+	 * A registry that only finds the schemas of one kind.
+	 *
+	 * @param string $kind The class a schema has to be, such as `Activity::class`.
+	 *
+	 * @return Registry The registry.
+	 */
+	public static function limit( $kind ) {
+		$registry       = new self();
+		$registry->kind = $kind;
+
+		return $registry;
+	}
+
 	/**
 	 * Get the schema object for remote data.
 	 *
 	 * @param mixed $data The remote data.
 	 *
+	 * @return Base_Object|\WP_Error The schema object, an error with status 400 for a type of no known
+	 *                               kind or of another kind than the registry is limited to.
+	 */
+	public function get( $data ) {
+		$schema = $this->find( $data );
+
+		if ( \is_wp_error( $schema ) || $schema instanceof $this->kind ) {
+			return $schema;
+		}
+
+		return new \WP_Error( 'activitypub_unexpected_type', \__( 'The type of the document is not expected here.', 'activitypub' ), array( 'status' => 400 ) );
+	}
+
+	/**
+	 * Find the schema object for remote data, of any kind.
+	 *
+	 * @param mixed $data The remote data.
+	 *
 	 * @return Base_Object|\WP_Error The schema object, an error with status 400 for a type of no known kind.
 	 */
-	public static function get( $data ) {
+	protected function find( $data ) {
 		$type = \is_array( $data ) && isset( $data['type'] ) && \is_string( $data['type'] ) ? $data['type'] : '';
 
 		/**

@@ -41,9 +41,41 @@ class Test_Registry extends \WP_UnitTestCase {
 	 * @param string $expected The expected schema class, or the error code.
 	 */
 	public function test_get( $data, $expected ) {
-		$schema = Registry::get( $data );
+		$schema = ( new Registry() )->get( $data );
 
 		$this->assertSame( $expected, \is_wp_error( $schema ) ? $schema->get_error_code() : \get_class( $schema ) );
+	}
+
+	/**
+	 * A limited registry only finds the schemas of its kind.
+	 *
+	 * @dataProvider limit_provider
+	 * @covers ::limit
+	 * @covers ::get
+	 *
+	 * @param array  $data     The remote data.
+	 * @param string $expected The expected schema class, or the error code.
+	 */
+	public function test_limit( $data, $expected ) {
+		$schema = Registry::limit( Activity::class )->get( $data );
+
+		$this->assertSame( $expected, \is_wp_error( $schema ) ? $schema->get_error_code() : \get_class( $schema ) );
+	}
+
+	/**
+	 * Data provider for test_limit.
+	 *
+	 * @return array The remote data and the expected schema class or error code.
+	 */
+	public function limit_provider() {
+		return array(
+			'activity'            => array( array( 'type' => 'Like' ), Activity::class ),
+			'activity of its own' => array( array( 'type' => 'QuoteRequest' ), Quote_Request::class ),
+			'post'                => array( array( 'type' => 'Note' ), 'activitypub_unexpected_type' ),
+			'collection'          => array( array( 'type' => 'OrderedCollection' ), 'activitypub_unexpected_type' ),
+			'actor'               => array( array( 'type' => 'Person' ), 'activitypub_unexpected_type' ),
+			'unknown'             => array( array( 'type' => 'Unknown' ), 'activitypub_unknown_type' ),
+		);
 	}
 
 	/**
@@ -84,8 +116,8 @@ class Test_Registry extends \WP_UnitTestCase {
 		};
 		\add_filter( 'activitypub_schema', $filter, 10, 3 );
 
-		$like   = Registry::get( array( 'type' => 'Like' ) );
-		$follow = Registry::get( array( 'type' => 'Follow' ) );
+		$like   = ( new Registry() )->get( array( 'type' => 'Like' ) );
+		$follow = ( new Registry() )->get( array( 'type' => 'Follow' ) );
 
 		\remove_filter( 'activitypub_schema', $filter );
 
@@ -105,7 +137,7 @@ class Test_Registry extends \WP_UnitTestCase {
 		$activity    = ( new Activity() )->get_schema()['properties'];
 
 		foreach ( Activity_Model::TYPES as $type ) {
-			$schema = Registry::get( array( 'type' => $type ) );
+			$schema = ( new Registry() )->get( array( 'type' => $type ) );
 
 			$this->assertInstanceOf( Activity::class, $schema, $type );
 

@@ -233,9 +233,11 @@ class Inbox_Controller extends \WP_REST_Controller {
 	public function get_activity_args() {
 		$properties = ( new Activity_Schema() )->get_schema()['properties'];
 
+		$registry = Registry::limit( Activity_Schema::class );
+
 		/** This filter is documented in includes/functions-activity.php */
 		foreach ( \apply_filters( 'activitypub_activity_types', Activity::TYPES ) as $type ) {
-			$schema = Registry::get( array( 'type' => $type ) );
+			$schema = $registry->get( array( 'type' => $type ) );
 
 			if ( $schema instanceof Activity_Schema ) {
 				$properties += $schema->get_schema()['properties'];
@@ -263,7 +265,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 	 */
 	public function validate_request( $request ) {
 		$activity = $request->get_json_params();
-		$schema   = Registry::get( $activity );
+		$schema   = Registry::limit( Activity_Schema::class )->get( $activity );
 		$valid    = \is_wp_error( $schema ) ? $schema : $schema->validate( $activity );
 
 		if ( true !== $valid ) {
