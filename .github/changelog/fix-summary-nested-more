@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+The summary of a post no longer repeats its text when the "more" tag is placed inside another block.
