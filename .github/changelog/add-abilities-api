@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Add a WordPress Abilities API integration (WordPress 6.9+) so other plugins can discover and use ActivityPub features such as resolving handles, fetching actors, and managing followers through a stable API.
