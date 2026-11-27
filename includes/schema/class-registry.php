@@ -39,6 +39,7 @@ class Registry {
 		Request::class,
 		Unexpected::class,
 	);
+
 	/**
 	 * Get the schema object for remote data, holding the data.
 	 *
