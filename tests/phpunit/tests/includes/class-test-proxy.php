@@ -88,6 +88,108 @@ class Test_Proxy extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A fetched document is checked against the schema of its type, and a refused one is cached like a failed fetch.
+	 *
+	 * @covers ::get
+	 */
+	public function test_get_refuses_a_document_that_fails_its_schema() {
+		$id                     = 'https://example.com/actors/1';
+		$this->responses[ $id ] = array(
+			'id'   => $id,
+			'type' => 'Person',
+		);
+
+		$first  = Proxy::get( $id );
+		$second = Proxy::get( $id );
+
+		$this->assertWPError( $first );
+		$this->assertSame( 400, $first->get_error_data()['status'] );
+		$this->assertWPError( $second );
+		$this->assertSame( 1, $this->requests );
+	}
+
+	/**
+	 * A fetched document is handed on normalized, the same form the inbox args give.
+	 *
+	 * @covers ::get
+	 */
+	public function test_get_normalizes_a_document() {
+		$locale = static function () {
+			return 'de_DE';
+		};
+		\add_filter( 'locale', $locale );
+
+		$id                     = 'https://example.com/notes/maps';
+		$this->responses[ $id ] = array(
+			'id'         => $id,
+			'type'       => 'Note',
+			'content'    => 'Hello',
+			'contentMap' => array( 'de' => 'Hallo' ),
+		);
+
+		$note = Proxy::get( $id );
+
+		\remove_filter( 'locale', $locale );
+
+		$this->assertSame( 'Hallo', $note['content'] );
+	}
+
+	/**
+	 * An embedded document from the signer's origin is stored like a fetch, and later served without one.
+	 *
+	 * @covers ::put
+	 */
+	public function test_put_stores_a_document_from_the_signers_origin() {
+		$actor = array(
+			'id'    => 'https://example.com/actors/1',
+			'type'  => 'Person',
+			'inbox' => 'https://example.com/actors/1/inbox',
+		);
+
+		$this->assertSame( $actor, Proxy::put( $actor, $actor['id'] ) );
+		$this->assertSame( $actor, Proxy::get( $actor['id'] ) );
+		$this->assertSame( 0, $this->requests );
+	}
+
+	/**
+	 * Only the signer's origin vouches for an embedded document, and it gets the schema check of a fetch.
+	 *
+	 * @dataProvider put_refused_provider
+	 * @covers ::put
+	 *
+	 * @param array  $data   The embedded document.
+	 * @param string $signer The signer.
+	 */
+	public function test_put_refuses( $data, $signer ) {
+		$this->assertWPError( Proxy::put( $data, $signer ) );
+		$this->assertSame( 0, $this->requests );
+	}
+
+	/**
+	 * Data provider for test_put_refuses.
+	 *
+	 * @return array The embedded document and the signer.
+	 */
+	public function put_refused_provider() {
+		$actor = array(
+			'id'    => 'https://example.com/actors/1',
+			'type'  => 'Person',
+			'inbox' => 'https://example.com/actors/1/inbox',
+		);
+		$note  = array(
+			'id'   => 'https://example.org/notes/1',
+			'type' => 'Note',
+		);
+
+		return array(
+			'another actor on the host' => array( $actor, 'https://example.com/actors/2' ),
+			'object on another host'    => array( $note, 'https://example.com/actors/1' ),
+			'without id'                => array( array( 'type' => 'Note' ), 'https://example.com/actors/1' ),
+			'fails its schema'          => array( \array_diff_key( $actor, array( 'inbox' => true ) ), 'https://example.com/actors/1' ),
+		);
+	}
+
+	/**
 	 * Transport failures back off briefly and are retried after expiry.
 	 *
 	 * @dataProvider transport_failure_provider

@@ -19,7 +19,6 @@ use function Activitypub\get_meta_ids_by_value;
 use function Activitypub\get_target_post_id;
 use function Activitypub\is_post_publicly_queryable;
 use function Activitypub\is_same_actor;
-use function Activitypub\is_same_host;
 use function Activitypub\object_to_id;
 use function Activitypub\user_can_activitypub;
 
@@ -38,8 +37,6 @@ class Quote_Request {
 		\add_action( 'activitypub_inbox_quote_request', array( self::class, 'handle_quote_request' ), 10, 4 );
 		\add_action( 'activitypub_rest_inbox_disallowed', array( self::class, 'handle_blocked_request' ), 10, 3 );
 		\add_action( 'delete_comment', array( self::class, 'handle_quote_delete' ), 10, 2 );
-
-		\add_filter( 'activitypub_validate_object', array( self::class, 'validate_object' ), 10, 3 );
 	}
 
 	/**
@@ -353,38 +350,5 @@ class Quote_Request {
 		$activity->add_to( object_to_id( $activity_object['actor'] ) );
 
 		add_to_outbox( $activity, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
-	}
-
-	/**
-	 * Validate the object.
-	 *
-	 * @param bool             $valid   The validation state.
-	 * @param string           $param   The object parameter.
-	 * @param \WP_REST_Request $request The request object.
-	 *
-	 * @return bool The validation state: true if valid, false if not.
-	 */
-	public static function validate_object( $valid, $param, $request ) {
-		$activity = $request->get_json_params();
-
-		if ( empty( $activity['type'] ) ) {
-			return false;
-		}
-
-		if ( 'QuoteRequest' !== $activity['type'] ) {
-			return $valid;
-		}
-
-		if ( ! isset( $activity['actor'], $activity['object'], $activity['instrument'] ) ) {
-			return false;
-		}
-
-		// The instrument is the quoting object, authored by the actor, so it must live on the
-		// actor's host. Otherwise a remote server could bind a third-party reference to a local post.
-		if ( ! is_same_host( $activity['actor'], $activity['instrument'] ) ) {
-			return false;
-		}
-
-		return $valid;
 	}
 }

@@ -66,82 +66,6 @@ class Test_Accept extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test validate_object with various scenarios.
-	 *
-	 * @dataProvider validate_object_provider
-	 * @covers ::validate_object
-	 *
-	 * @param array  $request_data     The request data to test.
-	 * @param bool   $input_valid      The input valid state.
-	 * @param bool   $expected_result  The expected validation result.
-	 * @param string $description      Description of the test case.
-	 */
-	public function test_validate_object( $request_data, $input_valid, $expected_result, $description ) {
-		$request = $this->createMock( 'WP_REST_Request' );
-		$request->method( 'get_json_params' )->willReturn( $request_data );
-
-		$result = Accept::validate_object( $input_valid, 'param', $request );
-
-		$this->assertEquals( $expected_result, $result, $description );
-	}
-
-	/**
-	 * Data provider for validate_object tests.
-	 *
-	 * @return array Test cases with request data, input valid state, expected result, and description.
-	 */
-	public function validate_object_provider() {
-		return array(
-			// Invalid cases.
-			'missing_type'            => array(
-				array(),
-				true,
-				false,
-				'Should return false when type is missing',
-			),
-			'missing_required_fields' => array(
-				array(
-					'type'  => 'Accept',
-					'actor' => 'foo',
-				),
-				true,
-				false,
-				'Should return false when required fields are missing',
-			),
-			// Valid cases - non-Accept type should pass through.
-			'type_not_accept'         => array(
-				array( 'type' => 'Follow' ),
-				true,
-				true,
-				'Should return true when type is not Accept',
-			),
-			// Valid Accept activity.
-			'valid_accept_activity'   => array(
-				array(
-					'type'   => 'Accept',
-					'actor'  => 'foo',
-					'object' => array(
-						'id'     => 'bar',
-						'actor'  => 'foo',
-						'type'   => 'Follow',
-						'object' => 'foo',
-					),
-				),
-				true,
-				true,
-				'Should return true for valid Accept activity',
-			),
-			// Test with input_valid false.
-			'input_valid_false'       => array(
-				array( 'type' => 'Follow' ),
-				false,
-				false,
-				'Should preserve input_valid when type is not Accept',
-			),
-		);
-	}
-
-	/**
 	 * Functional test: handle_accept moves user from pending to following meta.
 	 */
 	public function test_handle_accept_moves_user_from_pending_to_following() {
@@ -512,7 +436,6 @@ class Test_Accept extends \WP_UnitTestCase {
 		$this->assertSame( $before + 1, $this->count_updates( $post_id ) );
 		$this->assertSame( array( array( $post_id, 'https://remote.example/stamps/1' ) ), $authorized );
 	}
-
 
 	/**
 	 * An Accept for a request the post has since superseded is ignored.

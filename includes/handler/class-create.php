@@ -29,7 +29,6 @@ class Create {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_handled_inbox_create', array( self::class, 'handle_create' ), 10, 3 );
-		\add_filter( 'activitypub_validate_object', array( self::class, 'validate_object' ), 10, 3 );
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'maybe_unbury' ), 10, 2 );
 	}
 
@@ -126,47 +125,6 @@ class Create {
 		}
 
 		return Remote_Posts::add( $activity, $user_ids );
-	}
-
-	/**
-	 * Validate the object.
-	 *
-	 * @param bool             $valid   The validation state.
-	 * @param string           $param   The object parameter.
-	 * @param \WP_REST_Request $request The request object.
-	 *
-	 * @return bool The validation state: true if valid, false if not.
-	 */
-	public static function validate_object( $valid, $param, $request ) {
-		$activity = $request->get_json_params();
-
-		if ( empty( $activity['type'] ) ) {
-			return false;
-		}
-
-		if ( 'Create' !== $activity['type'] ) {
-			return $valid;
-		}
-
-		if ( ! isset( $activity['object'] ) || ! \is_array( $activity['object'] ) ) {
-			return false;
-		}
-
-		if ( ! isset( $activity['object']['id'] ) ) {
-			return false;
-		}
-		if ( ! isset( $activity['object']['content'] ) ) {
-			/*
-			 * Image-only replies and quotes have something to show only when comment images are enabled;
-			 * other posts still need text. This runs before the signature check, so it leaves the host
-			 * checks to Interactions::add_comment().
-			 */
-			if ( ( ! is_activity_reply( $activity ) && ! is_quote_activity( $activity ) ) || ! Interactions::get_image_attachments( $activity['object'], false ) ) {
-				return false;
-			}
-		}
-
-		return $valid;
 	}
 
 	/**

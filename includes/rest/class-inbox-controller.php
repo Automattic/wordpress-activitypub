@@ -14,6 +14,8 @@ use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Moderation;
 use Activitypub\Proxy;
+use Activitypub\Schema\Activity as Activity_Schema;
+use Activitypub\Schema\Registry;
 
 use function Activitypub\camel_to_snake_case;
 use function Activitypub\extract_recipients_from_activity;
@@ -32,7 +34,6 @@ use function Activitypub\user_can_activitypub;
  */
 class Inbox_Controller extends \WP_REST_Controller {
 	use Verification;
-	use Language_Map;
 
 	/**
 	 * The namespace of this controller's route.
@@ -62,80 +63,8 @@ class Inbox_Controller extends \WP_REST_Controller {
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'create_item' ),
 					'permission_callback' => array( $this, 'verify_signature' ),
-					'args'                => array(
-						'id'     => array(
-							'description' => 'The unique identifier for the activity.',
-							'type'        => 'string',
-							'format'      => 'uri',
-							'required'    => true,
-						),
-						'actor'  => array(
-							'description'       => 'The actor performing the activity.',
-							'type'              => 'string',
-							'required'          => true,
-							'sanitize_callback' => '\Activitypub\object_to_id',
-						),
-						'type'   => array(
-							'description'       => 'The type of the activity.',
-							'type'              => 'string',
-							'required'          => true,
-							'sanitize_callback' => 'sanitize_html_class',
-							'validate_callback' => static function ( $param ) {
-								// Reject values that sanitize to empty so dynamic hook names always have a suffix.
-								return '' !== \sanitize_html_class( (string) $param );
-							},
-						),
-						'object' => array(
-							'description'       => 'The object of the activity.',
-							'required'          => true,
-							'sanitize_callback' => array( $this, 'localize_language_maps' ),
-							'validate_callback' => static function ( $param, $request, $key ) {
-								/**
-								 * Filter the ActivityPub object validation.
-								 *
-								 * @param bool             $validate The validation result.
-								 * @param array            $param    The object data.
-								 * @param \WP_REST_Request $request  The request object.
-								 * @param string           $key      The key.
-								 */
-								return \apply_filters( 'activitypub_validate_object', true, $param, $request, $key );
-							},
-						),
-						'to'     => array(
-							'description'       => 'The primary recipients of the activity.',
-							'type'              => array( 'string', 'array' ),
-							'required'          => false,
-							'sanitize_callback' => static function ( $param ) {
-								if ( \is_string( $param ) ) {
-									$param = array( $param );
-								}
-
-								return $param;
-							},
-						),
-						'cc'     => array(
-							'description'       => 'The secondary recipients of the activity.',
-							'type'              => array( 'string', 'array' ),
-							'sanitize_callback' => static function ( $param ) {
-								if ( \is_string( $param ) ) {
-									$param = array( $param );
-								}
-
-								return $param;
-							},
-						),
-						'bcc'    => array(
-							'description'       => 'The private recipients of the activity.',
-							'type'              => array( 'string', 'array' ),
-							'sanitize_callback' => static function ( $param ) {
-								if ( \is_string( $param ) ) {
-									$param = array( $param );
-								}
-
-								return $param;
-							},
-						),
-					),
+					'args'                => $this->get_activity_args(),
+					'validate_callback'   => array( $this, 'validate_request' ),
 				),
 				'schema' => array( $this, 'get_item_schema' ),
 			)
@@ -286,6 +215,52 @@ class Inbox_Controller extends \WP_REST_Controller {
 		}
 
 		return Server::accepted_response();
+	}
+
+	/**
+	 * The route args of an activity delivered to an inbox: core builds them from the activity schema.
+	 *
+	 * Core checks every arg against the schema before any sanitizer runs; the sanitizers are the
+	 * schema's own (`arg_options`).
+	 *
+	 * @since unreleased
+	 *
+	 * @return array The route args.
+	 */
+	public function get_activity_args() {
+		return \rest_get_endpoint_args_for_schema( ( new Activity_Schema() )->get_schema() );
+	}
+
+	/**
+	 * The route's `validate_callback`: the rules between properties of the activity, after core checked each arg.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_REST_Request $request The request.
+	 *
+	 * @return true|\WP_Error True if valid, an error with status 400 if not.
+	 */
+	public function validate_request( $request ) {
+		$activity = $request->get_json_params();
+		$valid    = Registry::get( $activity )->check( $activity );
+
+		if ( true !== $valid ) {
+			return $valid;
+		}
+
+		/**
+		 * Filter the ActivityPub object validation.
+		 *
+		 * @param bool             $validate The validation result.
+		 * @param array            $param    The object data.
+		 * @param \WP_REST_Request $request  The request object.
+		 * @param string           $key      The key.
+		 */
+		if ( ! \apply_filters( 'activitypub_validate_object', true, $activity['object'], $request, 'object' ) ) {
+			return new \WP_Error( 'rest_invalid_param', \__( 'The object of the activity is not valid.', 'activitypub' ), array( 'status' => 400 ) );
+		}
+
+		return true;
 	}
 
 	/**

@@ -24,7 +24,6 @@ class Undo {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_undo', array( self::class, 'handle_undo' ), 10, 2 );
-		\add_action( 'activitypub_validate_object', array( self::class, 'validate_object' ), 10, 3 );
 	}
 
 	/**
@@ -92,40 +91,5 @@ class Undo {
 		 * @param bool|\WP_Error     $result   Whether the follower or the comment was removed, or the error why not.
 		 */
 		\do_action( 'activitypub_handled_undo', $activity, (array) $user_ids, $success, $result );
-	}
-
-	/**
-	 * Validate the object.
-	 *
-	 * @param bool             $valid   The validation state.
-	 * @param string           $param   The object parameter.
-	 * @param \WP_REST_Request $request The request object.
-	 *
-	 * @return bool The validation state: true if valid, false if not.
-	 */
-	public static function validate_object( $valid, $param, $request ) {
-		$activity = $request->get_json_params();
-
-		if ( empty( $activity['type'] ) ) {
-			return false;
-		}
-
-		if ( 'Undo' !== $activity['type'] ) {
-			return $valid;
-		}
-
-		if ( ! isset( $activity['actor'], $activity['object'] ) ) {
-			return false;
-		}
-
-		if ( ! \is_array( $activity['object'] ) && ! \is_string( $activity['object'] ) ) {
-			return false;
-		}
-
-		if ( \is_array( $activity['object'] ) && ! isset( $activity['object']['id'] ) ) {
-			return false;
-		}
-
-		return $valid;
 	}
 }

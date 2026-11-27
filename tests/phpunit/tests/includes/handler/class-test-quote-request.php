@@ -797,112 +797,6 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
-	 * Test validate_object with valid QuoteRequest.
-	 *
-	 * @covers ::validate_object
-	 */
-	public function test_validate_object_valid_quote_request() {
-		$request_data = array(
-			'type'       => 'QuoteRequest',
-			'actor'      => 'https://remote.example.com/users/remote_user',
-			'object'     => get_permalink( self::$post_id ),
-			'instrument' => 'https://remote.example.com/posts/456',
-		);
-
-		$request = new \WP_REST_Request();
-		$request->set_body( \wp_json_encode( $request_data ) );
-		$request->set_header( 'content-type', 'application/json' );
-
-		$result = Quote_Request::validate_object( true, 'object', $request );
-
-		$this->assertTrue( $result, 'Valid QuoteRequest should pass validation' );
-	}
-
-	/**
-	 * Test validate_object rejects an instrument hosted off the actor's domain.
-	 *
-	 * @covers ::validate_object
-	 */
-	public function test_validate_object_fails_for_cross_host_instrument() {
-		$request_data = array(
-			'type'       => 'QuoteRequest',
-			'actor'      => 'https://remote.example.com/users/remote_user',
-			'object'     => get_permalink( self::$post_id ),
-			'instrument' => 'https://victim.example/posts/456',
-		);
-
-		$request = new \WP_REST_Request();
-		$request->set_body( \wp_json_encode( $request_data ) );
-		$request->set_header( 'content-type', 'application/json' );
-
-		$result = Quote_Request::validate_object( true, 'object', $request );
-
-		$this->assertFalse( $result, 'QuoteRequest with a cross-host instrument should fail validation' );
-	}
-
-	/**
-	 * Test validate_object with missing required attributes.
-	 *
-	 * @covers ::validate_object
-	 */
-	public function test_validate_object_missing_required_attributes() {
-		$request_data = array(
-			'type'  => 'QuoteRequest',
-			'actor' => 'https://remote.example.com/users/remote_user',
-			// Missing 'object' and 'instrument'.
-		);
-
-		$request = new \WP_REST_Request();
-		$request->set_body( \wp_json_encode( $request_data ) );
-		$request->set_header( 'content-type', 'application/json' );
-
-		$result = Quote_Request::validate_object( true, 'object', $request );
-
-		$this->assertFalse( $result, 'QuoteRequest missing required attributes should fail validation' );
-	}
-
-	/**
-	 * Test validate_object with non-QuoteRequest type.
-	 *
-	 * @covers ::validate_object
-	 */
-	public function test_validate_object_non_quote_request_type() {
-		$request_data = array(
-			'type'   => 'Follow',
-			'actor'  => 'https://remote.example.com/users/remote_user',
-			'object' => get_permalink( self::$post_id ),
-		);
-
-		$request = new \WP_REST_Request();
-		$request->set_body( \wp_json_encode( $request_data ) );
-		$request->set_header( 'content-type', 'application/json' );
-
-		$result = Quote_Request::validate_object( true, 'object', $request );
-
-		$this->assertTrue( $result, 'Non-QuoteRequest types should pass through unchanged' );
-	}
-
-	/**
-	 * Test validate_object with no type specified.
-	 *
-	 * @covers ::validate_object
-	 */
-	public function test_validate_object_no_type() {
-		$request_data = array(
-			'actor'  => 'https://remote.example.com/users/remote_user',
-			'object' => get_permalink( self::$post_id ),
-		);
-
-		$request = new \WP_REST_Request();
-		$request->set_body( \wp_json_encode( $request_data ) );
-		$request->set_header( 'content-type', 'application/json' );
-
-		$result = Quote_Request::validate_object( true, 'object', $request );
-
-		$this->assertFalse( $result, 'Request without type should fail validation' );
-	}
-
-	/**
 	 * Test that init method properly registers hooks.
 	 *
 	 * @covers ::init
@@ -914,7 +808,6 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 		// Check that hooks are registered.
 		$this->assertTrue( has_action( 'activitypub_inbox_quote_request' ) );
 		$this->assertTrue( has_action( 'activitypub_rest_inbox_disallowed' ) );
-		$this->assertTrue( has_filter( 'activitypub_validate_object' ) );
 	}
 
 	/**

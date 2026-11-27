@@ -28,7 +28,6 @@ use function Activitypub\object_to_id;
 class Actors_Inbox_Controller extends Actors_Controller {
 	use Collection;
 	use Event_Stream;
-	use Language_Map;
 
 	/**
 	 * Register routes.
@@ -74,52 +73,19 @@ class Actors_Inbox_Controller extends Actors_Controller {
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'create_item' ),
 					'permission_callback' => array( $this, 'verify_signature' ),
-					'args'                => array(
-						'user_id' => array(
-							'description'       => 'The ID of the actor.',
-							'type'              => 'integer',
-							'required'          => true,
-							'validate_callback' => array( $this, 'validate_inbox_user_id' ),
+					// The URL arg, then the activity args of the shared inbox, so both inboxes check the same.
+					'args'                => \array_merge(
+						array(
+							'user_id' => array(
+								'description'       => 'The ID of the actor.',
+								'type'              => 'integer',
+								'required'          => true,
+								'validate_callback' => array( $this, 'validate_inbox_user_id' ),
+							),
 						),
-						'id'      => array(
-							'description' => 'The unique identifier for the activity.',
-							'type'        => 'string',
-							'format'      => 'uri',
-							'required'    => true,
-						),
-						'actor'   => array(
-							'description'       => 'The actor performing the activity.',
-							'type'              => 'string',
-							'required'          => true,
-							'sanitize_callback' => '\Activitypub\object_to_id',
-						),
-						'type'    => array(
-							'description'       => 'The type of the activity.',
-							'type'              => 'string',
-							'required'          => true,
-							'sanitize_callback' => 'sanitize_html_class',
-							'validate_callback' => static function ( $param ) {
-								// Reject values that sanitize to empty so dynamic hook names always have a suffix.
-								return '' !== \sanitize_html_class( (string) $param );
-							},
-						),
-						'object'  => array(
-							'description'       => 'The object of the activity.',
-							'required'          => true,
-							'sanitize_callback' => array( $this, 'localize_language_maps' ),
-							'validate_callback' => static function ( $param, $request, $key ) {
-								/**
-								 * Filter the ActivityPub object validation.
-								 *
-								 * @param bool             $validate The validation result.
-								 * @param array            $param    The object data.
-								 * @param \WP_REST_Request $request  The request object.
-								 * @param string           $key      The key.
-								 */
-								return \apply_filters( 'activitypub_validate_object', true, $param, $request, $key );
-							},
-						),
+						( new Inbox_Controller() )->get_activity_args()
 					),
+					'validate_callback'   => array( new Inbox_Controller(), 'validate_request' ),
 				),
 				'schema' => array( $this, 'get_item_schema' ),
 			)

@@ -518,6 +518,63 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	}
 
 	/**
+	 * Core checks the args per property, then the route's validate_callback runs the rules of the type.
+	 *
+	 * @dataProvider validate_request_provider
+	 * @covers ::validate_request
+	 * @covers ::get_activity_args
+	 *
+	 * @param array  $changes The changes to a valid QuoteRequest, null removes a property.
+	 * @param string $code    The expected error code, or '' for a request that passes validation.
+	 */
+	public function test_validate_request( $changes, $code ) {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$activity = \array_filter(
+			\array_merge(
+				array(
+					'id'         => 'https://remote.example/request/1',
+					'type'       => 'QuoteRequest',
+					'actor'      => 'https://remote.example/@test',
+					'object'     => 'https://local.example/post/1',
+					'instrument' => 'https://remote.example/note/1',
+				),
+				$changes
+			)
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $activity ) );
+
+		$response = \rest_do_request( $request );
+
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		if ( '' === $code ) {
+			$this->assertNotSame( 400, $response->get_status() );
+		} else {
+			$this->assertSame( 400, $response->get_status() );
+			$this->assertSame( $code, $response->get_data()['code'] );
+		}
+	}
+
+	/**
+	 * Data provider for test_validate_request.
+	 *
+	 * @return array The changes to a valid QuoteRequest and the expected error code.
+	 */
+	public function validate_request_provider() {
+		return array(
+			'valid'                 => array( array(), '' ),
+			'actor not a uri'       => array( array( 'actor' => 'alice' ), 'rest_invalid_param' ),
+			'type not letters'      => array( array( 'type' => 'as:QuoteRequest' ), 'rest_invalid_param' ),
+			'without instrument'    => array( array( 'instrument' => null ), 'activitypub_instrument_missing' ),
+			'instrument other host' => array( array( 'instrument' => 'https://other.example/note/1' ), 'activitypub_instrument_host' ),
+		);
+	}
+
+	/**
 	 * Test get_item method.
 	 *
 	 * @doesNotPerformAssertions
@@ -1763,11 +1820,12 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $track_fetches );
 	}
 
+
 	/**
 	 * Test that language maps in the object are normalized by the sanitize callback.
 	 *
-	 * Verifies that the Language_Map trait's sanitize_callback on the `object`
-	 * arg resolves language maps to plain strings before activity processing.
+	 * Verifies that the schema's sanitize_callback on the `object` arg resolves
+	 * language maps to plain strings before activity processing.
 	 *
 	 * @covers ::create_item
 	 */

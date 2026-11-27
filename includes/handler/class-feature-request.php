@@ -17,7 +17,6 @@ use Activitypub\Proxy;
 use function Activitypub\add_to_outbox;
 use function Activitypub\get_meta_ids_by_value;
 use function Activitypub\is_same_actor;
-use function Activitypub\is_same_host;
 use function Activitypub\object_to_id;
 use function Activitypub\user_can_activitypub;
 
@@ -48,8 +47,6 @@ class Feature_Request {
 	public static function init() {
 		\add_action( 'activitypub_inbox_feature_request', array( self::class, 'handle_feature_request' ), 10, 4 );
 		\add_action( 'activitypub_rest_inbox_disallowed', array( self::class, 'handle_blocked_request' ), 10, 3 );
-
-		\add_filter( 'activitypub_validate_object', array( self::class, 'validate_object' ), 10, 3 );
 	}
 
 	/**
@@ -355,38 +352,5 @@ class Feature_Request {
 		$activity->add_to( object_to_id( $activity_object['actor'] ) );
 
 		add_to_outbox( $activity, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
-	}
-
-	/**
-	 * Validate the object on incoming FeatureRequest activities.
-	 *
-	 * @param bool             $valid   The current validation state.
-	 * @param string           $param   The object parameter name.
-	 * @param \WP_REST_Request $request The request object.
-	 *
-	 * @return bool
-	 */
-	public static function validate_object( $valid, $param, $request ) {
-		$activity = $request->get_json_params();
-
-		if ( empty( $activity['type'] ) ) {
-			return false;
-		}
-
-		if ( 'FeatureRequest' !== $activity['type'] ) {
-			return $valid;
-		}
-
-		if ( ! isset( $activity['actor'], $activity['object'], $activity['instrument'] ) ) {
-			return false;
-		}
-
-		// The instrument is the requester's own object, so it must live on the actor's host.
-		// Otherwise a remote server could stamp a local actor with a third-party reference.
-		if ( ! is_same_host( $activity['actor'], $activity['instrument'] ) ) {
-			return false;
-		}
-
-		return $valid;
 	}
 }

@@ -27,7 +27,6 @@ class Reject {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_reject', array( self::class, 'handle_reject' ), 10, 2 );
-		\add_filter( 'activitypub_validate_object', array( self::class, 'validate_object' ), 10, 3 );
 	}
 
 	/**
@@ -167,40 +166,5 @@ class Reject {
 		}
 
 		return is_same_actor( $reject['actor'] ?? '', $quoted['attributedTo'] );
-	}
-
-	/**
-	 * Validate the object.
-	 *
-	 * @param bool             $valid   The validation state.
-	 * @param string           $param   The object parameter.
-	 * @param \WP_REST_Request $request The request object.
-	 *
-	 * @return bool The validation state: true if valid, false if not.
-	 */
-	public static function validate_object( $valid, $param, $request ) {
-		$activity = $request->get_json_params();
-
-		if ( empty( $activity['type'] ) ) {
-			return false;
-		}
-
-		if ( 'Reject' !== $activity['type'] ) {
-			return $valid;
-		}
-
-		if ( ! isset( $activity['actor'], $activity['object'] ) ) {
-			return false;
-		}
-
-		if ( ! \is_array( $activity['object'] ) ) {
-			return false;
-		}
-
-		if ( ! isset( $activity['object']['id'], $activity['object']['type'], $activity['object']['actor'], $activity['object']['object'] ) ) {
-			return false;
-		}
-
-		return $valid;
 	}
 }
