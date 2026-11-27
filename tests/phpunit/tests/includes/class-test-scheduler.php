@@ -687,7 +687,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test cleanup_remote_actors method.
+	 * Test cleanup_remote_actors method schedules deletion events with post ID when error threshold is reached.
 	 *
 	 * @covers ::cleanup_remote_actors
 	 */
@@ -714,7 +714,10 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		// Track scheduled events.
 		$scheduled_events        = array();
 		$schedule_event_callback = function ( $event ) use ( &$scheduled_events ) {
-			if ( 'activitypub_delete_remote_actor_interactions' === $event->hook ) {
+			if (
+				'activitypub_delete_remote_actor_interactions' === $event->hook ||
+				'activitypub_delete_remote_actor_posts' === $event->hook
+			) {
 				$scheduled_events[] = array(
 					'hook' => $event->hook,
 					'args' => $event->args,
@@ -724,27 +727,245 @@ class Test_Scheduler extends \WP_UnitTestCase {
 			return $event;
 		};
 		\add_filter( 'schedule_event', $schedule_event_callback );
-		$pre_get_remote_metadata_by_actor_callback = function () {
-			return new \WP_Error( 'no_actor', 'No actor found' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $activitypub_pre_http_get_remote_object_callback );
+		$pre_http_error_callback = function () {
+			return new \WP_Error( 500, 'Internal Server Error', array( 'status' => 500 ) );
 		};
-		\add_filter( 'pre_get_remote_metadata_by_actor', $pre_get_remote_metadata_by_actor_callback );
+		\add_filter( 'activitypub_pre_http_get_remote_object', $pre_http_error_callback );
 
 		// Run the cleanup function.
 		Scheduler::cleanup_remote_actors();
 
-		// Verify that the event was scheduled with the actor URL as parameter.
-		$this->assertCount( 1, $scheduled_events, 'Should schedule 1 event' );
-		$this->assertEquals( 'activitypub_delete_remote_actor_interactions', $scheduled_events[0]['hook'], 'Should schedule the correct hook' );
-		$this->assertCount( 1, $scheduled_events[0]['args'], 'Should have 1 argument' );
-		$this->assertEquals( 'https://example.com/users/test', $scheduled_events[0]['args'][0], 'Should pass actor URL as parameter' );
+		// Verify that deletion events were scheduled with the actor post ID as parameter.
+		$this->assertCount( 2, $scheduled_events, 'Should schedule 2 events (interactions and posts)' );
+		$this->assertEquals( 'activitypub_delete_remote_actor_interactions', $scheduled_events[0]['hook'] );
+		$this->assertEquals( array( $actor->ID ), $scheduled_events[0]['args'], 'Should pass actor post ID to interactions deletion' );
+		$this->assertEquals( 'activitypub_delete_remote_actor_posts', $scheduled_events[1]['hook'] );
+		$this->assertEquals( array( $actor->ID ), $scheduled_events[1]['args'], 'Should pass actor post ID to posts deletion' );
 
 		// Verify the actor was deleted.
 		$this->assertNull( \get_post( $actor->ID ), 'Actor should be deleted' );
 
 		// Clean up.
-		\remove_filter( 'activitypub_pre_http_get_remote_object', $activitypub_pre_http_get_remote_object_callback );
-		\remove_filter( 'pre_get_remote_metadata_by_actor', $pre_get_remote_metadata_by_actor_callback );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $pre_http_error_callback );
 		\remove_filter( 'schedule_event', $schedule_event_callback );
+	}
+
+	/**
+	 * Test that HTTP 404 is treated as a regular error and does not immediately delete the actor.
+	 *
+	 * @covers ::cleanup_remote_actors
+	 */
+	public function test_cleanup_remote_actors_404_increments_error_without_immediate_deletion() {
+		$actor_data   = array(
+			'type'              => 'Person',
+			'name'              => 'Test 404 User',
+			'preferredUsername' => 'test404',
+			'id'                => 'https://example.com/users/test404',
+			'url'               => 'https://example.com/@test404',
+			'inbox'             => 'https://example.com/users/test404/inbox',
+		);
+		$initial_mock = function () use ( $actor_data ) {
+			return $actor_data;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $initial_mock );
+		$actor = Remote_Actors::fetch_by_uri( $actor_data['id'] );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $initial_mock );
+
+		Remote_Actors::add_error( $actor->ID, 'Previous failure' );
+		$this->assertSame( 1, Remote_Actors::count_errors( $actor->ID ) );
+
+		// Mock 404 response on cleanup refetch.
+		$mock_404 = function () {
+			return new \WP_Error( 404, 'Not Found', array( 'status' => 404 ) );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_404 );
+
+		Scheduler::cleanup_remote_actors();
+
+		// Actor must NOT be deleted on a single 404.
+		$this->assertNotNull( \get_post( $actor->ID ), 'Actor should not be deleted on 404' );
+		// Error count must increment.
+		$this->assertSame( 2, Remote_Actors::count_errors( $actor->ID ), 'Error count should increment on 404' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_404 );
+	}
+
+	/**
+	 * Test that HTTP 410 Gone immediately deletes the actor and schedules cleanups.
+	 *
+	 * @covers ::cleanup_remote_actors
+	 */
+	public function test_cleanup_remote_actors_410_immediately_deletes_actor() {
+		$actor_data   = array(
+			'type'              => 'Person',
+			'name'              => 'Test 410 User',
+			'preferredUsername' => 'test410',
+			'id'                => 'https://example.com/users/test410',
+			'url'               => 'https://example.com/@test410',
+			'inbox'             => 'https://example.com/users/test410/inbox',
+		);
+		$initial_mock = function () use ( $actor_data ) {
+			return $actor_data;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $initial_mock );
+		$actor = Remote_Actors::fetch_by_uri( $actor_data['id'] );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $initial_mock );
+
+		Remote_Actors::add_error( $actor->ID, 'Previous failure' );
+
+		$scheduled_events        = array();
+		$schedule_event_callback = function ( $event ) use ( &$scheduled_events ) {
+			if (
+				'activitypub_delete_remote_actor_interactions' === $event->hook ||
+				'activitypub_delete_remote_actor_posts' === $event->hook
+			) {
+				$scheduled_events[] = array(
+					'hook' => $event->hook,
+					'args' => $event->args,
+				);
+			}
+			return $event;
+		};
+		\add_filter( 'schedule_event', $schedule_event_callback );
+
+		// Mock 410 Gone response on cleanup refetch.
+		$mock_410 = function () {
+			return new \WP_Error( 410, 'Gone', array( 'status' => 410 ) );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_410 );
+
+		Scheduler::cleanup_remote_actors();
+
+		// Actor must be deleted immediately on 410.
+		$this->assertNull( \get_post( $actor->ID ), 'Actor should be deleted immediately on 410' );
+		$this->assertCount( 2, $scheduled_events, 'Should schedule interactions and posts deletion on 410' );
+		$this->assertEquals( array( $actor->ID ), $scheduled_events[0]['args'] );
+		$this->assertEquals( array( $actor->ID ), $scheduled_events[1]['args'] );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_410 );
+		\remove_filter( 'schedule_event', $schedule_event_callback );
+	}
+
+	/**
+	 * Test that a confirmed Tombstone object immediately deletes the actor.
+	 *
+	 * @covers ::cleanup_remote_actors
+	 */
+	public function test_cleanup_remote_actors_tombstone_object_immediately_deletes_actor() {
+		$actor_data   = array(
+			'type'              => 'Person',
+			'name'              => 'Test Tombstone User',
+			'preferredUsername' => 'testtombstone',
+			'id'                => 'https://example.com/users/testtombstone',
+			'url'               => 'https://example.com/@testtombstone',
+			'inbox'             => 'https://example.com/users/testtombstone/inbox',
+		);
+		$initial_mock = function () use ( $actor_data ) {
+			return $actor_data;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $initial_mock );
+		$actor = Remote_Actors::fetch_by_uri( $actor_data['id'] );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $initial_mock );
+
+		Remote_Actors::add_error( $actor->ID, 'Previous failure' );
+
+		// Mock real Tombstone object on cleanup refetch.
+		$mock_tombstone = function () use ( $actor_data ) {
+			return array(
+				'type' => 'Tombstone',
+				'id'   => $actor_data['id'],
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_tombstone );
+
+		Scheduler::cleanup_remote_actors();
+
+		// Actor must be deleted immediately on Tombstone object.
+		$this->assertNull( \get_post( $actor->ID ), 'Actor should be deleted on Tombstone object' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_tombstone );
+	}
+
+	/**
+	 * Test that a successful refetch updates the actor and clears errors.
+	 *
+	 * @covers ::cleanup_remote_actors
+	 */
+	public function test_cleanup_remote_actors_successful_refetch_clears_errors() {
+		$actor_data   = array(
+			'type'              => 'Person',
+			'name'              => 'Original User',
+			'preferredUsername' => 'testrecover',
+			'id'                => 'https://example.com/users/testrecover',
+			'url'               => 'https://example.com/@testrecover',
+			'inbox'             => 'https://example.com/users/testrecover/inbox',
+		);
+		$initial_mock = function () use ( $actor_data ) {
+			return $actor_data;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $initial_mock );
+		$actor = Remote_Actors::fetch_by_uri( $actor_data['id'] );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $initial_mock );
+
+		Remote_Actors::add_error( $actor->ID, 'Temporary error' );
+		$this->assertSame( 1, Remote_Actors::count_errors( $actor->ID ) );
+
+		// Mock updated metadata with new name.
+		$updated_data  = array_merge( $actor_data, array( 'name' => 'Recovered User' ) );
+		$recovery_mock = function () use ( $updated_data ) {
+			return $updated_data;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $recovery_mock );
+
+		Scheduler::cleanup_remote_actors();
+
+		$this->assertNotNull( \get_post( $actor->ID ), 'Actor should remain present' );
+		$this->assertSame( 0, Remote_Actors::count_errors( $actor->ID ), 'Errors should be cleared upon successful recovery' );
+		$this->assertSame( 'Recovered User', \get_post( $actor->ID )->post_title );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $recovery_mock );
+	}
+
+	/**
+	 * Test that identity drift (different ID returned) is skipped to avoid collision or corrupting guid.
+	 *
+	 * @covers ::cleanup_remote_actors
+	 */
+	public function test_cleanup_remote_actors_id_mismatch_is_skipped() {
+		$actor_data   = array(
+			'type'              => 'Person',
+			'name'              => 'Original User',
+			'preferredUsername' => 'testmismatch',
+			'id'                => 'https://example.com/users/testmismatch',
+			'url'               => 'https://example.com/@testmismatch',
+			'inbox'             => 'https://example.com/users/testmismatch/inbox',
+		);
+		$initial_mock = function () use ( $actor_data ) {
+			return $actor_data;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $initial_mock );
+		$actor = Remote_Actors::fetch_by_uri( $actor_data['id'] );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $initial_mock );
+
+		Remote_Actors::add_error( $actor->ID, 'Original error' );
+
+		// Mock a response with a different ID.
+		$drifted_data  = array_merge( $actor_data, array( 'id' => 'https://example.com/users/different-person' ) );
+		$mismatch_mock = function () use ( $drifted_data ) {
+			return $drifted_data;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mismatch_mock );
+
+		Scheduler::cleanup_remote_actors();
+
+		$post = \get_post( $actor->ID );
+		$this->assertNotNull( $post, 'Actor should remain present' );
+		$this->assertSame( 'https://example.com/users/testmismatch', $post->guid, 'Guid must not be overwritten on ID mismatch' );
+		$this->assertSame( 1, Remote_Actors::count_errors( $actor->ID ), 'Errors should not be cleared when skipped' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mismatch_mock );
 	}
 
 	/**
