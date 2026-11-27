@@ -27,7 +27,7 @@ class Test_Activity extends \WP_UnitTestCase {
 	 * @param bool  $expected Whether it is valid.
 	 */
 	public function test_validate( $data, $expected ) {
-		$this->assertSame( $expected, ! \is_wp_error( ( new Activity() )->validate( $data ) ) );
+		$this->assertSame( $expected, ! \is_wp_error( ( new Activity( $data ) )->validate() ) );
 	}
 
 	/**
@@ -117,7 +117,7 @@ class Test_Activity extends \WP_UnitTestCase {
 		};
 		\add_filter( 'locale', $locale );
 
-		$activity = ( new Activity() )->sanitize(
+		$activity = ( new Activity(
 			array(
 				'id'     => 'https://example.com/create/1',
 				'type'   => 'Create',
@@ -129,7 +129,7 @@ class Test_Activity extends \WP_UnitTestCase {
 					'summaryMap' => array( 'de' => 'Hallo' ),
 				),
 			)
-		);
+		) )->sanitize();
 
 		\remove_filter( 'locale', $locale );
 
@@ -149,17 +149,15 @@ class Test_Activity extends \WP_UnitTestCase {
 	 * @param bool  $expected Whether it is valid.
 	 */
 	public function test_sanitize_keeps_valid_data_valid( $data, $expected ) {
-		$schema = new Activity();
-
 		if ( ! $expected ) {
-			$this->assertWPError( $schema->validate( $data ) );
+			$this->assertWPError( ( new Activity( $data ) )->validate() );
 			return;
 		}
 
-		$sanitized = $schema->sanitize( $data );
+		$sanitized = ( new Activity( $data ) )->sanitize();
 
-		$this->assertTrue( $schema->validate( $sanitized ) );
-		$this->assertSame( $sanitized, $schema->sanitize( $sanitized ) );
+		$this->assertTrue( ( new Activity( $sanitized ) )->validate() );
+		$this->assertSame( $sanitized, ( new Activity( $sanitized ) )->sanitize() );
 	}
 
 	/**
@@ -168,7 +166,7 @@ class Test_Activity extends \WP_UnitTestCase {
 	 * @covers ::sanitize
 	 */
 	public function test_sanitize_link_actor() {
-		$activity = ( new Activity() )->sanitize(
+		$activity = ( new Activity(
 			array(
 				'id'     => 'https://example.com/follow/1',
 				'type'   => 'Follow',
@@ -179,7 +177,7 @@ class Test_Activity extends \WP_UnitTestCase {
 				),
 				'object' => 'https://example.org/actor',
 			)
-		);
+		) )->sanitize();
 
 		$this->assertSame( 'https://example.com/actor', $activity['actor'] );
 	}

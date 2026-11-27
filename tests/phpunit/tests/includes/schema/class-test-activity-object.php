@@ -27,7 +27,7 @@ class Test_Activity_Object extends \WP_UnitTestCase {
 	 * @param bool  $expected Whether it is valid.
 	 */
 	public function test_validate( $data, $expected ) {
-		$this->assertSame( $expected, ! \is_wp_error( ( new Activity_Object() )->validate( $data ) ) );
+		$this->assertSame( $expected, ! \is_wp_error( ( new Activity_Object( $data ) )->validate() ) );
 	}
 
 	/**

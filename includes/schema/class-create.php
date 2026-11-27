@@ -25,12 +25,11 @@ class Create extends Activity {
 	 * other posts still need text. This runs before the signature check, so it leaves the host
 	 * checks to `Interactions::add_comment()`.
 	 *
-	 * @param array $data The activity.
-	 *
 	 * @return true|\WP_Error True if valid, an error with status 400 if not.
 	 */
-	public function check( $data ) {
-		$valid = parent::check( $data );
+	protected function check() {
+		$valid = parent::check();
+		$data  = $this->data;
 
 		if ( true !== $valid || isset( $data['object']['content'] ) ) {
 			return $valid;

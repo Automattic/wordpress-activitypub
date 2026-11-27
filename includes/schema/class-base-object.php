@@ -35,6 +35,22 @@ class Base_Object {
 	protected $schema;
 
 	/**
+	 * The remote data the schema checks and normalizes.
+	 *
+	 * @var mixed
+	 */
+	protected $data;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param mixed $data Optional. The remote data. Default null, for the schema alone (route args).
+	 */
+	public function __construct( $data = null ) {
+		$this->data = $data;
+	}
+
+	/**
 	 * Get the JSON Schema, as `WP_REST_Controller::get_item_schema()` does: built once, cached on the instance.
 	 *
 	 * The required properties are listed on the schema, not flagged on each property. A route's
@@ -67,17 +83,15 @@ class Base_Object {
 	}
 
 	/**
-	 * Validate remote data: the schema first, then the rules between fields.
-	 *
-	 * @param mixed $data The remote data.
+	 * Validate the remote data: the schema first, then the rules between fields.
 	 *
 	 * @return true|\WP_Error True if valid, an error naming the property if not.
 	 */
-	public function validate( $data ) {
-		$valid = \rest_validate_value_from_schema( $data, $this->get_schema(), 'data' );
+	public function validate() {
+		$valid = \rest_validate_value_from_schema( $this->data, $this->get_schema(), 'data' );
 
 		if ( true === $valid ) {
-			$valid = $this->check( $data );
+			$valid = $this->check();
 		}
 
 		// Core's errors carry no status, which a REST response would turn into a 500.
@@ -89,24 +103,69 @@ class Base_Object {
 	}
 
 	/**
-	 * Normalize remote data that passed validation: language maps resolve to the site's language,
-	 * and each property gets the `sanitize_callback` of its `arg_options`, the one the inbox's route
-	 * args use, so both ways in hand on the same form.
+	 * Normalize the remote data, once it passed `validate()`: language maps resolve to the site's
+	 * language, and each property gets the `sanitize_callback` of its `arg_options`.
 	 *
-	 * @param array $data The remote data, valid against the schema.
-	 *
-	 * @return array The normalized data.
+	 * @return mixed The normalized data.
 	 */
-	public function sanitize( $data ) {
-		$data = $this->localize_language_maps( $data );
+	public function sanitize() {
+		$data = $this->localize_language_maps( $this->data );
 
-		foreach ( $this->get_schema()['properties'] as $key => $property ) {
-			if ( isset( $data[ $key ], $property['arg_options']['sanitize_callback'] ) ) {
-				$data[ $key ] = \call_user_func( $property['arg_options']['sanitize_callback'], $data[ $key ] );
+		if ( ! \is_array( $data ) ) {
+			return $data;
+		}
+
+		foreach ( \array_keys( $this->get_schema()['properties'] ) as $key ) {
+			if ( isset( $data[ $key ] ) ) {
+				$data[ $key ] = $this->sanitize_property( $key, $data[ $key ] );
 			}
 		}
 
 		return $data;
+	}
+
+	/**
+	 * Normalize one property with the `sanitize_callback` of its `arg_options`.
+	 *
+	 * @param string $key   The property.
+	 * @param mixed  $value The value.
+	 *
+	 * @return mixed The normalized value, or the value if the property has no callback.
+	 */
+	public function sanitize_property( $key, $value ) {
+		$callback = $this->get_schema()['properties'][ $key ]['arg_options']['sanitize_callback'] ?? null;
+
+		return $callback ? \call_user_func( $callback, $value ) : $value;
+	}
+
+	/**
+	 * The `sanitize_callback` of a route arg: the property is normalized by the schema of the
+	 * request's type, so a type normalizes only its own properties.
+	 *
+	 * Core runs it after the args and the route's `validate_callback` checked the request. A request
+	 * without a type of this kind did not get that far; should it still, the arg's own schema normalizes.
+	 *
+	 * @param mixed            $value   The value.
+	 * @param \WP_REST_Request $request The request.
+	 * @param string           $key     The property.
+	 *
+	 * @return mixed The normalized value.
+	 */
+	public function sanitize_arg( $value, $request, $key ) {
+		$schema = Registry::get( $request->get_json_params() )->limit( static::class );
+
+		return ( $schema instanceof Unexpected ? $this : $schema )->sanitize_property( $key, $value );
+	}
+
+	/**
+	 * Limit the schema to a kind: the schema itself if it is one, else one that refuses the data.
+	 *
+	 * @param string $kind The class the schema has to be, such as `Activity::class`.
+	 *
+	 * @return Base_Object The schema.
+	 */
+	public function limit( $kind ) {
+		return $this instanceof $kind ? $this : new Unexpected( $this->data );
 	}
 
 	/**
@@ -157,11 +216,9 @@ class Base_Object {
 	 * Needs neither the signer nor stored data, so it runs wherever the document arrives, as part of
 	 * `validate()`: in the inbox route's `validate_callback` and in the Proxy. Runs after the schema passed.
 	 *
-	 * @param array $data The remote data.
-	 *
 	 * @return true|\WP_Error True if valid, an error with status 400 if not.
 	 */
-	public function check( $data ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Subclasses use it.
+	protected function check() {
 		return true;
 	}
 

@@ -22,6 +22,7 @@ use Activitypub\Schema\Quote_Authorization;
 use Activitypub\Schema\Quote_Request;
 use Activitypub\Schema\Registry;
 use Activitypub\Schema\Request;
+use Activitypub\Schema\Unexpected;
 
 
 /**
@@ -38,12 +39,10 @@ class Test_Registry extends \WP_UnitTestCase {
 	 * @covers ::get
 	 *
 	 * @param array  $data     The remote data.
-	 * @param string $expected The expected schema class, or the error code.
+	 * @param string $expected The expected schema class.
 	 */
 	public function test_get( $data, $expected ) {
-		$schema = ( new Registry() )->get( $data );
-
-		$this->assertSame( $expected, \is_wp_error( $schema ) ? $schema->get_error_code() : \get_class( $schema ) );
+		$this->assertSame( $expected, \get_class( Registry::get( $data ) ) );
 	}
 
 	/**
@@ -54,34 +53,32 @@ class Test_Registry extends \WP_UnitTestCase {
 	 * @covers ::get
 	 *
 	 * @param array  $data     The remote data.
-	 * @param string $expected The expected schema class, or the error code.
+	 * @param string $expected The expected schema class.
 	 */
 	public function test_limit( $data, $expected ) {
-		$schema = Registry::limit( Activity::class )->get( $data );
-
-		$this->assertSame( $expected, \is_wp_error( $schema ) ? $schema->get_error_code() : \get_class( $schema ) );
+		$this->assertSame( $expected, \get_class( Registry::get( $data )->limit( Activity::class ) ) );
 	}
 
 	/**
 	 * Data provider for test_limit.
 	 *
-	 * @return array The remote data and the expected schema class or error code.
+	 * @return array The remote data and the expected schema class.
 	 */
 	public function limit_provider() {
 		return array(
 			'activity'            => array( array( 'type' => 'Like' ), Activity::class ),
 			'activity of its own' => array( array( 'type' => 'QuoteRequest' ), Quote_Request::class ),
-			'post'                => array( array( 'type' => 'Note' ), 'activitypub_unexpected_type' ),
-			'collection'          => array( array( 'type' => 'OrderedCollection' ), 'activitypub_unexpected_type' ),
-			'actor'               => array( array( 'type' => 'Person' ), 'activitypub_unexpected_type' ),
-			'unknown'             => array( array( 'type' => 'Unknown' ), 'activitypub_unknown_type' ),
+			'post'                => array( array( 'type' => 'Note' ), Unexpected::class ),
+			'collection'          => array( array( 'type' => 'OrderedCollection' ), Unexpected::class ),
+			'actor'               => array( array( 'type' => 'Person' ), Unexpected::class ),
+			'unknown'             => array( array( 'type' => 'Unknown' ), Unexpected::class ),
 		);
 	}
 
 	/**
 	 * Data provider for test_get.
 	 *
-	 * @return array The remote data and the expected schema class or error code.
+	 * @return array The remote data and the expected schema class.
 	 */
 	public function get_provider() {
 		return array(
@@ -97,11 +94,11 @@ class Test_Registry extends \WP_UnitTestCase {
 			'own class, post'     => array( array( 'type' => 'Note' ), Note::class ),
 			'own class, page'     => array( array( 'type' => 'Page' ), Page::class ),
 			'object kind'         => array( array( 'type' => 'Tombstone' ), Activity_Object::class ),
-			'unknown'             => array( array( 'type' => 'Unknown' ), 'activitypub_unknown_type' ),
-			'names another class' => array( array( 'type' => 'Registry' ), 'activitypub_unknown_type' ),
-			'not letters'         => array( array( 'type' => 'Schema\\Activity' ), 'activitypub_unknown_type' ),
-			'no type'             => array( array(), 'activitypub_unknown_type' ),
-			'type not string'     => array( array( 'type' => array( 'Accept' ) ), 'activitypub_unknown_type' ),
+			'unknown'             => array( array( 'type' => 'Unknown' ), Unexpected::class ),
+			'names another class' => array( array( 'type' => 'Registry' ), Unexpected::class ),
+			'not letters'         => array( array( 'type' => 'Schema\\Activity' ), Unexpected::class ),
+			'no type'             => array( array(), Unexpected::class ),
+			'type not string'     => array( array( 'type' => array( 'Accept' ) ), Unexpected::class ),
 		);
 	}
 
@@ -112,12 +109,12 @@ class Test_Registry extends \WP_UnitTestCase {
 	 */
 	public function test_filter() {
 		$filter = static function ( $schema, $data, $type ) {
-			return 'Like' === $type ? new Request() : $schema;
+			return 'Like' === $type ? new Request( $data ) : $schema;
 		};
 		\add_filter( 'activitypub_schema', $filter, 10, 3 );
 
-		$like   = ( new Registry() )->get( array( 'type' => 'Like' ) );
-		$follow = ( new Registry() )->get( array( 'type' => 'Follow' ) );
+		$like   = Registry::get( array( 'type' => 'Like' ) );
+		$follow = Registry::get( array( 'type' => 'Follow' ) );
 
 		\remove_filter( 'activitypub_schema', $filter );
 
@@ -137,7 +134,7 @@ class Test_Registry extends \WP_UnitTestCase {
 		$activity    = ( new Activity() )->get_schema()['properties'];
 
 		foreach ( Activity_Model::TYPES as $type ) {
-			$schema = ( new Registry() )->get( array( 'type' => $type ) );
+			$schema = Registry::get( array( 'type' => $type ) );
 
 			$this->assertInstanceOf( Activity::class, $schema, $type );
 

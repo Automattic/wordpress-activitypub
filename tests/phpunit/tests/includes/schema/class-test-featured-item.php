@@ -27,7 +27,7 @@ class Test_Featured_Item extends \WP_UnitTestCase {
 	 * @param bool  $expected Whether it is valid.
 	 */
 	public function test_validate( $data, $expected ) {
-		$this->assertSame( $expected, ! \is_wp_error( ( new Featured_Item() )->validate( $data ) ) );
+		$this->assertSame( $expected, ! \is_wp_error( ( new Featured_Item( $data ) )->validate() ) );
 	}
 
 	/**

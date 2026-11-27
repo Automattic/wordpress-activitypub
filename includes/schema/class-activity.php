@@ -19,12 +19,10 @@ class Activity extends Base_Object {
 	 * The actor is replaced by its id (`arg_options`), so its id has to be a URI: for a `Link` or
 	 * `Mention` that is the `href`, which the schema can not require by type.
 	 *
-	 * @param array $data The activity.
-	 *
 	 * @return true|\WP_Error True if valid, an error with status 400 if not.
 	 */
-	public function check( $data ) {
-		$valid = \rest_validate_value_from_schema( object_to_id( $data['actor'] ), $this->uri(), 'actor' );
+	protected function check() {
+		$valid = \rest_validate_value_from_schema( object_to_id( $this->data['actor'] ), $this->uri(), 'actor' );
 
 		if ( \is_wp_error( $valid ) ) {
 			$valid->add_data( array( 'status' => 400 ) );

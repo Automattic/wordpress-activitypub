@@ -81,7 +81,7 @@ class Test_Base_Object extends \WP_UnitTestCase {
 	 * @param bool  $expected Whether it is valid.
 	 */
 	public function test_validate( $data, $expected ) {
-		$this->assertSame( $expected, ! \is_wp_error( ( new Base_Object() )->validate( $data ) ) );
+		$this->assertSame( $expected, ! \is_wp_error( ( new Base_Object( $data ) )->validate() ) );
 	}
 
 	/**
@@ -119,7 +119,7 @@ class Test_Base_Object extends \WP_UnitTestCase {
 		};
 		\add_filter( 'locale', $locale );
 
-		$note = ( new Base_Object() )->sanitize(
+		$note = ( new Base_Object(
 			array(
 				'id'         => 'https://example.com/notes/1',
 				'type'       => 'Note',
@@ -130,7 +130,7 @@ class Test_Base_Object extends \WP_UnitTestCase {
 					'de' => 'Hallo',
 				),
 			)
-		);
+		) )->sanitize();
 
 		\remove_filter( 'locale', $locale );
 

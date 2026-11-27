@@ -218,38 +218,33 @@ class Inbox_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * The route args of an activity delivered to an inbox: core builds them from the activity schemas.
+	 * The route args of an activity delivered to an inbox.
 	 *
-	 * The properties of the schema of every activity type, so a property a type adds is checked
-	 * and normalized too. A property is a term of the vocabulary: it means the same in every type.
-	 * Core checks the shape of every property that is sent before any sanitizer runs; the sanitizers
-	 * are the schema's own (`arg_options`). Which properties an activity needs depends on its type,
-	 * so the route's `validate_callback` decides that with the schema of the type.
+	 * Core checks the shape of the properties every activity has, from the schema of `Activity`.
+	 * Which properties an activity needs depends on its type, so the route's `validate_callback`
+	 * decides that with the schema of the type. Every property of an activity type is then
+	 * normalized by the schema of the request's type (`sanitize_arg()`), so a type normalizes only
+	 * its own properties.
 	 *
 	 * @since unreleased
 	 *
 	 * @return array The route args.
 	 */
 	public function get_activity_args() {
-		$properties = ( new Activity_Schema() )->get_schema()['properties'];
-
-		$registry = Registry::limit( Activity_Schema::class );
+		$schema   = new Activity_Schema();
+		$callback = array( $schema, 'sanitize_arg' );
+		$args     = \rest_get_endpoint_args_for_schema( $schema->get_schema() );
 
 		/** This filter is documented in includes/functions-activity.php */
 		foreach ( \apply_filters( 'activitypub_activity_types', Activity::TYPES ) as $type ) {
-			$schema = $registry->get( array( 'type' => $type ) );
+			$properties = Registry::get( array( 'type' => $type ) )->limit( Activity_Schema::class )->get_schema()['properties'];
 
-			if ( $schema instanceof Activity_Schema ) {
-				$properties += $schema->get_schema()['properties'];
+			foreach ( \array_keys( $properties ) as $key ) {
+				$args[ $key ]['sanitize_callback'] = $callback;
 			}
 		}
 
-		return \rest_get_endpoint_args_for_schema(
-			array(
-				'type'       => 'object',
-				'properties' => $properties,
-			)
-		);
+		return $args;
 	}
 
 	/**
@@ -265,8 +260,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 	 */
 	public function validate_request( $request ) {
 		$activity = $request->get_json_params();
-		$schema   = Registry::limit( Activity_Schema::class )->get( $activity );
-		$valid    = \is_wp_error( $schema ) ? $schema : $schema->validate( $activity );
+		$valid    = Registry::get( $activity )->limit( Activity_Schema::class )->validate();
 
 		if ( true !== $valid ) {
 			return $valid;

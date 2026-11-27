@@ -669,8 +669,9 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 			}
 		};
 
-		$register = static function ( $found, $data, $type ) use ( $schema ) {
-			return 'Offer' === $type ? $schema : $found;
+		$class    = \get_class( $schema );
+		$register = static function ( $found, $data, $type ) use ( $class ) {
+			return 'Offer' === $type ? new $class( $data ) : $found;
 		};
 
 		$label    = null;

@@ -145,9 +145,9 @@ class Proxy {
 
 		// The schema of the document's type: checked, then normalized. A document that fails is handled like a failed fetch.
 		if ( ! \is_wp_error( $object ) ) {
-			$schema = ( new Registry() )->get( $object );
-			$valid  = \is_wp_error( $schema ) ? $schema : $schema->validate( $object );
-			$object = \is_wp_error( $valid ) ? $valid : $schema->sanitize( $object );
+			$schema = Registry::get( $object );
+			$valid  = $schema->validate();
+			$object = \is_wp_error( $valid ) ? $valid : $schema->sanitize();
 		}
 
 		if ( \is_wp_error( $object ) ) {
@@ -218,13 +218,13 @@ class Proxy {
 			);
 		}
 
-		$schema = ( new Registry() )->get( $data );
-		$valid  = \is_wp_error( $schema ) ? $schema : $schema->validate( $data );
+		$schema = Registry::get( $data );
+		$valid  = $schema->validate();
 		if ( \is_wp_error( $valid ) ) {
 			return $valid;
 		}
 
-		$data = $schema->sanitize( $data );
+		$data = $schema->sanitize();
 
 		/** This filter is documented in includes/class-proxy.php */
 		$ttl = (int) \apply_filters( 'activitypub_proxy_cache_ttl', HOUR_IN_SECONDS, $id, $data );

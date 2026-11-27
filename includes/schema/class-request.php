@@ -19,12 +19,11 @@ class Request extends Activity {
 	 * A request names the requester's own object as its instrument, so it is required and lives on
 	 * the actor's host. Otherwise a remote server could bind a third-party reference to a local post or actor.
 	 *
-	 * @param array $data The request.
-	 *
 	 * @return true|\WP_Error True if valid, an error if not.
 	 */
-	public function check( $data ) {
-		$valid = parent::check( $data );
+	protected function check() {
+		$valid = parent::check();
+		$data  = $this->data;
 
 		if ( true !== $valid ) {
 			return $valid;
