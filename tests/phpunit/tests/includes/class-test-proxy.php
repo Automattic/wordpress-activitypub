@@ -1000,4 +1000,58 @@ class Test_Proxy extends \WP_UnitTestCase {
 		$this->assertSame( $actor, Proxy::put( $actor, $actor['id'] ) );
 		$this->assertWPError( Proxy::put( $actor, 'https://example.com/profile' ), 'A signer without the fragment is another id.' );
 	}
+
+	/**
+	 * A sanitizer that refuses a value fails the fetch and the embedded copy: nothing is cached with the error.
+	 *
+	 * @covers ::get
+	 * @covers ::put
+	 */
+	public function test_a_sanitizer_error_is_not_cached() {
+		$schema = new class() extends \Activitypub\Schema\Actor {
+			/**
+			 * The properties: a label whose callback refuses it.
+			 *
+			 * @return array The properties, keyed by name.
+			 */
+			protected function get_properties() {
+				$properties = parent::get_properties();
+
+				$properties['label'] = array(
+					'type'        => 'string',
+					'arg_options' => array(
+						'sanitize_callback' => static function () {
+							return new \WP_Error( 'my_plugin_label', 'No label.' );
+						},
+					),
+				);
+
+				return $properties;
+			}
+		};
+		$class  = \get_class( $schema );
+		$filter = static function ( $found, $data ) use ( $class ) {
+			return isset( $data['label'] ) ? new $class( $data ) : $found;
+		};
+		\add_filter( 'activitypub_schema', $filter, 10, 2 );
+
+		$actor                           = array(
+			'id'    => 'https://example.com/users/labelled',
+			'type'  => 'Person',
+			'inbox' => 'https://example.com/users/labelled/inbox',
+			'label' => 'x',
+		);
+		$this->responses[ $actor['id'] ] = $actor;
+
+		$fetched  = Proxy::get( $actor['id'] );
+		$embedded = Proxy::put( $actor, $actor['id'] );
+
+		\remove_filter( 'activitypub_schema', $filter );
+
+		$this->assertWPError( $fetched );
+		$this->assertWPError( $embedded );
+		$this->assertSame( 'my_plugin_label', $embedded->get_error_code() );
+		$again = Proxy::get( $actor['id'] );
+		$this->assertFalse( \is_array( $again ) && ( $again['label'] ?? null ) instanceof \WP_Error, 'No copy with the error in it was cached.' );
+	}
 }

@@ -508,6 +508,9 @@ class Test_Accept extends \WP_UnitTestCase {
 
 		$this->assertFalse( Accept::validate_object( true, null, $request ), 'An invalid Accept is refused.' );
 
+		$error = new \WP_Error( 'earlier', 'Refused earlier.' );
+		$this->assertSame( $error, Accept::validate_object( $error, null, $request ), 'An earlier error stands.' );
+
 		$request->set_body( \wp_json_encode( array( 'type' => 'Like' ) ) );
 		$this->assertTrue( Accept::validate_object( true, null, $request ), 'Another type keeps the result.' );
 	}

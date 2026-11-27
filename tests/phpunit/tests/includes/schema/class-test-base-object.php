@@ -173,4 +173,47 @@ class Test_Base_Object extends \WP_UnitTestCase {
 		$this->assertWPError( ( new $class( \array_merge( $note, array( 'details' => array() ) ) ) )->validate(), 'label is required in details' );
 		$this->assertTrue( ( new $class( \array_merge( $note, array( 'details' => array( 'label' => 'x' ) ) ) ) )->validate() );
 	}
+
+	/**
+	 * A callback that refuses a value makes `sanitize()` return its error, not a document with it.
+	 *
+	 * @covers ::sanitize
+	 */
+	public function test_sanitize_returns_the_error_of_a_property() {
+		$class = \get_class(
+			new class() extends Base_Object {
+				/**
+				 * The properties: a label whose callback refuses it.
+				 *
+				 * @return array The properties, keyed by name.
+				 */
+				protected function get_properties() {
+					$properties = parent::get_properties();
+
+					$properties['label'] = array(
+						'type'        => 'string',
+						'arg_options' => array(
+							'sanitize_callback' => static function () {
+								return new \WP_Error( 'my_plugin_label', 'No label.' );
+							},
+						),
+					);
+
+					return $properties;
+				}
+			}
+		);
+
+		$sanitized = ( new $class(
+			array(
+				'id'    => 'https://example.com/note/1',
+				'type'  => 'Note',
+				'label' => 'x',
+			)
+		) )->sanitize();
+
+		$this->assertWPError( $sanitized );
+		$this->assertSame( 'my_plugin_label', $sanitized->get_error_code() );
+		$this->assertSame( 400, $sanitized->get_error_data()['status'] );
+	}
 }

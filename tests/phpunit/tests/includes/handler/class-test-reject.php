@@ -275,6 +275,9 @@ class Test_Reject extends \WP_UnitTestCase {
 
 		$this->assertFalse( Reject::validate_object( true, null, $request ), 'An invalid Reject is refused.' );
 
+		$error = new \WP_Error( 'earlier', 'Refused earlier.' );
+		$this->assertSame( $error, Reject::validate_object( $error, null, $request ), 'An earlier error stands.' );
+
 		$request->set_body( \wp_json_encode( array( 'type' => 'Like' ) ) );
 		$this->assertTrue( Reject::validate_object( true, null, $request ), 'Another type keeps the result.' );
 	}

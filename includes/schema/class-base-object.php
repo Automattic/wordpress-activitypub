@@ -106,7 +106,10 @@ class Base_Object {
 	 * Normalize the remote data, once it passed `validate()`: language maps resolve to the site's
 	 * language, and each property gets the `sanitize_callback` of its `arg_options`.
 	 *
-	 * @return mixed The normalized data.
+	 * A callback can refuse a value with an error, as core lets an arg's `sanitize_callback` do: the
+	 * error is returned instead of the data, so no caller stores a document with an error in it.
+	 *
+	 * @return mixed|\WP_Error The normalized data, or the error of a property.
 	 */
 	public function sanitize() {
 		$data = $this->localize_language_maps( $this->data );
@@ -116,8 +119,16 @@ class Base_Object {
 		}
 
 		foreach ( \array_keys( $this->get_schema()['properties'] ) as $key ) {
-			if ( isset( $data[ $key ] ) ) {
-				$data[ $key ] = $this->sanitize_property( $key, $data[ $key ] );
+			if ( ! isset( $data[ $key ] ) ) {
+				continue;
+			}
+
+			$data[ $key ] = $this->sanitize_property( $key, $data[ $key ] );
+
+			if ( \is_wp_error( $data[ $key ] ) ) {
+				$data[ $key ]->add_data( array( 'status' => 400 ) );
+
+				return $data[ $key ];
 			}
 		}
 

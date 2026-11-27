@@ -49,7 +49,7 @@ class Test_Registry extends \WP_UnitTestCase {
 	 * A limited registry only finds the schemas of its kind.
 	 *
 	 * @dataProvider limit_provider
-	 * @covers ::limit
+	 * @covers \Activitypub\Schema\Base_Object::limit
 	 * @covers ::get
 	 *
 	 * @param array  $data     The remote data.

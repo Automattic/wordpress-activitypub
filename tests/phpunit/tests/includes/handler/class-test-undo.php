@@ -583,6 +583,9 @@ class Test_Undo extends \WP_UnitTestCase {
 
 		$this->assertFalse( Undo::validate_object( true, null, $request ), 'An invalid Undo is refused.' );
 
+		$error = new \WP_Error( 'earlier', 'Refused earlier.' );
+		$this->assertSame( $error, Undo::validate_object( $error, null, $request ), 'An earlier error stands.' );
+
 		$request->set_body( \wp_json_encode( array( 'type' => 'Like' ) ) );
 		$this->assertTrue( Undo::validate_object( true, null, $request ), 'Another type keeps the result.' );
 	}

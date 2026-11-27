@@ -157,11 +157,11 @@ class Create {
 	 *
 	 * @deprecated unreleased The schema of the type checks the activity in the inbox, see `Activitypub\Schema\Create`.
 	 *
-	 * @param bool             $valid   The validation result.
+	 * @param bool|\WP_Error   $valid   The validation result.
 	 * @param array            $param   The object data.
 	 * @param \WP_REST_Request $request The request object.
 	 *
-	 * @return bool The validation result: for a Create, what its schema says.
+	 * @return bool|\WP_Error The validation result: for a Create, what its schema says.
 	 */
 	public static function validate_object( $valid, $param, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- The signature of the removed check.
 		\_deprecated_function( __METHOD__, 'unreleased' );
@@ -176,6 +176,11 @@ class Create {
 			return $valid;
 		}
 
-		return $valid && true === Registry::get( $activity )->validate();
+		// An earlier refusal (false or an error) stands.
+		if ( true !== $valid ) {
+			return $valid;
+		}
+
+		return true === Registry::get( $activity )->validate();
 	}
 }

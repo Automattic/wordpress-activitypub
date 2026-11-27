@@ -227,6 +227,9 @@ class Proxy {
 		}
 
 		$data = $schema->sanitize();
+		if ( \is_wp_error( $data ) ) {
+			return $data;
+		}
 
 		/** This filter is documented in includes/class-proxy.php */
 		$ttl = (int) \apply_filters( 'activitypub_proxy_cache_ttl', HOUR_IN_SECONDS, $id, $data );

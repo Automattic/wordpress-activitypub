@@ -860,6 +860,9 @@ class Test_Create extends \WP_UnitTestCase {
 
 		$this->assertFalse( Create::validate_object( true, null, $request ), 'An invalid Create is refused.' );
 
+		$error = new \WP_Error( 'earlier', 'Refused earlier.' );
+		$this->assertSame( $error, Create::validate_object( $error, null, $request ), 'An earlier error stands.' );
+
 		$request->set_body( \wp_json_encode( array( 'type' => 'Like' ) ) );
 		$this->assertTrue( Create::validate_object( true, null, $request ), 'Another type keeps the result.' );
 	}

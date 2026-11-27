@@ -1117,6 +1117,9 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 
 		$this->assertFalse( Quote_Request::validate_object( true, null, $request ), 'An invalid QuoteRequest is refused.' );
 
+		$error = new \WP_Error( 'earlier', 'Refused earlier.' );
+		$this->assertSame( $error, Quote_Request::validate_object( $error, null, $request ), 'An earlier error stands.' );
+
 		$request->set_body( \wp_json_encode( array( 'type' => 'Like' ) ) );
 		$this->assertTrue( Quote_Request::validate_object( true, null, $request ), 'Another type keeps the result.' );
 	}

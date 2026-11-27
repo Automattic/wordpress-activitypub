@@ -537,7 +537,8 @@ class Test_Collection_Sync extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * A collection whose items are no list and no URI is not reconciled: every follow stays.
+	 * A collection whose items are no list, no URI, or name a follower without an id is not
+	 * reconciled: every follow stays.
 	 *
 	 * @dataProvider blank_items_provider
 	 * @covers ::reconcile_followers
@@ -578,6 +579,15 @@ class Test_Collection_Sync extends \WP_UnitTestCase {
 			'empty string' => array( '' ),
 			'whitespace'   => array( '  ' ),
 			'false'        => array( false ),
+			'no id'        => array(
+				array(
+					array(
+						'type' => 'Person',
+						'name' => 'Alice',
+					),
+				),
+			),
+			'one no id'    => array( array( self::$remote_actors[0], array( 'type' => 'Person' ) ) ),
 		);
 	}
 }
