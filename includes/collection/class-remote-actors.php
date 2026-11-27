@@ -8,6 +8,7 @@
 namespace Activitypub\Collection;
 
 use Activitypub\Activity\Actor;
+use Activitypub\Cache\Avatar;
 use Activitypub\Emoji;
 use Activitypub\Proxy;
 use Activitypub\Sanitize;
@@ -15,6 +16,7 @@ use Activitypub\Webfinger;
 
 use function Activitypub\get_id_hash;
 use function Activitypub\get_stored_id_forms;
+use function Activitypub\get_url_authority;
 use function Activitypub\is_actor;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
@@ -112,11 +114,93 @@ class Remote_Actors {
 
 		$post = self::get_by_uri( $actor->get_id() );
 
+		// An unknown id may be a stored actor with a new id on the same origin (FEP-d1cb).
+		if ( \is_wp_error( $post ) ) {
+			$post = self::reidentify( $actor );
+		}
+
 		if ( ! \is_wp_error( $post ) ) {
 			return self::update( $post, $actor );
 		}
 
 		return self::create( $actor );
+	}
+
+	/**
+	 * Give a stored actor its new id, when it changed the id on the same origin (FEP-d1cb).
+	 *
+	 * The stored actor keeps its post, so follows in both directions, pending requests, blocks,
+	 * comments and Reader posts stay with it. No Follow or Undo is sent.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array|Actor $actor The actor document with the new id, fetched through Proxy::get().
+	 *
+	 * @return \WP_Post|\WP_Error The stored actor under its new id, or WP_Error if no stored actor is re-identified.
+	 */
+	public static function reidentify( $actor ) {
+		if ( \is_array( $actor ) ) {
+			$actor = Actor::init_from_array( $actor );
+		}
+
+		$not_found = new \WP_Error( 'activitypub_actor_not_found', \__( 'Actor not found', 'activitypub' ), array( 'status' => 404 ) );
+		$id        = $actor->get_id();
+
+		// Only an id that is not stored yet replaces a stored one; merging two stored actors is not done here.
+		if ( ! \is_string( $id ) || ! \is_wp_error( self::get_by_uri( $id ) ) ) {
+			return $not_found;
+		}
+
+		// An origin is scheme, host and port (RFC 6454); another origin is a change of authority, not a re-identification.
+		$origin = static function ( $url ) {
+			$authority = get_url_authority( $url );
+
+			return $authority ? \sprintf( '%s:%s', \strtolower( $authority ), \wp_parse_url( $url, PHP_URL_PORT ) ) : '';
+		};
+
+		foreach ( (array) $actor->get_also_known_as() as $alias ) {
+			$alias = object_to_id( $alias );
+
+			if ( ! \is_string( $alias ) || '' === $origin( $alias ) || $origin( $alias ) !== $origin( $id ) ) {
+				continue;
+			}
+
+			$post = self::get_by_uri( $alias );
+
+			if ( \is_wp_error( $post ) ) {
+				continue;
+			}
+
+			// Any actor can list an alias; only the publisher of the alias can make it resolve to the new id.
+			$resolved = Proxy::get( $alias, array( 'cached' => false ) );
+
+			if ( \is_wp_error( $resolved ) || object_to_id( $resolved ) !== $id ) {
+				continue;
+			}
+
+			global $wpdb;
+
+			// The cached avatar is stored under the old id, and nothing would find it after the change.
+			Avatar::clear_cached_avatar( $post->ID );
+
+			// wp_update_post() never changes a guid, so it is written in the form an insert stores, with its hash.
+			list( $guid ) = get_stored_id_forms( $id );
+			$data         = array(
+				'guid'      => $guid,
+				'post_name' => get_id_hash( $id ),
+			);
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			if ( ! $wpdb->update( $wpdb->posts, $data, array( 'ID' => $post->ID ) ) ) {
+				return $not_found;
+			}
+
+			\clean_post_cache( $post->ID );
+
+			return \get_post( $post->ID );
+		}
+
+		return $not_found;
 	}
 
 	/**

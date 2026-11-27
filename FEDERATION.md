@@ -42,6 +42,7 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 - [FEP-65ca: Common Client Configuration](https://codeberg.org/fediverse/fep/src/branch/main/fep/65ca/fep-65ca.md)
 - [FEP-7aa9: Featuring recommendations using a dedicated collection](https://codeberg.org/fediverse/fep/src/branch/main/fep/7aa9/fep-7aa9.md) (answers `FeatureRequest` with a `FeatureAuthorization`; the plugin does not publish featured collections of its own)
 - [FEP-ae0c: Fediverse Relay Protocols](https://codeberg.org/fediverse/fep/src/branch/main/fep/ae0c/fep-ae0c.md)
+- [FEP-d1cb: Same-origin actor re-identification](https://codeberg.org/fediverse/fep/src/branch/main/fep/d1cb/fep-d1cb.md) (receiver only: a remote actor that changes its `id` on the same origin keeps its follows and blocks; existing duplicate actors are not merged, and the plugin does not change the ids of its own actors)
 - [FEP-dc88: MathML in ActivityPub](https://codeberg.org/fediverse/fep/src/branch/main/fep/dc88/fep-dc88.md)
 - [FEP-fe34: Origin-based security model](https://codeberg.org/fediverse/fep/src/branch/main/fep/fe34/fep-fe34.md) (checks that activities, objects and keys are on the same host as their actor, and only trusts a fetched object served under its own `id`; compares hosts, not full origins, and does not accept other objects of the same origin)
 

@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Collection;
 
+use Activitypub\Cache\Avatar;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
@@ -2850,5 +2851,133 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$this->assertSame( array( '1' ), \get_post_meta( $target_id, Followers::FOLLOWER_META_KEY, false ) );
 		$this->assertSame( (string) $target_id, \get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true ) );
 		$this->assertSame( (string) $target_id, \get_post_meta( $reader_id, '_activitypub_remote_actor_id', true ) );
+	}
+
+	/**
+	 * Build an actor document for the re-identification tests.
+	 *
+	 * @param string $id            The actor id.
+	 * @param array  $also_known_as The aliases.
+	 *
+	 * @return array The actor document.
+	 */
+	private function reidentified_actor( $id, $also_known_as = array() ) {
+		return array(
+			'type'              => 'Person',
+			'id'                => $id,
+			'inbox'             => $id . '&inbox',
+			'preferredUsername' => 'alice',
+			'name'              => 'Alice',
+			'alsoKnownAs'       => $also_known_as,
+		);
+	}
+
+	/**
+	 * Serve the given documents for Proxy::get().
+	 *
+	 * @param array $documents Documents by URL.
+	 *
+	 * @return callable The filter, to remove it again.
+	 */
+	private function serve_documents( $documents ) {
+		$filter = static function ( $pre, $url ) use ( $documents ) {
+			return \is_string( $url ) && isset( $documents[ $url ] ) ? $documents[ $url ] : $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+
+		return $filter;
+	}
+
+	/**
+	 * A new id on the same origin, confirmed by the alias, re-identifies the stored actor (FEP-d1cb).
+	 *
+	 * @covers ::upsert
+	 * @covers ::reidentify
+	 */
+	public function test_upsert_reidentifies_a_stored_actor() {
+		$alias = 'https://example.com/@alice';
+		$id    = 'https://example.com/?author=5&lang=en';
+		$user  = self::factory()->user->create();
+
+		$post_id = Remote_Actors::upsert( $this->reidentified_actor( $alias ) );
+		\add_post_meta( $post_id, Followers::FOLLOWER_META_KEY, $user );
+
+		// The avatar cached for the actor is stored under its old id.
+		$avatar = Avatar::get_storage_paths( $alias )['basedir'];
+		\wp_mkdir_p( $avatar );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		\file_put_contents( $avatar . '/avatar.jpg', 'avatar' );
+
+		$actor  = $this->reidentified_actor( $id, array( $alias ) );
+		$filter = $this->serve_documents( array( $alias => $actor ) );
+
+		$result = Remote_Actors::upsert( $actor );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter, 10 );
+
+		$this->assertSame( $post_id, $result, 'The stored actor keeps its post.' );
+		$this->assertSame( $post_id, Remote_Actors::get_by_uri( $id )->ID, 'The actor is found under its new id, also after the update.' );
+		$this->assertWPError( Remote_Actors::get_by_uri( $alias ), 'The alias is no longer stored as an id.' );
+		$this->assertSame( array( (string) $user ), \get_post_meta( $post_id, Followers::FOLLOWER_META_KEY, false ), 'The relationships stay with the actor.' );
+		$this->assertDirectoryDoesNotExist( $avatar, 'No avatar is left behind under the old id.' );
+
+		// A later Update of the same actor is a normal update.
+		$this->assertSame( $post_id, Remote_Actors::upsert( $actor ) );
+	}
+
+	/**
+	 * An actor that lists a stored actor in alsoKnownAs does not take it over when the alias does not resolve to it.
+	 *
+	 * @covers ::upsert
+	 * @covers ::reidentify
+	 */
+	public function test_upsert_does_not_reidentify_when_the_alias_resolves_elsewhere() {
+		$alias = 'https://example.com/@alice';
+		$id    = 'https://example.com/@mallory';
+
+		$post_id = Remote_Actors::upsert( $this->reidentified_actor( $alias ) );
+		$filter  = $this->serve_documents( array( $alias => $this->reidentified_actor( $alias ) ) );
+
+		$result = Remote_Actors::upsert( $this->reidentified_actor( $id, array( $alias ) ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter, 10 );
+
+		$this->assertNotSame( $post_id, $result, 'The other actor gets its own post.' );
+		$this->assertSame( $post_id, Remote_Actors::get_by_uri( $alias )->ID, 'The stored actor keeps its id.' );
+	}
+
+	/**
+	 * An alias on another origin, including another port, is not a re-identification.
+	 *
+	 * @covers ::reidentify
+	 * @dataProvider other_origin_provider
+	 *
+	 * @param string $alias The stored actor id.
+	 * @param string $id    The new id.
+	 */
+	public function test_reidentify_requires_the_same_origin( $alias, $id ) {
+		$post_id = Remote_Actors::upsert( $this->reidentified_actor( $alias ) );
+		$actor   = $this->reidentified_actor( $id, array( $alias ) );
+		$filter  = $this->serve_documents( array( $alias => $actor ) );
+
+		$result = Remote_Actors::reidentify( $actor );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter, 10 );
+
+		$this->assertWPError( $result );
+		$this->assertSame( $post_id, Remote_Actors::get_by_uri( $alias )->ID );
+	}
+
+	/**
+	 * Pairs of a stored id and a new id on another origin.
+	 *
+	 * @return array[]
+	 */
+	public function other_origin_provider() {
+		return array(
+			'other host'   => array( 'https://example.com/@alice', 'https://other.example/?author=5' ),
+			'other scheme' => array( 'http://example.com/@alice', 'https://example.com/?author=5' ),
+			'other port'   => array( 'https://example.com/@alice', 'https://example.com:8443/?author=5' ),
+		);
 	}
 }
