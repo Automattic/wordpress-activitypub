@@ -9,6 +9,9 @@ namespace Activitypub\Cache;
 
 use Activitypub\Collection\Remote_Actors;
 
+use function Activitypub\get_id_hash;
+use function Activitypub\unescape_guid;
+
 /**
  * Avatar cache class.
  *
@@ -90,6 +93,30 @@ class Avatar extends File {
 	}
 
 	/**
+	 * Get the storage paths for an actor.
+	 *
+	 * The folder is named after the hash of the actor's id, not after the post the actor is
+	 * stored in, so it does not depend on that post. A value that is not a valid id still gets a
+	 * folder of its own, never the folder all avatars are in.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $entity_id The id (URI) of the actor.
+	 *
+	 * @return array {
+	 *     Storage paths.
+	 *
+	 *     @type string $basedir Base directory path.
+	 *     @type string $baseurl Base URL.
+	 * }
+	 */
+	public static function get_storage_paths( $entity_id ) {
+		$hash = get_id_hash( $entity_id );
+
+		return parent::get_storage_paths( $hash ? $hash : \hash( 'sha256', (string) $entity_id ) );
+	}
+
+	/**
 	 * Clear the cached avatar when an actor is updated.
 	 *
 	 * Invalidates cached files so the avatar is re-downloaded on next access.
@@ -100,7 +127,7 @@ class Avatar extends File {
 	 */
 	public static function clear_cached_avatar( $post_id ) {
 		// Invalidate cached files so next access re-downloads.
-		self::invalidate_entity( $post_id );
+		self::invalidate_entity( unescape_guid( \get_post_field( 'guid', $post_id, 'raw' ) ) );
 
 		// Clean up legacy meta from previous versions.
 		\delete_post_meta( $post_id, '_activitypub_avatar_url' );
@@ -114,7 +141,7 @@ class Avatar extends File {
 	 *
 	 * @param string     $url       The remote URL.
 	 * @param string     $context   The context ('avatar', 'media', 'emoji', etc.).
-	 * @param string|int $entity_id The entity identifier (actor post ID).
+	 * @param string|int $entity_id The entity identifier (the id of the actor).
 	 * @param array      $options   Optional. Additional options (unused for avatars).
 	 *
 	 * @return string The local URL if cached successfully, otherwise the original URL.
@@ -132,6 +159,8 @@ class Avatar extends File {
 	/**
 	 * Maybe clean up cached avatar when actor is deleted.
 	 *
+	 * Removes the cached files and the legacy meta, like an update does.
+	 *
 	 * @param int $post_id The post ID being deleted.
 	 *
 	 * @return void
@@ -141,7 +170,7 @@ class Avatar extends File {
 			return;
 		}
 
-		self::invalidate_entity( $post_id );
+		self::clear_cached_avatar( $post_id );
 	}
 
 	/**
@@ -150,15 +179,15 @@ class Avatar extends File {
 	 * This is a convenience method that wraps get_or_cache with the correct options.
 	 * It also invalidates any existing avatar before caching the new one.
 	 *
-	 * @param int    $actor_id   The actor post ID.
+	 * @since unreleased The actor is given by its id, no longer by its post ID.
+	 *
+	 * @param string $actor_id   The id (URI) of the actor.
 	 * @param string $avatar_url The remote avatar URL.
 	 *
 	 * @return string|false The local avatar URL on success, false on failure.
 	 */
 	public static function save( $actor_id, $avatar_url ) {
-		// Validate actor_id is a positive integer.
-		$actor_id = (int) $actor_id;
-		if ( $actor_id <= 0 ) {
+		if ( ! \is_string( $actor_id ) || ! \filter_var( $actor_id, FILTER_VALIDATE_URL ) ) {
 			return false;
 		}
 
