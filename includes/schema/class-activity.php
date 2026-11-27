@@ -7,30 +7,12 @@
 
 namespace Activitypub\Schema;
 
-use function Activitypub\object_to_id;
-
 /**
  * The schema of an activity received from a remote server.
  *
  * @since unreleased
  */
 class Activity extends Base_Object {
-	/**
-	 * Normalize an activity: language maps resolved (the embedded object's too), the actor as its id.
-	 *
-	 * The same the inbox's route args do per property, for the ways in without args (the Proxy).
-	 *
-	 * @param array $data The activity, valid against the schema.
-	 *
-	 * @return array The normalized activity.
-	 */
-	public function sanitize( $data ) {
-		$data          = parent::sanitize( $data );
-		$data['actor'] = object_to_id( $data['actor'] );
-
-		return $data;
-	}
-
 	/**
 	 * The properties of an activity.
 	 *

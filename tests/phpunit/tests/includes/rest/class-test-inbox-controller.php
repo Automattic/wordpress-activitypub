@@ -569,8 +569,108 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 			'valid'                 => array( array(), '' ),
 			'actor not a uri'       => array( array( 'actor' => 'alice' ), 'rest_invalid_param' ),
 			'type not letters'      => array( array( 'type' => 'as:QuoteRequest' ), 'rest_invalid_param' ),
+			'without object'        => array( array( 'object' => null ), 'rest_property_required' ),
 			'without instrument'    => array( array( 'instrument' => null ), 'activitypub_instrument_missing' ),
 			'instrument other host' => array( array( 'instrument' => 'https://other.example/note/1' ), 'activitypub_instrument_host' ),
+		);
+	}
+
+	/**
+	 * An activity without an object passes when its type does not need one.
+	 *
+	 * @covers ::validate_request
+	 * @covers ::get_activity_args
+	 */
+	public function test_validate_request_intransitive_activity() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'id'    => 'https://remote.example/arrive/1',
+					'type'  => 'Arrive',
+					'actor' => 'https://remote.example/@test',
+				)
+			)
+		);
+
+		$response = \rest_do_request( $request );
+
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$this->assertNotSame( 400, $response->get_status() );
+	}
+
+	/**
+	 * A schema registered for a type is enforced by both inboxes, without a change to their routes.
+	 *
+	 * @dataProvider inbox_route_provider
+	 * @covers ::validate_request
+	 *
+	 * @param string $route The inbox route.
+	 */
+	public function test_validate_request_uses_registered_schema( $route ) {
+		$schema = new class() extends \Activitypub\Schema\Activity {
+			/**
+			 * The properties: those of an activity, and a required target.
+			 *
+			 * @return array The properties, keyed by name.
+			 */
+			protected function get_properties() {
+				$properties = parent::get_properties();
+
+				$properties['target'] = $this->required( $properties['target'] );
+
+				return $properties;
+			}
+		};
+
+		$register = static function ( $schemas ) use ( $schema ) {
+			$schemas['Offer'] = $schema;
+
+			return $schemas;
+		};
+
+		\add_filter( 'activitypub_schemas', $register );
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$activity = array(
+			'id'     => 'https://remote.example/offer/1',
+			'type'   => 'Offer',
+			'actor'  => 'https://remote.example/@test',
+			'object' => 'https://remote.example/note/1',
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . $route );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $activity ) );
+
+		$without_target = \rest_do_request( $request );
+
+		$activity['target'] = 'https://remote.example/collection/1';
+		$request->set_body( \wp_json_encode( $activity ) );
+
+		$with_target = \rest_do_request( $request );
+
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\remove_filter( 'activitypub_schemas', $register );
+
+		$this->assertSame( 400, $without_target->get_status() );
+		$this->assertSame( 'rest_property_required', $without_target->get_data()['code'] );
+		$this->assertNotSame( 400, $with_target->get_status() );
+	}
+
+	/**
+	 * Data provider for test_validate_request_uses_registered_schema.
+	 *
+	 * @return array The inbox routes.
+	 */
+	public function inbox_route_provider() {
+		return array(
+			'shared inbox' => array( '/inbox' ),
+			'actor inbox'  => array( '/users/1/inbox' ),
 		);
 	}
 

@@ -110,7 +110,7 @@ class Test_Base_Object extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Valid data is normalized: language maps resolve to the site's language.
+	 * Valid data is normalized: language maps resolve to the site's language, an audience becomes a list.
 	 *
 	 * @covers ::sanitize
 	 */
@@ -124,6 +124,7 @@ class Test_Base_Object extends \WP_UnitTestCase {
 			array(
 				'id'         => 'https://example.com/notes/1',
 				'type'       => 'Note',
+				'to'         => 'https://www.w3.org/ns/activitystreams#Public',
 				'content'    => 'Hello',
 				'contentMap' => array(
 					'en' => 'Hello',
@@ -135,5 +136,6 @@ class Test_Base_Object extends \WP_UnitTestCase {
 		\remove_filter( 'locale', $locale );
 
 		$this->assertSame( 'Hallo', $note['content'] );
+		$this->assertSame( array( 'https://www.w3.org/ns/activitystreams#Public' ), $note['to'] );
 	}
 }

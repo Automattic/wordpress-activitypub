@@ -37,13 +37,29 @@ class Base_Object {
 	/**
 	 * Get the JSON Schema, as `WP_REST_Controller::get_item_schema()` does: built once, cached on the instance.
 	 *
+	 * The required properties are listed on the schema, not flagged on each property. A route's
+	 * args are fixed, the type is only known from the body: args built from this schema check the
+	 * shape of each property that is sent, and the schema of the type decides which ones it needs.
+	 *
 	 * @return array The schema.
 	 */
 	public function get_schema() {
 		if ( ! $this->schema ) {
+			$properties = $this->get_properties();
+			$required   = array();
+
+			foreach ( $properties as $key => $property ) {
+				if ( ! empty( $property['required'] ) ) {
+					$required[] = $key;
+				}
+
+				unset( $properties[ $key ]['required'] );
+			}
+
 			$this->schema = array(
 				'type'       => 'object',
-				'properties' => $this->get_properties(),
+				'properties' => $properties,
+				'required'   => $required,
 			);
 		}
 
@@ -73,14 +89,35 @@ class Base_Object {
 	}
 
 	/**
-	 * Normalize remote data that passed validation: language maps resolve to the site's language.
+	 * Normalize remote data that passed validation: language maps resolve to the site's language,
+	 * and each property gets the `sanitize_callback` of its `arg_options`, the one the inbox's route
+	 * args use, so both ways in hand on the same form.
 	 *
 	 * @param array $data The remote data, valid against the schema.
 	 *
 	 * @return array The normalized data.
 	 */
 	public function sanitize( $data ) {
-		return $this->localize_language_maps( $data );
+		$data = $this->localize_language_maps( $data );
+
+		foreach ( $this->get_schema()['properties'] as $key => $property ) {
+			if ( isset( $data[ $key ], $property['arg_options']['sanitize_callback'] ) ) {
+				$data[ $key ] = \call_user_func( $property['arg_options']['sanitize_callback'], $data[ $key ] );
+			}
+		}
+
+		return $data;
+	}
+
+	/**
+	 * Normalize an audience to a list: handlers read `to`, `cc` and `bcc` as arrays.
+	 *
+	 * @param string|array $audience One URI, or a list of URIs.
+	 *
+	 * @return array The list of URIs.
+	 */
+	public function audience_to_list( $audience ) {
+		return \is_string( $audience ) ? array( $audience ) : $audience;
 	}
 
 	/**
@@ -106,8 +143,8 @@ class Base_Object {
 	/**
 	 * Rules between properties of the document that a schema can not express.
 	 *
-	 * Needs neither the signer nor stored data, so it runs wherever the document arrives: in the
-	 * inbox route's `validate_callback`, and in `validate()` for the Proxy. Runs after the schema passed.
+	 * Needs neither the signer nor stored data, so it runs wherever the document arrives, as part of
+	 * `validate()`: in the inbox route's `validate_callback` and in the Proxy. Runs after the schema passed.
 	 *
 	 * @param array $data The remote data.
 	 *
@@ -172,13 +209,14 @@ class Base_Object {
 	 */
 	protected function audience() {
 		return array(
-			'anyOf' => array(
+			'anyOf'       => array(
 				$this->uri(),
 				array(
 					'type'  => 'array',
 					'items' => $this->uri(),
 				),
 			),
+			'arg_options' => array( 'sanitize_callback' => array( $this, 'audience_to_list' ) ),
 		);
 	}
 

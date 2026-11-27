@@ -220,8 +220,9 @@ class Inbox_Controller extends \WP_REST_Controller {
 	/**
 	 * The route args of an activity delivered to an inbox: core builds them from the activity schema.
 	 *
-	 * Core checks every arg against the schema before any sanitizer runs; the sanitizers are the
-	 * schema's own (`arg_options`).
+	 * Core checks the shape of every property that is sent before any sanitizer runs; the sanitizers
+	 * are the schema's own (`arg_options`). Which properties an activity needs depends on its type,
+	 * so the route's `validate_callback` decides that with the schema of the type.
 	 *
 	 * @since unreleased
 	 *
@@ -232,7 +233,9 @@ class Inbox_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * The route's `validate_callback`: the rules between properties of the activity, after core checked each arg.
+	 * The route's `validate_callback`: the activity against the schema of its type, after core checked each arg.
+	 *
+	 * Runs before the sanitizers and before the signature check, for both inboxes.
 	 *
 	 * @since unreleased
 	 *
@@ -242,10 +245,15 @@ class Inbox_Controller extends \WP_REST_Controller {
 	 */
 	public function validate_request( $request ) {
 		$activity = $request->get_json_params();
-		$valid    = Registry::get( $activity )->check( $activity );
+		$valid    = Registry::get( $activity )->validate( $activity );
 
 		if ( true !== $valid ) {
 			return $valid;
+		}
+
+		// Only an activity with an object has one to filter, as when the filter ran on the `object` arg.
+		if ( ! isset( $activity['object'] ) ) {
+			return true;
 		}
 
 		/**
