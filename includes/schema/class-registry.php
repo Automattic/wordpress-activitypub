@@ -44,6 +44,22 @@ class Registry {
 	}
 
 	/**
+	 * Get the schema object for an activity: the one of its type, else the one of an activity.
+	 *
+	 * A document delivered to an inbox is an activity whatever its type says, so a type the
+	 * plugin does not know still needs what every activity needs.
+	 *
+	 * @param mixed $data The activity.
+	 *
+	 * @return Activity The schema object.
+	 */
+	public static function get_activity( $data ) {
+		$schema = self::get( $data );
+
+		return $schema instanceof Activity ? $schema : new Activity();
+	}
+
+	/**
 	 * Get the schema objects of the types that have rules of their own.
 	 *
 	 * @return Base_Object[] The schema objects, keyed by type.

@@ -167,7 +167,12 @@ class Base_Object {
 	}
 
 	/**
-	 * A reference to an object or an actor: its id, or an object with its id.
+	 * A reference to an object or an actor, in the forms `object_to_id()` reads: its id, an object
+	 * with its id, or a `Link` or `Mention` with the `href` it points to.
+	 *
+	 * A `Link` with an `id` but no `href` passes as an object; `object_to_id()` finds nothing in it.
+	 * Core can not make `href` depend on the type, so a reference the plugin replaces by its id is
+	 * checked in `check()` too.
 	 *
 	 * @return array The schema.
 	 */
@@ -178,7 +183,20 @@ class Base_Object {
 				array(
 					'type'       => 'object',
 					'properties' => array(
-						'id' => $this->required( $this->uri() ),
+						'id'   => $this->required( $this->uri() ),
+						'href' => $this->uri(),
+					),
+				),
+				array(
+					'type'       => 'object',
+					'properties' => array(
+						'type' => $this->required(
+							array(
+								'type' => 'string',
+								'enum' => array( 'Link', 'Mention' ),
+							)
+						),
+						'href' => $this->required( $this->uri() ),
 					),
 				),
 			),

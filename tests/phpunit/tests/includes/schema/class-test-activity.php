@@ -48,6 +48,11 @@ class Test_Activity extends \WP_UnitTestCase {
 			'type' => 'Note',
 		);
 
+		$link = array(
+			'type' => 'Link',
+			'href' => 'https://example.com/actor',
+		);
+
 		return array(
 			'follow'                => array( $follow, true ),
 			'without id'            => array( \array_diff_key( $follow, array( 'id' => true ) ), false ),
@@ -56,9 +61,43 @@ class Test_Activity extends \WP_UnitTestCase {
 			'without actor'         => array( \array_diff_key( $follow, array( 'actor' => true ) ), false ),
 			'actor not a uri'       => array( \array_merge( $follow, array( 'actor' => 'alice' ) ), false ),
 			'actor as object'       => array( \array_merge( $follow, array( 'actor' => array( 'id' => 'https://example.com/actor' ) ) ), true ),
+			'actor id not a uri'    => array( \array_merge( $follow, array( 'actor' => array( 'id' => 'alice' ) ) ), false ),
+			'actor as list'         => array( \array_merge( $follow, array( 'actor' => array( 'https://example.com/actor' ) ) ), false ),
+			'actor as link'         => array( \array_merge( $follow, array( 'actor' => $link ) ), true ),
+			'actor as mention'      => array( \array_merge( $follow, array( 'actor' => \array_merge( $link, array( 'type' => 'Mention' ) ) ) ), true ),
+			'actor link with id'    => array( \array_merge( $follow, array( 'actor' => \array_merge( $link, array( 'id' => 'https://example.com/link/1' ) ) ) ), true ),
+			'actor link no href'    => array(
+				\array_merge(
+					$follow,
+					array(
+						'actor' => array(
+							'type' => 'Link',
+							'id'   => 'https://example.com/link/1',
+						),
+					)
+				),
+				false,
+			),
+			'actor href not a uri'  => array(
+				\array_merge(
+					$follow,
+					array(
+						'actor' => \array_merge(
+							$link,
+							array(
+								'id'   => 'https://example.com/link/1',
+								'href' => 'alice',
+							)
+						),
+					)
+				),
+				false,
+			),
+			'actor link href list'  => array( \array_merge( $follow, array( 'actor' => \array_merge( $link, array( 'href' => array( 'https://example.com/actor' ) ) ) ) ), false ),
 			'without object'        => array( \array_diff_key( $follow, array( 'object' => true ) ), false ),
 			'object embedded'       => array( \array_merge( $follow, array( 'object' => $note ) ), true ),
 			'object embedded no id' => array( \array_merge( $follow, array( 'object' => array( 'type' => 'Note' ) ) ), false ),
+			'object as link'        => array( \array_merge( $follow, array( 'object' => $link ) ), true ),
 			'object as list'        => array( \array_merge( $follow, array( 'object' => array( 'https://example.org/a', 'https://example.org/b' ) ) ), true ),
 			'instrument not a uri'  => array( \array_merge( $follow, array( 'instrument' => 'note' ) ), false ),
 			'to as string'          => array( \array_merge( $follow, array( 'to' => 'https://www.w3.org/ns/activitystreams#Public' ) ), true ),
@@ -96,5 +135,52 @@ class Test_Activity extends \WP_UnitTestCase {
 
 		$this->assertSame( 'https://example.com/actor', $activity['actor'] );
 		$this->assertSame( 'Hallo', $activity['object']['summary'] );
+	}
+
+	/**
+	 * Normalizing only picks what was validated: what passed the schema still passes it after
+	 * `sanitize()`, and a second `sanitize()` changes nothing.
+	 *
+	 * @dataProvider validate_provider
+	 * @covers ::sanitize
+	 * @covers ::validate
+	 *
+	 * @param array $data     The remote data.
+	 * @param bool  $expected Whether it is valid.
+	 */
+	public function test_sanitize_keeps_valid_data_valid( $data, $expected ) {
+		$schema = new Activity();
+
+		if ( ! $expected ) {
+			$this->assertWPError( $schema->validate( $data ) );
+			return;
+		}
+
+		$sanitized = $schema->sanitize( $data );
+
+		$this->assertTrue( $schema->validate( $sanitized ) );
+		$this->assertSame( $sanitized, $schema->sanitize( $sanitized ) );
+	}
+
+	/**
+	 * A Link or Mention as actor is replaced by the href it points to, which the schema checked.
+	 *
+	 * @covers ::sanitize
+	 */
+	public function test_sanitize_link_actor() {
+		$activity = ( new Activity() )->sanitize(
+			array(
+				'id'     => 'https://example.com/follow/1',
+				'type'   => 'Follow',
+				'actor'  => array(
+					'type' => 'Link',
+					'id'   => 'https://example.com/link/1',
+					'href' => 'https://example.com/actor',
+				),
+				'object' => 'https://example.org/actor',
+			)
+		);
+
+		$this->assertSame( 'https://example.com/actor', $activity['actor'] );
 	}
 }

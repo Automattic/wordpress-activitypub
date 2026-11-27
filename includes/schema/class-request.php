@@ -24,6 +24,12 @@ class Request extends Activity {
 	 * @return true|\WP_Error True if valid, an error if not.
 	 */
 	public function check( $data ) {
+		$valid = parent::check( $data );
+
+		if ( true !== $valid ) {
+			return $valid;
+		}
+
 		if ( ! isset( $data['instrument'] ) ) {
 			return new \WP_Error( 'activitypub_instrument_missing', \__( 'A request needs an instrument.', 'activitypub' ), array( 'status' => 400 ) );
 		}
