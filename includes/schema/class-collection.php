@@ -14,15 +14,63 @@ namespace Activitypub\Schema;
  */
 class Collection extends Base_Object {
 	/**
-	 * The items of a collection: a list, a single item becomes one.
+	 * The items are a URI or a list: core reads any other scalar as an empty list (`rest_is_array()`).
+	 *
+	 * @return true|\WP_Error True if valid, an error with status 400 if not.
+	 */
+	protected function check() {
+		foreach ( array( 'items', 'orderedItems' ) as $key ) {
+			if ( isset( $this->data[ $key ] ) && ! \is_string( $this->data[ $key ] ) && ! \is_array( $this->data[ $key ] ) ) {
+				return new \WP_Error( 'activitypub_invalid_items', \__( 'The items of the collection are not a list.', 'activitypub' ), array( 'status' => 400 ) );
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * The items of a collection: a list of URIs or objects, a single URI becomes one.
+	 *
+	 * Objects need no id: Mastodon lists its featured hashtags as objects without one.
 	 *
 	 * @return array The schema.
 	 */
 	protected function items() {
+		$item = array(
+			'anyOf' => array(
+				$this->uri(),
+				array( 'type' => 'object' ),
+			),
+		);
+
 		return array(
-			'type'        => 'array',
+			'anyOf'       => array(
+				$this->uri(),
+				array(
+					'type'  => 'array',
+					'items' => $item,
+				),
+			),
 			'arg_options' => array( 'sanitize_callback' => array( $this, 'to_list' ) ),
 		);
+	}
+
+	/**
+	 * A page of a collection: a reference, or the page embedded without an id of its own.
+	 *
+	 * @return array The schema.
+	 */
+	protected function page() {
+		$page = $this->reference();
+
+		$page['anyOf'][] = array(
+			'type'       => 'object',
+			'properties' => array(
+				'type' => $this->required( array( 'type' => 'string' ) ),
+			),
+		);
+
+		return $page;
 	}
 
 	/**
@@ -40,11 +88,11 @@ class Collection extends Base_Object {
 				),
 				'items'        => $this->items(),
 				'orderedItems' => $this->items(),
-				'first'        => $this->reference(),
-				'last'         => $this->reference(),
-				'current'      => $this->reference(),
-				'next'         => $this->reference(),
-				'prev'         => $this->reference(),
+				'first'        => $this->page(),
+				'last'         => $this->page(),
+				'current'      => $this->page(),
+				'next'         => $this->page(),
+				'prev'         => $this->page(),
 				'partOf'       => $this->reference(),
 			)
 		);

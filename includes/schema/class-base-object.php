@@ -64,12 +64,12 @@ class Base_Object {
 			$properties = $this->get_properties();
 			$required   = array();
 
+			// Only the marker `required()` sets: a property's own `required` list is part of its schema.
 			foreach ( $properties as $key => $property ) {
-				if ( ! empty( $property['required'] ) ) {
+				if ( true === ( $property['required'] ?? null ) ) {
 					$required[] = $key;
+					unset( $properties[ $key ]['required'] );
 				}
-
-				unset( $properties[ $key ]['required'] );
 			}
 
 			$this->schema = array(
@@ -174,14 +174,14 @@ class Base_Object {
 	/**
 	 * Normalize a value to a list: an audience (`to`, `cc`, `bcc`) or the items of a collection.
 	 *
-	 * Core takes a single value for an array (`rest_is_array()`), the code that reads it expects a list.
+	 * The schema takes one URI or a list of them, the code that reads it expects a list.
 	 *
-	 * @param mixed $value One value, or a list of them.
+	 * @param mixed $value One URI, or a list.
 	 *
-	 * @return array The list.
+	 * @return mixed The list.
 	 */
 	public function to_list( $value ) {
-		return \is_scalar( $value ) ? array( $value ) : $value;
+		return \is_string( $value ) ? array( $value ) : $value;
 	}
 
 	/**
@@ -294,17 +294,24 @@ class Base_Object {
 	}
 
 	/**
-	 * An audience (`to`, `cc`, `bcc`): one URI, or a list of URIs.
+	 * An audience (`to`, `cc`, `bcc`): one recipient, or a list of them. A recipient is a URI, or one
+	 * of the identifiers the plugin reads as public, the bare `Public` included.
 	 *
 	 * @return array The schema.
 	 */
 	protected function audience() {
+		$public = array(
+			'type' => 'string',
+			'enum' => ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS,
+		);
+
 		return array(
 			'anyOf'       => array(
 				$this->uri(),
+				$public,
 				array(
 					'type'  => 'array',
-					'items' => $this->uri(),
+					'items' => array( 'anyOf' => array( $this->uri(), $public ) ),
 				),
 			),
 			'arg_options' => array( 'sanitize_callback' => array( $this, 'to_list' ) ),

@@ -351,4 +351,21 @@ class Quote_Request {
 
 		add_to_outbox( $activity, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
 	}
+
+	/**
+	 * Validate the object of an activity.
+	 *
+	 * @deprecated unreleased The schema of the type checks the activity in the inbox, see `Activitypub\Schema\Quote_Request`.
+	 *
+	 * @param bool             $valid   The validation result.
+	 * @param array            $param   The object data.
+	 * @param \WP_REST_Request $request The request object.
+	 *
+	 * @return bool The validation result, unchanged.
+	 */
+	public static function validate_object( $valid, $param, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Kept for callers of the removed check.
+		\_deprecated_function( __METHOD__, 'unreleased' );
+
+		return $valid;
+	}
 }

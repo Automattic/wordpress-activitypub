@@ -7,7 +7,6 @@
 
 namespace Activitypub\Tests\Schema;
 
-use Activitypub\Activity\Activity as Activity_Model;
 use Activitypub\Schema\Activity;
 use Activitypub\Schema\Activity_Object;
 use Activitypub\Schema\Actor;
@@ -97,6 +96,8 @@ class Test_Registry extends \WP_UnitTestCase {
 			'object kind'         => array( array( 'type' => 'Tombstone' ), Activity_Object::class ),
 			'unknown'             => array( array( 'type' => 'Unknown' ), Unexpected::class ),
 			'names another class' => array( array( 'type' => 'Registry' ), Unexpected::class ),
+			'names the root'      => array( array( 'type' => 'BaseObject' ), Unexpected::class ),
+			'names a group'       => array( array( 'type' => 'Request' ), Unexpected::class ),
 			'not letters'         => array( array( 'type' => 'Schema\\Activity' ), Unexpected::class ),
 			'no type'             => array( array(), Unexpected::class ),
 			'key without type'    => array(
@@ -124,7 +125,7 @@ class Test_Registry extends \WP_UnitTestCase {
 	 */
 	public function test_filter() {
 		$filter = static function ( $schema, $data, $type ) {
-			return 'Like' === $type ? new Request( $data ) : $schema;
+			return 'Like' === $type ? new Quote_Request( $data ) : $schema;
 		};
 		\add_filter( 'activitypub_schema', $filter, 10, 3 );
 
@@ -135,34 +136,5 @@ class Test_Registry extends \WP_UnitTestCase {
 
 		$this->assertInstanceOf( Request::class, $like );
 		$this->assertSame( Activity::class, \get_class( $follow ) );
-	}
-
-	/**
-	 * A property a type adds is defined alike by every activity type, so the inbox can check and
-	 * normalize it with one route arg. A type may narrow a property of `Activity`, such as the
-	 * embedded object of a `Create`: the route arg is the one of `Activity`.
-	 *
-	 * @covers ::get
-	 */
-	public function test_activity_schemas_define_a_property_alike() {
-		$definitions = array();
-		$activity    = ( new Activity() )->get_schema()['properties'];
-
-		foreach ( Activity_Model::TYPES as $type ) {
-			$schema = Registry::get( array( 'type' => $type ) );
-
-			$this->assertInstanceOf( Activity::class, $schema, $type );
-
-			foreach ( \array_diff_key( $schema->get_schema()['properties'], $activity ) as $name => $property ) {
-				// A callback on the schema itself is compared by its method, not by the instance.
-				$definition = \wp_json_encode( $property );
-
-				if ( ! isset( $definitions[ $name ] ) ) {
-					$definitions[ $name ] = $definition;
-				}
-
-				$this->assertSame( $definitions[ $name ], $definition, \sprintf( '%s defines "%s" differently.', $type, $name ) );
-			}
-		}
 	}
 }

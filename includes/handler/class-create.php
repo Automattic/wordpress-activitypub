@@ -150,4 +150,21 @@ class Create {
 			Tombstone::remove( $object->get_id(), $object->get_url() );
 		}
 	}
+
+	/**
+	 * Validate the object of an activity.
+	 *
+	 * @deprecated unreleased The schema of the type checks the activity in the inbox, see `Activitypub\Schema\Create`.
+	 *
+	 * @param bool             $valid   The validation result.
+	 * @param array            $param   The object data.
+	 * @param \WP_REST_Request $request The request object.
+	 *
+	 * @return bool The validation result, unchanged.
+	 */
+	public static function validate_object( $valid, $param, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Kept for callers of the removed check.
+		\_deprecated_function( __METHOD__, 'unreleased' );
+
+		return $valid;
+	}
 }

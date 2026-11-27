@@ -102,6 +102,9 @@ class Test_Activity extends \WP_UnitTestCase {
 			'instrument not a uri'  => array( \array_merge( $follow, array( 'instrument' => 'note' ) ), false ),
 			'to as string'          => array( \array_merge( $follow, array( 'to' => 'https://www.w3.org/ns/activitystreams#Public' ) ), true ),
 			'to as list'            => array( \array_merge( $follow, array( 'to' => array( 'https://example.org/actor' ) ) ), true ),
+			'to bare Public'        => array( \array_merge( $follow, array( 'to' => array( 'Public' ) ) ), true ),
+			'to Public as string'   => array( \array_merge( $follow, array( 'to' => 'Public' ) ), true ),
+			'to a word'             => array( \array_merge( $follow, array( 'to' => array( 'Everyone' ) ) ), false ),
 			'bcc not a uri'         => array( \array_merge( $follow, array( 'bcc' => array( 'everyone' ) ) ), false ),
 		);
 	}

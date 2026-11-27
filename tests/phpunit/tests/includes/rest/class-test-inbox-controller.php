@@ -563,6 +563,56 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	}
 
 	/**
+	 * An error from the object filter stops the request, as a client error unless it says otherwise.
+	 *
+	 * @dataProvider validate_object_error_provider
+	 * @covers ::validate_request
+	 *
+	 * @param array $data     The error data the filter sets.
+	 * @param int   $expected The expected status.
+	 */
+	public function test_validate_object_filter_error( $data, $expected ) {
+		$filter = static function () use ( $data ) {
+			return new \WP_Error( 'my_plugin_refused', 'Refused.', $data );
+		};
+		\add_filter( 'activitypub_validate_object', $filter );
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'id'     => 'https://remote.example/like/1',
+					'type'   => 'Like',
+					'actor'  => 'https://remote.example/@test',
+					'object' => 'https://local.example/post/1',
+				)
+			)
+		);
+
+		$response = \rest_do_request( $request );
+
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\remove_filter( 'activitypub_validate_object', $filter );
+
+		$this->assertSame( $expected, $response->get_status() );
+		$this->assertSame( 'my_plugin_refused', $response->get_data()['code'] );
+	}
+
+	/**
+	 * Data provider for test_validate_object_filter_error.
+	 *
+	 * @return array The error data and the expected status.
+	 */
+	public function validate_object_error_provider() {
+		return array(
+			'no status'  => array( null, 400 ),
+			'own status' => array( array( 'status' => 403 ), 403 ),
+		);
+	}
+
+	/**
 	 * Data provider for test_validate_request.
 	 *
 	 * @return array The changes to a valid QuoteRequest and the expected error code.

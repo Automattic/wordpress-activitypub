@@ -367,7 +367,8 @@ class Test_Remote_Actors extends \WP_UnitTestCase {
 		$result = Remote_Actors::get_public_key( $actor_url . '#main-key' );
 		$this->unstub_remote_requests();
 		$this->assertWPError( $result );
-		$this->assertSame( 'activitypub_no_remote_key_found', $result->get_error_code() );
+		// With the key embedded, the unresolved id is the actor's own: the Proxy refuses the actor already.
+		$this->assertSame( $reference ? 'activitypub_no_remote_key_found' : 'activitypub_no_remote_profile_found', $result->get_error_code() );
 	}
 
 	/**

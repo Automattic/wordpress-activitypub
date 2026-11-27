@@ -14,7 +14,7 @@ use function Activitypub\is_same_host;
  *
  * @since unreleased
  */
-class Request extends Activity {
+abstract class Request extends Activity {
 	/**
 	 * A request names the requester's own object as its instrument, so it is required and lives on
 	 * the actor's host. Otherwise a remote server could bind a third-party reference to a local post or actor.

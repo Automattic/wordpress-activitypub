@@ -281,8 +281,14 @@ class Inbox_Controller extends \WP_REST_Controller {
 		 */
 		$valid = \apply_filters( 'activitypub_validate_object', true, $activity['object'], $request, 'object' );
 
-		// An error is handed on, as core did when the filter ran as the arg's validator.
+		// An error is handed on, as core did when the filter ran as the arg's validator: a client error unless it says otherwise.
 		if ( \is_wp_error( $valid ) ) {
+			$data = $valid->get_error_data();
+
+			if ( empty( $data['status'] ) ) {
+				$valid->add_data( \array_merge( \is_array( $data ) ? $data : array(), array( 'status' => 400 ) ) );
+			}
+
 			return $valid;
 		}
 

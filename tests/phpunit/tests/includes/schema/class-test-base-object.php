@@ -32,7 +32,7 @@ class Test_Base_Object extends \WP_UnitTestCase {
 			$name = 'Activitypub\\Schema\\' . \str_replace( ' ', '_', \ucwords( \str_replace( '-', ' ', \basename( $file, '.php' ) ) ) );
 			$name = \str_replace( 'Class_', '', $name );
 
-			if ( ! \is_a( $name, Base_Object::class, true ) ) {
+			if ( ! \is_a( $name, Base_Object::class, true ) || ! ( new \ReflectionClass( $name ) )->isInstantiable() ) {
 				continue;
 			}
 
@@ -136,5 +136,41 @@ class Test_Base_Object extends \WP_UnitTestCase {
 
 		$this->assertSame( 'Hallo', $note['content'] );
 		$this->assertSame( array( 'https://www.w3.org/ns/activitystreams#Public' ), $note['to'] );
+	}
+
+	/**
+	 * A property's own required list stays with it: only the marker of `required()` moves to the schema.
+	 *
+	 * @covers ::get_schema
+	 */
+	public function test_nested_required_list_stays() {
+		$class = \get_class(
+			new class() extends Base_Object {
+				/**
+				 * The properties: an optional details object whose label is required.
+				 *
+				 * @return array The properties, keyed by name.
+				 */
+				protected function get_properties() {
+					$properties = parent::get_properties();
+
+					$properties['details'] = array(
+						'type'       => 'object',
+						'properties' => array( 'label' => array( 'type' => 'string' ) ),
+						'required'   => array( 'label' ),
+					);
+
+					return $properties;
+				}
+			}
+		);
+		$note  = array(
+			'id'   => 'https://example.com/note/1',
+			'type' => 'Note',
+		);
+
+		$this->assertTrue( ( new $class( $note ) )->validate(), 'details is optional' );
+		$this->assertWPError( ( new $class( \array_merge( $note, array( 'details' => array() ) ) ) )->validate(), 'label is required in details' );
+		$this->assertTrue( ( new $class( \array_merge( $note, array( 'details' => array( 'label' => 'x' ) ) ) ) )->validate() );
 	}
 }

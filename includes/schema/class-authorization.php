@@ -12,7 +12,7 @@ namespace Activitypub\Schema;
  *
  * @since unreleased
  */
-class Authorization extends Base_Object {
+abstract class Authorization extends Base_Object {
 	/**
 	 * The properties of an authorization: who issued it, and which object it allows on which target.
 	 *

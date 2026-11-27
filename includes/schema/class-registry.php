@@ -59,11 +59,15 @@ class Registry {
 			return $schema;
 		}
 
-		// The schema of the type: `QuoteRequest` is `Quote_Request`. Letters only, so a type can not name another class.
+		/*
+		 * The schema of the type: `QuoteRequest` is `Quote_Request`. Letters only, so a type can not
+		 * name another class. A group (`Request`) is abstract and the root is none of them, so only
+		 * the schema of a type is found by its name.
+		 */
 		if ( \preg_match( '/^[A-Za-z]+$/', $type ) ) {
 			$class = __NAMESPACE__ . '\\' . \ucwords( camel_to_snake_case( $type ), '_' );
 
-			if ( \class_exists( $class ) && \is_a( $class, Base_Object::class, true ) ) {
+			if ( \class_exists( $class ) && \is_subclass_of( $class, Base_Object::class ) && ( new \ReflectionClass( $class ) )->isInstantiable() ) {
 				return new $class( $data );
 			}
 		}
