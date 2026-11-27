@@ -145,6 +145,9 @@ class Base_Object {
 	 * Core runs it after the args and the route's `validate_callback` checked the request. A request
 	 * without a type of this kind did not get that far; should it still, the arg's own schema normalizes.
 	 *
+	 * The schema is selected from the raw body: core normalizes the params one by one, in place, so a
+	 * selection from them would depend on the order of the properties.
+	 *
 	 * @param mixed            $value   The value.
 	 * @param \WP_REST_Request $request The request.
 	 * @param string           $key     The property.
@@ -152,7 +155,7 @@ class Base_Object {
 	 * @return mixed The normalized value.
 	 */
 	public function sanitize_arg( $value, $request, $key ) {
-		$schema = Registry::get( $request->get_json_params() )->limit( static::class );
+		$schema = Registry::get( \json_decode( $request->get_body(), true ) )->limit( static::class );
 
 		return ( $schema instanceof Unexpected ? $this : $schema )->sanitize_property( $key, $value );
 	}
@@ -169,14 +172,16 @@ class Base_Object {
 	}
 
 	/**
-	 * Normalize an audience to a list: handlers read `to`, `cc` and `bcc` as arrays.
+	 * Normalize a value to a list: an audience (`to`, `cc`, `bcc`) or the items of a collection.
 	 *
-	 * @param string|array $audience One URI, or a list of URIs.
+	 * Core takes a single value for an array (`rest_is_array()`), the code that reads it expects a list.
 	 *
-	 * @return array The list of URIs.
+	 * @param mixed $value One value, or a list of them.
+	 *
+	 * @return array The list.
 	 */
-	public function audience_to_list( $audience ) {
-		return \is_string( $audience ) ? array( $audience ) : $audience;
+	public function to_list( $value ) {
+		return \is_scalar( $value ) ? array( $value ) : $value;
 	}
 
 	/**
@@ -302,7 +307,7 @@ class Base_Object {
 					'items' => $this->uri(),
 				),
 			),
-			'arg_options' => array( 'sanitize_callback' => array( $this, 'audience_to_list' ) ),
+			'arg_options' => array( 'sanitize_callback' => array( $this, 'to_list' ) ),
 		);
 	}
 

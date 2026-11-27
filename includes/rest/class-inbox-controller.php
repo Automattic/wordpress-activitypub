@@ -274,12 +274,19 @@ class Inbox_Controller extends \WP_REST_Controller {
 		/**
 		 * Filter the ActivityPub object validation.
 		 *
-		 * @param bool             $validate The validation result.
+		 * @param bool|\WP_Error   $validate The validation result.
 		 * @param array            $param    The object data.
 		 * @param \WP_REST_Request $request  The request object.
 		 * @param string           $key      The key.
 		 */
-		if ( ! \apply_filters( 'activitypub_validate_object', true, $activity['object'], $request, 'object' ) ) {
+		$valid = \apply_filters( 'activitypub_validate_object', true, $activity['object'], $request, 'object' );
+
+		// An error is handed on, as core did when the filter ran as the arg's validator.
+		if ( \is_wp_error( $valid ) ) {
+			return $valid;
+		}
+
+		if ( ! $valid ) {
 			return new \WP_Error( 'rest_invalid_param', \__( 'The object of the activity is not valid.', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
