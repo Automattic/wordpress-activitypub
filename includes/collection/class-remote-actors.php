@@ -181,7 +181,7 @@ class Remote_Actors {
 			global $wpdb;
 
 			// The cached avatar is stored under the old id, and nothing would find it after the change.
-			Avatar::invalidate_entity( unescape_guid( $post->guid ) );
+			Avatar::clear_cached_avatar( $post->ID );
 
 			// wp_update_post() never changes a guid, so it is written in the form an insert stores, with its hash.
 			list( $guid ) = get_stored_id_forms( $id );
