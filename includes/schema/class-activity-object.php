@@ -22,12 +22,12 @@ class Activity_Object extends Base_Object {
 		return \array_merge(
 			parent::get_properties(),
 			array(
-				'inReplyTo'      => $this->reference(),
+				'inReplyTo'      => $this->nullable( $this->reference() ),
 				// The keys `get_quote_url()` reads.
-				'quote'          => $this->reference(),
-				'quoteUrl'       => $this->reference(),
-				'quoteUri'       => $this->reference(),
-				'_misskey_quote' => $this->reference(),
+				'quote'          => $this->nullable( $this->reference() ),
+				'quoteUrl'       => $this->nullable( $this->reference() ),
+				'quoteUri'       => $this->nullable( $this->reference() ),
+				'_misskey_quote' => $this->nullable( $this->reference() ),
 				'url'            => $this->references(),
 			)
 		);

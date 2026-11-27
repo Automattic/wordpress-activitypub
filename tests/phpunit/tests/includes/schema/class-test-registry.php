@@ -94,20 +94,22 @@ class Test_Registry extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * A property is a term of the vocabulary: the schema of every activity type defines it alike,
-	 * so the inbox can check and normalize it with one route arg for all types.
+	 * A property a type adds is defined alike by every activity type, so the inbox can check and
+	 * normalize it with one route arg. A type may narrow a property of `Activity`, such as the
+	 * embedded object of a `Create`: the route arg is the one of `Activity`.
 	 *
 	 * @covers ::get
 	 */
 	public function test_activity_schemas_define_a_property_alike() {
 		$definitions = array();
+		$activity    = ( new Activity() )->get_schema()['properties'];
 
 		foreach ( Activity_Model::TYPES as $type ) {
 			$schema = Registry::get( array( 'type' => $type ) );
 
 			$this->assertInstanceOf( Activity::class, $schema, $type );
 
-			foreach ( $schema->get_schema()['properties'] as $name => $property ) {
+			foreach ( \array_diff_key( $schema->get_schema()['properties'], $activity ) as $name => $property ) {
 				// A callback on the schema itself is compared by its method, not by the instance.
 				$definition = \wp_json_encode( $property );
 

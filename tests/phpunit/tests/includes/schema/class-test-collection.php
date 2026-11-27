@@ -46,7 +46,7 @@ class Test_Collection extends \WP_UnitTestCase {
 		return array(
 			'collection'       => array( $collection, true ),
 			'with items'       => array( \array_merge( $collection, array( 'orderedItems' => array( 'https://example.org/actor' ) ) ), true ),
-			'items not a list' => array( \array_merge( $collection, array( 'orderedItems' => 'https://example.org/actor' ) ), false ),
+			'items not a list' => array( \array_merge( $collection, array( 'orderedItems' => array( 'first' => 'https://example.org/actor' ) ) ), false ),
 			'negative total'   => array( \array_merge( $collection, array( 'totalItems' => -1 ) ), false ),
 			'first not a uri'  => array( \array_merge( $collection, array( 'first' => 'page-1' ) ), false ),
 		);

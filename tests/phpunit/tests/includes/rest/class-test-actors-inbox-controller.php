@@ -358,7 +358,8 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		// Dispatch the request.
 		$response = \rest_do_request( $request );
 		$this->assertEquals( 400, $response->get_status() );
-		$this->assertEquals( 'rest_invalid_param', $response->get_data()['code'] );
+		// The schema of a Create wants the object embedded.
+		$this->assertEquals( 'rest_invalid_type', $response->get_data()['code'] );
 
 		// Valid request, because of a valid object.
 		$json['object'] = array(

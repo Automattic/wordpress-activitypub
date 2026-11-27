@@ -46,9 +46,10 @@ class Test_Proxy extends \WP_UnitTestCase {
 	 */
 	private function note( $id ) {
 		$this->responses[ $id ] = array(
-			'id'      => $id,
-			'type'    => 'Note',
-			'content' => 'Hi',
+			'id'           => $id,
+			'type'         => 'Note',
+			'attributedTo' => 'https://example.com/users/alice',
+			'content'      => 'Hi',
 		);
 
 		return $id;
@@ -121,10 +122,11 @@ class Test_Proxy extends \WP_UnitTestCase {
 
 		$id                     = 'https://example.com/notes/maps';
 		$this->responses[ $id ] = array(
-			'id'         => $id,
-			'type'       => 'Note',
-			'content'    => 'Hello',
-			'contentMap' => array( 'de' => 'Hallo' ),
+			'id'           => $id,
+			'type'         => 'Note',
+			'attributedTo' => 'https://example.com/users/alice',
+			'content'      => 'Hello',
+			'contentMap'   => array( 'de' => 'Hallo' ),
 		);
 
 		$note = Proxy::get( $id );
@@ -177,8 +179,9 @@ class Test_Proxy extends \WP_UnitTestCase {
 			'inbox' => 'https://example.com/actors/1/inbox',
 		);
 		$note  = array(
-			'id'   => 'https://example.org/notes/1',
-			'type' => 'Note',
+			'id'           => 'https://example.org/notes/1',
+			'type'         => 'Note',
+			'attributedTo' => 'https://example.com/users/alice',
 		);
 
 		return array(
@@ -300,8 +303,9 @@ class Test_Proxy extends \WP_UnitTestCase {
 				'response' => array( 'code' => 200 ),
 				'body'     => \wp_json_encode(
 					array(
-						'id'   => $id,
-						'type' => 'Note',
+						'id'           => $id,
+						'type'         => 'Note',
+						'attributedTo' => 'https://example.com/users/alice',
 					)
 				),
 				'headers'  => array( 'content-type' => $content_type ),
@@ -385,9 +389,10 @@ class Test_Proxy extends \WP_UnitTestCase {
 			'activitypub_pre_http_get_remote_object',
 			function ( $pre, $url ) {
 				return array(
-					'id'      => $url,
-					'type'    => 'Note',
-					'stubbed' => true,
+					'id'           => $url,
+					'type'         => 'Note',
+					'attributedTo' => 'https://example.com/users/alice',
+					'stubbed'      => true,
 				);
 			},
 			10,
@@ -419,8 +424,9 @@ class Test_Proxy extends \WP_UnitTestCase {
 			),
 		);
 		$this->responses[ $actor ] = array(
-			'id'   => $actor,
-			'type' => 'Person',
+			'id'    => $actor,
+			'type'  => 'Person',
+			'inbox' => 'https://example.com/inbox',
 		);
 
 		$this->assertSame( 'Person', Proxy::get( 'alice@example.com' )['type'] );
@@ -435,8 +441,9 @@ class Test_Proxy extends \WP_UnitTestCase {
 		$actor = 'https://example.com/users/alice';
 
 		$this->responses[ $actor ] = array(
-			'id'   => $actor,
-			'type' => 'Person',
+			'id'    => $actor,
+			'type'  => 'Person',
+			'inbox' => 'https://example.com/inbox',
 		);
 
 		Proxy::get( $actor . '#main-key' );
@@ -482,8 +489,9 @@ class Test_Proxy extends \WP_UnitTestCase {
 		$this->responses[ $requested ] = $this->redirected(
 			$declared,
 			array(
-				'id'   => $declared,
-				'type' => 'Note',
+				'id'           => $declared,
+				'type'         => 'Note',
+				'attributedTo' => 'https://example.com/users/alice',
 			)
 		);
 
@@ -509,8 +517,9 @@ class Test_Proxy extends \WP_UnitTestCase {
 	public function test_get_preserves_both_verification_origins( $first_origin, $declared, $final_known, $alias ) {
 		$requested                     = 'https://example.com/redirect';
 		$object                        = array(
-			'id'   => $declared,
-			'type' => 'Note',
+			'id'           => $declared,
+			'type'         => 'Note',
+			'attributedTo' => 'https://example.com/users/alice',
 		);
 		$this->responses[ $requested ] = $this->redirected( $first_origin, $object );
 		$this->responses[ $declared ]  = $this->redirected( $declared, $object );
@@ -688,8 +697,9 @@ class Test_Proxy extends \WP_UnitTestCase {
 	public function test_delete_refuses_a_media_object_from_another_host() {
 		$id                     = 'https://example.com/notes/1';
 		$this->responses[ $id ] = array(
-			'id'   => $id,
-			'type' => 'Note',
+			'id'           => $id,
+			'type'         => 'Note',
+			'attributedTo' => 'https://example.com/users/alice',
 		);
 
 		Proxy::get( $id );
@@ -724,8 +734,9 @@ class Test_Proxy extends \WP_UnitTestCase {
 		$actor                     = 'https://example.com/actor';
 		$key_id                    = $actor . '#main-key';
 		$this->responses[ $actor ] = array(
-			'id'   => $key_id,
-			'type' => 'Person',
+			'id'    => $key_id,
+			'type'  => 'Person',
+			'inbox' => 'https://example.com/inbox',
 		);
 
 		Proxy::get( $key_id );
@@ -762,8 +773,9 @@ class Test_Proxy extends \WP_UnitTestCase {
 			'headers'  => array( 'content-type' => 'application/activity+json' ),
 			'body'     => \wp_json_encode(
 				array(
-					'id'   => $id,
-					'type' => 'Note',
+					'id'           => $id,
+					'type'         => 'Note',
+					'attributedTo' => 'https://example.com/users/alice',
 				)
 			),
 		);
@@ -817,9 +829,10 @@ class Test_Proxy extends \WP_UnitTestCase {
 	public function test_a_document_cannot_forge_an_alias() {
 		$id                     = 'https://example.com/notes/1';
 		$this->responses[ $id ] = array(
-			'id'      => $id,
-			'type'    => 'Note',
-			'__alias' => array( 'https://example.org/users/victim' ),
+			'id'           => $id,
+			'type'         => 'Note',
+			'attributedTo' => 'https://example.com/users/alice',
+			'__alias'      => array( 'https://example.org/users/victim' ),
 		);
 
 		$first  = Proxy::get( $id );
@@ -943,8 +956,9 @@ class Test_Proxy extends \WP_UnitTestCase {
 		$declared  = 'https://example.org/users/v';
 
 		$this->responses[ $requested ] = array(
-			'id'   => $declared,
-			'type' => 'Note',
+			'id'           => $declared,
+			'type'         => 'Note',
+			'attributedTo' => 'https://example.com/users/alice',
 		);
 
 		$this->assertWPError( Proxy::get( $requested ) );

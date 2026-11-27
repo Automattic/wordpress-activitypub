@@ -250,6 +250,21 @@ class Base_Object {
 	}
 
 	/**
+	 * Allow null as well: servers send `"inReplyTo": null` for a post that does not reply.
+	 *
+	 * Adds to the alternatives of the schema, as core needs a type on each of them.
+	 *
+	 * @param array $schema The schema of the property, with `anyOf`.
+	 *
+	 * @return array The schema, or null.
+	 */
+	protected function nullable( $schema ) {
+		$schema['anyOf'][] = array( 'type' => 'null' );
+
+		return $schema;
+	}
+
+	/**
 	 * Mark a property as required.
 	 *
 	 * @param array $schema The schema of the property.

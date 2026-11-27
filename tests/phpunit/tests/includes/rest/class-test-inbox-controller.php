@@ -98,7 +98,8 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		// Dispatch the request.
 		$response = \rest_do_request( $request );
 		$this->assertEquals( 400, $response->get_status() );
-		$this->assertEquals( 'rest_invalid_param', $response->get_data()['code'] );
+		// The schema of a Create wants the object embedded.
+		$this->assertEquals( 'rest_invalid_type', $response->get_data()['code'] );
 
 		// Valid request, because of a valid object.
 		$json['object'] = array(
@@ -626,7 +627,11 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 				$properties['target'] = $this->required( $properties['target'] );
 				$properties['label']  = array(
 					'type'        => 'string',
-					'arg_options' => array( 'sanitize_callback' => 'trim' ),
+					'arg_options' => array(
+						'sanitize_callback' => static function ( $value ) {
+							return \trim( $value );
+						},
+					),
 				);
 
 				return $properties;
@@ -952,7 +957,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	}
 
 	/**
-	 * Test that a crafted activity type is sanitized so it can't pollute action hook names.
+	 * Test that a crafted activity type is refused, so it can't pollute action hook names.
 	 *
 	 * @covers ::create_item
 	 */
@@ -989,10 +994,11 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 				)
 			);
 
-			\rest_do_request( $request );
+			$response = \rest_do_request( $request );
 
-			$this->assertNotNull( $captured_type, 'activitypub_inbox should fire' );
-			$this->assertSame( 'createevil', $captured_type, 'Crafted activity types should be normalized to the expected canonical value' );
+			// A crafted type is no type the plugin knows, so it is refused, not normalized into a hook name.
+			$this->assertSame( 400, $response->get_status() );
+			$this->assertNull( $captured_type, 'activitypub_inbox must not fire' );
 		} finally {
 			\remove_action( 'activitypub_inbox', $capture, 10 );
 			\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );

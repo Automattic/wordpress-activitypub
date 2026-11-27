@@ -51,6 +51,8 @@ class Test_Activity_Object extends \WP_UnitTestCase {
 			'content map'             => array( \array_merge( $note, array( 'contentMap' => array( 'en' => 'Hello' ) ) ), true ),
 			'content map not strings' => array( \array_merge( $note, array( 'contentMap' => array( 'en' => array( 'Hello' ) ) ) ), false ),
 			'reply'                   => array( \array_merge( $note, array( 'inReplyTo' => 'https://example.org/note/1' ) ), true ),
+			'not a reply'             => array( \array_merge( $note, array( 'inReplyTo' => null ) ), true ),
+			'not a quote'             => array( \array_merge( $note, array( 'quote' => null ) ), true ),
 			'reply not a uri'         => array( \array_merge( $note, array( 'inReplyTo' => 'note' ) ), false ),
 			'quote not a uri'         => array( \array_merge( $note, array( 'quote' => 'note' ) ), false ),
 			'url as list'             => array( \array_merge( $note, array( 'url' => array( 'https://example.com/@actor/1' ) ) ), true ),

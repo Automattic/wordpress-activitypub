@@ -34,6 +34,28 @@ class Activity extends Base_Object {
 	}
 
 	/**
+	 * An embedded activity, as the object of an answer (`Accept`, `Reject`): its id, type, actor and object.
+	 *
+	 * @param array $property The property it narrows, whose `arg_options` it keeps.
+	 *
+	 * @return array The schema.
+	 */
+	protected function activity( $property ) {
+		return $this->required(
+			array(
+				'type'        => 'object',
+				'properties'  => array(
+					'id'     => $this->required( $this->uri() ),
+					'type'   => $this->required( array( 'type' => 'string' ) ),
+					'actor'  => $this->required( $this->reference() ),
+					'object' => $this->required( $this->references() ),
+				),
+				'arg_options' => $property['arg_options'],
+			)
+		);
+	}
+
+	/**
 	 * The properties of an activity.
 	 *
 	 * @return array The properties, keyed by name.
