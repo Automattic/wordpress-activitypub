@@ -126,7 +126,7 @@ class Base_Object {
 	 * @return array The properties, keyed by name.
 	 */
 	protected function get_properties() {
-		return array(
+		$properties = array(
 			'id'           => $this->uri(),
 			'type'         => $this->required(
 				array(
@@ -138,6 +138,17 @@ class Base_Object {
 			'to'           => $this->audience(),
 			'cc'           => $this->audience(),
 		);
+
+		// The texts `sanitize()` localizes: a string, or null (Mastodon sends `"summary": null`), and a map of strings.
+		foreach ( array( 'name', 'summary', 'content' ) as $key ) {
+			$properties[ $key ]         = array( 'type' => array( 'string', 'null' ) );
+			$properties[ $key . 'Map' ] = array(
+				'type'                 => array( 'object', 'null' ),
+				'additionalProperties' => array( 'type' => 'string' ),
+			);
+		}
+
+		return $properties;
 	}
 
 	/**

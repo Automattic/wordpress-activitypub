@@ -7,12 +7,22 @@
 
 namespace Activitypub\Tests\Schema;
 
+use Activitypub\Activity\Activity as Activity_Model;
 use Activitypub\Schema\Activity;
+use Activitypub\Schema\Activity_Object;
 use Activitypub\Schema\Actor;
-use Activitypub\Schema\Base_Object;
-use Activitypub\Schema\Intransitive_Activity;
+use Activitypub\Schema\Arrive;
+use Activitypub\Schema\Collection;
+use Activitypub\Schema\Cryptographic_Key;
+use Activitypub\Schema\Image;
+use Activitypub\Schema\Note;
+use Activitypub\Schema\Page;
+use Activitypub\Schema\Question;
+use Activitypub\Schema\Quote_Authorization;
+use Activitypub\Schema\Quote_Request;
 use Activitypub\Schema\Registry;
 use Activitypub\Schema\Request;
+
 
 /**
  * Test class for the Registry schema.
@@ -27,49 +37,86 @@ class Test_Registry extends \WP_UnitTestCase {
 	 * @dataProvider get_provider
 	 * @covers ::get
 	 *
-	 * @param array  $data  The remote data.
-	 * @param string $class The expected schema class.
+	 * @param array  $data     The remote data.
+	 * @param string $expected The expected schema class, or the error code.
 	 */
-	public function test_get( $data, $class ) {
-		$this->assertSame( $class, \get_class( Registry::get( $data ) ) );
+	public function test_get( $data, $expected ) {
+		$schema = Registry::get( $data );
+
+		$this->assertSame( $expected, \is_wp_error( $schema ) ? $schema->get_error_code() : \get_class( $schema ) );
 	}
 
 	/**
 	 * Data provider for test_get.
 	 *
-	 * @return array The remote data and the expected schema class.
+	 * @return array The remote data and the expected schema class or error code.
 	 */
 	public function get_provider() {
 		return array(
-			'accept'          => array( array( 'type' => 'Accept' ), Activity::class ),
-			'feature request' => array( array( 'type' => 'FeatureRequest' ), Request::class ),
-			'quote request'   => array( array( 'type' => 'QuoteRequest' ), Request::class ),
-			'arrive'          => array( array( 'type' => 'Arrive' ), Intransitive_Activity::class ),
-			'like'            => array( array( 'type' => 'Like' ), Activity::class ),
-			'person'          => array( array( 'type' => 'Person' ), Actor::class ),
-			'note'            => array( array( 'type' => 'Note' ), Base_Object::class ),
-			'unknown'         => array( array( 'type' => 'Unknown' ), Base_Object::class ),
-			'no type'         => array( array(), Base_Object::class ),
-			'type not string' => array( array( 'type' => array( 'Accept' ) ), Base_Object::class ),
+			'own class'           => array( array( 'type' => 'QuoteRequest' ), Quote_Request::class ),
+			'own class, vocab'    => array( array( 'type' => 'Arrive' ), Arrive::class ),
+			'own class, object'   => array( array( 'type' => 'Image' ), Image::class ),
+			'own class, poll'     => array( array( 'type' => 'Question' ), Question::class ),
+			'own class, stamp'    => array( array( 'type' => 'QuoteAuthorization' ), Quote_Authorization::class ),
+			'own class, key'      => array( array( 'type' => 'CryptographicKey' ), Cryptographic_Key::class ),
+			'activity kind'       => array( array( 'type' => 'Like' ), Activity::class ),
+			'actor kind'          => array( array( 'type' => 'Person' ), Actor::class ),
+			'collection kind'     => array( array( 'type' => 'OrderedCollection' ), Collection::class ),
+			'own class, post'     => array( array( 'type' => 'Note' ), Note::class ),
+			'own class, page'     => array( array( 'type' => 'Page' ), Page::class ),
+			'object kind'         => array( array( 'type' => 'Tombstone' ), Activity_Object::class ),
+			'unknown'             => array( array( 'type' => 'Unknown' ), 'activitypub_unknown_type' ),
+			'names another class' => array( array( 'type' => 'Registry' ), 'activitypub_unknown_type' ),
+			'not letters'         => array( array( 'type' => 'Schema\\Activity' ), 'activitypub_unknown_type' ),
+			'no type'             => array( array(), 'activitypub_unknown_type' ),
+			'type not string'     => array( array( 'type' => array( 'Accept' ) ), 'activitypub_unknown_type' ),
 		);
 	}
 
 	/**
-	 * A plugin registers the schema object of its type.
+	 * A plugin returns the schema object of its type.
 	 *
-	 * @covers ::get_schemas
+	 * @covers ::get
 	 */
-	public function test_plugins_register_types() {
-		$register = static function ( $schemas ) {
-			$schemas['Like'] = new Request();
-			return $schemas;
+	public function test_filter() {
+		$filter = static function ( $schema, $data, $type ) {
+			return 'Like' === $type ? new Request() : $schema;
 		};
-		\add_filter( 'activitypub_schemas', $register );
+		\add_filter( 'activitypub_schema', $filter, 10, 3 );
 
-		$schema = Registry::get( array( 'type' => 'Like' ) );
+		$like   = Registry::get( array( 'type' => 'Like' ) );
+		$follow = Registry::get( array( 'type' => 'Follow' ) );
 
-		\remove_filter( 'activitypub_schemas', $register );
+		\remove_filter( 'activitypub_schema', $filter );
 
-		$this->assertInstanceOf( Request::class, $schema );
+		$this->assertInstanceOf( Request::class, $like );
+		$this->assertSame( Activity::class, \get_class( $follow ) );
+	}
+
+	/**
+	 * A property is a term of the vocabulary: the schema of every activity type defines it alike,
+	 * so the inbox can check and normalize it with one route arg for all types.
+	 *
+	 * @covers ::get
+	 */
+	public function test_activity_schemas_define_a_property_alike() {
+		$definitions = array();
+
+		foreach ( Activity_Model::TYPES as $type ) {
+			$schema = Registry::get( array( 'type' => $type ) );
+
+			$this->assertInstanceOf( Activity::class, $schema, $type );
+
+			foreach ( $schema->get_schema()['properties'] as $name => $property ) {
+				// A callback on the schema itself is compared by its method, not by the instance.
+				$definition = \wp_json_encode( $property );
+
+				if ( ! isset( $definitions[ $name ] ) ) {
+					$definitions[ $name ] = $definition;
+				}
+
+				$this->assertSame( $definitions[ $name ], $definition, \sprintf( '%s defines "%s" differently.', $type, $name ) );
+			}
+		}
 	}
 }

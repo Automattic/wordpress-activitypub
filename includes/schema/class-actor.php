@@ -33,17 +33,11 @@ class Actor extends Base_Object {
 						'sharedInbox' => $this->uri(),
 					),
 				),
+				// The key embedded, or its URI, which `Remote_Actors::get_public_key()` fetches.
 				'publicKey' => array(
-					'type'       => 'object',
-					'properties' => array(
-						'id'           => $this->required( $this->uri() ),
-						'owner'        => $this->uri(),
-						'publicKeyPem' => $this->required(
-							array(
-								'type'      => 'string',
-								'minLength' => 1,
-							)
-						),
+					'anyOf' => array(
+						$this->uri(),
+						( new Key() )->get_schema(),
 					),
 				),
 			)

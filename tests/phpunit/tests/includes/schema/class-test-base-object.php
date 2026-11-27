@@ -7,10 +7,7 @@
 
 namespace Activitypub\Tests\Schema;
 
-use Activitypub\Schema\Activity;
-use Activitypub\Schema\Actor;
 use Activitypub\Schema\Base_Object;
-use Activitypub\Schema\Registry;
 
 /**
  * Test class for the Base_Object schema.
@@ -29,16 +26,18 @@ class Test_Base_Object extends \WP_UnitTestCase {
 	public function test_schemas_use_only_core_keywords() {
 		// `arg_options` is not checked: core merges it into the route arg (`rest_get_endpoint_args_for_schema()`).
 		$allowed = \array_merge( \rest_get_allowed_schema_keywords(), array( 'required', 'arg_options' ) );
-		$schemas = \array_merge(
-			Registry::get_schemas(),
-			array(
-				'object'   => new Base_Object(),
-				'activity' => new Activity(),
-				'actor'    => new Actor(),
-			)
-		);
 
-		foreach ( $schemas as $name => $schema ) {
+		// Every schema class, so a new one is checked too.
+		foreach ( \glob( ACTIVITYPUB_PLUGIN_DIR . 'includes/schema/class-*.php' ) as $file ) {
+			$name = 'Activitypub\\Schema\\' . \str_replace( ' ', '_', \ucwords( \str_replace( '-', ' ', \basename( $file, '.php' ) ) ) );
+			$name = \str_replace( 'Class_', '', $name );
+
+			if ( ! \is_a( $name, Base_Object::class, true ) ) {
+				continue;
+			}
+
+			$schema = new $name();
+
 			foreach ( $this->get_keywords( $schema->get_schema() ) as $keyword ) {
 				$this->assertContains( $keyword, $allowed, \sprintf( 'The %s schema uses "%s".', $name, $keyword ) );
 			}

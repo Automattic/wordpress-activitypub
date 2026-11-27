@@ -218,8 +218,10 @@ class Inbox_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * The route args of an activity delivered to an inbox: core builds them from the activity schema.
+	 * The route args of an activity delivered to an inbox: core builds them from the activity schemas.
 	 *
+	 * The properties of the schema of every activity type, so a property a type adds is checked
+	 * and normalized too. A property is a term of the vocabulary: it means the same in every type.
 	 * Core checks the shape of every property that is sent before any sanitizer runs; the sanitizers
 	 * are the schema's own (`arg_options`). Which properties an activity needs depends on its type,
 	 * so the route's `validate_callback` decides that with the schema of the type.
@@ -229,7 +231,23 @@ class Inbox_Controller extends \WP_REST_Controller {
 	 * @return array The route args.
 	 */
 	public function get_activity_args() {
-		return \rest_get_endpoint_args_for_schema( ( new Activity_Schema() )->get_schema() );
+		$properties = ( new Activity_Schema() )->get_schema()['properties'];
+
+		/** This filter is documented in includes/functions-activity.php */
+		foreach ( \apply_filters( 'activitypub_activity_types', Activity::TYPES ) as $type ) {
+			$schema = Registry::get( array( 'type' => $type ) );
+
+			if ( $schema instanceof Activity_Schema ) {
+				$properties += $schema->get_schema()['properties'];
+			}
+		}
+
+		return \rest_get_endpoint_args_for_schema(
+			array(
+				'type'       => 'object',
+				'properties' => $properties,
+			)
+		);
 	}
 
 	/**
@@ -245,7 +263,8 @@ class Inbox_Controller extends \WP_REST_Controller {
 	 */
 	public function validate_request( $request ) {
 		$activity = $request->get_json_params();
-		$valid    = Registry::get( $activity )->validate( $activity );
+		$schema   = Registry::get( $activity );
+		$valid    = \is_wp_error( $schema ) ? $schema : $schema->validate( $activity );
 
 		if ( true !== $valid ) {
 			return $valid;

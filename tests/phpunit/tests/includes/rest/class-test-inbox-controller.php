@@ -552,7 +552,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
 
 		if ( '' === $code ) {
-			$this->assertNotSame( 400, $response->get_status() );
+			$this->assertSame( 202, $response->get_status() );
 		} else {
 			$this->assertSame( 400, $response->get_status() );
 			$this->assertSame( $code, $response->get_data()['code'] );
@@ -600,21 +600,23 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
 
-		$this->assertNotSame( 400, $response->get_status() );
+		$this->assertSame( 202, $response->get_status() );
 	}
 
 	/**
-	 * A schema registered for a type is enforced by both inboxes, without a change to their routes.
+	 * A schema registered for a type is enforced by both inboxes, without a change to their routes:
+	 * the properties it requires, and the normalizing of a property it adds.
 	 *
 	 * @dataProvider inbox_route_provider
 	 * @covers ::validate_request
+	 * @covers ::get_activity_args
 	 *
 	 * @param string $route The inbox route.
 	 */
 	public function test_validate_request_uses_registered_schema( $route ) {
 		$schema = new class() extends \Activitypub\Schema\Activity {
 			/**
-			 * The properties: those of an activity, and a required target.
+			 * The properties: those of an activity, a required target and a trimmed label.
 			 *
 			 * @return array The properties, keyed by name.
 			 */
@@ -622,25 +624,40 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 				$properties = parent::get_properties();
 
 				$properties['target'] = $this->required( $properties['target'] );
+				$properties['label']  = array(
+					'type'        => 'string',
+					'arg_options' => array( 'sanitize_callback' => 'trim' ),
+				);
 
 				return $properties;
 			}
 		};
 
-		$register = static function ( $schemas ) use ( $schema ) {
-			$schemas['Offer'] = $schema;
-
-			return $schemas;
+		$register = static function ( $found, $data, $type ) use ( $schema ) {
+			return 'Offer' === $type ? $schema : $found;
 		};
 
-		\add_filter( 'activitypub_schemas', $register );
+		$label    = null;
+		$received = static function ( $data ) use ( &$label ) {
+			$label = $data['label'] ?? null;
+		};
+
+		\add_filter( 'activitypub_schema', $register, 10, 3 );
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\add_action( 'activitypub_inbox_offer', $received );
+		\add_action( 'activitypub_inbox_shared_offer', $received );
+
+		// The routes are built on `rest_api_init`, so they see a schema registered before it.
+		global $wp_rest_server;
+		$wp_rest_server = new \Spy_REST_Server();
+		\do_action( 'rest_api_init', $wp_rest_server );
 
 		$activity = array(
 			'id'     => 'https://remote.example/offer/1',
 			'type'   => 'Offer',
 			'actor'  => 'https://remote.example/@test',
 			'object' => 'https://remote.example/note/1',
+			'label'  => '  Offer  ',
 		);
 
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . $route );
@@ -654,12 +671,15 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		$with_target = \rest_do_request( $request );
 
+		\remove_action( 'activitypub_inbox_shared_offer', $received );
+		\remove_action( 'activitypub_inbox_offer', $received );
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
-		\remove_filter( 'activitypub_schemas', $register );
+		\remove_filter( 'activitypub_schema', $register );
 
 		$this->assertSame( 400, $without_target->get_status() );
 		$this->assertSame( 'rest_property_required', $without_target->get_data()['code'] );
-		$this->assertNotSame( 400, $with_target->get_status() );
+		$this->assertSame( 202, $with_target->get_status() );
+		$this->assertSame( 'Offer', $label );
 	}
 
 	/**

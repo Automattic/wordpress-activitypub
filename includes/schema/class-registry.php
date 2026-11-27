@@ -7,11 +7,15 @@
 
 namespace Activitypub\Schema;
 
+use function Activitypub\camel_to_snake_case;
 use function Activitypub\is_activity;
+use function Activitypub\is_activity_object;
 use function Activitypub\is_actor;
+use function Activitypub\is_collection;
 
 /**
  * Finds the schema object for remote data: the one of its type, else the one of its kind.
+ * A type of no kind the plugin knows is not parsed.
  *
  * @since unreleased
  */
@@ -21,67 +25,60 @@ class Registry {
 	 *
 	 * @param mixed $data The remote data.
 	 *
-	 * @return Base_Object The schema object.
+	 * @return Base_Object|\WP_Error The schema object, an error with status 400 for a type of no known kind.
 	 */
 	public static function get( $data ) {
-		$type    = \is_array( $data ) && isset( $data['type'] ) && \is_string( $data['type'] ) ? $data['type'] : '';
-		$schemas = self::get_schemas();
+		$type = \is_array( $data ) && isset( $data['type'] ) && \is_string( $data['type'] ) ? $data['type'] : '';
 
-		if ( isset( $schemas[ $type ] ) && $schemas[ $type ] instanceof Base_Object ) {
-			return $schemas[ $type ];
+		/**
+		 * Filters the schema object for remote data.
+		 *
+		 * Return a schema object for a type of your own, or to change the rules of a type. A type
+		 * of your own also has to be in the list of its kind, `activitypub_activity_types` for an
+		 * activity, so the inbox builds its route args from your schema too.
+		 *
+		 * Example usage:
+		 *
+		 * add_filter( 'activitypub_schema', function( $schema, $data, $type ) {
+		 *     return 'Offer' === $type ? new My_Offer_Schema() : $schema;
+		 * }, 10, 3 );
+		 *
+		 * @param Base_Object|null $schema The schema object. Default null, the plugin's own.
+		 * @param mixed            $data   The remote data.
+		 * @param string           $type   The type of the remote data.
+		 */
+		$schema = \apply_filters( 'activitypub_schema', null, $data, $type );
+
+		if ( $schema instanceof Base_Object ) {
+			return $schema;
+		}
+
+		// The schema of the type: `QuoteRequest` is `Quote_Request`. Letters only, so a type can not name another class.
+		if ( \preg_match( '/^[A-Za-z]+$/', $type ) ) {
+			$class = __NAMESPACE__ . '\\' . \ucwords( camel_to_snake_case( $type ), '_' );
+
+			if ( \class_exists( $class ) && \is_a( $class, Base_Object::class, true ) ) {
+				return new $class();
+			}
 		}
 
 		// No schema of its own: the one of its kind.
-		if ( is_actor( $data ) ) {
-			return new Actor();
-		}
-
 		if ( is_activity( $data ) ) {
 			return new Activity();
 		}
 
-		return new Base_Object();
-	}
+		if ( is_actor( $data ) ) {
+			return new Actor();
+		}
 
-	/**
-	 * Get the schema object for an activity: the one of its type, else the one of an activity.
-	 *
-	 * A document delivered to an inbox is an activity whatever its type says, so a type the
-	 * plugin does not know still needs what every activity needs.
-	 *
-	 * @param mixed $data The activity.
-	 *
-	 * @return Activity The schema object.
-	 */
-	public static function get_activity( $data ) {
-		$schema = self::get( $data );
+		if ( is_collection( $data ) ) {
+			return new Collection();
+		}
 
-		return $schema instanceof Activity ? $schema : new Activity();
-	}
+		if ( is_activity_object( $data ) ) {
+			return new Activity_Object();
+		}
 
-	/**
-	 * Get the schema objects of the types that have rules of their own.
-	 *
-	 * @return Base_Object[] The schema objects, keyed by type.
-	 */
-	public static function get_schemas() {
-		$request      = new Request();
-		$intransitive = new Intransitive_Activity();
-
-		$schemas = array(
-			'Arrive'         => $intransitive,
-			'FeatureRequest' => $request,
-			'QuoteRequest'   => $request,
-			'Travel'         => $intransitive,
-		);
-
-		/**
-		 * Filters the schema objects of the types that have rules of their own.
-		 *
-		 * A type without an entry gets the schema of its kind: `Actor`, `Activity` or `Base_Object`.
-		 *
-		 * @param Base_Object[] $schemas The schema objects, keyed by type.
-		 */
-		return \apply_filters( 'activitypub_schemas', $schemas );
+		return new \WP_Error( 'activitypub_unknown_type', \__( 'The type of the document is not known.', 'activitypub' ), array( 'status' => 400 ) );
 	}
 }
